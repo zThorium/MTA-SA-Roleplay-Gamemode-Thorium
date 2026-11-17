@@ -21,6 +21,28 @@ local ai = nil   -- estado del conductor
 local CURB = { target = 1.3, hospital = 1.0, leave = 0 }
 
 local function heading(dx, dy) return -math.deg(math.atan2(dx, dy)) end
+
+-- Aviso al log del cliente y al del servidor (para saber que paso con cada llamada)
+local function trace(text)
+    outputDebugString("[rp_emergency] " .. text, 2)
+    if ai and ai.callId then triggerServerEvent("rp:emergency:trace", resourceRoot, ai.callId, text) end
+end
+
+-- Al tener ruta por primera vez (ida al paciente), informa sus metros: el servidor
+-- calcula el tiempo estimado y manda otra unidad si no llega a tiempo
+local function reportRoute()
+    if ai.mode ~= "target" or ai.etaSent or not ai.wp[1] then return end
+    ai.etaSent = true
+    local x, y = getElementPosition(ai.vehicle)
+    local m, off, px, py = 0, 0, x, y
+    for _, p in ipairs(ai.wp) do
+        m = m + getDistanceBetweenPoints2D(px, py, p[1], p[2])
+        if p[6] then off = off + 1 end
+        px, py = p[1], p[2]
+    end
+    local kind = off == 0 and "por la calle" or (off == #ai.wp and "fuera de la calle" or "calle y tramo fuera de la calle")
+    triggerServerEvent("rp:emergency:eta", resourceRoot, ai.callId, m, kind)
+end
 local function angleDiff(a, b)
     local d = (a - b) % 360
     if d > 180 then d = d - 360 end
@@ -150,6 +172,7 @@ local function planOffroad()
     if #wp == 0 then wp = { { x, y, z, 0, nil, true } } end
     ai.wp, ai.i, ai.offroad = wp, 1, true
     ai.lastProgress, ai.bestRemaining, ai.nextPlan = getTickCount(), math.huge, nil
+    reportRoute()
     return true
 end
 
@@ -175,7 +198,8 @@ local function plan()
         elseif getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 45 then
             wp = straightLine(x, y, z, ai.tx, ai.ty)
         else
-            outputDebugString("[rp_emergency] la ambulancia no encontro ruta por la red vial; reintentando", 2)
+            trace(("no encontro ruta por la red vial a %.0f m del destino; reintentando"):format(
+                getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty)))
             ai.wp, ai.i = {}, 1
             ai.nextPlan = getTickCount() + 2000
             return false
@@ -184,6 +208,7 @@ local function plan()
     ai.wp, ai.i = wp, 1
     ai.lastProgress, ai.bestRemaining = getTickCount(), math.huge
     ai.nextPlan = nil
+    reportRoute()
     return true
 end
 
@@ -254,8 +279,12 @@ local function tick()
         local now = getTickCount()
         if now - (ai.warnAt or 0) > 10000 then
             ai.warnAt = now
-            outputDebugString(("[rp_emergency] ambulancia sin control (syncer=%s, cargada=%s)"):format(
-                tostring(isElementSyncer(vehicle)), tostring(isElementStreamedIn(vehicle))), 2)
+            local px, py = getElementPosition(localPlayer)
+            local vx, vy = getElementPosition(vehicle)
+            trace(("ambulancia sin control a %.0f m de quien llamo (syncer=%s, cargada=%s)"):format(
+                getDistanceBetweenPoints2D(px, py, vx, vy), tostring(isElementSyncer(vehicle)), tostring(isElementStreamedIn(vehicle))))
+            setElementStreamable(vehicle, false)
+            setElementStreamable(ped, false)
         end
         return
     end
@@ -447,6 +476,9 @@ end
 function stopAIDriver()
     if not ai then return end
     if isTimer(ai.timer) then killTimer(ai.timer) end
+    for _, el in ipairs({ ai.vehicle, ai.ped }) do
+        if isElement(el) then setElementStreamable(el, true) end
+    end
     if isElement(ai.ped) then
         for _, c in ipairs({ "accelerate", "brake_reverse", "handbrake" }) do setPedControlState(ai.ped, c, false) end
         setPedAnalogControlState(ai.ped, "vehicle_left", 0)
@@ -469,6 +501,11 @@ function startAIDriver(callId, vehicle, ped, mode, tx, ty, tz)
     if ai and ai.vehicle ~= vehicle then stopAIDriver() timer = nil end
     ai = ai or {}
     ai.callId, ai.vehicle, ai.ped, ai.mode = callId, vehicle, ped, mode
+    ai.etaSent = false
+    -- Aparece a 80-140 m: sin esto MTA puede no cargarla en este cliente (fuera del
+    -- radio de carga) y la ambulancia queda quieta para siempre, sin fisica ni control
+    setElementStreamable(vehicle, false)
+    setElementStreamable(ped, false)
     ai.reached, ai.stuckCount, ai.reverseUntil, ai.blockedSince, ai.stuckSince = false, 0, nil, nil, nil
     ai.wp, ai.i = {}, 1
     if not isTimer(timer) then ai.timer = setTimer(tick, 50, 0) else ai.timer = timer end
@@ -481,7 +518,8 @@ function startAIDriver(callId, vehicle, ped, mode, tx, ty, tz)
 end
 
 -- Punto donde aparece la ambulancia: en un carril, fuera de la vista y con ruta hasta el jugador
-function pickSpawnPoint()
+-- avoidX/avoidY: donde se perdio la unidad anterior (la nueva sale de otro lado)
+function pickSpawnPoint(avoidX, avoidY)
     local px, py, pz = getElementPosition(localPlayer)
     local lo, hi = EMERGENCY.SPAWN_MIN, EMERGENCY.SPAWN_MAX
     if loadRoadGraph() then
@@ -489,8 +527,10 @@ function pickSpawnPoint()
         local fallback = nil
         for _ = 1, 12 do
             local a, b = roadNodeAround(px, py, lo, hi)
+            local x, y, z, rot
+            if a then x, y, z, rot = laneStartPoint(a, b) end
+            if a and avoidX and getDistanceBetweenPoints2D(x, y, avoidX, avoidY) < 70 then a = nil end
             if a then
-                local x, y, z, rot = laneStartPoint(a, b)
                 local routable = not ta or findRoute(a, b, ta, 4000) ~= nil
                 local hidden = not getScreenFromWorldPosition(x, y, z + 1, 0, false)
                 if routable and hidden then return x, y, z, rot end

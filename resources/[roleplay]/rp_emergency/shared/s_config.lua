@@ -20,11 +20,20 @@ EMERGENCY = {
     -- Ambulancia
     AMBULANCE_MODEL = 416,
     PARAMEDIC_SKINS = { 274, 275, 276 },   -- paramedicos de LS
-    SPAWN_MIN = 110,           -- m desde el jugador donde aparece (fuera de la vista y con ruta por la red vial)
-    SPAWN_MAX = 170,
+    SPAWN_MIN = 80,            -- m desde el jugador donde aparece (fuera de la vista y con ruta por la red vial)
+    SPAWN_MAX = 140,
     SPAWN_REQUEST_TIMEOUT = 10,
     ARRIVE_MAX_DIST = 120,     -- m: el servidor acepta "llego" si la ambulancia esta a menos de esto del jugador
-    ENROUTE_TIMEOUT = 240,     -- s: si no llega, se cancela la llamada (recuperacion)
+    ENROUTE_TIMEOUT = 240,     -- s: plazo del traslado al hospital
+    -- Tiempo estimado de llegada = metros de la ruta / ETA_SPEED * ETA_MARGIN + 15 s,
+    -- entre ETA_MIN y ETA_MAX. Si no llega a tiempo, o pasa NO_PROGRESS s sin acercarse,
+    -- se manda otra ambulancia desde otro punto (hasta MAX_ATTEMPTS unidades por llamada).
+    ETA_SPEED = 11,            -- m/s de media (~40 km/h contando curvas y cruces)
+    ETA_MARGIN = 1.5,
+    ETA_MIN = 35,
+    ETA_MAX = 150,
+    NO_PROGRESS = 30,
+    MAX_ATTEMPTS = 3,
     SEARCH_RADIUS = 60,        -- m alrededor de la ambulancia para buscar abatidos
     LOOK_TIME = 4,             -- s que miran alrededor si no hay abatidos antes de volver
     CRUISE_SPEED = 85,         -- km/h en recta (va con sirena)

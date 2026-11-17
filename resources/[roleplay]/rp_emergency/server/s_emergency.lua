@@ -41,6 +41,8 @@ addEvent("rp:emergency:call", true)
 addEvent("rp:emergency:spawn", true)
 addEvent("rp:emergency:arrived", true)
 addEvent("rp:emergency:paths", true)
+addEvent("rp:emergency:eta", true)
+addEvent("rp:emergency:trace", true)
 
 local function notify(p, t, k, d) exports.rp_notify:notify(p, t, k, d) end
 local function popup(p, t, m, k) exports.rp_notify:popup(p, t, m, k) end
@@ -156,7 +158,7 @@ end
 -- Ciclo de vida de la llamada
 ----------------------------------------------------------------
 local function killTimers(c)
-    for _, k in ipairs({ "stepTimer", "workTimer", "deadline", "hardTimer", "leaveTimer", "spawnTimer" }) do
+    for _, k in ipairs({ "stepTimer", "workTimer", "deadline", "hardTimer", "leaveTimer", "spawnTimer", "watchTimer" }) do
         if isTimer(c[k]) then killTimer(c[k]) end
         c[k] = nil
     end
@@ -717,6 +719,7 @@ addEventHandler("rp:emergency:arrived", resourceRoot, function(callId, mode)
             log(c, "aviso de llegada rechazado: la ambulancia esta lejos de quien llamo; sigue hacia el")
             if ok(c.caller) then
                 local cx, cy, cz = getElementPosition(c.caller)
+                c.tx, c.ty, c.tz = cx, cy, cz
                 toController(c, "rp:emergency:drive", c.id, c.vehicle, c.driver, "target", cx, cy, cz)
             end
             return
@@ -758,22 +761,148 @@ local function dispatchAmbulance(player)
     calls[c.id], byCaller[player] = c, c
     activeCount = activeCount + 1
     c.hardTimer = setTimer(endCall, 20 * 60000, 1, c, true)
-    c.spawnTimer = setTimer(function()
-        if not c.ended and c.state == "spawning" then endCall(c, false, "No hay ambulancias disponibles ahora.") end
-    end, EMERGENCY.SPAWN_REQUEST_TIMEOUT * 1000, 1)
-
+    c.attempt = 1
     log(c, "despacho solicitado")
-    triggerClientEvent(player, "rp:emergency:spawnRequest", resourceRoot, c.id)
+    requestSpawn(c)
     popup(player, "911", "Tu llamada fue recibida. Buscando una ambulancia...", "info")
     return true
 end
+
+----------------------------------------------------------------
+-- En camino: tiempo estimado, vigilancia y reaparicion
+----------------------------------------------------------------
+-- Si la ambulancia no llega dentro del tiempo estimado, o pasa NO_PROGRESS s sin
+-- acercarse, desaparece (con fundido) y la central manda otra unidad desde otro punto,
+-- hasta MAX_ATTEMPTS intentos. Todo queda en el log del servidor ([rp_emergency]).
+local respawnAmbulance
+
+local function etaSeconds(meters)
+    local s = meters / EMERGENCY.ETA_SPEED * EMERGENCY.ETA_MARGIN + 15
+    return math.floor(math.max(EMERGENCY.ETA_MIN, math.min(EMERGENCY.ETA_MAX, s)))
+end
+
+local function setDeadline(c, seconds, why)
+    if isTimer(c.deadline) then killTimer(c.deadline) end
+    c.deadline = setTimer(function()
+        if c.ended or c.state ~= "enroute" then return end
+        respawnAmbulance(c, ("no llego en el tiempo estimado (%d s, %s)"):format(seconds, why))
+    end, seconds * 1000, 1)
+end
+
+-- Destino: el abatido mas cercano a quien llamo (si hay), si no quien llamo
+local function chooseTarget(c)
+    local player = c.caller
+    local cx, cy, cz = getElementPosition(player)
+    local tx, ty, tz, who = cx, cy, cz, "quien llamo"
+    local best = EMERGENCY.SEARCH_RADIUS
+    for _, p in ipairs(getElementsByType("player")) do
+        if p ~= player and isPlayerDowned(p) and getElementDimension(p) == 0 then
+            local px, py, pz = getElementPosition(p)
+            local pd = getDistanceBetweenPoints2D(cx, cy, px, py)
+            if pd < best then tx, ty, tz, best, who = px, py, pz, pd, getPlayerName(p) end
+        end
+    end
+    c.tx, c.ty, c.tz = tx, ty, tz
+    return tx, ty, tz, who
+end
+
+local function targetDistance(c)
+    if not ok(c.vehicle) then return math.huge end
+    local vx, vy = getElementPosition(c.vehicle)
+    return getDistanceBetweenPoints2D(vx, vy, c.tx, c.ty)
+end
+
+-- Cada 5 s: registra el avance y detecta la ambulancia perdida o sin control
+local function watch(c)
+    if c.ended or c.state ~= "enroute" or not ok(c.vehicle) then return end
+    local now = getTickCount()
+    local d = targetDistance(c)
+    if d < c.bestDist - 8 then c.bestDist, c.progressAt = d, now end
+    if now - c.logAt >= 15000 then
+        c.logAt = now
+        local vx, vy, vz = getElementVelocity(c.vehicle)
+        log(c, ("en camino: a %.0f m del destino, %.0f km/h, %d s desde que salio"):format(
+            d, math.sqrt(vx * vx + vy * vy + vz * vz) * 180, math.floor((now - c.spawnedAt) / 1000)))
+    end
+    if now - c.progressAt > EMERGENCY.NO_PROGRESS * 1000 then
+        respawnAmbulance(c, ("lleva %d s sin acercarse (a %.0f m)"):format(EMERGENCY.NO_PROGRESS, d))
+    end
+end
+
+local function requestSpawn(c, avoidX, avoidY)
+    c.state = "spawning"
+    if isTimer(c.spawnTimer) then killTimer(c.spawnTimer) end
+    c.spawnTimer = setTimer(function()
+        if not c.ended and c.state == "spawning" then
+            log(c, "el cliente no envio punto de aparicion")
+            endCall(c, false, "No hay ambulancias disponibles ahora.")
+        end
+    end, EMERGENCY.SPAWN_REQUEST_TIMEOUT * 1000, 1)
+    triggerClientEvent(c.caller, "rp:emergency:spawnRequest", resourceRoot, c.id, avoidX, avoidY)
+end
+
+respawnAmbulance = function(c, reason)
+    if c.ended then return end
+    log(c, ("ambulancia %s perdida en el intento %d: %s"):format(c.unit or "?", c.attempt or 1, reason))
+    for _, k in ipairs({ "deadline", "watchTimer" }) do
+        if isTimer(c[k]) then killTimer(c[k]) end
+        c[k] = nil
+    end
+    toController(c, "rp:emergency:stop", c.id)
+    local ax, ay
+    if ok(c.vehicle) then ax, ay = getElementPosition(c.vehicle) end
+    -- La unidad perdida se desvanece (por si alguien la ve) y se destruye
+    local old = { c.blip, c.medics[1], c.medics[2], c.driver, c.vehicle }
+    c.blip, c.driver, c.vehicle, c.medics = nil, nil, nil, {}
+    local alpha = 255
+    setTimer(function()
+        alpha = alpha - 40
+        for _, el in ipairs(old) do
+            if ok(el) then
+                if alpha <= 0 then destroyElement(el) elseif getElementType(el) ~= "blip" then setElementAlpha(el, alpha) end
+            end
+        end
+    end, 120, 7)
+
+    if (c.attempt or 1) >= EMERGENCY.MAX_ATTEMPTS or not playerValid(c.caller) then
+        return endCall(c, false, "Ninguna ambulancia pudo llegar hasta ti. Vuelve a llamar desde un lugar junto a la calle.")
+    end
+    c.attempt = (c.attempt or 1) + 1
+    popup(c.caller, "911", "Central: la unidad no logra llegar. Enviamos otra ambulancia por otra ruta.", "warning")
+    requestSpawn(c, ax, ay)
+end
+
+-- El cliente que conduce informa la ruta que armo: de ahi sale el tiempo estimado
+addEventHandler("rp:emergency:eta", resourceRoot, function(callId, meters, kind)
+    local c = calls[tonumber(callId)]
+    meters = tonumber(meters)
+    if not c or client ~= c.syncer or c.ended or c.state ~= "enroute" or c.etaSet or not meters then return end
+    c.etaSet = true
+    local d = targetDistance(c)
+    meters = math.max(d, math.min(meters, d * 4 + 200))   -- no se fia de una cifra absurda
+    local secs = etaSeconds(meters)
+    log(c, ("ruta de %.0f m (%s), tiempo estimado %d s"):format(meters, tostring(kind):sub(1, 40), secs))
+    setDeadline(c, secs, "ruta de " .. math.floor(meters) .. " m")
+    popup(c.caller, "911", ("Central: la ambulancia %s llega en unos %d segundos."):format(c.unit, math.max(10, math.floor(meters / EMERGENCY.ETA_SPEED))), "info")
+end)
+
+-- Avisos del conductor (sin ruta, sin control...) para que queden en el log del servidor
+addEventHandler("rp:emergency:trace", resourceRoot, function(callId, text)
+    local c = calls[tonumber(callId)]
+    if not c or client ~= c.syncer or c.ended or type(text) ~= "string" then return end
+    local now = getTickCount()
+    if now - (c.traceAt or 0) < 3000 then return end
+    c.traceAt = now
+    log(c, "conductor: " .. text:sub(1, 120))
+end)
 
 addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, rot)
     local player = client
     local c = calls[tonumber(callId)]
     x, y, z, rot = tonumber(x), tonumber(y), tonumber(z), tonumber(rot) or 0
     if not c or c.caller ~= player or c.state ~= "spawning" or not (x and y and z) then return end
-    local d = getDistanceBetweenPoints2D(c.x, c.y, x, y)
+    local cx, cy = getElementPosition(player)
+    local d = getDistanceBetweenPoints2D(cx, cy, x, y)
     if d < 40 or d > EMERGENCY.SPAWN_MAX + 150 then
         return log(c, ("punto de aparicion rechazado a %.0f m"):format(d))
     end
@@ -797,7 +926,7 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     c.driver = newPed(0)
     c.medics = { newPed(1), newPed(2) }
     setVehicleSirensOn(vehicle, true)      -- ya con conductor: luces y sonido
-    c.unit = tostring(math.random(10, 49))
+    c.unit = tostring(math.random(10, 49))   -- cada intento es otra unidad
     local pool = {}
     for _, n in ipairs(EMERGENCY.PARAMEDIC_NAMES) do pool[#pool + 1] = n end
     c.names = {}
@@ -808,19 +937,13 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
 
     c.blip = createBlipAttachedTo(vehicle, 22, 2, 255, 255, 255, 255, 0, 99999, player)
     c.state = "enroute"
-    c.deadline = setTimer(endCall, EMERGENCY.ENROUTE_TIMEOUT * 1000, 1, c, true,
-        "La ambulancia no pudo llegar hasta ti. Vuelve a llamar.")
-    -- Va directo al abatido mas cercano a quien llamo (si hay), si no a quien llamo
-    local tx, ty, tz = c.x, c.y, c.z
-    local best = EMERGENCY.SEARCH_RADIUS
-    for _, p in ipairs(getElementsByType("player")) do
-        if p ~= player and isPlayerDowned(p) and getElementDimension(p) == 0 then
-            local px, py, pz = getElementPosition(p)
-            local pd = getDistanceBetweenPoints2D(c.x, c.y, px, py)
-            if pd < best then tx, ty, tz, best = px, py, pz, pd end
-        end
-    end
-    log(c, ("ambulancia %s creada a %.0f m, en camino"):format(c.unit, d))
+    local tx, ty, tz, who = chooseTarget(c)
+    -- Plazo provisional (linea recta x1.6) hasta que el conductor informe su ruta real
+    c.etaSet, c.spawnedAt, c.logAt = false, getTickCount(), getTickCount()
+    c.bestDist, c.progressAt = math.huge, getTickCount()
+    setDeadline(c, etaSeconds(getDistanceBetweenPoints2D(x, y, tx, ty) * 1.6), "estimacion inicial")
+    c.watchTimer = setTimer(watch, 5000, 0, c)
+    log(c, ("ambulancia %s (intento %d) creada a %.0f m, va hacia %s"):format(c.unit, c.attempt or 1, d, who))
     triggerClientEvent(player, "rp:emergency:drive", resourceRoot, c.id, vehicle, c.driver, "target", tx, ty, tz)
     popup(player, "911", "Central: la ambulancia " .. c.unit .. " va en camino con sirena. Esperala fuera, junto a la calle.", "success")
 end)

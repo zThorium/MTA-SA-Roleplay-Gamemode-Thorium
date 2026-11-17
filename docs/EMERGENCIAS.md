@@ -47,8 +47,17 @@ pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de 
      traslado con sirena al hospital más cercano (el paciente pasa a ser syncer), entrega en urgencias, pantalla en
      negro `TREAT_TIME` s y reaparece en la cama con `TREAT_HEALTH`.
 5. **Partida.** Guardan el equipo, vuelven a sus puertas, suben con la animación de entrar, radio "unidad libre",
-   apagan la sirena, se alejan por la red vial y se desvanecen. Cualquier fallo (caller desconectado, no llega en
-   `ENROUTE_TIMEOUT`) limpia todo y libera a los pacientes.
+   apagan la sirena, se alejan por la red vial y se desvanecen. Cualquier fallo (caller desconectado, sin unidades
+   que lleguen) limpia todo y libera a los pacientes.
+
+**Tiempo estimado y reaparición.** Al armar su ruta, el conductor informa los metros al servidor, que calcula el tiempo
+estimado (`metros / ETA_SPEED * ETA_MARGIN + 15 s`, entre `ETA_MIN` y `ETA_MAX`) y se lo dice a quien llamó. Cada 5 s
+el servidor vigila la distancia al destino: si la ambulancia no llega en ese tiempo, o pasa `NO_PROGRESS` s sin
+acercarse (ruta equivocada, atascada o sin control), la unidad se desvanece y la central manda otra desde otro punto
+(a más de 70 m de donde se perdió), hasta `MAX_ATTEMPTS` unidades. La ambulancia y su conductor se marcan
+`setElementStreamable(false)` en el cliente que conduce: aparecían fuera de su radio de carga y se quedaban quietas.
+Todo queda en el log del servidor con el prefijo `[rp_emergency] llamada #N`: punto de aparición, destino, ruta y
+tiempo estimado, avance cada 15 s, avisos del conductor (sin ruta, sin control) y por qué se reemplazó una unidad.
 
 **Movimiento a pie de los paramédicos** (`client/c_walk.lua`): el servidor pide al cliente de quien llamó un camino a
 pie (`footPath` en `client/c_offroad.lua`: línea recta si está libre, si no A* en rejilla de 1 m que rodea autos, muros,

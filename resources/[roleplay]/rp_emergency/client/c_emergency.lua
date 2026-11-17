@@ -71,8 +71,8 @@ addEventHandler("onClientResourceStop", resourceRoot, close)
 ----------------------------------------------------------------
 -- Ambulancia
 ----------------------------------------------------------------
-addEventHandler("rp:emergency:spawnRequest", resourceRoot, function(callId)
-    local x, y, z, rot = pickSpawnPoint()
+addEventHandler("rp:emergency:spawnRequest", resourceRoot, function(callId, avoidX, avoidY)
+    local x, y, z, rot = pickSpawnPoint(tonumber(avoidX), tonumber(avoidY))
     triggerServerEvent("rp:emergency:spawn", resourceRoot, callId, x, y, z, rot)
 end)
 
