@@ -34,6 +34,7 @@ addEvent("rp:injury:reanim", true)
 addEvent("rp:onPlayerDowned", false)
 addEvent("rp:onPlayerDownedEnd", false)
 addEvent("rp:onDownedLogout", false)
+addEvent("rp:emergency:revive", false)   -- lo dispara rp_emergency al reanimar (paramedicos IA)
 
 local downed = {}      -- [player] = { expires = tick, timer = timer }
 local dying = {}       -- [player] = timer del respawn (o true mientras muere)
@@ -216,6 +217,15 @@ function revivePlayer(player)
     notify(player, "Te han reanimado.", "success")
     return true
 end
+
+-- Paramedicos de rp_emergency: ellos ponen la vida y sueltan la animacion; aqui se
+-- cancela el temporizador y el tiempo guardado
+addEventHandler("rp:emergency:revive", root, function()
+    if downed[source] then
+        clearDowned(source)
+        notify(source, "Los paramedicos te reanimaron.", "success")
+    end
+end)
 
 ----------------------------------------------------------------
 -- Entrada al estado

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>911</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window">
+        <header>
+            <div>
+                <h1>Emergencias 911</h1>
+                <p class="hint">Elige el servicio. Teclas <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Esc</kbd> para cerrar</p>
+            </div>
+            <button class="close" id="btn-close" title="Cerrar">&times;</button>
+        </header>
+        <p class="busy" id="busy" hidden>Ya tienes una llamada en curso.</p>
+        <section class="list" id="list"></section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
