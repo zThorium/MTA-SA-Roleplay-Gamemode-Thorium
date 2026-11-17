@@ -358,9 +358,24 @@ local HELP = {
     { LEVEL_ADMIN, "Dinero: /givemoney (/apagar) efectivo, /dardinero banco" },
     { LEVEL_ADMIN, "Otros: /a (chat admin) /admins /freecam /forzarpayday" },
     { LEVEL_ADMIN, "Mundo: /crearatm /crearshop /crearcasa /crearropa /crearfaccion /dealer (y sus /borrar...)" },
+    { LEVEL_ADMIN, "Debug: /debug [0-3] activa o apaga el debugscript de tu cliente" },
     { LEVEL_SUPER, "Super admin: /setmoney /ban" },
 }
 
+-- /debug [0-3]: activa el debugscript del cliente del admin (0 = apagado, 3 = errores, avisos e info).
+-- Es un comando del gamemode con permiso por admin_level: no hace falta meter cuentas en acl.xml.
+local debugLevels = {}   -- [jugador] = true mientras tiene el debug activado
+addCommandHandler("debug", function(player, _, level)
+    if not guard(player) then return end
+    local n = tonumber(level)
+    if level == nil then n = debugLevels[player] and 0 or 3 end
+    if not n or n < 0 or n > 3 or n ~= math.floor(n) then
+        return notify(player, "Uso: /debug [0-3]  (sin numero: alterna entre 3 y 0)", "warning")
+    end
+    setPlayerScriptDebugLevel(player, n)
+    debugLevels[player] = n > 0 or nil
+    notify(player, ("Debugscript %s (nivel %d)."):format(n == 0 and "apagado" or "activado", n), "success")
+end)
 addCommandHandler("ahelp", function(player)
     if not guard(player) then return end
     local lvl = levelOf(player)
