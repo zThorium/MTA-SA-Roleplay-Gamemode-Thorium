@@ -232,6 +232,46 @@ SCHEMA = {
         PRIMARY KEY (type, a, b)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- Tiendas de ropa con interior propio (rp_clothing). ix..irot: interior corregido en juego (NULL = el del tipo)
+    [[
+    CREATE TABLE IF NOT EXISTS clothing_stores (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name       VARCHAR(48)  NOT NULL,
+        type       VARCHAR(16)  NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        ix         FLOAT        NULL,
+        iy         FLOAT        NULL,
+        iz         FLOAT        NULL,
+        irot       FLOAT        NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Accesorios (toys) del personaje: hueso, posicion, rotacion y escala por eje
+    [[
+    CREATE TABLE IF NOT EXISTS character_toys (
+        id           INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED     NOT NULL,
+        toy          VARCHAR(32)      NOT NULL,
+        bone         TINYINT UNSIGNED NOT NULL,
+        x            FLOAT            NOT NULL DEFAULT 0,
+        y            FLOAT            NOT NULL DEFAULT 0,
+        z            FLOAT            NOT NULL DEFAULT 0,
+        rx           FLOAT            NOT NULL DEFAULT 0,
+        ry           FLOAT            NOT NULL DEFAULT 0,
+        rz           FLOAT            NOT NULL DEFAULT 0,
+        sx           FLOAT            NOT NULL DEFAULT 1,
+        sy           FLOAT            NOT NULL DEFAULT 1,
+        sz           FLOAT            NOT NULL DEFAULT 1,
+        worn         TINYINT(1)       NOT NULL DEFAULT 0,
+        created_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_toys_character (character_id),
+        CONSTRAINT fk_toys_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- Hito 5: vehiculos de los personajes
     [[
     CREATE TABLE IF NOT EXISTS vehicles (
