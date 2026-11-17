@@ -110,27 +110,30 @@ addEventHandler("onResourceStart", resourceRoot, function()
     buildShops()
 end)
 
--- /taller lista | /taller mover <n> (admin): pone el taller donde esta tu auto,
--- con su orientacion. Elige un lugar abierto: ahi se pone el auto al tunear.
-addCommandHandler("taller", function(player, _, action, index)
+function getTuningShops() return shops end
+
+-- Mueve el taller n a donde esta el auto del admin (con su orientacion).
+-- Elige un lugar abierto: ahi se pone el auto al tunear.
+local function moveShop(player, index)
     if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
-    if action == "lista" then
-        for i, shop in ipairs(shops) do
-            outputChatBox(("%d. %s (%.1f, %.1f, %.1f)"):format(i, shop.name, shop.x, shop.y, shop.z), player, 245, 165, 36)
-        end
-    elseif action == "mover" then
-        index = tonumber(index)
-        if not index or not shops[index] then return notify(player, "Uso: /taller mover <numero> (ver /taller lista)", "warning") end
-        local el = getPedOccupiedVehicle(player) or player
-        local x, y, z = getElementPosition(el)
-        local _, _, rz = getElementRotation(el)
-        local shop = shops[index]
-        shop.x, shop.y, shop.z, shop.rz = x, y, z, rz
-        saveShops()
-        buildShops()
-        notify(player, ("Taller %s movido a tu posicion."):format(shop.name), "success")
-    else
-        notify(player, "Uso: /taller lista | /taller mover <numero>", "warning")
+    index = tonumber(index)
+    if not index or not shops[index] then return notify(player, "Uso: /movertaller <numero> (ver /nearbytalleres)", "warning") end
+    local el = getPedOccupiedVehicle(player) or player
+    local x, y, z = getElementPosition(el)
+    local _, _, rz = getElementRotation(el)
+    local shop = shops[index]
+    shop.x, shop.y, shop.z, shop.rz = x, y, z, rz
+    saveShops()
+    buildShops()
+    notify(player, ("Taller %s movido a tu posicion."):format(shop.name), "success")
+end
+
+addCommandHandler("movertaller", function(player, _, index) moveShop(player, index) end)
+addCommandHandler("taller", function(player, _, action, index)
+    if action == "mover" then return moveShop(player, index) end
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    for i, shop in ipairs(shops) do
+        outputChatBox(("%d. %s (%.1f, %.1f, %.1f)"):format(i, shop.name, shop.x, shop.y, shop.z), player, 245, 165, 36)
     end
 end)
 

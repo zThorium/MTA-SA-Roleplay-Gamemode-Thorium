@@ -15,6 +15,7 @@
     <script src="server/s_interaction.lua" type="server" />
     <script src="server/s_police.lua" type="server" />
     <script src="server/s_tuning.lua" type="server" />
+    <script src="server/s_admin.lua" type="server" />
     <script src="client/c_controls.lua" type="client" cache="false" />
     <script src="client/c_interaction.lua" type="client" cache="false" />
     <script src="client/c_tuning.lua" type="client" cache="false" />
