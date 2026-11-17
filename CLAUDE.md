@@ -72,6 +72,19 @@ reportes (#7), estrellas de búsqueda y policía IA (#8), comandos de admin
 
 Detalles y fragmentos de ejemplo en [`docs/CONVENCIONES.md`](docs/CONVENCIONES.md).
 
+## Skills del proyecto
+
+En `.claude/skills/` hay skills compartidas con el estándar del equipo. Úsalas siempre que apliquen:
+
+| Skill | Cuándo |
+|---|---|
+| `crear-recurso` | Añadir un sistema o recurso `rp_*` nuevo (estructura, `meta.xml`, plantilla de servidor, registro, checklist de PR) |
+| `migracion-bd` | Cualquier tabla, columna o índice nuevo en `schema.lua` |
+| `interfaz-cef` | Cualquier panel o ventana HTML en el juego |
+| `comando-admin` | Cualquier `/comando`, y elementos que los admins colocan en el mundo |
+
+Si una forma de hacer algo funciona mejor que lo que dice una skill, actualiza la skill en el mismo PR.
+
 ## Secretos: nunca al repo
 
 - `resources/[roleplay]/rp_database/config.lua` (credenciales MySQL) está en `.gitignore`.
