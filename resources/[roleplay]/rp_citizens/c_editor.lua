@@ -162,7 +162,10 @@ local function isSel(sel, t, i) return sel and sel.t == t and sel.i == i end
 
 local COLORS = { p = tocolor(80, 200, 255, 220), v = tocolor(255, 160, 40, 140) }
 local LANE_COLOR = tocolor(90, 230, 120, 230)
+local CURVE_COLOR = tocolor(230, 90, 255, 220)
+local PLAN_COLOR = tocolor(255, 230, 40, 255)
 local showLanes = true
+local showPlans = true
 
 -- Carril real de un sentido (a -> b): linea verde desplazada a la derecha con flecha
 function drawLane(a, b, ax, ay, az, bx, by, bz)
@@ -207,16 +210,56 @@ local function render()
         end
     end
 
+    -- Curvas de giro en los cruces (las mismas que calculan los autos)
+    if show.v and showLanes then
+        for _, n in ipairs(list) do
+            local links = n.t == "v" and LINKS.v[n.i]
+            if links and #links >= 2 then
+                for _, a in ipairs(links) do
+                    if getLaneInfo(a, n.i) > 0 then
+                        for _, c in ipairs(links) do
+                            if c ~= a and getLaneInfo(n.i, c) > 0 then
+                                local pts, turn = computeTurnPoints(a, n.i, c)
+                                if turn >= 10 then
+                                    for k = 1, #pts - 1 do
+                                        dxDrawLine3D(pts[k][1], pts[k][2], pts[k][3] + 0.3, pts[k + 1][1], pts[k + 1][2], pts[k + 1][3] + 0.3, CURVE_COLOR, 2)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Ruta planificada de cada auto de la poblacion
+    if showPlans then
+        for _, p in ipairs(getCitizenCarPlans()) do
+            local px, py, pz = getElementPosition(p.vehicle)
+            local lx, ly, lz = px, py, pz
+            for k = 1, math.min(#p.wp, 30) do
+                local w = p.wp[k]
+                dxDrawLine3D(lx, ly, lz + 0.6, w[1], w[2], w[3] + 0.6, PLAN_COLOR, 4)
+                lx, ly, lz = w[1], w[2], w[3]
+            end
+            local sx, sy = getScreenFromWorldPosition(px, py, pz + 1.6)
+            if sx then
+                dxDrawText(("%s  [%s]"):format(p.state or "?", p.lod == "dummy" and "dummy" or "fisica"), sx, sy, sx, sy, tocolor(255, 255, 255), 1, "default-bold", "center", "bottom")
+            end
+        end
+    end
+
     -- Panel de ayuda
     local lines = {
         "EDITOR DE RUTAS  (/nodos para salir)",
         "Clic: seleccionar y arrastrar   Shift+clic: 2o nodo",
         "N: nuevo nodo   K: enlazar/desenlazar   Supr: borrar",
         ("1: peatones [%s]   2: vehiculos [%s]   3: carriles [%s]"):format(show.p and "si" or "no", show.v and "si" or "no", showLanes and "si" or "no"),
-        "Naranja = linea central (se edita)  Verde = carril real con sentido",
+        ("Naranja = centro (se edita)  Verde = carril  Morado = curvas  Amarillo = ruta de cada auto [4: %s]"):format(showPlans and "si" or "no"),
         selected and ("Seleccionado: %s #%d  (%d enlaces)"):format(selected.t == "v" and "vial" or "peatonal", selected.i, #(LINKS[selected.t][selected.i] or {})) or "Nada seleccionado",
     }
-    dxDrawRectangle(20, screenH / 2 - 70, 380, 20 + #lines * 20, tocolor(12, 14, 20, 210))
+    dxDrawRectangle(20, screenH / 2 - 70, 560, 20 + #lines * 20, tocolor(12, 14, 20, 210))
     for k, l in ipairs(lines) do
         dxDrawText(l, 32, screenH / 2 - 60 + (k - 1) * 20, 0, 0, k == 1 and tocolor(245, 165, 36) or tocolor(242, 244, 248), 1, k == 1 and "default-bold" or "default")
     end
@@ -315,6 +358,7 @@ end
 local function toggleP() show.p = not show.p end
 local function toggleV() show.v = not show.v end
 local function toggleLanes() showLanes = not showLanes end
+local function togglePlans() showPlans = not showPlans end
 
 local function setEditing(state)
     editing = state
@@ -329,6 +373,7 @@ local function setEditing(state)
         bindKey("1", "down", toggleP)
         bindKey("2", "down", toggleV)
         bindKey("3", "down", toggleLanes)
+        bindKey("4", "down", togglePlans)
         showCursor(true)
         exports.rp_notify:notify("Editor de rutas activado. Usa /freecam para moverte libremente.", "info")
     else
@@ -341,6 +386,7 @@ local function setEditing(state)
         unbindKey("1", "down", toggleP)
         unbindKey("2", "down", toggleV)
         unbindKey("3", "down", toggleLanes)
+        unbindKey("4", "down", togglePlans)
         showCursor(false)
         selected, second, dragging = nil, nil, false
         exports.rp_notify:notify("Editor de rutas desactivado.", "info")

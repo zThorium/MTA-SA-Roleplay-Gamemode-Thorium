@@ -15,4 +15,7 @@
     <script src="c_nodes_ls.lua" type="client" />
     <script src="c_citizens.lua" type="client" />
     <script src="c_editor.lua" type="client" />
+
+    <!-- Bocina de los autos de la poblacion (sonido generado para el proyecto) -->
+    <file src="sounds/horn.wav" />
 </meta>
