@@ -12,6 +12,7 @@ local grid = nil
 local CELL = 100
 local STEP = 6            -- m entre puntos en los tramos rectos
 local DEFAULT_OFFSET = 2.5
+WRONG_WAY_FACTOR = 3      -- ambulancia con sirena: calles de un sentido a contramano si conviene (false = nunca)
 
 function loadRoadGraph()
     if N then return true end
@@ -229,9 +230,12 @@ function findRoute(from, start, goal, maxExpansions)
             if expansions > (maxExpansions or 8000) then return nil end
             local cx, cy = nodePosition(cur)
             for _, n in ipairs(L[cur] or {}) do
-                if not closed[n] and n ~= parent[cur] and canDrive(cur, n) then
+                -- Con sirena puede ir en contra en una calle de un sentido, pero solo si
+                -- le ahorra mucho camino (cuesta 3 veces mas)
+                local factor = canDrive(cur, n) and 1 or (WRONG_WAY_FACTOR or false)
+                if not closed[n] and n ~= parent[cur] and factor then
                     local nx, ny = nodePosition(n)
-                    local g = cost[cur] + getDistanceBetweenPoints2D(cx, cy, nx, ny)
+                    local g = cost[cur] + getDistanceBetweenPoints2D(cx, cy, nx, ny) * factor
                     if not cost[n] or g < cost[n] then
                         cost[n], parent[n] = g, cur
                         push(open, n, g + getDistanceBetweenPoints2D(nx, ny, gx, gy))

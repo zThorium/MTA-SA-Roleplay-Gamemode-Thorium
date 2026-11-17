@@ -655,8 +655,8 @@ addEventHandler("rp:emergency:arrived", resourceRoot, function(callId, mode)
         if not ok(c.caller) or dist3(c.vehicle, c.caller) > EMERGENCY.ARRIVE_MAX_DIST then
             log(c, "aviso de llegada rechazado: la ambulancia esta lejos de quien llamo; sigue hacia el")
             if ok(c.caller) then
-                local cx, cy = getElementPosition(c.caller)
-                toController(c, "rp:emergency:drive", c.id, c.vehicle, c.driver, "target", cx, cy)
+                local cx, cy, cz = getElementPosition(c.caller)
+                toController(c, "rp:emergency:drive", c.id, c.vehicle, c.driver, "target", cx, cy, cz)
             end
             return
         end
@@ -724,7 +724,6 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     setVehicleDamageProof(vehicle, true)
     setVehicleEngineState(vehicle, true)
     setVehicleLocked(vehicle, true)
-    setVehicleSirensOn(vehicle, true)
     setElementData(vehicle, "rp:emergency", c.id)
 
     local skins = EMERGENCY.PARAMEDIC_SKINS
@@ -736,6 +735,7 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     end
     c.driver = newPed(0)
     c.medics = { newPed(1), newPed(2) }
+    setVehicleSirensOn(vehicle, true)      -- ya con conductor: luces y sonido
     c.unit = tostring(math.random(10, 49))
     local pool = {}
     for _, n in ipairs(EMERGENCY.PARAMEDIC_NAMES) do pool[#pool + 1] = n end
@@ -750,17 +750,17 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     c.deadline = setTimer(endCall, EMERGENCY.ENROUTE_TIMEOUT * 1000, 1, c, true,
         "La ambulancia no pudo llegar hasta ti. Vuelve a llamar.")
     -- Va directo al abatido mas cercano a quien llamo (si hay), si no a quien llamo
-    local tx, ty = c.x, c.y
+    local tx, ty, tz = c.x, c.y, c.z
     local best = EMERGENCY.SEARCH_RADIUS
     for _, p in ipairs(getElementsByType("player")) do
         if p ~= player and isPlayerDowned(p) and getElementDimension(p) == 0 then
-            local px, py = getElementPosition(p)
+            local px, py, pz = getElementPosition(p)
             local pd = getDistanceBetweenPoints2D(c.x, c.y, px, py)
-            if pd < best then tx, ty, best = px, py, pd end
+            if pd < best then tx, ty, tz, best = px, py, pz, pd end
         end
     end
     log(c, ("ambulancia %s creada a %.0f m, en camino"):format(c.unit, d))
-    triggerClientEvent(player, "rp:emergency:drive", resourceRoot, c.id, vehicle, c.driver, "target", tx, ty)
+    triggerClientEvent(player, "rp:emergency:drive", resourceRoot, c.id, vehicle, c.driver, "target", tx, ty, tz)
     popup(player, "911", "Central: la ambulancia " .. c.unit .. " va en camino con sirena. Esperala fuera, junto a la calle.", "success")
 end)
 

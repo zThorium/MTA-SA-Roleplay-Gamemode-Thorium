@@ -45,7 +45,20 @@ local function steerTo(value)
     setPedAnalogControlState(ai.ped, "vehicle_right", value < 0 and -value or 0)
 end
 
-local function horn(on) setPedControlState(ai.ped, "horn", on) end
+-- Bocina: sonido propio. NUNCA el control "horn" del NPC: en un vehiculo de emergencia
+-- ese control enciende y apaga la sirena (por eso llegaban sin sirena).
+local function horn(on)
+    if not on then return end
+    local now = getTickCount()
+    if now - (ai.hornAt or 0) < 1300 then return end
+    ai.hornAt = now
+    local x, y, z = getElementPosition(ai.vehicle)
+    local snd = playSound3D(":rp_citizens/sounds/horn.wav", x, y, z)
+    if snd then
+        setSoundMaxDistance(snd, 70)
+        attachElements(snd, ai.vehicle)
+    end
+end
 
 -- Rayo desde el frente (angulo en grados, + = izquierda). wall = solo edificios/muros.
 local function ray(vehicle, m, angle, reach, wall)
@@ -123,13 +136,43 @@ local function routeTo(tx, ty, curb)
     return nil
 end
 
+local function targetZ(nearZ)
+    if ai.tz then return ai.tz end
+    local g = getGroundPosition(ai.tx, ai.ty, nearZ + 30)
+    return (g and g ~= 0) and g or nearZ
+end
+
+-- Ruta propia (fuera de la calle) desde donde esta la ambulancia hasta el paciente
+local function planOffroad()
+    local x, y, z = getElementPosition(ai.vehicle)
+    local wp = offroadPath(x, y, z - 0.9, ai.tx, ai.ty, targetZ(z), EMERGENCY.OFFROAD_STOP)
+    if not wp then return false end
+    if #wp == 0 then wp = { { x, y, z, 0, nil, true } } end
+    ai.wp, ai.i, ai.offroad = wp, 1, true
+    ai.lastProgress, ai.bestRemaining, ai.nextPlan = getTickCount(), math.huge, nil
+    return true
+end
+
 local function plan()
     local vehicle = ai.vehicle
     local x, y, z = getElementPosition(vehicle)
+    -- Ya fuera de la calle (o el paciente cerca y sin calle): sigue con su propia ruta
+    if ai.offroad and ai.mode ~= "leave" and planOffroad() then return true end
+    ai.offroad = false
     local wp = routeTo(ai.tx, ai.ty, CURB[ai.mode] or 0)
+    if wp and #wp > 0 and ai.mode ~= "leave" then
+        -- El paciente no esta junto a la calle: desde el punto de parada arma su propia ruta
+        local last = wp[#wp]
+        if getDistanceBetweenPoints2D(last[1], last[2], ai.tx, ai.ty) > EMERGENCY.OFFROAD_STOP + 3 then
+            local off = offroadPath(last[1], last[2], last[3], ai.tx, ai.ty, targetZ(last[3]), EMERGENCY.OFFROAD_STOP)
+            if off then for _, p in ipairs(off) do wp[#wp + 1] = p end end
+        end
+    end
     if not wp or #wp == 0 then
-        -- Sin ruta por la red vial: solo en el tramo final (cerca del destino) va en linea recta
-        if getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 45 then
+        -- Sin ruta por la red vial: ruta propia si esta a menos de 160 m
+        if ai.mode ~= "leave" and getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 160 and planOffroad() then
+            return true
+        elseif getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 45 then
             wp = straightLine(x, y, z, ai.tx, ai.ty)
         else
             outputDebugString("[rp_emergency] la ambulancia no encontro ruta por la red vial; reintentando", 2)
@@ -274,8 +317,10 @@ local function tick()
     end
     ai.i = i
 
-    -- Se salio de la ruta: recalcula (como mucho cada 3 s)
-    if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 22 and now - (ai.lastPlan or 0) > 3000 then
+    -- Se salio de la ruta: recalcula (como mucho cada 3 s). Fuera de la calle, con su propia ruta.
+    local offroadNow = wp[i][6] == true
+    if offroadNow then ai.offroad = true end
+    if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > (offroadNow and 12 or 22) and now - (ai.lastPlan or 0) > 3000 then
         ai.lastPlan = now
         plan()
         return
@@ -333,10 +378,11 @@ local function tick()
 
     -- Velocidad objetivo
     local target = EMERGENCY.CRUISE_SPEED
-    if upcoming > 70 then target = 18 elseif upcoming > 40 then target = 26 elseif upcoming > 20 then target = 36 end
+    if upcoming > 70 then target = 26 elseif upcoming > 40 then target = 36 elseif upcoming > 20 then target = 48 end
     if junctionDist and junctionDist < 25 then target = math.min(target, EMERGENCY.JUNCTION_SPEED) end
     if math.abs(diff) > 50 then target = math.min(target, 15) end
     if wallFront then target = math.min(target, 12) end
+    if offroadNow then target = math.min(target, EMERGENCY.OFFROAD_SPEED) end
     target = math.min(target, 6 + remaining * 0.8)        -- se acerca despacio al punto de parada
     if ai.mode == "leave" then target = math.min(target, 45) end
 
@@ -354,10 +400,16 @@ local function tick()
     if obstacle then
         local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedKmh(obstacle) or 0
         if gap and gap < 4 + speed * 0.12 then target = 0 else target = math.min(target, otherSpeed + 3) end
+        -- Va con sirena: adelanta a los lentos por el carril contrario o el arcen en vez de seguirlos
+        if isElement(obstacle) and getElementType(obstacle) == "vehicle" and otherSpeed < target - 12
+            and ai.mode ~= "leave" and now - (ai.overtakeAt or 0) > 2000 then
+            ai.overtakeAt = now
+            tryDetour(m)
+        end
         if target <= 1 and speed < 3 then
             ai.blockedSince = ai.blockedSince or now
             local waited = now - ai.blockedSince
-            horn(waited > 700 and (now % 1500) < 600)
+            horn(waited > 700)
             if waited > 2500 and tryDetour(m) then
                 ai.blockedSince = nil
             elseif waited > 5000 then
@@ -396,7 +448,7 @@ function stopAIDriver()
     if not ai then return end
     if isTimer(ai.timer) then killTimer(ai.timer) end
     if isElement(ai.ped) then
-        for _, c in ipairs({ "accelerate", "brake_reverse", "handbrake", "horn" }) do setPedControlState(ai.ped, c, false) end
+        for _, c in ipairs({ "accelerate", "brake_reverse", "handbrake" }) do setPedControlState(ai.ped, c, false) end
         setPedAnalogControlState(ai.ped, "vehicle_left", 0)
         setPedAnalogControlState(ai.ped, "vehicle_right", 0)
     end
@@ -412,7 +464,7 @@ local function leaveTarget(x, y)
     return x + math.cos(ang) * 400, y + math.sin(ang) * 400
 end
 
-function startAIDriver(callId, vehicle, ped, mode, tx, ty)
+function startAIDriver(callId, vehicle, ped, mode, tx, ty, tz)
     local timer = ai and ai.timer
     if ai and ai.vehicle ~= vehicle then stopAIDriver() timer = nil end
     ai = ai or {}
@@ -424,7 +476,7 @@ function startAIDriver(callId, vehicle, ped, mode, tx, ty)
     local x, y = getElementPosition(vehicle)
     if mode == "leave" then tx, ty = leaveTarget(x, y) end
     if not (tx and ty) then return end
-    ai.tx, ai.ty = tx, ty
+    ai.tx, ai.ty, ai.tz, ai.offroad = tx, ty, tonumber(tz), false
     plan()
 end
 

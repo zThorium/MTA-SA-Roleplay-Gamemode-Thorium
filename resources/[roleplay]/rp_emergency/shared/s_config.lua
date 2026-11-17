@@ -25,12 +25,14 @@ EMERGENCY = {
     SPAWN_REQUEST_TIMEOUT = 10,
     ARRIVE_MAX_DIST = 120,     -- m: el servidor acepta "llego" si la ambulancia esta a menos de esto del jugador
     ENROUTE_TIMEOUT = 240,     -- s: si no llega, se cancela la llamada (recuperacion)
-    SEARCH_RADIUS = 45,        -- m alrededor de la ambulancia para buscar abatidos
+    SEARCH_RADIUS = 60,        -- m alrededor de la ambulancia para buscar abatidos
     LOOK_TIME = 4,             -- s que miran alrededor si no hay abatidos antes de volver
     WALK_TIMEOUT = 15,         -- s: si no llego (atascado), el servidor lo coloca en el punto
     WALK_ARRIVE_DIST = 1.4,    -- m al paciente / destino para considerarlo llegado
-    CRUISE_SPEED = 62,         -- km/h
-    JUNCTION_SPEED = 30,       -- km/h al cruzar un cruce (con sirena no espera semaforos)
+    CRUISE_SPEED = 85,         -- km/h en recta (va con sirena)
+    JUNCTION_SPEED = 45,       -- km/h al cruzar un cruce (con sirena no espera semaforos)
+    OFFROAD_SPEED = 28,        -- km/h fuera de la calle (parques, plazas, estacionamientos)
+    OFFROAD_STOP = 7,          -- m del paciente donde se detiene cuando sale de la calle
     LEAVE_TIME = 18,           -- s alejandose antes de desaparecer
     ARRIVE_RADIUS = 12,        -- m al ultimo punto de la ruta para detenerse
 

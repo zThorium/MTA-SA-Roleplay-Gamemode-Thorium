@@ -77,9 +77,9 @@ addEventHandler("rp:emergency:spawnRequest", resourceRoot, function(callId)
     triggerServerEvent("rp:emergency:spawn", resourceRoot, callId, x, y, z, rot)
 end)
 
-addEventHandler("rp:emergency:drive", resourceRoot, function(callId, vehicle, ped, mode, tx, ty)
+addEventHandler("rp:emergency:drive", resourceRoot, function(callId, vehicle, ped, mode, tx, ty, tz)
     if not isElement(vehicle) or not isElement(ped) then return end
-    startAIDriver(callId, vehicle, ped, mode, tonumber(tx), tonumber(ty))
+    startAIDriver(callId, vehicle, ped, mode, tonumber(tx), tonumber(ty), tonumber(tz))
 end)
 
 -- Los paramedicos no mueren ni se les puede herir

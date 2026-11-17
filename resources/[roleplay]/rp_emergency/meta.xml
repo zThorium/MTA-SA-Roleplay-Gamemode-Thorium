@@ -10,6 +10,7 @@
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_emergency.lua" type="server" />
     <script src="client/c_graph.lua" type="client" cache="false" />
+    <script src="client/c_offroad.lua" type="client" cache="false" />
     <script src="client/c_driver.lua" type="client" cache="false" />
     <script src="client/c_bubbles.lua" type="client" cache="false" />
     <script src="client/c_emergency.lua" type="client" cache="false" />

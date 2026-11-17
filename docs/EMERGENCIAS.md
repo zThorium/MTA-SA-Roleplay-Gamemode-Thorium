@@ -30,6 +30,13 @@ pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de 
    asistencia de dirección, frena en curvas, cruza los cruces a `JUNCTION_SPEED`, bocina y desvío si algo la bloquea,
    marcha atrás si se atasca y **recalcula la ruta** si se sale de ella. Se detiene pegada a la acera. Solo se recoloca
    como último recurso, si ningún jugador la ve ni está a menos de 70 m.
+   - **Conducción de emergencia**: sirena sonando todo el trayecto (el control `horn` del NPC la apagaba: ya no se usa,
+     la bocina es un sonido propio), `CRUISE_SPEED` 85 km/h, adelanta a los lentos por el carril contrario o el arcén y
+     puede ir a contramano por una calle de un sentido si le ahorra mucho camino (`WRONG_WAY_FACTOR` en `c_graph.lua`).
+   - **Ruta propia fuera de la calle** (`client/c_offroad.lua`): si el paciente no está junto a una calle (parque,
+     plaza, estacionamiento), desde el punto de parada arma su propio camino (línea recta si cabe; si no, A* en una
+     rejilla de 2,5 m que comprueba suelo, escalones, muros y el ancho de la ambulancia) y se detiene a
+     `OFFROAD_STOP` m del paciente, a `OFFROAD_SPEED`. Si no hay calle cerca, sale directamente con su ruta propia.
 4. **Llegada.** Radio a la central, se abren las puertas, los paramédicos bajan con la animación de salir (uno por la
    puerta del copiloto, otro por atrás con el equipo) y buscan abatidos en `SEARCH_RADIUS`:
    - **Abatidos**: corren hacia el paciente y hacen el guion de rol (~20 s): valoración, pulso, RCP contando
