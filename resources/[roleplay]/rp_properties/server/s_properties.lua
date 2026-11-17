@@ -260,6 +260,7 @@ local function endPreview(player, silent)
 end
 
 addEventHandler("rp:prop:enter", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local n = near[player]
     if not n or n.inside or not props[n.id] then return end
@@ -272,6 +273,7 @@ addEventHandler("rp:prop:enter", resourceRoot, function()
 end)
 
 addEventHandler("rp:prop:exit", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local n = near[player]
     if not n or not n.inside then return end
@@ -280,6 +282,7 @@ addEventHandler("rp:prop:exit", resourceRoot, function()
 end)
 
 addEventHandler("rp:prop:preview", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local n = near[player]
     if not n or n.inside or not props[n.id] or props[n.id].row.owner_id then return end
@@ -295,6 +298,7 @@ end)
 -- Comprar
 ----------------------------------------------------------------
 addEventHandler("rp:prop:buy", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local n = near[player]
     local characterId = characterOf(player)

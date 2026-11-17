@@ -65,6 +65,8 @@ end)
 
 addEventHandler("rp:emergency:ui:close", root, close)
 addEventHandler("onClientPlayerWasted", localPlayer, close)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)   -- abatido (rp_injury)
 addEventHandler("onClientResourceStop", resourceRoot, close)
 
 ----------------------------------------------------------------

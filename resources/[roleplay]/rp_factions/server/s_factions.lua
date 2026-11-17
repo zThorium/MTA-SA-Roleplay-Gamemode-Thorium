@@ -359,6 +359,7 @@ local function refreshFaction(factionId)
 end
 
 addEventHandler("rp:fac:open", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not characterOf(player) then return end
     if not getFaction(player) then return notify(player, "No perteneces a ninguna faccion.", "warning") end
@@ -599,6 +600,7 @@ end
 actions.leave = function(player) leave(player) end
 
 addEventHandler("rp:fac:action", resourceRoot, function(action, d)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local now = getTickCount()
     if cooldown[player] and now - cooldown[player] < 350 then return end

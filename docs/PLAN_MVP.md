@@ -39,7 +39,7 @@ mindmap
       Teléfono llamadas y SMS ⬜
     Facciones de estado
       Policía ⬜
-      Médicos 🚧 (ambulancia IA 911)
+      Médicos 🚧 (abatido en rp_injury, ambulancia IA 911 en rp_emergency)
       Cárcel ⬜
     Trabajos
       Camionero ⬜
@@ -90,7 +90,7 @@ Ordenado por prioridad. La **fase 1** es lo mínimo para abrir el servidor a jug
 |---|---|---|---|
 | 1 | `rp_chat` | Chat por proximidad. `/me`, `/do`, `/b` (OOC local), `/s` (gritar), `/w` (susurrar), `/o` (OOC global, admin lo puede apagar). Colores por distancia. | `rp_characters` |
 | 2 | `rp_police` | Facción de estado sobre `rp_factions`: esposar, cachear, arrestar, multas, cárcel con tiempo, sirena y `/buscados`. Permisos del rol controlan qué puede hacer cada agente. | `rp_factions`, `rp_inventory` |
-| 3 | `rp_medic` | (`rp_emergency` ya aporta el 911 y la ambulancia IA; falta el estado abatido y los médicos jugadores.) Al morir el personaje queda herido unos minutos en lugar de reaparecer al instante. Los médicos lo reaniman; si nadie llega, va al hospital y paga la factura. | `rp_factions`, `rp_bank` |
+| 3 | `rp_medic` | 🚧 Ya hecho: estado **abatido** en `rp_injury` (2 minutos, se reanuda al reconectar, hospital y factura) y el 911 con ambulancia IA en `rp_emergency`, cuyos paramédicos reaniman a los abatidos. Falta la facción de médicos jugadores (reaniman con el export `revivePlayer` de `rp_injury`). | `rp_factions`, `rp_bank`, `rp_injury` |
 | 4 | `rp_licenses` | DNI del personaje, licencia de conducir con examen en autoescuela y licencia de armas. Se muestran con `/mostrar`. Ítems en el inventario. | `rp_inventory` |
 | 5 | `rp_jobs` | Dos o tres trabajos civiles con rutas (camionero, basurero, taxista). Pago por tarea. Es la vía de ingreso de quien no tiene facción. | `rp_vehicles`, `rp_bank` |
 | 6 | `rp_fuel` | Combustible por vehículo, gasolineras con pago. Sin gasolina el motor se apaga. | `rp_vehicles` |

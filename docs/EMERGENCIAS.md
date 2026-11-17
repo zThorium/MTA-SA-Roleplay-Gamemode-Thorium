@@ -17,7 +17,7 @@ para que `rp_police` / facciones lo implementen.
 
 ## Contrato con el sistema de abatidos
 
-El estado "abatido" **no existe aún en `main`**. `rp_emergency` solo asume esto (editable en `shared/s_config.lua`):
+El estado "abatido" lo implementa `rp_injury`, que cumple este contrato (claves editables en `shared/s_config.lua`):
 
 | Qué | Cómo |
 |---|---|
@@ -26,7 +26,9 @@ El estado "abatido" **no existe aún en `main`**. `rp_emergency` solo asume esto
 | Reanimar | `rp_emergency` dispara `triggerEvent("rp:emergency:revive", player, motivo)`; el sistema de abatidos debe escucharlo y limpiar su estado. Si no hay nadie escuchando, hace el mínimo él mismo (borra las claves, vida, controles, `spawnPlayer` si estaba muerto) |
 | Entrega en hospital | evento `rp:emergency:onPatientDelivered` (`source` = paciente, nombre del hospital) |
 
-Nota: hoy `rp_characters` respawnea en el hospital a los muertos a los 5 s, antes de que llegue una ambulancia; el traslado solo aplica cuando el sistema de abatidos retiene al personaje.
+Con `rp_injury`, un jugador abatido tiene 2 minutos (`INJURY.DOWNED_TIME`) para que lleguen los paramédicos; `rp_injury`
+escucha `rp:emergency:revive` y cancela su temporizador. Si se desangra, a los 5 s aparece en el hospital y paga la tarifa,
+así que el traslado de muertos casi no se usa. Un jugador abatido no puede usar `/911` (tiene que llamar otro).
 
 ## Pendiente / a verificar en juego
 

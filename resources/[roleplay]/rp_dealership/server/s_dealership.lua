@@ -135,6 +135,7 @@ local function guardFall(vehicle, x, y, z)
 end
 
 addEventHandler("rp:dealer:open", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local i = nearSpot[player]
     if not i or not display[i] then return end
@@ -150,6 +151,7 @@ addEventHandler("rp:dealer:open", resourceRoot, function()
 end)
 
 addEventHandler("rp:dealer:buy", resourceRoot, function(spot, colorIndex)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     spot, colorIndex = tonumber(spot), tonumber(colorIndex) or 1
     local characterId = characterOf(player)

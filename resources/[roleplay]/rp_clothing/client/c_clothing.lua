@@ -134,7 +134,7 @@ end)
 ----------------------------------------------------------------
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if isElement(browserGui) or not canOpen() or isPedInVehicle(localPlayer) then return end
+        if isElement(browserGui) or not canOpen() or isPedInVehicle(localPlayer) or getElementData(localPlayer, "rp:downed") then return end
         if near.exit and insideStore then
             triggerServerEvent("rp:cloth:exit", resourceRoot)
         elseif near.door then
@@ -165,6 +165,8 @@ addEventHandler("onClientRender", root, function()
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, closeClothingUI)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, closeClothingUI)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     if isElement(browserGui) then destroyElement(browserGui); showCursor(false); guiSetInputEnabled(false) end
 end)

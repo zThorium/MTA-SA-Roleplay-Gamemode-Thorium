@@ -169,6 +169,7 @@ local function catalogFor(shopId)
 end
 
 addEventHandler("rp:shop:open", resourceRoot, function(shopId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     shopId = tonumber(shopId)
     if not shopId or not exports.rp_characters:getPlayerCharacterId(player) then return end
@@ -177,6 +178,7 @@ addEventHandler("rp:shop:open", resourceRoot, function(shopId)
 end)
 
 addEventHandler("rp:shop:buy", resourceRoot, function(shopId, itemId, quantity)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     shopId, quantity = tonumber(shopId), tonumber(quantity)
     local now = getTickCount()

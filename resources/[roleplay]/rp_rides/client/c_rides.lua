@@ -201,12 +201,17 @@ end, 500, 0)
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("m", "down", function()
         if not visible or isChatBoxInputActive() or isConsoleActive() then return end
+        if not interactive and getElementData(localPlayer, "rp:downed") then return end
         if not interactive and isCursorShowing() then return end   -- otra interfaz tiene el cursor
         setInteractive(not interactive)
     end)
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, function()
+    if interactive then setInteractive(false) end
+end)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, function()
     if interactive then setInteractive(false) end
 end)
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)

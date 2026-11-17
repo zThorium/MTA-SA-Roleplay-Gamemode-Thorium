@@ -149,3 +149,7 @@ addEventHandler("onClientResourceStop", resourceRoot, function() stop(false) end
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
     if key == "rp:characterId" and not new then stop(false) end
 end)
+
+-- Abatido (rp_injury): se cierra la interfaz
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, function() stop(false) end)

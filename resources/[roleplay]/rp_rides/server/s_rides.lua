@@ -313,12 +313,14 @@ local function hasPhone(player)
 end
 
 addEventHandler("rp:rides:open", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not characterOf(player) then return end
     loadDriver(player, function() sendState(player) end)
 end)
 
 addEventHandler("rp:rides:request", resourceRoot, function(dx, dy)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local characterId = characterOf(player)
     if not characterId or rides[player] or throttled(player, 1500) then return end
@@ -357,6 +359,7 @@ addEventHandler("rp:rides:cancel", resourceRoot, function()
 end)
 
 addEventHandler("rp:rides:setDest", resourceRoot, function(dx, dy)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local ride = rides[player]
     dx, dy = tonumber(dx), tonumber(dy)
@@ -377,6 +380,7 @@ addEventHandler("rp:rides:setDest", resourceRoot, function(dx, dy)
 end)
 
 addEventHandler("rp:rides:rate", resourceRoot, function(stars, tip)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local p = pendingRate[player]
     stars, tip = tonumber(stars), math.floor(tonumber(tip) or 0)
@@ -419,6 +423,7 @@ end)
 -- Conductor jugador
 ----------------------------------------------------------------
 addEventHandler("rp:rides:duty", resourceRoot, function(state)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not characterOf(player) or throttled(player) then return end
     if state == true and not hasPhone(player) then return notify(player, "Necesitas un telefono.", "error") end
@@ -442,6 +447,7 @@ addEventHandler("rp:rides:duty", resourceRoot, function(state)
 end)
 
 addEventHandler("rp:rides:accept", resourceRoot, function(rideId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local d = drivers[player]
     local ride = findRideById(tonumber(rideId))
@@ -678,13 +684,16 @@ end
 
 addEventHandler("onPlayerQuit", root, function() forget(source) end)
 addEventHandler("rp:onCharacterLogout", root, function() forget(source) end)
-addEventHandler("onPlayerWasted", root, function()
+local function cancelOnDeath()
     local ride = rides[source]
     if ride and ride.state ~= "riding" then
         destroyAI(ride, true)
         endRide(ride, "Tu viaje se cancelo.")
     end
-end)
+end
+addEventHandler("onPlayerWasted", root, cancelOnDeath)
+addEvent("rp:onPlayerDowned", false)
+addEventHandler("rp:onPlayerDowned", root, cancelOnDeath)   -- abatido (rp_injury)
 
 addEventHandler("onResourceStop", resourceRoot, function()
     for _, ride in pairs(rides) do destroyAI(ride, false) end

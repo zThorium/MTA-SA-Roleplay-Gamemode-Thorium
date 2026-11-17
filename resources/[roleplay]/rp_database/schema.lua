@@ -412,4 +412,9 @@ SCHEMA = {
     ALTER TABLE characters
         ADD COLUMN IF NOT EXISTS payday_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER energy
     ]],
+    -- rp_injury: ms que le quedan abatido (0 = no esta abatido). Se retoma al volver a entrar
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS downed_ms INT UNSIGNED NOT NULL DEFAULT 0 AFTER payday_minutes
+    ]],
 }

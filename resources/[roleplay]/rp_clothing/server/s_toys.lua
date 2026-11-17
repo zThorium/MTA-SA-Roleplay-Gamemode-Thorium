@@ -209,10 +209,12 @@ local function ownedToy(player, toyId)
 end
 
 addEventHandler("rp:toys:open", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     if characterOf(client) then sendWardrobe(client) end
 end)
 
 addEventHandler("rp:toys:wear", resourceRoot, function(toyId, state, view)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local row = ownedToy(player, toyId)
     if not row then return end
@@ -227,6 +229,7 @@ addEventHandler("rp:toys:wear", resourceRoot, function(toyId, state, view)
 end)
 
 addEventHandler("rp:toys:delete", resourceRoot, function(toyId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local row = ownedToy(player, toyId)
     if not row then return end
@@ -238,6 +241,7 @@ addEventHandler("rp:toys:delete", resourceRoot, function(toyId)
 end)
 
 addEventHandler("rp:toys:edit", resourceRoot, function(toyId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local row = ownedToy(player, toyId)
     if not row then return end
@@ -253,6 +257,7 @@ addEventHandler("rp:toys:edit", resourceRoot, function(toyId)
 end)
 
 addEventHandler("rp:toys:save", resourceRoot, function(toyId, v)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local row = ownedToy(player, toyId)
     if not row or type(v) ~= "table" then return end

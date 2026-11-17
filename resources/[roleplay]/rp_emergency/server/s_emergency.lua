@@ -610,7 +610,7 @@ for _, s in ipairs(EMERGENCY.SERVICES) do VALID_SERVICE[s.id] = s end
 
 local function openMenu(player)
     if not characterOf(player) then return end
-    if isPedDead(player) then return end
+    if isPedDead(player) or getElementData(player, "rp:downed") then return end   -- abatido (rp_injury)
     triggerClientEvent(player, "rp:emergency:show", resourceRoot, EMERGENCY.SERVICES, byCaller[player] ~= nil)
 end
 
@@ -634,7 +634,7 @@ end
 addEventHandler("rp:emergency:call", resourceRoot, function(service)
     local player = client
     if limited(player, 800) or type(service) ~= "string" then return end
-    if not characterOf(player) or isPedDead(player) then return end
+    if not characterOf(player) or isPedDead(player) or getElementData(player, "rp:downed") then return end
     local s = VALID_SERVICE[service]
     if not s then return end
     procedures[service](player)

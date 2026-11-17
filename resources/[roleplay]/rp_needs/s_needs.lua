@@ -90,6 +90,22 @@ local function unload(player)
 end
 
 addEventHandler("rp:onCharacterSpawn", root, function(characterId) load(source, characterId) end)
+
+-- Abatido (rp_injury): se despierta de golpe; al terminar se reaplica el cansancio
+addEvent("rp:onPlayerDowned", false)
+addEvent("rp:onPlayerDownedEnd", false)
+addEventHandler("rp:onPlayerDowned", root, function()
+    if isTimer(sleeping[source]) then
+        killTimer(sleeping[source])
+        sleeping[source] = nil
+        setElementFrozen(source, false)
+        fadeCamera(source, true, 0.5)
+    end
+end)
+addEventHandler("rp:onPlayerDownedEnd", root, function()
+    local n = needs[source]
+    if n then n.tired = nil; applyEffects(source) end
+end)
 addEventHandler("rp:onCharacterLogout", root, function() unload(source) end)
 addEventHandler("onPlayerQuit", root, function() if needs[source] then unload(source) end end)
 

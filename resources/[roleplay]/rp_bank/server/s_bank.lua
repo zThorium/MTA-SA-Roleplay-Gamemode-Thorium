@@ -223,12 +223,14 @@ end
 -- Eventos de la interfaz
 ----------------------------------------------------------------
 addEventHandler("rp:bank:open", root, function(view)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     view = view == "phone" and "phone" or "atm"
     if view == "atm" and not isNearATM(client) then return end
     sendBankData(client, view)
 end)
 
 addEventHandler("rp:bank:deposit", root, function(amount, view)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     view = view == "phone" and "phone" or "atm"
     if view == "phone" and not exports.rp_inventory:hasItem(client, "phone", 1) then return end
     if view == "atm" and not isNearATM(client) then return end
@@ -236,10 +238,12 @@ addEventHandler("rp:bank:deposit", root, function(amount, view)
 end)
 
 addEventHandler("rp:bank:withdraw", root, function(amount)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     withdraw(client, tonumber(amount))
 end)
 
 addEventHandler("rp:bank:transfer", root, function(targetName, amount, view)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     view = view == "phone" and "phone" or "atm"
     if view == "phone" and not exports.rp_inventory:hasItem(client, "phone", 1) then return end
     if view == "atm" and not isNearATM(client) then return end
