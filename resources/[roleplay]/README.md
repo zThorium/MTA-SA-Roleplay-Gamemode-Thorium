@@ -1,0 +1,45 @@
+# Gamemode Roleplay (MTA:SA 1.6)
+
+## Recursos (en orden de arranque, ver `mtaserver.conf`)
+| Recurso | Qué hace |
+|---|---|
+| `rp_database` | Conexión MySQL única (`dbConnect`) y esquema (`schema.lua`, se aplica solo al iniciar). Exports `getConnection()`, `isReady()`. Credenciales en `config.lua` (solo servidor). |
+| `rp_notify` | Notificaciones reutilizables con sonido: `notify`, `popup` y `bubble` (exports de cliente y servidor). `/silenciarnotis`. |
+| `rp_ids` | ID libre más bajo por jugador (elementData `id`). Exports `getPlayerId`, `getPlayerFromId`, `findPlayer`. Comando `/id`. |
+| `rp_login` | Login/registro CEF, contraseñas bcrypt. Evento de servidor `rp:onAccountLogin`. Exports `isPlayerLoggedIn`, `getPlayerAccountId`, `getPlayerAccountName`, `getPlayerAdminLevel`. |
+| `bone_attach` | Bone Attach 1.2.0 de CrystalMV (solo fuentes .lua). |
+| `rp_heads` | 78 cabezas personalizadas (modelos de Countryside-RP, de Aleks) en IDs nuevos con `engineRequestModel`; oculta la sangre del cuello. `/ajustecabeza` para calibrar. |
+| `rp_characters` | Selección y creación de personajes (3 slots, CEF con vista previa). Hombres = cuerpo de CJ + cabeza + ropa; mujeres = skin. Eventos `rp:onCharacterSpawn` / `rp:onCharacterLogout`. Exports `getPlayerCharacterId`, `getPlayerCharacterName`, `saveCharacter`. |
+| `rp_needs` | Hambre, sed y energía por personaje. `/dormir` solo en interiores. Exports `addNeed`, `getNeed`, `getNeeds`. |
+| `rp_inventory` | Inventario por personaje (`character_items`), tecla I. Catálogo en `shared/s_items.lua`. Exports `giveItem`, `takeItem`, `hasItem`, `canCarry`... |
+| `rp_shops` | Tiendas con NPC (`shops`/`shop_items`), E para comprar. Admin: `/crearshop <nombre>`, `/borrarshop <id>`. |
+| `rp_bank` | Cuenta bancaria + cajeros (retiro solo en cajero). Admin: `/crearatm`, `/borraratm <id>`, `/dardinero <id> <cantidad>`. |
+| `rp_phone` | Teléfono (tecla P o usar el item): Notas, Contactos, Banco, Fotogram (fotos del juego) y Ajustes. |
+| `rp_properties` | 138 casas de Los Santos generadas de los datos del juego (`server/s_seed_ls.lua`: ENEX con interior real + edificios residenciales de los IPL). Pickup verde = en venta (modal Comprar / Previsualizar 1 min), flecha blanca = con dueño. `/cerrarcasa`, `/vendercasa`. Admin: `/crearcasa <tipo> <precio> <nombre>`, `/borrarcasa <id>`, `/tiposcasa`. |
+| `rp_vehicles` | Vehículos con dueño (`vehicles`). Tecla L o `/bloquear`. |
+| `rp_dealership` | Concesionario Coutt and Schutz: autos al azar que cambian cada 60 min, compra con el banco, entrega segura. Admin: `/dealer puesto <n>`, `/dealer entrega`, `/dealer rotar`. |
+| `rp_nametags` | Nombre Apellido (ID) sobre la cabeza con barras de vida y chaleco. |
+| `rp_scoreboard` | Mantener Tab: servidor, jugadores activos, ID, nombre y ping. |
+| `rp_hud` | HUD propio: minimapa giratorio (radar extraído de gta3.img, `tools/RadarExtract.cs`), barras, hora, dinero. `/hud`. |
+| `rp_citizens` | Peatones y tráfico 100% en el cliente sobre la red de caminos de GTA SA (`c_nodes_ls.lua`). Máquina de estados: pasear, esperar, huir, pelear / conducir, frenar, bocina, esquivar, huir. `/poblacion`, `/poblacioninfo`. Editor de rutas para admins: `/nodos` (cambios en `path_nodes` / `path_links`, aplicados en vivo). |
+| `rp_admin` | Herramientas de administración: `/freecam`. |
+
+## Créditos
+- Modelos y ajustes de cabezas: Aleks (https://forum.mtasa.com/profile/40470-mraleks/), Countryside-RP, publicado por Neus. Su licencia prohíbe vender estos recursos.
+- bone_attach: CrystalMV.
+- Mapa del radar, caminos y casas: generados a partir de los archivos de la instalación local de GTA SA.
+
+## Base de datos
+- MariaDB de XAMPP (`C:\Users\fabia\Documents\Programas`), puerto 3306.
+- Base `mtarp`, usuario dedicado `mtarp` (sin permisos fuera de esa base).
+- Tablas: `accounts`, `login_log`, `characters`, `character_items`, `shops`, `shop_items`, `bank_transactions`, `atms`, `phone_notes`, `phone_contacts`, `social_posts`, `social_likes`, `properties`, `vehicles`.
+
+## Arrancar
+1. Abre el XAMPP Control Panel y pulsa **Start** en MySQL.
+2. Ejecuta `MTA Server.exe`.
+
+## Seguridad aplicada
+- Toda validación se repite en el servidor; el cliente solo reenvía.
+- Consultas parametrizadas (`?`), nunca SQL concatenado; cobros con `UPDATE ... WHERE saldo >= ?` atómicos.
+- Máx. 5 intentos fallidos → kick; 5 min para iniciar sesión; máx. 3 cuentas por serial; una sesión por cuenta.
+- Chat bloqueado sin personaje; registro de intentos en `login_log`.

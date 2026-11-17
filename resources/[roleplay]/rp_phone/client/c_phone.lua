@@ -46,7 +46,7 @@ end
 
 local function open()
     if isOpen() then return end
-    exports.rp_inventory:closeInventory()
+    pcall(function() exports.rp_inventory:closeInventory() end)   -- no falla si el inventario no esta cargado
     browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
     browser = guiGetBrowser(browserGui)
     addEventHandler("onClientBrowserCreated", browser, function() loadBrowserURL(source, "http://mta/local/html/index.html") end)

@@ -209,6 +209,29 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS irot   FLOAT NULL AFTER iz,
         ADD COLUMN IF NOT EXISTS source VARCHAR(8) NOT NULL DEFAULT 'admin' AFTER irot
     ]],
+    -- Editor de rutas de ciudadanos: cambios sobre la red de caminos original de GTA SA
+    -- type: 'p' peatones, 'v' vehiculos. idx: indice del nodo en c_nodes_ls.lua (o nuevo)
+    [[
+    CREATE TABLE IF NOT EXISTS path_nodes (
+        type       CHAR(1)      NOT NULL,
+        idx        INT UNSIGNED NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        deleted    TINYINT(1)   NOT NULL DEFAULT 0,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (type, idx)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS path_links (
+        type    CHAR(1)      NOT NULL,
+        a       INT UNSIGNED NOT NULL,
+        b       INT UNSIGNED NOT NULL,
+        removed TINYINT(1)   NOT NULL DEFAULT 0,
+        PRIMARY KEY (type, a, b)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- Hito 5: vehiculos de los personajes
     [[
     CREATE TABLE IF NOT EXISTS vehicles (
