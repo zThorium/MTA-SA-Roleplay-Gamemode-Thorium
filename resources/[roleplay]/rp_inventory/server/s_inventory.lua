@@ -39,7 +39,7 @@ local function serialize(player)
     local list = {}
     if inv then
         for itemId, amount in pairs(inv.items) do
-            local def = ITEMS[itemId]
+            local def = getItemDefinition(itemId)
             if def then
                 list[#list + 1] = {
                     id = itemId, name = def.name, icon = def.icon, description = def.description,
@@ -67,7 +67,7 @@ local function loadInventory(player, characterId)
         local inv = inventories[player]
         if not isElement(player) or not inv or inv.characterId ~= characterId then return end
         for _, row in ipairs(rows) do
-            if ITEMS[row.item_id] and tonumber(row.amount) > 0 then
+            if getItemDefinition(row.item_id) and tonumber(row.amount) > 0 then
                 inv.items[row.item_id] = tonumber(row.amount)
             end
         end
@@ -123,14 +123,14 @@ function getInventoryWeight(player)
     if not inv then return 0 end
     local total = 0
     for itemId, amount in pairs(inv.items) do
-        total = total + (ITEMS[itemId] and ITEMS[itemId].weight or 0) * amount
+        total = total + (getItemDefinition(itemId) and getItemDefinition(itemId).weight or 0) * amount
     end
     return math.floor(total * 100 + 0.5) / 100
 end
 
 function canCarry(player, itemId, amount)
     amount = tonumber(amount) or 1
-    local inv, def = inventories[player], ITEMS[itemId]
+    local inv, def = inventories[player], getItemDefinition(itemId)
     if not inv or inv.loading then return false, "Tu inventario no esta disponible." end
     if not def then return false, "Item desconocido." end
     if not validAmount(amount) then return false, "Cantidad no valida." end
@@ -194,7 +194,7 @@ end)
 addEventHandler("rp:inv:use", resourceRoot, function(itemId)
     local player = client
     if throttled(player) or type(itemId) ~= "string" then return end
-    local def = ITEMS[itemId]
+    local def = getItemDefinition(itemId)
     if not def or not def.use then return notify(player, "Ese objeto no se puede usar.", "warning") end
     if not hasItem(player, itemId, 1) then return notify(player, "No tienes ese objeto.", "error") end
     if isPedDead(player) then return end
@@ -237,7 +237,7 @@ addEventHandler("rp:inv:drop", resourceRoot, function(itemId, amount)
     local player = client
     if throttled(player) or type(itemId) ~= "string" then return end
     amount = tonumber(amount) or 1
-    local def = ITEMS[itemId]
+    local def = getItemDefinition(itemId)
     if not def then return end
     local ok, reason = takeItem(player, itemId, amount)
     if ok then
