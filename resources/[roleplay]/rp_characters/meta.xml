@@ -22,4 +22,8 @@
     <export function="getPlayerCharacterId" type="server" />
     <export function="getPlayerCharacterName" type="server" />
     <export function="saveCharacter" type="server" />
+    <export function="getCharacterLook" type="server" />
+    <export function="setCharacterLook" type="server" />
+    <export function="restoreCharacterLook" type="server" />
+    <export function="getAllowedSkins" type="server" />
 </meta>

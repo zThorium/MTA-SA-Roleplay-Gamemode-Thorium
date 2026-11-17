@@ -13,6 +13,7 @@
 | `rp_needs` | Hambre, sed y energía por personaje. `/dormir` solo en interiores. Exports `addNeed`, `getNeed`, `getNeeds`. |
 | `rp_inventory` | Inventario por personaje (`character_items`), tecla I. Catálogo en `shared/s_items.lua`. Exports `giveItem`, `takeItem`, `hasItem`, `canCarry`... |
 | `rp_shops` | Tiendas con NPC (`shops`/`shop_items`), E para comprar. Admin: `/crearshop <nombre>`, `/borrarshop <id>`. |
+| `rp_clothing` | Tiendas de ropa con interior propio (Binco, SubUrban, ProLaps, ZIP, Victim, Didier Sachs). E en la puerta para entrar; dentro, E abre el probador: ropa de CJ (o conjuntos/skins) que se prueba en vivo y solo se guarda al comprar. Accesorios (toys) pegados a un hueso con `bone_attach`, con editor de hueso, posicion, rotacion y escala por eje (`/accesorios`). Admin: `/crearropa <tipo> <nombre>`, `/ropapunto <id> entrada\|interior`, `/borrarropa <id>`, `/tiendasropa`. |
 | `rp_bank` | Cuenta bancaria + cajeros (retiro solo en cajero). Admin: `/crearatm`, `/borraratm <id>`, `/dardinero <id> <cantidad>`. |
 | `rp_phone` | Teléfono (tecla P o usar el item): Notas, Contactos, Banco, Fotogram (fotos del juego) y Ajustes. |
 | `rp_properties` | 138 casas de Los Santos generadas de los datos del juego (`server/s_seed_ls.lua`: ENEX con interior real + edificios residenciales de los IPL). Pickup verde = en venta (modal Comprar / Previsualizar 1 min), flecha blanca = con dueño. `/cerrarcasa`, `/vendercasa`. Admin: `/crearcasa <tipo> <precio> <nombre>`, `/borrarcasa <id>`, `/tiposcasa`. |

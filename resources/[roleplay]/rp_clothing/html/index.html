@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Tienda de ropa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window">
+        <header>
+            <div>
+                <h1 id="title">Tienda de ropa</h1>
+                <p class="hint" id="subtitle"><kbd>Esc</kbd> para salir. Lo que no compres se devuelve al cerrar.</p>
+            </div>
+            <div class="money" id="money-box">
+                <span class="label">Tu efectivo</span>
+                <strong id="money">$0</strong>
+            </div>
+            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+        </header>
+        <nav class="tabs" id="tabs"></nav>
+        <section class="panel" id="panel"></section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
