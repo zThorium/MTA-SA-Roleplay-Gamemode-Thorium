@@ -20,6 +20,7 @@ local mapTexture, renderTarget
 
 -- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
 local BLIP_ICON_IDS = { 27, 41, 45, 52, 55 }
+local zoomUnits = 300
 local BLIP_MAX_DISTANCE = 900   -- metros: mas lejos no se muestran en el minimapa (si en F11)
 local blipIcons = {}
 for _, id in ipairs(BLIP_ICON_IDS) do
@@ -88,7 +89,10 @@ local function drawMinimap(x, y)
         local vx, vy, vz = getElementVelocity(vehicle)
         speed = math.sqrt(vx * vx + vy * vy + vz * vz) * 180
     end
-    local unitsAcross = 300 + math.min(speed, 160) * 2.5
+    -- El zoom cambia suave: si salta, los iconos parecen moverse solos
+    local target = 300 + math.min(speed, 160) * 2
+    zoomUnits = zoomUnits + (target - zoomUnits) * 0.03
+    local unitsAcross = zoomUnits
     local unitPx = MS / unitsAcross
 
     local interior = getElementInterior(localPlayer) ~= 0
@@ -116,18 +120,25 @@ local function drawMinimap(x, y)
                 if always or worldDist <= math.min(getBlipVisibleDistance(blip) or 99999, BLIP_MAX_DISTANCE) then
                     local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
                     dx, dy = rotate(dx, dy, -heading)
-                    local half = MS / 2 - 10 * s
-                    local dist = math.sqrt(dx * dx + dy * dy)
-                    if dist > half then dx, dy = dx / dist * half, dy / dist * half end
+                    local half = MS / 2 - 14 * s
+                    local outside = math.abs(dx) > half or math.abs(dy) > half
+                    -- Los lugares solo se dibujan si caen dentro del minimapa (no se
+                    -- arrastran por el borde); el destino de navegacion si se fija al borde.
+                    if outside and always then
+                        local k = half / math.max(math.abs(dx), math.abs(dy))
+                        dx, dy = dx * k, dy * k
+                    end
+                    if not outside or always then
                     local icon = blipIcons[iconId]
                     if icon then
-                        local is = 18 * s
+                        local is = 26 * s
                         dxDrawImage(MS / 2 + dx - is / 2, MS / 2 + dy - is / 2, is, is, icon)
                     else
                         local r, g, b = getBlipColor(blip)
-                        local bs = 9 * s
+                        local bs = 11 * s
                         dxDrawRectangle(MS / 2 + dx - bs / 2 - 1, MS / 2 + dy - bs / 2 - 1, bs + 2, bs + 2, tocolor(0, 0, 0, 200))
                         dxDrawRectangle(MS / 2 + dx - bs / 2, MS / 2 + dy - bs / 2, bs, bs, tocolor(r, g, b, 255))
+                    end
                     end
                 end
             end

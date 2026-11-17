@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Taller</title>
+    <link rel="stylesheet" href="tuning.css">
+</head>
+<body>
+    <aside id="panel" class="panel hidden">
+        <header>
+            <div class="shop" id="shop">Taller</div>
+            <div class="car" id="car"></div>
+        </header>
+        <div class="crumbs"><button type="button" id="back" class="hidden">&larr; Volver</button><span id="crumb">Categorias</span></div>
+        <div id="list" class="list"></div>
+        <footer>
+            <div class="row"><span class="muted">Efectivo</span><span id="money">$0</span></div>
+            <div class="row total"><span>Total</span><span id="total">$0</span></div>
+            <div class="buttons">
+                <button type="button" class="btn" id="exit">Salir</button>
+                <button type="button" class="btn primary" id="buy" disabled>Pagar</button>
+            </div>
+        </footer>
+    </aside>
+    <script src="tuning.js"></script>
+</body>
+</html>

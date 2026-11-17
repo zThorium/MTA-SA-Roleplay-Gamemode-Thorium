@@ -139,6 +139,17 @@ local function close(player)
     if isElement(v) then updateFrozen(v) end
 end
 
+-- Datos del panel (al entrar y tras cada compra, para seguir tuneando)
+function sendTuning(player, v, shop)
+    local data = getVehicleData(v)
+    triggerClientEvent(player, "rp:tune:show", resourceRoot, v, {
+        shop = shop.name, name = getVehicleNameFromModel(data.model), plate = data.plate,
+        slots = catalog(v), state = captureTuning(v), paintjobs = PAINTJOB_MODELS[data.model] or 0,
+        prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
+        money = getPlayerMoney(player),
+    })
+end
+
 addEventHandler("rp:tune:open", resourceRoot, function()
     local player = client
     local v, data = ownedDriverVehicle(player)
@@ -148,13 +159,7 @@ addEventHandler("rp:tune:open", resourceRoot, function()
     if vehicleSpeedKmh(v) > 5 then return notify(player, "Detente para entrar al taller.", "warning") end
     tuning[player] = v
     setElementFrozen(v, true)
-    local t = captureTuning(v)
-    triggerClientEvent(player, "rp:tune:show", resourceRoot, v, {
-        shop = shop.name, name = getVehicleNameFromModel(data.model), plate = data.plate,
-        slots = catalog(v), state = t, paintjobs = PAINTJOB_MODELS[data.model] or 0,
-        prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
-        money = getPlayerMoney(player),
-    })
+    sendTuning(player, v, shop)
 end)
 
 addEventHandler("rp:tune:close", resourceRoot, function() close(client) end)
@@ -251,8 +256,8 @@ addEventHandler("rp:tune:buy", resourceRoot, function(cart)
     exports.rp_characters:saveCharacter(player)
 
     notify(player, ("Tuning aplicado por $%d."):format(total), "success")
-    triggerClientEvent(player, "rp:tune:done", resourceRoot, true)
-    close(player)
+    -- Sigue en el taller con el estado nuevo
+    sendTuning(player, v, shopOf(v) or { name = "Taller" })
 end)
 
 addEventHandler("onPlayerQuit", root, function() close(source) end)

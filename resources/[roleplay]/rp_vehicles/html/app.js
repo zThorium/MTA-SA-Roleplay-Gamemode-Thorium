@@ -207,126 +207,10 @@
         });
     }
 
-    // ---------------------------------------------------------- Tuning
-    function hex(r, g, b) { return "#" + [r, g, b].map(function (n) { return ("0" + Number(n || 0).toString(16)).slice(-2); }).join(""); }
-    function rgb(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
-    function same(a, b) { for (var i = 0; i < a.length; i++) if (Number(a[i]) !== Number(b[i])) return false; return true; }
-
-    var tune = null;
-
-    function renderTuning(d) {
-        var st = d.state;
-        tune = {
-            d: d, cat: "colors", sel: {}, slotOf: {}, current: {},
-            c1: st.c.slice(0, 3), c2: st.c.slice(3, 6), h: st.h.slice(0, 3), p: Number(st.p),
-        };
-        list(d.slots).forEach(function (s) {
-            tune.current[s.slot] = Number(s.current) || 0;
-            list(s.upgrades).forEach(function (u) { tune.slotOf[u.id] = s.slot; });
-        });
-        openWindow("Taller " + d.shop, d.name + " · " + d.plate,
-            '<div class="tune"><div class="cats" id="cats"></div><div id="opts"></div></div>' +
-            '<div class="footer"><span class="muted">Efectivo: ' + money(d.money) + '</span><span class="spacer"></span>' +
-            '<span class="total" id="total">$0</span><button type="button" class="btn" id="t-cancel">Cancelar</button>' +
-            '<button type="button" class="btn primary" id="t-buy">Pagar</button></div>');
-        $("t-cancel").addEventListener("click", close);
-        $("t-buy").addEventListener("click", function () {
-            var cart = buildCart();
-            if (cart.total <= 0) return;
-            this.disabled = true;
-            send("rp:veh:ui:tuneBuy", JSON.stringify(cart));
-        });
-        drawTuning();
-    }
-
-    function buildCart() {
-        var d = tune.d, st = d.state, total = 0, cart = { upgrades: [], remove: [], full: [] };
-        var c = tune.c1.concat(tune.c2);
-        if (!same(c, st.c.slice(0, 6))) {
-            cart.colors = c;
-            if (!same(tune.c1, st.c.slice(0, 3))) total += d.prices.color;
-            if (!same(tune.c2, st.c.slice(3, 6))) total += d.prices.color;
-        }
-        if (!same(tune.h, st.h)) { cart.headlight = tune.h; total += d.prices.color; }
-        if (tune.p !== Number(st.p)) { cart.paintjob = tune.p; total += d.prices.paintjob; }
-        var prices = {};
-        list(d.slots).forEach(function (s) { list(s.upgrades).forEach(function (u) { prices[u.id] = u.price; }); });
-        Object.keys(tune.current).forEach(function (slot) {
-            var cur = tune.current[slot];
-            var sel = tune.sel.hasOwnProperty(slot) ? tune.sel[slot] : cur;
-            if (sel !== cur) {
-                if (sel === 0) { cart.remove.push(Number(slot)); total += d.prices.remove; }
-                else { cart.upgrades.push(sel); total += prices[sel] || 0; }
-            }
-            if (sel) cart.full.push(sel);
-        });
-        // Piezas puestas en slots sin catalogo (no deberia haber)
-        list(st.u).forEach(function (id) { if (tune.slotOf[id] === undefined) cart.full.push(id); });
-        cart.total = total;
-        return cart;
-    }
-
-    function drawTuning() {
-        var d = tune.d;
-        var cats = [{ id: "colors", name: "Colores" }, { id: "lights", name: "Color de faros" }];
-        if (d.paintjobs > 0) cats.push({ id: "paintjob", name: "Paintjob" });
-        list(d.slots).forEach(function (s) { cats.push({ id: "slot" + s.slot, name: s.name, slot: s.slot }); });
-        $("cats").innerHTML = cats.map(function (c) {
-            var changed = c.slot !== undefined && tune.sel.hasOwnProperty(c.slot) && tune.sel[c.slot] !== tune.current[c.slot];
-            return '<button type="button" data-cat="' + c.id + '" class="' + (tune.cat === c.id ? "active" : "") + '">' + esc(c.name) + (changed ? '<span class="dot">●</span>' : "") + "</button>";
-        }).join("");
-        $("cats").querySelectorAll("[data-cat]").forEach(function (b) {
-            b.addEventListener("click", function () { tune.cat = b.getAttribute("data-cat"); drawTuning(); });
-        });
-
-        var o = $("opts");
-        if (tune.cat === "colors") {
-            o.innerHTML = '<div class="color-row"><input type="color" id="c1" value="' + hex.apply(null, tune.c1) + '"> Color primario (' + money(d.prices.color) + ")</div>" +
-                '<div class="color-row"><input type="color" id="c2" value="' + hex.apply(null, tune.c2) + '"> Color secundario (' + money(d.prices.color) + ")</div>";
-            $("c1").addEventListener("input", function () { tune.c1 = rgb(this.value); changed(); });
-            $("c2").addEventListener("input", function () { tune.c2 = rgb(this.value); changed(); });
-        } else if (tune.cat === "lights") {
-            o.innerHTML = '<div class="color-row"><input type="color" id="hl" value="' + hex.apply(null, tune.h) + '"> Color de los faros (' + money(d.prices.color) + ")</div>";
-            $("hl").addEventListener("input", function () { tune.h = rgb(this.value); changed(); });
-        } else if (tune.cat === "paintjob") {
-            var opts = [{ v: 3, n: "Sin paintjob" }];
-            for (var i = 0; i < d.paintjobs; i++) opts.push({ v: i, n: "Paintjob " + (i + 1) });
-            o.innerHTML = '<div class="opts">' + opts.map(function (p) {
-                return '<div class="opt' + (tune.p === p.v ? " selected" : "") + '" data-pj="' + p.v + '">' + p.n + "<small>" + money(d.prices.paintjob) + "</small></div>";
-            }).join("") + "</div>";
-            o.querySelectorAll("[data-pj]").forEach(function (el) {
-                el.addEventListener("click", function () { tune.p = Number(el.getAttribute("data-pj")); changed(); drawTuning(); });
-            });
-        } else {
-            var slot = Number(tune.cat.substr(4));
-            var s = list(d.slots).filter(function (x) { return x.slot === slot; })[0];
-            var sel = tune.sel.hasOwnProperty(slot) ? tune.sel[slot] : tune.current[slot];
-            var html = '<div class="opts"><div class="opt' + (sel === 0 ? " selected" : "") + '" data-up="0">Ninguna<small>' +
-                (tune.current[slot] ? "Quitar " + money(d.prices.remove) : "De fabrica") + "</small></div>";
-            list(s.upgrades).forEach(function (u) {
-                html += '<div class="opt' + (sel === u.id ? " selected" : "") + '" data-up="' + u.id + '">' + esc(u.name) + "<small>" +
-                    (tune.current[slot] === u.id ? "Instalada" : money(u.price)) + "</small></div>";
-            });
-            o.innerHTML = html + "</div>";
-            o.querySelectorAll("[data-up]").forEach(function (el) {
-                el.addEventListener("click", function () { tune.sel[slot] = Number(el.getAttribute("data-up")); changed(); drawTuning(); });
-            });
-        }
-        $("total").textContent = money(buildCart().total);
-    }
-
-    var previewTimer = null;
-    function changed() {
-        $("total").textContent = money(buildCart().total);
-        clearTimeout(previewTimer);
-        previewTimer = setTimeout(function () { send("rp:veh:ui:tunePreview", JSON.stringify(buildCart())); }, 120);
-    }
-
     // ---------------------------------------------------------- API para Lua
     window.RPV = {
         show: function (name, data) {
             view = name;
-            if (name !== "tuning") tune = null;
             switch (name) {
                 case "menu": renderMenu(data); break;
                 case "trunk": renderTrunk(data); break;
@@ -334,12 +218,10 @@
                 case "fines": renderFines(data); break;
                 case "admin": renderAdmin(data); break;
                 case "police": renderPolice(data); break;
-                case "tuning": renderTuning(data); break;
             }
         },
         hide: function () {
             view = null;
-            tune = null;
             $("menu").classList.add("hidden");
             $("window").classList.add("hidden");
             document.body.classList.remove("dim");

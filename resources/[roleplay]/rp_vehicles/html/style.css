@@ -139,17 +139,3 @@ td { padding: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 #preview { height: 220px; border-radius: 12px; border: 1px dashed var(--border); background: transparent; display: flex; align-items: flex-end; justify-content: center; padding: 8px; margin-bottom: 12px; }
 #preview span { font-size: 11px; color: var(--faint); }
 
-/* Tuning */
-.tune { display: grid; grid-template-columns: 200px 1fr; gap: 16px; min-height: 340px; }
-.cats { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow: auto; }
-.cats button { padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; text-align: left; cursor: pointer; display: flex; }
-.cats button.active { background: var(--surface-hover); color: var(--text); }
-.cats button .dot { margin-left: auto; color: var(--accent); }
-.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; }
-.opt { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 13px; }
-.opt small { display: block; color: var(--faint); margin-top: 2px; }
-.opt.selected { border-color: var(--accent); background: rgba(245, 165, 36, 0.1); }
-.color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; }
-.footer { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
-.footer .total { font-size: 15px; font-weight: 700; }
-.footer .spacer { flex: 1; }

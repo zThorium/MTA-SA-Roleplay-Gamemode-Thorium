@@ -5,7 +5,7 @@
     multas, policia y admin. El panel de admin muestra el auto en 3D con
     object_preview (Ren712) si la tarjeta grafica lo soporta.
 
-    Tambien maneja el panel del taller de tuning (vista previa local).
+    El taller de tuning esta en c_tuning.lua.
 ]]
 
 local screenW, screenH = guiGetScreenSize()
@@ -13,7 +13,6 @@ local browserGui, browser, ready = nil, nil, false
 local pendingJS = {}
 local cursorMode = false
 local currentVehicle = nil
-local tuneNear, tuneState = false, nil
 local preview = { clone = nil, element = nil, angle = 0 }
 
 addEvent("rp:veh:showMenu", true)
@@ -22,16 +21,11 @@ addEvent("rp:veh:showPlate", true)
 addEvent("rp:veh:showAdmin", true)
 addEvent("rp:veh:showPolice", true)
 addEvent("rp:veh:showFines", true)
-addEvent("rp:tune:near", true)
-addEvent("rp:tune:show", true)
-addEvent("rp:tune:done", true)
 
 -- Eventos que dispara el HTML
 addEvent("rp:veh:ui:close", false)
 addEvent("rp:veh:ui:action", false)
 addEvent("rp:veh:ui:preview", false)
-addEvent("rp:veh:ui:tunePreview", false)
-addEvent("rp:veh:ui:tuneBuy", false)
 
 local function callJS(code)
     if isElement(browser) and ready then executeBrowserJavascript(browser, code)
@@ -90,8 +84,6 @@ end)
 ----------------------------------------------------------------
 -- Navegador
 ----------------------------------------------------------------
-local restoreTuning
-
 -- El navegador CEF se crea una sola vez (oculto) y se reutiliza: crear y
 -- destruir navegadores seguido carga al driver de video.
 local panelOpen = false
@@ -111,11 +103,6 @@ end
 
 local function closePanel()
     destroyPreview()
-    if tuneState then
-        restoreTuning()
-        triggerServerEvent("rp:tune:close", resourceRoot)
-        tuneState = nil
-    end
     if panelOpen then
         panelOpen = false
         callJS("RPV.hide()")
@@ -231,75 +218,4 @@ end)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     destroyPreview()
     if cursorMode or panelOpen then showCursor(false) guiSetInputEnabled(false) end
-end)
-
-----------------------------------------------------------------
--- Taller de tuning
-----------------------------------------------------------------
-local tuneVehicle = nil
-
-local function applyLocal(vehicle, state)
-    if not isElement(vehicle) or type(state) ~= "table" then return end
-    for _, id in ipairs(getVehicleUpgrades(vehicle) or {}) do removeVehicleUpgrade(vehicle, id) end
-    for _, id in ipairs(state.u or {}) do addVehicleUpgrade(vehicle, id) end
-    if state.c and #state.c >= 6 then setVehicleColor(vehicle, unpack(state.c, 1, 6)) end
-    if state.h and #state.h >= 3 then setVehicleHeadLightColor(vehicle, unpack(state.h, 1, 3)) end
-    if state.p then setVehiclePaintjob(vehicle, state.p) end
-end
-
-restoreTuning = function()
-    if tuneState and isElement(tuneVehicle) then applyLocal(tuneVehicle, tuneState) end
-end
-
-addEventHandler("rp:tune:near", resourceRoot, function(shopName)
-    tuneNear = shopName or false
-end)
-
-addEventHandler("onClientRender", root, function()
-    if not tuneNear or panelOpen then return end
-    local text = ("%s - pulsa E o escribe /tunear"):format(tuneNear)
-    dxDrawText(text, 1, screenH * 0.78 + 1, screenW + 1, screenH * 0.78 + 1, tocolor(0, 0, 0, 200), 1.4, "default-bold", "center")
-    dxDrawText(text, 0, screenH * 0.78, screenW, screenH * 0.78, tocolor(255, 190, 60, 255), 1.4, "default-bold", "center")
-end)
-
-local function requestTuning()
-    if tuneNear and not panelOpen then triggerServerEvent("rp:tune:open", resourceRoot) end
-end
-addCommandHandler("tunear", requestTuning)
-bindKey("e", "down", function()
-    if tuneNear and not isChatBoxInputActive() and not isConsoleActive() then requestTuning() end
-end)
-
-addEventHandler("rp:tune:show", resourceRoot, function(vehicle, data)
-    tuneVehicle = vehicle
-    tuneState = data.state
-    show("tuning", vehicle, data)
-end)
-
--- El HTML manda el carrito (JSON) para verlo en el auto antes de pagar
-local function parseCart(json)
-    local cart = type(json) == "string" and fromJSON("[" .. json .. "]")
-    return type(cart) == "table" and cart or nil
-end
-
-addEventHandler("rp:veh:ui:tunePreview", root, function(json)
-    local cart = parseCart(json)
-    if not cart or not tuneState or not isElement(tuneVehicle) then return end
-    -- Estado original + cambios del carrito (full = lista completa de piezas deseadas)
-    local state = { c = cart.colors or tuneState.c, h = cart.headlight or tuneState.h, p = cart.paintjob or tuneState.p,
-        u = type(cart.full) == "table" and cart.full or tuneState.u }
-    applyLocal(tuneVehicle, state)
-end)
-
-addEventHandler("rp:veh:ui:tuneBuy", root, function(json)
-    local cart = parseCart(json)
-    if cart then triggerServerEvent("rp:tune:buy", resourceRoot, cart) end
-end)
-
--- Compra hecha o cancelada por el servidor: el servidor ya sincronizo el estado real
-addEventHandler("rp:tune:done", resourceRoot, function(bought)
-    if not bought then restoreTuning() end
-    tuneState = nil
-    tuneNear = false
-    closePanel()
 end)
