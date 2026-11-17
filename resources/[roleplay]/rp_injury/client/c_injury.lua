@@ -2,7 +2,7 @@
     rp_injury / c_injury.lua
     Lado cliente del estado abatido:
       - Intercepta el dano mortal y avisa al servidor.
-      - Pantalla gris con vinyeta y latido rojo (shader).
+      - Pantalla en escala de grises y desenfoque al mover la camara (c_screen.lua).
       - Contador: reloj de arena verde en el centro; cuando se vacia, muere.
       - Sangrado: gotas de sangre (fxAddBlood) y un charco que crece bajo cada abatido.
       - Avisa a los demas recursos con "rp:onClientPlayerDowned" para que cierren sus interfaces.
@@ -19,7 +19,6 @@ local dyingLocal = false  -- murio desangrado, esperando el hospital
 local startedAt, expiresAt, total = 0, 0, 1
 local requested = false   -- ya pedimos quedar abatido (evita repetir el evento)
 
-local screenSource, shader
 local poolTexture = dxCreateTexture("files/blood_pool.png", "argb", true, "clamp")
 local pools = {}          -- [player] = { x, y, z, started }
 local BLEED_BONES = { 3, 2, 8 }
@@ -108,47 +107,6 @@ end, true, "high+5")
 ----------------------------------------------------------------
 -- Pantalla
 ----------------------------------------------------------------
-local function createShader()
-    if shader then return true end
-    screenSource = dxCreateScreenSource(sw, sh)
-    shader = dxCreateShader("files/downed.fx")
-    if not screenSource or not shader then
-        if isElement(screenSource) then destroyElement(screenSource) end
-        if isElement(shader) then destroyElement(shader) end
-        screenSource, shader = nil, nil
-        return false
-    end
-    dxSetShaderValue(shader, "ScreenTexture", screenSource)
-    return true
-end
-
-local function destroyShader()
-    if isElement(shader) then destroyElement(shader) end
-    if isElement(screenSource) then destroyElement(screenSource) end
-    shader, screenSource = nil, nil
-end
-
--- Se dibuja antes que las demas interfaces (prioridad alta), asi el mundo queda gris
-local function drawScreen()
-    local now = getTickCount()
-    local progress = math.min(1, (now - startedAt) / total)
-    local fadeIn = math.min(1, (now - startedAt) / 1500)
-    -- Latido: mas rapido y fuerte cuanto menos tiempo queda
-    local rate = 1.0 + progress * 1.6
-    local beat = math.abs(math.sin((now / 1000) * math.pi * rate)) ^ 6
-
-    if shader then
-        dxUpdateScreenSource(screenSource, true)
-        dxSetShaderValue(shader, "Saturation", 1 - fadeIn * 0.95)
-        dxSetShaderValue(shader, "Darkness", (0.35 + progress * 0.5) * fadeIn)
-        dxSetShaderValue(shader, "Pulse", (0.35 + beat * 0.65) * fadeIn)
-        dxDrawImage(0, 0, sw, sh, shader)
-    else
-        dxDrawRectangle(0, 0, sw, sh, tocolor(45, 45, 45, 150 * fadeIn))
-        dxDrawRectangle(0, 0, sw, sh, tocolor(120, 0, 0, 40 * beat * fadeIn))
-    end
-end
-
 -- Reloj de arena (contador de los 2 minutos). Texturas de 256 px: circulo verde, marco
 -- y la arena de cada bulbo por separado; la arena de arriba baja y la de abajo sube.
 local HOURGLASS = {
@@ -229,8 +187,7 @@ local function start(remaining)
     if not active then
         startedAt = now
         total = INJURY.DOWNED_TIME
-        createShader()
-        addEventHandler("onClientRender", root, drawScreen, true, "high+3")
+        InjuryScreen.fadeIn()
         addEventHandler("onClientRender", root, drawOverlay, true, "low-10")
         animWatch = setTimer(checkAnimation, 1000, 0)
         showCursor(false)
@@ -245,11 +202,9 @@ end
 local function stop()
     if not active then return end
     active = false
-    removeEventHandler("onClientRender", root, drawScreen)
     removeEventHandler("onClientRender", root, drawOverlay)
     if isTimer(animWatch) then killTimer(animWatch) end
     animWatch = nil
-    destroyShader()
 end
 
 addEventHandler("rp:injury:state", resourceRoot, function(state, remaining)
@@ -259,16 +214,15 @@ addEventHandler("rp:injury:state", resourceRoot, function(state, remaining)
         stop()
         dyingLocal = state == "dying"
         requested = false
+        -- Reanimado: los colores vuelven poco a poco. Si murio desangrado, la pantalla
+        -- sigue gris durante la muerte y se recupera al aparecer en el hospital.
+        if not dyingLocal then InjuryScreen.fadeOut() end
     end
 end)
 
 addEventHandler("onClientPlayerSpawn", localPlayer, function()
+    if dyingLocal then InjuryScreen.fadeOut() end
     dyingLocal, requested = false, false
-end)
-
--- La pantalla se puede perder al minimizar; se recrea
-addEventHandler("onClientRestore", root, function()
-    if active then destroyShader(); createShader() end
 end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
@@ -277,7 +231,10 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     end
 end)
 
-addEventHandler("onClientResourceStop", resourceRoot, stop)
+addEventHandler("onClientResourceStop", resourceRoot, function()
+    stop()
+    InjuryScreen.stop()
+end)
 
 -- Export cliente para otros recursos
 function isLocalPlayerDowned()
