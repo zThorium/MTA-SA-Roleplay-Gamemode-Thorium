@@ -10,8 +10,10 @@
          comandos y chat cancelados en el servidor y las interfaces cerradas en el cliente.
       3. A los INJURY.DOWNED_TIME ms muere, y tras INJURY.RESPAWN_DELAY aparece en el
          hospital con la vida completa y se le cobra INJURY.HOSPITAL_FEE.
-      4. Si sale del servidor (o del personaje) estando abatido, se le cobra igual y
-         la proxima vez aparece en el hospital.
+      4. El tiempo que le queda se guarda en characters.downed_ms. Si sale del servidor
+         (o del personaje) estando abatido, al volver a entrar sigue abatido en el mismo
+         sitio y el temporizador continua donde lo dejo: desconectarse no salta la espera.
+         Si sale cuando ya murio desangrado, se le cobra el hospital y aparece alli.
 
     elementData "rp:downed" (solo lo escribe el servidor):
         true      -> abatido
@@ -54,6 +56,18 @@ function isPlayerDowned(player)
     return downed[player] ~= nil
 end
 
+-- Guarda en la base de datos los ms que le quedan abatido (0 = no esta abatido)
+local function persist(player, ms)
+    local characterId = characterOf(player)
+    if not characterId then return end
+    dbExec(db(), "UPDATE characters SET downed_ms = ? WHERE id = ?", math.max(0, math.floor(ms or 0)), characterId)
+end
+
+local function remainingOf(player)
+    local d = downed[player]
+    return d and math.max(0, d.expires - getTickCount()) or 0
+end
+
 local function applyAnimation(player)
     setPedAnimation(player, INJURY.ANIM_BLOCK, INJURY.ANIM_NAME, -1, true, false, false, true)
 end
@@ -88,11 +102,13 @@ end
 ----------------------------------------------------------------
 -- Estado
 ----------------------------------------------------------------
--- Quita el estado abatido. keepLocked: deja los controles bloqueados (muerte final)
-local function clearDowned(player, keepLocked)
+-- Quita el estado abatido. keepLocked: deja los controles bloqueados (muerte final).
+-- keepSaved: no borra el tiempo guardado (sale del servidor y lo retoma al volver)
+local function clearDowned(player, keepLocked, keepSaved)
     local d = downed[player]
     if not d then return false end
     if isTimer(d.timer) then killTimer(d.timer) end
+    if not keepSaved then persist(player, 0) end
     downed[player] = nil
     if isElement(player) then
         setElementData(player, "rp:downed", false)
@@ -175,6 +191,7 @@ function downPlayer(player, remaining)
         timer = setTimer(bleedOut, remaining, 1, player),
     }
     setElementData(player, "rp:downed", true)
+    persist(player, remaining)
     triggerClientEvent(player, "rp:injury:state", resourceRoot, true, remaining)
     if first then
         triggerEvent("rp:onPlayerDowned", player)
@@ -281,19 +298,58 @@ end)
 -- rp_characters lo dispara antes de guardar un personaje abatido (o muriendo)
 addEventHandler("rp:onDownedLogout", root, function()
     local player = source
-    if downed[player] or dying[player] then
+    if dying[player] then
+        -- Ya murio desangrado: paga el hospital y aparecera alli
         chargeHospital(player)
-        outputServerLog(("[rp_injury] %s salio estando abatido: tarifa cobrada"):format(getPlayerName(player)))
+        persist(player, 0)
+        if isTimer(dying[player]) then killTimer(dying[player]) end
+        dying[player] = nil
+        outputServerLog(("[rp_injury] %s salio tras desangrarse: tarifa cobrada"):format(getPlayerName(player)))
+    elseif downed[player] then
+        -- Sigue abatido: se guarda lo que le queda y lo retoma al volver a entrar
+        local left = math.max(1000, remainingOf(player))
+        persist(player, left)
+        clearDowned(player, false, true)
+        outputServerLog(("[rp_injury] %s salio abatido (%d s pendientes)"):format(getPlayerName(player), math.ceil(left / 1000)))
     end
-    clearDowned(player)
-    if isTimer(dying[player]) then killTimer(dying[player]) end
-    dying[player] = nil
 end)
 
+-- Si el personaje tenia tiempo abatido pendiente, vuelve a quedar abatido donde estaba
+local function resumeDowned(player)
+    local characterId = characterOf(player)
+    if not characterId then return end
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0)
+        local left = rows and rows[1] and tonumber(rows[1].downed_ms) or 0
+        if left <= 0 or not isElement(player) or characterOf(player) ~= characterId then return end
+        if downed[player] or dying[player] or isPedDead(player) then return end
+        if downPlayer(player, left) then
+            notify(player, "Sigues abatido: el tiempo continua donde lo dejaste.", "warning")
+        end
+    end, db(), "SELECT downed_ms FROM characters WHERE id = ?", characterId)
+end
+
 addEventHandler("rp:onCharacterSpawn", root, function()
-    if downed[source] then clearDowned(source) end
-    dying[source] = nil
-    setElementData(source, "rp:downed", false)
+    local player = source
+    if downed[player] then clearDowned(player, false, true) end
+    dying[player] = nil
+    setElementData(player, "rp:downed", false)
+    -- Pequena espera para que termine el spawn (camara, apariencia)
+    setTimer(function() if isElement(player) then resumeDowned(player) end end, 1000, 1)
+end)
+
+-- Copia de seguridad del tiempo restante (por si el servidor se cae)
+setTimer(function()
+    for player in pairs(downed) do
+        if isElement(player) then persist(player, math.max(1000, remainingOf(player))) end
+    end
+end, 10000, 0)
+
+-- Al reiniciar el recurso, los que tenian tiempo pendiente vuelven a quedar abatidos
+addEventHandler("onResourceStart", resourceRoot, function()
+    for _, player in ipairs(getElementsByType("player")) do
+        if characterOf(player) then resumeDowned(player) end
+    end
 end)
 
 addEventHandler("onPlayerQuit", root, function()
@@ -305,6 +361,7 @@ end)
 addEventHandler("onResourceStop", resourceRoot, function()
     for player in pairs(downed) do
         if isElement(player) then
+            persist(player, math.max(1000, remainingOf(player)))   -- se retoma al volver a iniciar
             setElementData(player, "rp:downed", false)
             toggleAllControls(player, true, true, true)
             setPedAnimation(player)

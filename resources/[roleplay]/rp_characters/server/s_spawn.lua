@@ -31,13 +31,14 @@ function spawnCharacter(player, row)
     fadeCamera(player, true, 1.5)
 end
 
--- Guarda el personaje activo. Si esta muerto o abatido (rp_injury) guarda el hospital:
--- la proxima vez aparece alli con la vida completa.
+-- Guarda el personaje activo. Si esta muerto (o murio desangrado en rp_injury) guarda el
+-- hospital: la proxima vez aparece alli con la vida completa. Un personaje abatido se
+-- guarda donde esta, para que al volver siga abatido en el mismo sitio.
 function saveCharacter(player, toHospital)
     local row = active[player]
     if not row or not isElement(player) then return false end
 
-    if toHospital or isPedDead(player) or getElementHealth(player) <= 0 or getElementData(player, "rp:downed") then
+    if toHospital or isPedDead(player) or getElementHealth(player) <= 0 or getElementData(player, "rp:downed") == "dying" then
         local h = SPAWN.HOSPITAL
         return dbExec(db(),
             "UPDATE characters SET money = ?, health = 100, armor = 0, pos_x = ?, pos_y = ?, pos_z = ?, rotation = ?, interior = 0, dimension = 0 WHERE id = ?",
