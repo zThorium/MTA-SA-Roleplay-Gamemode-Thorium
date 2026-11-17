@@ -17,4 +17,13 @@
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />
+
+    <!-- Red vial y rutas A*: los reutiliza rp_emergency -->
+    <export function="loadRoadGraph" type="client" />
+    <export function="nearestRoadNode" type="client" />
+    <export function="nodePosition" type="client" />
+    <export function="roadNodeAround" type="client" />
+    <export function="findRoadRoute" type="client" />
+    <export function="routeWaypoints" type="client" />
+    <export function="laneStartPoint" type="client" />
 </meta>
