@@ -1,8 +1,9 @@
 --[[
     rp_phone / s_phone.lua
     Telefono movil (item "phone" de rp_inventory). Se abre usandolo desde el
-    inventario o con la tecla P. Apps: Notas, Contactos, Banco (rp_bank) y
-    Fotogram (red social con fotos tomadas en el juego).
+    inventario o con la tecla P. Apps: Telefono (numeros de emergencia que
+    llaman a rp_emergency), Notas, Contactos, Banco (rp_bank) y Fotogram
+    (red social con fotos tomadas en el juego).
 
     Tablas: phone_notes, phone_contacts, social_posts, social_likes y
     characters.phone_number (se asigna la primera vez que se usa el telefono).
@@ -12,6 +13,16 @@ local MAX_IMAGE = 350 * 1024       -- bytes del base64 de una foto
 local FEED_SIZE = 15
 
 local busy = {}
+local lastCall = {}
+
+-- Numeros de emergencia que trae la app Telefono. service = id de rp_emergency.
+local EMERGENCY_NUMBERS = {
+    { number = "911", service = "ambulance", name = "Ambulancia", desc = "Paramedicos LSMD" },
+    { number = "912", service = "police",    name = "Policia",    desc = "LSPD" },
+    { number = "913", service = "fire",      name = "Bomberos",   desc = "LSFD" },
+}
+local BY_NUMBER = {}
+for _, e in ipairs(EMERGENCY_NUMBERS) do BY_NUMBER[e.number] = e end
 
 addEvent("rp:onItemUse", false)
 addEvent("rp:phone:open", true)
@@ -20,6 +31,7 @@ addEvent("rp:phone:note:delete", true)
 addEvent("rp:phone:contact:add", true)
 addEvent("rp:phone:contact:addPlayer", true)
 addEvent("rp:phone:contact:delete", true)
+addEvent("rp:phone:call", true)
 addEvent("rp:social:feed", true)
 addEvent("rp:social:post", true)
 addEvent("rp:social:like", true)
@@ -81,6 +93,7 @@ local function openPhone(player)
         if not isElement(player) then return end
         triggerClientEvent(player, "rp:phone:show", resourceRoot, {
             number = number or 0, owner = (getPlayerName(player):gsub("_", " ")),
+            emergency = EMERGENCY_NUMBERS,
         })
         sendNotes(player)
         sendContacts(player)
@@ -254,4 +267,29 @@ addEventHandler("rp:social:like", resourceRoot, function(postId)
     end, db(), "DELETE FROM social_likes WHERE post_id = ? AND character_id = ?", postId, characterId)
 end)
 
-addEventHandler("onPlayerQuit", root, function() busy[source] = nil end)
+----------------------------------------------------------------
+-- Telefono: llamadas (por ahora solo a los numeros de emergencia)
+----------------------------------------------------------------
+addEventHandler("rp:phone:call", resourceRoot, function(number)
+    local player = client
+    if not hasPhone(player) or getElementData(player, "rp:downed") or isPedDead(player) then return end   -- abatido (rp_injury)
+    local now = getTickCount()
+    if lastCall[player] and now - lastCall[player] < 3000 then return end
+    lastCall[player] = now
+    if type(number) ~= "string" or #number > 12 then return end
+    local entry = BY_NUMBER[number]
+    if not entry then
+        triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
+        return notify(player, "El numero marcado no esta disponible.", "info")
+    end
+    local emergency = getResourceFromName("rp_emergency")
+    if not emergency or getResourceState(emergency) ~= "running" then
+        triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
+        return notify(player, "No hay servicio de emergencias en este momento.", "error")
+    end
+    -- rp_emergency valida todo y avisa al jugador si rechaza la llamada
+    local ok = exports.rp_emergency:callService(player, entry.service)
+    triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, ok == true)
+end)
+
+addEventHandler("onPlayerQuit", root, function() busy[source], lastCall[source] = nil, nil end)

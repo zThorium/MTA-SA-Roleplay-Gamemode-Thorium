@@ -17,6 +17,8 @@
     durante el traslado, el paciente) solo ejecuta la fisica: conducir y caminar
     a los puntos que el servidor ordena. Si no responde, el servidor teletransporta.
 
+    Tambien se llama desde la app Telefono de rp_phone (export callService).
+
     Comandos:
         /911                    abre el menu de emergencias
         /cancelar911 <jugador>  (admin) cancela la llamada activa de un jugador
@@ -527,19 +529,20 @@ end)
 ----------------------------------------------------------------
 -- Despacho
 ----------------------------------------------------------------
+-- Devuelve true si se envio la ambulancia (false = rechazada, ya se aviso al jugador)
 local function dispatchAmbulance(player)
-    if byCaller[player] then return notify(player, "Ya tienes una ambulancia en camino.", "warning") end
+    if byCaller[player] then notify(player, "Ya tienes una ambulancia en camino.", "warning") return false end
     if cooldown[player] and getTickCount() < cooldown[player] then
-        return notify(player, "Espera un momento antes de volver a llamar al 911.", "warning")
+        notify(player, "Espera un momento antes de volver a llamar al 911.", "warning") return false
     end
     if activeCount >= EMERGENCY.MAX_ACTIVE_CALLS then
-        return notify(player, "Todas las unidades estan ocupadas. Intentalo en unos minutos.", "warning")
+        notify(player, "Todas las unidades estan ocupadas. Intentalo en unos minutos.", "warning") return false
     end
     if getElementInterior(player) ~= 0 or getElementDimension(player) ~= 0 then
-        return notify(player, "La ambulancia no puede entrar: sal al exterior para llamarla.", "warning")
+        notify(player, "La ambulancia no puede entrar: sal al exterior para llamarla.", "warning") return false
     end
     if isPedInVehicle(player) then
-        return notify(player, "Detente fuera del vehiculo para llamar a la ambulancia.", "warning")
+        notify(player, "Detente fuera del vehiculo para llamar a la ambulancia.", "warning") return false
     end
 
     nextId = nextId + 1
@@ -555,6 +558,7 @@ local function dispatchAmbulance(player)
 
     triggerClientEvent(player, "rp:emergency:spawnRequest", resourceRoot, c.id)
     popup(player, "911", "Tu llamada fue recibida. Buscando una ambulancia...", "info")
+    return true
 end
 
 addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, rot)
@@ -628,16 +632,23 @@ for _, id in ipairs({ "police", "fire" }) do
         local x, y, z = getElementPosition(player)
         triggerEvent("rp:emergency:onCall", player, id, x, y, z, getElementInterior(player), getElementDimension(player))
         notify(player, ("Tu llamada a %s quedo registrada, pero no hay unidades disponibles todavia."):format(VALID_SERVICE[id].name), "info")
+        return true
     end
+end
+
+-- Punto unico de entrada de una llamada (menu /911 y app Telefono de rp_phone).
+-- Devuelve true si la central acepto la llamada; si la rechaza (cooldown, en un
+-- vehiculo, interior...) devuelve false y el aviso al jugador ya lo dio el procedimiento.
+function callService(player, service)
+    if not playerValid(player) or type(service) ~= "string" or not VALID_SERVICE[service] then return false end
+    if isPedDead(player) or getElementData(player, "rp:downed") then return false end   -- abatido (rp_injury)
+    return procedures[service](player) == true
 end
 
 addEventHandler("rp:emergency:call", resourceRoot, function(service)
     local player = client
     if limited(player, 800) or type(service) ~= "string" then return end
-    if not characterOf(player) or isPedDead(player) or getElementData(player, "rp:downed") then return end
-    local s = VALID_SERVICE[service]
-    if not s then return end
-    procedures[service](player)
+    callService(player, service)
 end)
 
 ----------------------------------------------------------------

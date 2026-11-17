@@ -5,6 +5,18 @@ independiente (`procedures` en `server/s_emergency.lua`). Hoy solo la ambulancia
 bomberos disparan el evento de servidor `rp:emergency:onCall` (`source` = jugador, `service`, `x, y, z, interior, dimensión`)
 para que `rp_police` / facciones lo implementen.
 
+## Llamar desde el celular
+
+La app **Teléfono** de `rp_phone` (icono verde) trae por defecto **911 Ambulancia**, **912 Policía** y **913 Bomberos**
+(tabla `EMERGENCY_NUMBERS` en `rp_phone/server/s_phone.lua`) y un teclado para marcarlos. `rp_phone` valida que tengas
+teléfono y no estés abatido, y llama al export `callService(player, servicio)` de `rp_emergency`, que es el mismo punto de
+entrada que usa el menú `/911`: mismas validaciones, mismo cooldown y la misma ambulancia IA hacia la posición del que llama.
+Devuelve `true` si la central aceptó la llamada; si la rechaza (en un vehículo, en un interior, ya hay una en camino...)
+avisa al jugador y el celular muestra "La central no pudo atender tu llamada".
+
+Un jugador **abatido no puede llamar** (ni con `/911` ni con el celular, que se guarda al caer): la ambulancia la tiene que
+pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de quien llamó.
+
 ## Flujo de la ambulancia
 
 1. El servidor valida (personaje, exterior, sin llamada activa, cooldown, tope global) y pide al **cliente** un punto de la calle a 120-200 m fuera de la vista.

@@ -20,5 +20,6 @@
 
     <export function="isPlayerDowned" type="server" />
     <export function="getActiveCall" type="server" />
+    <export function="callService" type="server" />
     <export function="revivePlayer" type="server" />
 </meta>

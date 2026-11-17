@@ -32,7 +32,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Heridas** | Estado abatido en vez de morir: 2 minutos desangrándose en el suelo con pantalla gris, sin poder moverse, hablar ni usar el teléfono; luego hospital con tarifa. |
 | **Economía** | Dinero en mano, cuenta bancaria con historial de transacciones, cajeros (el retiro solo se hace en cajero) y tiendas con NPC. |
 | **Inventario** | Inventario por personaje con catálogo de items (tecla `I`). |
-| **Teléfono** | Notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
+| **Teléfono** | App de llamadas con los números de emergencia (911 ambulancia IA, 912 policía, 913 bomberos), notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
 | **Propiedades** | Casas comprables con visita de un minuto, cierre y venta. |
 | **Vehículos** | Vehículos con dueño persistentes, bloqueo con `L` o `/bloquear`. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
