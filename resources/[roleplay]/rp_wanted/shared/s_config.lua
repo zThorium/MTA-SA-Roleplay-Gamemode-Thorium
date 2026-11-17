@@ -34,7 +34,8 @@ WANTED = {
     DECAY_CITY = 1,             -- puntos por segundo en la ciudad
     DECAY_ELUSIVE = 2,          -- fuera de la ciudad o en un interior
 
-    -- La policia (faccion reservada en rp_factions / rp_database) no acumula busqueda
+    -- La policia (faccion reservada en rp_factions / rp_database) de servicio (con
+    -- uniforme o en un vehiculo policial) no acumula busqueda; de civil, si
     POLICE_FACTION_ID = 1,
     -- Delitos contra otros jugadores (golpes, disparos, atropellos) tambien suman
     PLAYER_CRIMES = true,
@@ -139,6 +140,10 @@ WANTED_FLEET = {
 
 -- A 1 estrella la patrulla lleva solo al conductor (GTA: 1 policia en persecucion)
 WANTED_CREW_AT_ONE_STAR = 1
+
+-- Skins de policia (uniforme): un miembro de la faccion con uno de estos esta de servicio
+WANTED_POLICE_SKINS = {}
+for id = 280, 288 do WANTED_POLICE_SKINS[id] = true end
 
 -- Modelos que cuentan como vehiculo policial (presencia policial)
 WANTED_POLICE_MODELS = { [596] = true, [597] = true, [598] = true, [599] = true, [523] = true,

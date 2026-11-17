@@ -439,7 +439,7 @@ local function heliTick(u, now)
     end
     setElementAngularVelocity(h, 0, 0, 0)
     setElementRotation(h, 0, 0, heading(px - x, py - y))
-    setHelicopterRotorSpeed(h, 0.2)
+    if setVehicleRotorSpeed then setVehicleRotorSpeed(h, 0.2) end
 
     -- Foco de noche
     if isNight() and not u.leaving then
@@ -512,6 +512,19 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     level = tonumber(getElementData(localPlayer, "rp:wanted")) or 0
     setTimer(tick, TICK, 0)
     triggerServerEvent("rp:wanted:ready", resourceRoot)
+    -- Garajes del juego que contienen un Pay 'n' Spray (el servidor abre su porton)
+    local ids = {}
+    for id = 0, 49 do
+        local west, east, south, north = getGarageBoundingBox(id)
+        if west then
+            for _, spot in ipairs(WANTED.SPRAYS) do
+                if spot.x >= west - 3 and spot.x <= east + 3 and spot.y >= south - 3 and spot.y <= north + 3 then
+                    ids[#ids + 1] = id
+                end
+            end
+        end
+    end
+    if #ids > 0 then triggerServerEvent("rp:wanted:garages", resourceRoot, ids) end
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()

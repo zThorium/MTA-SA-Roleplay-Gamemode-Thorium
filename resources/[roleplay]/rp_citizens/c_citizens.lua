@@ -89,8 +89,39 @@ local function pickPedSkin(x, y, z)
     return pick(pop.peds)
 end
 
+-- Motos (como en popcycle de GTA SA, una parte del trafico va en moto)
+local BIKES = {
+    default = { 461, 462, 463, 468, 521, 581, 586 },
+    ghetto = { 462, 463, 468, 586 },
+    rich = { 461, 521, 522, 581 },
+    industrial = { 462, 463, 468, 586 },
+}
+local BIKE_CHANCE = 0.15
+
+-- Patrullas de la policia en el trafico (sin persecucion: patrullan con las
+-- luces apagadas). Modelo y agente segun la ciudad; tambien motos de policia.
+local POLICE_CHANCE = 0.08       -- proporcion de autos de policia en el trafico
+local POLICE_BIKE_CHANCE = 0.35  -- de esas patrullas, cuantas son motos (HPV1000)
+local POLICE_BY_CITY = {
+    ["Los Santos"] = { 596, 280 }, ["San Fierro"] = { 597, 281 }, ["Las Venturas"] = { 598, 282 },
+}
+local POLICE_RURAL = { 599, 283 }
+local POLICE_BIKE = { 523, 284 }
+
 local function pickCarModel(x, y, z)
+    if math.random() < BIKE_CHANCE then
+        local zone = getZoneName(x, y, z, false)
+        return pick(BIKES[ZONE_PROFILE[zone] or "default"])
+    end
     return pick(population(x, y, z).cars)
+end
+
+-- Devuelve modelo y skin de una patrulla, o nil si este auto no es de policia
+local function pickPolice(x, y, z)
+    if math.random() >= POLICE_CHANCE then return nil end
+    if math.random() < POLICE_BIKE_CHANCE then return POLICE_BIKE[1], POLICE_BIKE[2] end
+    local p = POLICE_BY_CITY[getZoneName(x, y, z, true)] or POLICE_RURAL
+    return p[1], p[2]
 end
 
 local function pickDriverSkin(x, y, z)
@@ -737,16 +768,22 @@ local function spawnCar(px, py)
     if not target then return end
     local sx, sy, sz, dx, dy = laneStart(node, target)
 
-    local vehicle = createVehicle(pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
+    local policeModel, policeSkin = pickPolice(sx, sy, sz)
+    local vehicle = createVehicle(policeModel or pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
     if not vehicle then return end
-    local driver = createPed(pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
+    local driver = createPed(policeSkin or pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
     if not driver then destroyElement(vehicle) return end
     warpPedIntoVehicle(driver, vehicle)
     setVehicleEngineState(vehicle, true)
     if isNight() then setVehicleOverrideLights(vehicle, 2) end
+    if policeModel then
+        -- rp_wanted los reconoce como policia (delitos contra ellos, exceso de velocidad)
+        setElementData(vehicle, "rp:copCar", true, false)
+        setElementData(driver, "rp:cop", true, false)
+    end
 
     cars[vehicle] = {
-        driver = driver, prev = node, node = target, wp = {},
+        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil,
         state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
     }
     carCount = carCount + 1
@@ -1384,6 +1421,14 @@ local function carTick()
         if isElement(v) and s.state ~= "ABANDONED" then
             local x, y, z = getElementPosition(v)
             local d = getDistanceBetweenPoints3D(px, py, pz, x, y, z)
+            -- Patrulla del trafico: prende la sirena si el jugador esta buscado y cerca (rp_wanted)
+            if s.police then
+                local alert = d < 70 and (tonumber(getElementData(localPlayer, "rp:wanted")) or 0) > 0
+                if alert ~= (s.siren or false) then
+                    s.siren = alert
+                    setVehicleSirensOn(v, alert)
+                end
+            end
             -- cambio de LOD: fisica completa cerca; dummy lejos y fuera de camara
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)

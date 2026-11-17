@@ -70,8 +70,9 @@ No sube solo por el tiempo: sube porque en una persecución sigues cometiendo de
 | Caos y estrellas | `rp_wanted/server/s_wanted.lua` | Tabla de puntos, cola de 10 s por víctima, decaimiento cada segundo, libertad condicional, Busted (multa de $250 por estrella en efectivo, quita armas, te deja en la puerta de la comisaría de Pershing Square), Wasted, Pay 'n' Spray. Se conserva 30 min al reconectar o cambiar de personaje (en memoria, sin tocar la base de datos). |
 | Detección de delitos | `rp_wanted/client/c_crimes.lua` | Los peatones y el tráfico de `rp_citizens` existen solo en el cliente, así que los delitos contra ellos y contra la policía IA se avisan desde ahí (con límite de avisos en el servidor). Los delitos contra otros jugadores los detecta el servidor con `onPlayerDamage`. |
 | Policía IA | `rp_wanted/server/s_units.lua` + `client/c_police.lua` | El servidor crea patrulla, agentes y helicóptero (todos los ven) y hace syncer al buscado, como el auto IA de `rp_rides`. El cliente elige dónde aparecen (en la calle, fuera de la vista, con la red vial de `rp_citizens`) y conduce: A* por la red hasta el jugador, persecución directa cuando lo ve, embestidas desde 3 estrellas, bajarse cuando vas a pie, disparar desde 2 estrellas, volver a la patrulla si te escapas en auto, irse con la sirena apagada al terminar. |
+| Tráfico | `rp_citizens/c_citizens.lua` | 15 % del tráfico va en moto. 8 % son patrullas (Police LS/SF/LV o Ranger, y un tercio motos HPV1000) con su agente; cuentan como policía para los delitos y el exceso de velocidad, y prenden la sirena si estás buscado. |
 | HUD | `rp_wanted/client/c_hud.lua` | 6 estrellas dibujadas con primitivas (arte propio) debajo de la hora y el dinero de `rp_hud`. Parpadean al cambiar el nivel y laten mientras ningún policía está cerca. Respetan `/hud`. |
-| Policía jugadora | `s_wanted.lua` | Los miembros de la facción 1 no acumulan búsqueda, reciben el aviso de la central en el chat y ven un punto rojo sobre los buscados en el mapa. Sus patrullas y su presencia cuentan para frenar el decaimiento. |
+| Policía jugadora | `s_wanted.lua` | Los miembros de la facción 1 de servicio (con uniforme, skins 280-288, o en un vehículo policial) no acumulan búsqueda; de civil sí, reciben el aviso de la central en el chat y ven un punto rojo sobre los buscados en el mapa. Sus patrullas y su presencia cuentan para frenar el decaimiento. |
 
 Decisiones:
 - **Sin cambios en `schema.lua`** ni en `rp_hud`, para no chocar con el PR de vehículos (#6), que toca ambos archivos.
@@ -80,6 +81,7 @@ Decisiones:
 - Configuración en `rp_wanted/shared/s_config.lua`: puntos, umbrales, unidades por nivel, multa, ubicación de liberación y de los Pay 'n' Spray.
 
 ## 3. Comandos
+- `/busquedainfo`: tus estrellas, puntos de caos y si cuentas como policía de servicio.
 - `/busqueda <jugador>` (admin): muestra estrellas y caos.
 - `/busqueda <jugador> <0-6>` (admin): fija el nivel (con los valores de caos de GTA: 70, 200, 570, 1220, 2420, 4620).
 

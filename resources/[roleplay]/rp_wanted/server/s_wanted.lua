@@ -43,6 +43,17 @@ function isWantedPolice(player)
     return ok and tonumber(id) == WANTED.POLICE_FACTION_ID
 end
 
+-- Policia de servicio: miembro de la faccion y con uniforme (skin de policia) o
+-- en un vehiculo policial. Un policia de civil comete delitos como cualquiera.
+local function isPoliceOnDuty(player)
+    if not isWantedPolice(player) then return false end
+    if WANTED_POLICE_SKINS[getElementModel(player)] then return true end
+    local v = getPedOccupiedVehicle(player)
+    return v and WANTED_POLICE_MODELS[getElementModel(v)] or false
+end
+
+local dutyNotice = {}
+
 local function state(player)
     local s = W[player]
     if not s then
@@ -131,7 +142,15 @@ end
 function reportCrime(player, crimeKey, victimKey, dontCare)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
-    if not crime or not characterOf(player) or isWantedPolice(player) then return false end
+    if not crime or not characterOf(player) then return false end
+    if isPoliceOnDuty(player) then
+        local now = getTickCount()
+        if not dutyNotice[player] or now - dutyNotice[player] > 60000 then
+            dutyNotice[player] = now
+            notify(player, "Estas de servicio como policia: no acumulas busqueda.", "info")
+        end
+        return false
+    end
     local s = state(player)
     if s.busted then return false end
     local now = getTickCount()
@@ -191,7 +210,7 @@ addEventHandler("onPlayerDamage", root, function(attacker, weapon)
         attacker, byVehicle = getVehicleController(attacker), true
     end
     if not attacker or attacker == source or getElementType(attacker) ~= "player" then return end
-    local crime = wantedCrimeForPedDamage(weapon, isWantedPolice(source), byVehicle)
+    local crime = wantedCrimeForPedDamage(weapon, isPoliceOnDuty(source), byVehicle)
     if crime then reportCrime(attacker, crime, getPlayerSerial(source)) end
 end)
 
@@ -355,13 +374,6 @@ addEventHandler("onResourceStart", resourceRoot, function()
         local marker = createMarker(spot.x, spot.y, spot.z - 1, "cylinder", 4, 245, 165, 36, 60)
         setElementData(marker, "rp:spray", spot.name, false)
         createBlip(spot.x, spot.y, spot.z, 63, 2, 255, 255, 255, 255, 0, 400)
-        -- Abre el porton del garaje del juego que contiene el punto (si lo hay)
-        for id = 0, 49 do
-            local west, east, south, north = getGarageBoundingBox(id)
-            if west and spot.x >= west - 2 and spot.x <= east + 2 and spot.y >= south - 2 and spot.y <= north + 2 then
-                setGarageOpen(id, true)
-            end
-        end
         addEventHandler("onMarkerHit", marker, function(player, sameDim)
             if not sameDim or getElementType(player) ~= "player" then return end
             local vehicle = getPedOccupiedVehicle(player)
@@ -390,7 +402,18 @@ addEventHandler("onResourceStart", resourceRoot, function()
     end
 end)
 
-addEventHandler("onPlayerQuit", root, function() sprayCooldown[source] = nil end)
+addEventHandler("onPlayerQuit", root, function() sprayCooldown[source] = nil dutyNotice[source] = nil end)
+
+-- Portones de los garajes Pay 'n' Spray: getGarageBoundingBox solo existe en el
+-- cliente, que nos dice que garajes contienen los puntos; aqui se abren.
+addEvent("rp:wanted:garages", true)
+addEventHandler("rp:wanted:garages", resourceRoot, function(ids)
+    if type(ids) ~= "table" then return end
+    for _, id in ipairs(ids) do
+        id = tonumber(id)
+        if id and id >= 0 and id <= 49 and id == math.floor(id) and not isGarageOpen(id) then setGarageOpen(id, true) end
+    end
+end)
 
 ----------------------------------------------------------------
 -- Admin
@@ -407,6 +430,19 @@ addCommandHandler("busqueda", function(admin, _, query, level)
     if not level or level < 0 or level > WANTED.MAX_LEVEL then return notify(admin, "Nivel de 0 a 6.", "error") end
     setWantedLevel(target, level)
     notify(admin, ("%s ahora tiene %d estrellas."):format(displayName(target), level), "success")
+end)
+
+-- Diagnostico para cualquier jugador: estrellas, caos y si cuenta como policia de servicio
+addCommandHandler("busquedainfo", function(player)
+    local s = W[player]
+    outputChatBox(("Busqueda: %d estrellas, %d puntos de caos (siguiente estrella: %s)."):format(
+        s and s.level or 0, s and s.chaos or 0,
+        tostring(WANTED.THRESHOLDS[(s and s.level or 0) + 1] or "-")), player, 245, 165, 36)
+    if isWantedPolice(player) then
+        outputChatBox(isPoliceOnDuty(player)
+            and "Eres policia de servicio (uniforme o vehiculo policial): tus delitos no suman."
+            or "Eres policia, pero de civil: tus delitos suman como los de cualquiera.", player, 245, 165, 36)
+    end
 end)
 
 addEventHandler("onResourceStop", resourceRoot, function()
