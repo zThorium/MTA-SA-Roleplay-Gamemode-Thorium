@@ -118,7 +118,7 @@ local function createFx(vehicle)
     for _, o in ipairs(lampOffsets(vehicle)) do
         local x, y, z = getElementPosition(vehicle)
         local marker = createMarker(x, y, z, "corona", 0.35, r, g, b, 0)
-        local light = createLight and createLight(0, x, y, z, 2.2, 0, 0, 0) or nil
+        local light = VEHICLES.INDICATOR_REAL_LIGHTS and createLight and createLight(0, x, y, z, 2.2, 0, 0, 0) or nil
         if marker then
             setElementDimension(marker, getElementDimension(vehicle))
             setElementInterior(marker, getElementInterior(vehicle))

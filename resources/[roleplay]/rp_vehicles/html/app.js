@@ -337,6 +337,14 @@
                 case "tuning": renderTuning(data); break;
             }
         },
+        hide: function () {
+            view = null;
+            tune = null;
+            $("menu").classList.add("hidden");
+            $("window").classList.add("hidden");
+            document.body.classList.remove("dim");
+            $("body").innerHTML = "";
+        },
         previewUnsupported: function () {
             var p = $("preview");
             if (p) p.innerHTML = "<span>La vista 3D necesita el recurso object_preview y una tarjeta grafica con MRT.</span>";

@@ -92,29 +92,14 @@ end)
 ----------------------------------------------------------------
 local restoreTuning
 
-local function closePanel()
-    destroyPreview()
-    if tuneState then
-        restoreTuning()
-        triggerServerEvent("rp:tune:close", resourceRoot)
-        tuneState = nil
-    end
-    if isElement(browserGui) then
-        destroyElement(browserGui)
-        triggerServerEvent("rp:veh:action", resourceRoot, currentVehicle, "trunk_close")
-    end
-    browserGui, browser, ready, pendingJS = nil, nil, false, {}
-    currentVehicle = nil
-    guiSetInputEnabled(false)
-    showCursor(cursorMode)
-end
+-- El navegador CEF se crea una sola vez (oculto) y se reutiliza: crear y
+-- destruir navegadores seguido carga al driver de video.
+local panelOpen = false
 
-local function openPanel()
+local function createBrowser()
     if isElement(browserGui) then return end
-    if exports.rp_inventory and getResourceFromName("rp_inventory") and exports.rp_inventory:isInventoryOpen() then
-        exports.rp_inventory:closeInventory()
-    end
     browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
+    guiSetVisible(browserGui, false)
     browser = guiGetBrowser(browserGui)
     addEventHandler("onClientBrowserCreated", browser, function() loadBrowserURL(source, "http://mta/local/html/index.html") end)
     addEventHandler("onClientBrowserDocumentReady", browser, function()
@@ -122,6 +107,37 @@ local function openPanel()
         for _, code in ipairs(pendingJS) do executeBrowserJavascript(source, code) end
         pendingJS = {}
     end)
+end
+
+local function closePanel()
+    destroyPreview()
+    if tuneState then
+        restoreTuning()
+        triggerServerEvent("rp:tune:close", resourceRoot)
+        tuneState = nil
+    end
+    if panelOpen then
+        panelOpen = false
+        callJS("RPV.hide()")
+        if isElement(browserGui) then guiSetVisible(browserGui, false) end
+        triggerServerEvent("rp:veh:action", resourceRoot, currentVehicle, "trunk_close")
+    end
+    currentVehicle = nil
+    guiSetInputEnabled(false)
+    showCursor(cursorMode)
+end
+
+local function openPanel()
+    if panelOpen then return end
+    if getResourceFromName("rp_inventory") and getResourceState(getResourceFromName("rp_inventory")) == "running"
+        and exports.rp_inventory:isInventoryOpen() then
+        exports.rp_inventory:closeInventory()
+    end
+    createBrowser()
+    panelOpen = true
+    guiSetVisible(browserGui, true)
+    guiBringToFront(browserGui)
+    focusBrowser(browser)
     showCursor(true)
     guiSetInputEnabled(true)
 end
@@ -158,6 +174,7 @@ end)
 for event, view in pairs({ ["rp:veh:showTrunk"] = "trunk", ["rp:veh:showPlate"] = "plate", ["rp:veh:showAdmin"] = "admin",
                            ["rp:veh:showPolice"] = "police", ["rp:veh:showFines"] = "fines" }) do
     addEventHandler(event, resourceRoot, function(vehicle, data)
+        if not panelOpen then return end   -- respuesta tardia con el panel ya cerrado
         if view ~= "trunk" and view ~= "police" and view ~= "fines" then destroyPreview() end
         show(view, vehicle, data)
     end)
@@ -167,7 +184,7 @@ end
 -- Modo cursor (M) y click derecho
 ----------------------------------------------------------------
 local function toggleCursorMode()
-    if isElement(browserGui) then return closePanel() end
+    if panelOpen then return closePanel() end
     if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
     if isChatBoxInputActive() or isConsoleActive() or isMainMenuActive() then return end
     if not cursorMode and isCursorShowing() then return end   -- otro panel abierto
@@ -189,7 +206,7 @@ local function vehicleUnderCursor(clicked, wx, wy, wz)
 end
 
 addEventHandler("onClientClick", root, function(button, state, _, _, wx, wy, wz, clicked)
-    if not cursorMode or isElement(browserGui) or button ~= "right" or state ~= "down" then return end
+    if not cursorMode or panelOpen or button ~= "right" or state ~= "down" then return end
     local vehicle = vehicleUnderCursor(clicked, wx, wy, wz)
     if not vehicle then return end
     local px, py, pz = getElementPosition(localPlayer)
@@ -213,7 +230,7 @@ addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
 end)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     destroyPreview()
-    if cursorMode or isElement(browserGui) then showCursor(false) guiSetInputEnabled(false) end
+    if cursorMode or panelOpen then showCursor(false) guiSetInputEnabled(false) end
 end)
 
 ----------------------------------------------------------------
@@ -239,14 +256,14 @@ addEventHandler("rp:tune:near", resourceRoot, function(shopName)
 end)
 
 addEventHandler("onClientRender", root, function()
-    if not tuneNear or isElement(browserGui) then return end
+    if not tuneNear or panelOpen then return end
     local text = ("%s - pulsa E o escribe /tunear"):format(tuneNear)
     dxDrawText(text, 1, screenH * 0.78 + 1, screenW + 1, screenH * 0.78 + 1, tocolor(0, 0, 0, 200), 1.4, "default-bold", "center")
     dxDrawText(text, 0, screenH * 0.78, screenW, screenH * 0.78, tocolor(255, 190, 60, 255), 1.4, "default-bold", "center")
 end)
 
 local function requestTuning()
-    if tuneNear and not isElement(browserGui) then triggerServerEvent("rp:tune:open", resourceRoot) end
+    if tuneNear and not panelOpen then triggerServerEvent("rp:tune:open", resourceRoot) end
 end
 addCommandHandler("tunear", requestTuning)
 bindKey("e", "down", function()

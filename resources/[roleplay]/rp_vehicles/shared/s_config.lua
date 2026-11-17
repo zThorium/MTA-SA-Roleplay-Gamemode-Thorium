@@ -26,6 +26,10 @@ VEHICLES = {
     INDICATOR_BLINK = 380,      -- ms encendido / apagado
     INDICATOR_COLOR = { 255, 170, 0 },
     INDICATOR_STREAM = 120,     -- metros a los que se dibujan
+    -- Ademas de la corona amarilla, cada intermitente puede iluminar el entorno
+    -- con createLight. Viene apagado: en algunas GPU NVIDIA (Optimus) las luces
+    -- dinamicas moviendose cada frame coincidieron con crashes del driver.
+    INDICATOR_REAL_LIGHTS = false,
 
     -- Maletero: kg por categoria (0 = sin maletero). El resto usa TRUNK_DEFAULT.
     TRUNK_DEFAULT = 30,
