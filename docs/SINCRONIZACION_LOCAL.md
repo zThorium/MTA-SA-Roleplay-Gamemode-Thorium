@@ -5,7 +5,9 @@ Lo ejecuta el Programador de tareas cada 2 minutos.
 
 ## Qué hace
 
-Cada ejecución hace `git fetch` en un **clon de trabajo** (no es la carpeta del servidor). Si `main` no
+Cada ejecución hace `git fetch` en el repositorio git de la propia carpeta del servidor (`modsdeathmatch`; si esa carpeta no
+es un repo, usa un clon aparte en `Documentsmta-rp-syncepo`). **Nunca hace checkout ni `reset --hard`**: lee los
+archivos nuevos directamente del commit de `main`. Si `main` no
 cambió, termina sin hacer ni escribir nada. Si cambió:
 
 1. Respalda lo que va a tocar en `mods\deathmatch\backups\sync-AAAA-MM-DD_HHMMSS`.
@@ -36,8 +38,8 @@ El script nunca reinicia el servidor ni sus recursos: eso lo decides tú.
 
 Requisitos: Git instalado y acceso al repositorio (el mismo que usa `git` o `gh` en tu PC).
 
-1. Copia el script a una carpeta tuya (o usa el que viene en el repo) y crea el clon de trabajo. Esto **no copia nada**:
-   marca `main` como "ya aplicado" porque tu servidor ya está al día:
+1. Copia el script a una carpeta tuya (o usa el que viene en el repo) y márcalo como "ya aplicado". Esto **no copia nada**:
+   Con `-BaseSha <commit>` indicas hasta qué commit de `main` está aplicado tu servidor (por defecto, el `main` actual):
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File "<ruta>\sync-local.ps1" -Init

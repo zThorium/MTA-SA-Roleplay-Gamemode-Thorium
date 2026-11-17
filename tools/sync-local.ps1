@@ -34,12 +34,16 @@ param(
     [string]$Server = "C:\Program Files (x86)\MTA San Andreas 1.6\server\mods\deathmatch",
     [string]$RepoUrl = "https://github.com/zThorium/MTA-SA-Roleplay-Gamemode-Thorium.git",
     [string]$Branch = "main",
+    [string]$Repo = "",          # repo git a usar; por defecto el propio servidor si ya es un repo, si no <Root>\repo
+    [string]$BaseSha = "",       # solo con -Init: commit de main que el servidor ya tiene aplicado (por defecto HEAD)
     [switch]$Init,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
-$Repo      = Join-Path $Root "repo"
+if (-not $Repo) {
+    if (Test-Path -LiteralPath (Join-Path $Server ".git")) { $Repo = $Server } else { $Repo = Join-Path $Root "repo" }
+}
 $StateFile = Join-Path $Root "estado.txt"          # SHA de main ya aplicado al servidor
 $LogFile   = Join-Path $Root "sync-local.log"      # historial
 $LastFile  = Join-Path $Root "ultimo-sync.txt"     # resumen de la ultima sincronizacion
@@ -141,12 +145,11 @@ try {
             & git clone --quiet $RepoUrl $Repo
             if ($LASTEXITCODE -ne 0) { throw "git clone fallo" }
         }
-        & git -C $Repo config core.autocrlf false
         Invoke-Git fetch --quiet origin $Branch | Out-Null
-        Invoke-Git checkout --quiet -B $Branch "origin/$Branch" | Out-Null
-        $sha = (Invoke-Git rev-parse HEAD) | Select-Object -First 1
+        if ($BaseSha) { $sha = (Invoke-Git rev-parse $BaseSha) | Select-Object -First 1 }
+        else { $sha = (Invoke-Git rev-parse "origin/$Branch") | Select-Object -First 1 }
         Set-Content -LiteralPath $StateFile -Value $sha
-        Say "Init: clon listo en $Repo; main ($($sha.Substring(0,7))) marcado como ya aplicado. No se copio nada."
+        Say "Init: repo en $Repo; main ($($sha.Substring(0,7))) marcado como ya aplicado al servidor. No se copio nada."
         throw "__NOOP__"
     }
 
@@ -167,10 +170,8 @@ try {
     Say ("main cambio: {0} -> {1}{2}" -f $old.Substring(0,7), $new.Substring(0,7), $(if ($DryRun) { "  (SIMULACRO: no se copia nada)" } else { "" }))
     foreach ($l in (Invoke-Git log --format="  - %s" "$old..$new" | Select-Object -First 15)) { $report.Add($l) }
 
-    # --- actualizar clon de trabajo (es solo del script: se puede resetear)
-    Invoke-Git checkout --quiet -B $Branch "origin/$Branch" | Out-Null
-    Invoke-Git reset --quiet --hard "origin/$Branch" | Out-Null
-
+    # Los archivos nuevos se leen directamente del commit de main (nunca se hace checkout ni reset --hard
+    # en el repo, asi no se pierde nada de lo que tengas sin commitear en el servidor).
     $backup = Join-Path $Server ("backups\sync-" + $stamp)
     $changes = @(Invoke-Git diff --name-status --no-renames $old $new)
     $copied = 0; $merged = 0; $conflicts = @(); $removed = 0; $skippedSame = 0
@@ -187,7 +188,8 @@ try {
         if (-not $dest) { continue }
         $res = ResourceOf $rel
         if ($rel -like "*rp_database/schema.lua") { $schemaChanged = $true }
-        $src = Join-Path $Repo ($rel -replace '/', '\')
+        $src = Join-Path $tmp "nuevo.tmp"
+        if (-not (GitShowToFile $new $rel $src)) { LogOnly "  no se pudo leer de main: $rel"; continue }
         $ext = [IO.Path]::GetExtension($rel).ToLower()
         $isBin = $BinaryExt -contains $ext
 
@@ -274,9 +276,10 @@ try {
     }
 
     # --- registrar en mtaserver.conf
-    $resRoot = Join-Path $Repo "resources"
     $confPath = Join-Path $Server "mtaserver.conf"
-    $repoConf = Join-Path $Repo "mtaserver.conf"
+    $repoConf = Join-Path $tmp "mtaserver.main.conf"
+    if (-not (GitShowToFile $new "mtaserver.conf" $repoConf)) { throw "No se pudo leer mtaserver.conf de main" }
+    $metaPaths = @(Invoke-Git ls-tree -r --name-only $new | Where-Object { $_ -match '^resources/\[[^\]]+\]/[^/]+/meta\.xml$' })
     $confAdded = @()
     $repoOrder = ConfNames $repoConf
     $localNames = ConfNames $confPath
@@ -288,9 +291,11 @@ try {
         $lines = New-Object System.Collections.Generic.List[string]
         $lines.AddRange([string[]][IO.File]::ReadAllLines($confPath))
         foreach ($name in $toAdd) {
-            $metaRepo = Get-ChildItem -LiteralPath $resRoot -Recurse -Filter meta.xml -ErrorAction SilentlyContinue | Where-Object { $_.Directory.Name -eq $name } | Select-Object -First 1
-            if (-not $metaRepo) { continue }
-            $deps = MetaIncludes $metaRepo.FullName
+            $metaRel = $metaPaths | Where-Object { $_ -match ('/' + [regex]::Escape($name) + '/meta\.xml$') } | Select-Object -First 1
+            if (-not $metaRel) { continue }
+            $metaTmp = Join-Path $tmp "meta.tmp"
+            if (-not (GitShowToFile $new $metaRel $metaTmp)) { continue }
+            $deps = MetaIncludes $metaTmp
             # posicion: despues de su predecesor en el orden del repo y de todas sus dependencias
             $minIdx = -1
             $iRepo = [array]::IndexOf($repoOrder, $name)
@@ -316,7 +321,11 @@ try {
         }
     }
 
-    if (-not $DryRun) { Set-Content -LiteralPath $StateFile -Value $new }
+    if (-not $DryRun) {
+        Set-Content -LiteralPath $StateFile -Value $new
+        # Mueve HEAD/indice a main SIN tocar los archivos: `git status` pasa a mostrar solo tus diferencias locales
+        try { Invoke-Git reset --quiet --mixed $new | Out-Null } catch { LogOnly ("aviso: no se pudo mover HEAD: " + $_.Exception.Message) }
+    }
 
     # --- informe
     $report.Add("")
