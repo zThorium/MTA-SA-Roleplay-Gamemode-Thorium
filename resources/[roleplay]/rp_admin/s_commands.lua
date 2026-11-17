@@ -16,6 +16,8 @@
         /kick <jugador> [motivo]        expulsar del servidor
         /givemoney <jugador> <monto>    dar (o quitar, si es negativo) efectivo. Alias: /apagar
         /a <mensaje>                    chat de administradores
+        /debug [0-3]                    activar / apagar el debugscript de tu cliente
+        /copiardebug [X]                copiar al portapapeles las ultimas X lineas del debug
         /ahelp                          lista de comandos de admin
     Nivel 3 (super admin):
         /setmoney <jugador> <monto>     fijar el efectivo
@@ -359,6 +361,7 @@ local HELP = {
     { LEVEL_ADMIN, "Otros: /a (chat admin) /admins /freecam /forzarpayday" },
     { LEVEL_ADMIN, "Mundo: /crearatm /crearshop /crearcasa /crearropa /crearfaccion /dealer (y sus /borrar...)" },
     { LEVEL_ADMIN, "Debug: /debug [0-3] activa o apaga el debugscript de tu cliente" },
+    { LEVEL_ADMIN, "Debug: /copiardebug [X] copia al portapapeles las ultimas X lineas del debug (antes /debug 3)" },
     { LEVEL_SUPER, "Super admin: /setmoney /ban" },
 }
 
@@ -375,6 +378,17 @@ addCommandHandler("debug", function(player, _, level)
     setPlayerScriptDebugLevel(player, n)
     debugLevels[player] = n > 0 or nil
     notify(player, ("Debugscript %s (nivel %d)."):format(n == 0 and "apagado" or "activado", n), "success")
+end)
+-- /copiardebug [X]: copia al portapapeles del admin las ultimas X lineas del debugscript (tope 100).
+-- El buffer vive en el cliente (c_debug.lua); aqui solo se valida el permiso.
+addEvent("rp:admin:copyDebug", true)
+addCommandHandler("copiardebug", function(player, _, count)
+    if not guard(player) then return end
+    local n = count and tonumber(count) or 10
+    if not n or n < 1 then
+        return notify(player, "Uso: /copiardebug [lineas] (1-100, por defecto 10). Antes activa el debug con /debug 3.", "warning")
+    end
+    triggerClientEvent(player, "rp:admin:copyDebug", resourceRoot, math.min(math.floor(n), 100))
 end)
 addCommandHandler("ahelp", function(player)
     if not guard(player) then return end
