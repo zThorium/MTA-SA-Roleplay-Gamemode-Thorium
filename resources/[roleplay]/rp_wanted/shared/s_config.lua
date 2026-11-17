@@ -33,7 +33,9 @@ WANTED = {
     DECAY_RADIUS = 18,          -- m: policia a esta distancia impide que baje el caos
     DECAY_CITY = 1,             -- puntos por segundo en la ciudad
     DECAY_ELUSIVE = 2,          -- fuera de la ciudad o en un interior
-    DECAY_GRACE = 30000,        -- ms sin decaimiento despues de un delito o de subir de nivel
+    DECAY_GRACE = 30000,
+    EVADE_TIME = 10000,         -- ms sin que ningun policia te vea antes de que empiece a bajar
+    CITY_EXIT_COOLDOWN = 60000, -- salir de la ciudad con 2+ estrellas quita una (como mucho 1 vez por minuto)        -- ms sin decaimiento despues de un delito o de subir de nivel
 
     -- Mas facil que GTA (pedido del servidor): todos los puntos se multiplican
     CRIME_SCALE = 2,
@@ -96,11 +98,11 @@ WANTED_CRIMES = {
     ped_melee    = { points = 5,   label = "Agresion" },
     cop_melee    = { points = 45,  label = "Agresion a un policia", instant = 1 },
     ped_stab     = { points = 35,  label = "Apunalar a un civil", instant = 1 },
-    cop_stab     = { points = 100, label = "Apunalar a un policia", instant = 1 },
+    cop_stab     = { points = 100, label = "Apunalar a un policia", instant = 2 },
     ped_shoot    = { points = 30,  label = "Disparar a un civil", instant = 1 },
-    cop_shoot    = { points = 80,  label = "Disparar a un policia", instant = 1 },
+    cop_shoot    = { points = 80,  label = "Disparar a un policia", instant = 2 },
     ped_runover  = { points = 18,  label = "Atropello" },
-    cop_runover  = { points = 80,  label = "Atropellar a un policia", instant = 1 },
+    cop_runover  = { points = 80,  label = "Atropellar a un policia", instant = 2 },
     cop_car      = { points = 80,  label = "Embestir una patrulla", instant = 1 },
     car_hit      = { points = 2,   label = "Choque" },
     car_damage   = { points = 5,   label = "Danos a un vehiculo" },
@@ -130,13 +132,15 @@ end
 ]]
 -- Mas duro que GTA (pedido del servidor): mas patrullas, embestidas desde 2
 -- estrellas, controles y pinchos (spikes = % por despacho) por delante.
+-- chasers: cuantas patrullas persiguen de cerca (GTA: 2 de 2 a 4 estrellas, 3 en 5-6);
+-- las demas se adelantan por tu ruta para cortarte el paso.
 WANTED_LEVELS = {
-    [1] = { cars = 2, heli = 0, roadblock = 0,  spikes = 0,  fleet = { "police" },                 shoot = false, ram = false },
-    [2] = { cars = 3, heli = 0, roadblock = 20, spikes = 25, fleet = { "police" },                 shoot = true,  ram = true },
-    [3] = { cars = 4, heli = 1, roadblock = 35, spikes = 40, fleet = { "police" },                 shoot = true,  ram = true },
-    [4] = { cars = 4, heli = 1, roadblock = 45, spikes = 45, fleet = { "swat", "police" },         shoot = true,  ram = true },
-    [5] = { cars = 5, heli = 2, roadblock = 55, spikes = 50, fleet = { "fbi", "police", "fbi" },   shoot = true,  ram = true },
-    [6] = { cars = 5, heli = 2, roadblock = 60, spikes = 50, fleet = { "tank", "army", "fbi" },    shoot = true,  ram = true },
+    [1] = { cars = 2, chasers = 1, heli = 0, roadblock = 0,  spikes = 0,  fleet = { "police" },                 shoot = false, ram = false },
+    [2] = { cars = 3, chasers = 2, heli = 0, roadblock = 20, spikes = 25, fleet = { "police" },                 shoot = true,  ram = true },
+    [3] = { cars = 4, chasers = 2, heli = 1, roadblock = 35, spikes = 40, fleet = { "police" },                 shoot = true,  ram = true },
+    [4] = { cars = 4, chasers = 2, heli = 1, roadblock = 45, spikes = 45, fleet = { "swat", "police" },         shoot = true,  ram = true },
+    [5] = { cars = 5, chasers = 3, heli = 2, roadblock = 55, spikes = 50, fleet = { "fbi", "police", "fbi" },   shoot = true,  ram = true },
+    [6] = { cars = 5, chasers = 3, heli = 2, roadblock = 60, spikes = 50, fleet = { "tank", "army", "fbi" },    shoot = true,  ram = true },
 }
 
 -- Arma de los acompanantes para disparar desde la ventanilla (MP5)

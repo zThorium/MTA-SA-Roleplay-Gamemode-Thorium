@@ -100,6 +100,12 @@ Persecución más difícil (segunda ronda):
 - **Tráfico**: 16 autos de día y 9 de noche (antes 7 y 4), 6 más durante una persecución. Yendo rápido, el 70 % aparece por delante.
 - **Lag**: si una patrulla no encontraba ruta, repetía el A* cada 50 ms. Ahora hay como mucho una búsqueda por tick y un fallo espera 1,2 s.
 
+Tercera ronda (comparado con el análisis de la wiki):
+- **Temporizador de evasión**: la búsqueda solo baja después de 10 s sin que ningún policía te vea (unidad, patrulla del tráfico, helicóptero hasta 140 m o policía jugador). Lo mide tu cliente con línea de visión y cualquier avistamiento lo reinicia.
+- **Salir de la ciudad al campo** con 2 o más estrellas quita una (como mucho una vez por minuto).
+- **Disparar, apuñalar o atropellar a un policía** deja 2 estrellas al instante; golpearlo, 1.
+- **Perseguidores**: 1 a 1 estrella, 2 de 2 a 4 y 3 en 5-6; el resto intercepta.
+
 Decisiones:
 - **Sin cambios en `schema.lua`**. En `rp_hud` solo se agrega `c_wanted.lua` y una línea en su `meta.xml` (el PR #6 también toca ese `meta.xml`: conflicto de una línea, fácil de resolver).
 - **Sin CEF**: el HUD usa dx, así no se crean navegadores.

@@ -21,6 +21,7 @@
 
 addEvent("rp:onWantedLevelChange", false)
 addEvent("rp:wanted:crime", true)
+addEvent("rp:wanted:seen", true)
 addEvent("rp:onCharacterSpawn", false)    -- de rp_characters
 addEvent("rp:onCharacterLogout", false)
 
@@ -271,11 +272,24 @@ setTimer(function()
             W[player] = nil
         else
             if s.parole and now - s.parole.at > WANTED.PAROLE_TIME then s.parole = nil end
+            local x, y, z = getElementPosition(player)
+            local inCity = getElementInterior(player) == 0 and CITIES[getZoneName(x, y, z, true)] ~= nil
+            -- GTA: salir de la ciudad al campo con 2+ estrellas quita una
+            if s.inCity and not inCity and getElementInterior(player) == 0 and s.level >= 2 and not s.busted
+                and now - (s.cityDropAt or 0) > WANTED.CITY_EXIT_COOLDOWN then
+                s.cityDropAt = now
+                applyChaos(player, WANTED.SET_LEVEL_CHAOS[s.level - 1])
+                notify(player, "Saliste de la ciudad: la policia te busca con menos intensidad.", "info")
+            end
+            s.inCity = inCity
+            local unseen = now - (s.seenAt or 0) > WANTED.EVADE_TIME
             if s.chaos > 0 and not s.busted and now < (s.graceUntil or 0) then
                 setLost(player, s, false)
+            elseif s.chaos > 0 and not s.busted and not unseen then
+                -- algun policia te ve (lo informa tu cliente): no baja
+                setLost(player, s, false)
             elseif s.chaos > 0 and not s.busted then
-                local x, y, z = getElementPosition(player)
-                local elusive = getElementInterior(player) ~= 0 or not CITIES[getZoneName(x, y, z, true)]
+                local elusive = not inCity
                 -- GTA: con 2+ estrellas en una zona apartada y dentro de un vehiculo policial no baja
                 local v = getPedOccupiedVehicle(player)
                 local hiding = s.level > 1 and elusive and v and WANTED_POLICE_MODELS[getElementModel(v)]
@@ -291,6 +305,14 @@ setTimer(function()
         end
     end
 end, 1000, 0)
+
+-- El cliente informa si algun policia (unidad, patrulla del trafico, helicoptero
+-- o policia jugador) tiene linea de vision: la busqueda solo baja tras EVADE_TIME
+-- sin que te vean (GTA: temporizador de evasion; cualquier avistamiento lo reinicia)
+addEventHandler("rp:wanted:seen", resourceRoot, function()
+    local s = W[client]
+    if s then s.seenAt = getTickCount() end
+end)
 
 -- La faccion de un jugador puede cambiar: se refrescan los puntos de la policia
 setTimer(function()

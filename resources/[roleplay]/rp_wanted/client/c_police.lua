@@ -883,7 +883,8 @@ local function assignRoles(now)
         local wasRole = u.role
         u.role, u.icpt = "chase", nil
         -- la primera persigue; el resto intercepta si hay ruta probable y va rapido
-        if i > 1 and path and #path > 3 and (pred.speed or 0) > 9 then
+        local cfg = levelCfg()
+        if i > (cfg and cfg.chasers or 1) and path and #path > 3 and (pred.speed or 0) > 9 then
             local p = chooseIntercept(u, path, pred.speed)
             if p then
                 u.role = "intercept"
@@ -997,6 +998,37 @@ local function checkSpikes()
         end
     end
 end
+
+----------------------------------------------------------------
+-- Avistamiento: cada segundo se le dice al servidor si algun policia te ve
+----------------------------------------------------------------
+local function copSees(el, px, py, pz, range)
+    local x, y, z = getElementPosition(el)
+    if getDistanceBetweenPoints3D(x, y, z, px, py, pz) > range then return false end
+    return isLineOfSightClear(x, y, z + 0.8, px, py, pz + 0.6, true, false, false, true, false, true, false)
+end
+
+local function policeSeesMe()
+    local px, py, pz = getElementPosition(localPlayer)
+    for _, ped in ipairs(getElementsWithinRange(px, py, pz, 70, "ped")) do
+        if getElementData(ped, "rp:cop") and not isPedDead(ped) and copSees(ped, px, py, pz, 70) then return true end
+    end
+    for _, v in ipairs(getElementsWithinRange(px, py, pz, 140, "vehicle")) do
+        if getElementData(v, "rp:copCar") and getVehicleController(v) and getVehicleController(v) ~= localPlayer then
+            -- el helicoptero ve desde mas lejos
+            local range = getVehicleType(v) == "Helicopter" and 140 or 70
+            if copSees(v, px, py, pz, range) then return true end
+        end
+    end
+    for _, pl in ipairs(getElementsWithinRange(px, py, pz, 70, "player")) do
+        if pl ~= localPlayer and WANTED_POLICE_SKINS[getElementModel(pl)] and copSees(pl, px, py, pz, 70) then return true end
+    end
+    return false
+end
+
+setTimer(function()
+    if level > 0 and policeSeesMe() then triggerServerEvent("rp:wanted:seen", resourceRoot) end
+end, 1000, 0)
 
 local function tick()
     local now = getTickCount()
