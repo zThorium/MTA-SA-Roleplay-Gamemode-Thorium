@@ -23,7 +23,7 @@
 | `rp_scoreboard` | Mantener Tab: servidor, jugadores activos, ID, nombre y ping. |
 | `rp_hud` | HUD propio: minimapa giratorio (radar extraído de gta3.img, `tools/RadarExtract.cs`), barras, hora, dinero. `/hud`. |
 | `rp_citizens` | Peatones y tráfico 100% en el cliente sobre la red de caminos de GTA SA (`c_nodes_ls.lua`). Máquina de estados: pasear, esperar, huir, pelear / conducir, frenar, bocina, esquivar, huir. `/poblacion`, `/poblacioninfo`. Editor de rutas para admins: `/nodos` (cambios en `path_nodes` / `path_links`, aplicados en vivo). |
-| `rp_admin` | Herramientas de administración: `/freecam`. |
+| `rp_admin` | Administración: `/freecam`, `/goto`, `/get`, `/tp`, `/heal`, `/sethp`, `/freeze`, `/slap`, `/kick`, `/givemoney`, `/a`, `/admins`, `/ahelp` (nivel 1) y `/setmoney`, `/ban` (nivel 3). Registra todo en `admin_log`. |
 | `rp_factions` | Facciones con panel en F3: el lider crea roles con nivel, sueldo y permisos (ver miembros, invitar, expulsar, cambiar rol, gestionar roles, fondos, registro, anuncio). Cada miembro solo ve lo que su rol permite. `/f`, `/finvitar`, `/aceptarfaccion`, `/salirfaccion`. Admin: `/crearfaccion <tipo> <siglas> <nombre>`, `/setlider <jugador> <id>`, `/darfondos`, `/borrarfaccion`, `/facciones`. |
 | `rp_payday` | Sueldo cada 60 min de juego (sin contar AFK, se conserva entre sesiones) al banco: el del rol en la faccion (Estado o fondos de la faccion) o el sueldo base del Estado. `/payday`. Admin: `/forzarpayday <jugador>`. |
 
