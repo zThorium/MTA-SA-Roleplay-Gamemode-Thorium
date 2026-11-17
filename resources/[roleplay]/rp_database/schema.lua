@@ -510,4 +510,21 @@ SCHEMA = {
     WHERE EXISTS (SELECT 1 FROM factions WHERE id = 1 AND type = 'policia')
       AND NOT EXISTS (SELECT 1 FROM faction_ranks WHERE faction_id = 1)
     ]],
+    -- Bencina de los vehiculos (NULL = tanque lleno) y tarjetas de debito
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS fuel FLOAT NULL
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS bank_cards (
+        character_id INT UNSIGNED NOT NULL,
+        number       CHAR(16)     NOT NULL,
+        pin          CHAR(4)      NOT NULL,
+        holder       VARCHAR(32)  NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        UNIQUE KEY uq_bank_cards_number (number),
+        CONSTRAINT fk_bank_cards_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -117,6 +117,7 @@ local function spawnRow(row)
     setElementData(v, "rp:vehicleId", id)
     setElementData(v, "rp:indicator", false)
     if applyTuning then applyTuning(v, row.tuning) end
+    if initFuel then initFuel(v, tonumber(row.fuel)) end
     updateFrozen(v)
     labelKey(v)
     return v
@@ -129,9 +130,10 @@ function saveVehicle(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local tuning = captureTuning and toJSON(captureTuning(vehicle), true) or nil
     dbExec(db(), [[UPDATE vehicles SET x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, interior = ?, dimension = ?, health = ?,
-        locked = ?, handbrake = ?, clamped = ?, tuning = ? WHERE id = ?]],
+        locked = ?, handbrake = ?, clamped = ?, tuning = ?, fuel = ? WHERE id = ?]],
         x, y, z, rx, ry, rz, getElementInterior(vehicle), getElementDimension(vehicle), getElementHealth(vehicle),
-        data.locked and 1 or 0, data.handbrake and 1 or 0, data.clamped and 1 or 0, tuning, data.id)
+        data.locked and 1 or 0, data.handbrake and 1 or 0, data.clamped and 1 or 0, tuning,
+        getVehicleFuel and getVehicleFuel(vehicle) or nil, data.id)
 end
 
 local function loadVehicles()
@@ -317,6 +319,13 @@ addEventHandler("rp:veh:engine", resourceRoot, function()
     local v = driverVehicle(player)
     if not v then return notify(player, "Debes estar al volante.", "warning") end
     local data = vehicles[v]
+    local starting = not (data and data.engine or (not data and getVehicleEngineState(v)))
+    if starting and getVehicleFuel and getVehicleFuel(v) <= 0 then
+        return notify(player, "El vehiculo no tiene bencina. Llevalo a una bencinera.", "error")
+    end
+    if starting and isRefueling and isRefueling(v) then
+        return notify(player, "Espera a que terminen de cargar la bencina.", "warning")
+    end
     if not data then
         -- Vehiculos sin dueno (admin, trabajos...): motor libre
         return setVehicleEngineState(v, not getVehicleEngineState(v))
@@ -355,13 +364,28 @@ addEventHandler("rp:veh:indicator", resourceRoot, function(side)
     setElementData(v, "rp:indicator", current ~= side and side or false)
 end)
 
+-- Enciende o apaga el motor desde otro script (p. ej. sin bencina o en la bencinera)
+function setEngine(vehicle, on)
+    local data = vehicles[vehicle]
+    if data then data.engine = on and true or false end
+    setVehicleEngineState(vehicle, on and true or false)
+end
+
 ----------------------------------------------------------------
 -- Entrar y salir
 ----------------------------------------------------------------
 -- Los autos con dueno conservan el estado del motor: GTA lo enciende solo al subir
 addEventHandler("onVehicleEnter", root, function(player, seat)
     local data = vehicles[source]
-    if not data then return end
+    if not data then
+        -- Sin dueno: GTA enciende el motor solo, salvo que no tenga bencina
+        if seat == 0 and getVehicleFuel and getVehicleFuel(source) <= 0 then
+            local v = source
+            setTimer(function() if isElement(v) then setVehicleEngineState(v, false) end end, 100, 1)
+            notify(player, "El vehiculo no tiene bencina.", "warning")
+        end
+        return
+    end
     if seat == 0 then
         setVehicleEngineState(source, data.engine)
         if not data.engine and hasVehicleKey(player, data.id) then

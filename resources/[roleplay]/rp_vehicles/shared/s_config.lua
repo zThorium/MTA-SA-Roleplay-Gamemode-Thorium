@@ -101,3 +101,60 @@ end
 function vehicleKeyItem(vehicleId)
     return "vkey:" .. tostring(vehicleId)
 end
+
+----------------------------------------------------------------
+-- Bencina (server/s_fuel.lua, client/c_fuel.lua)
+----------------------------------------------------------------
+FUEL = {
+    PRICE_PER_LITER = 4,         -- $ por litro
+    PER_KM = 0.9,                -- litros por km recorrido (escala de juego: ~60 km por tanque)
+    IDLE_PER_MIN = 0.12,         -- litros por minuto con el motor encendido y parado
+    TICK = 3000,                 -- ms entre calculos de consumo
+    REFUEL_RATE = 3.5,           -- litros por segundo al cargar
+    LOW = 0.15,                  -- fraccion del tanque que se considera reserva
+    -- Litros del tanque: por modelo, por tipo de vehiculo o por defecto
+    CAPACITY_DEFAULT = 55,
+    CAPACITY_BY_TYPE = { Bike = 16, Quad = 14, ["Monster Truck"] = 120 },
+    CAPACITY_BY_MODEL = {
+        [403] = 300, [514] = 300, [515] = 300,                  -- camiones
+        [431] = 200, [437] = 200,                               -- buses
+        [407] = 150, [427] = 120, [428] = 90, [433] = 150, [455] = 150, [456] = 120, [498] = 90, [499] = 90, [578] = 150,
+        [482] = 75, [440] = 70, [418] = 70, [413] = 70, [459] = 70, [582] = 70, [489] = 80, [505] = 80, [579] = 85,
+    },
+    -- Tipos de vehiculo sin bencina (bicicletas, trenes, remolques, aviones, botes)
+    NO_FUEL_TYPES = { BMX = true, Train = true, Trailer = true, Plane = true, Helicopter = true, Boat = true },
+    ATTENDANT_SKIN = 50,         -- mecanico con overol
+    MARKER_RADIUS = 3.2,
+    -- Bencineras: x, y, z = donde se estaciona el auto (marcador);
+    -- px, py, pz, prz = donde espera el bombero. Los admins las ajustan con
+    -- /moverbencinera y /moverbombero (se guardan en fuel_stations.json).
+    STATIONS = {
+        { name = "Xoomer Idlewood",      x = 1941.7, y = -1771.3, z = 13.4, px = 1937.6, py = -1775.4, pz = 13.4, prz = 270 },
+        { name = "Xoomer Mulholland",    x = 1004.0, y = -937.5,  z = 42.2, px = 1000.6, py = -932.5,  pz = 42.3, prz = 190 },
+        { name = "Flint County",         x = -90.5,  y = -1169.4, z = 2.4,  px = -86.0,  py = -1164.2, pz = 2.3,  prz = 160 },
+        { name = "Dillimore",            x = 655.6,  y = -565.0,  z = 16.3, px = 660.4,  py = -569.6,  pz = 16.3, prz = 90 },
+        { name = "Angel Pine",           x = -2243.9, y = -2560.6, z = 31.9, px = -2238.6, py = -2564.0, pz = 32.0, prz = 60 },
+        { name = "Whetstone",            x = -1606.0, y = -2713.7, z = 48.5, px = -1601.6, py = -2709.2, pz = 48.5, prz = 140 },
+        { name = "Easter Basin (SF)",    x = -1675.9, y = 412.9,   z = 7.2,  px = -1670.5, py = 416.9,   pz = 7.2,  prz = 130 },
+        { name = "Juniper Hollow (SF)",  x = -2410.7, y = 975.6,   z = 45.3, px = -2415.9, py = 977.7,   pz = 45.3, prz = 270 },
+        { name = "Come-A-Lot (LV)",      x = 2114.9,  y = 920.0,   z = 10.8, px = 2109.7,  py = 916.2,   pz = 10.8, prz = 270 },
+        { name = "Roca Escalante (LV)",  x = 2202.2,  y = 2474.3,  z = 10.8, px = 2197.3,  py = 2479.0,  pz = 10.8, prz = 200 },
+        { name = "Spinybed (LV)",        x = 2640.1,  y = 1106.0,  z = 10.8, px = 2645.6,  py = 1109.6,  pz = 10.8, prz = 90 },
+        { name = "Redsands (LV)",        x = 1596.3,  y = 2199.4,  z = 10.8, px = 1590.8,  py = 2204.4,  pz = 10.8, prz = 270 },
+        { name = "Fort Carson",          x = 70.4,    y = 1218.6,  z = 18.8, px = 65.6,    py = 1222.9,  pz = 18.8, prz = 250 },
+        { name = "Tierra Robada",        x = -1328.8, y = 2677.2,  z = 50.1, px = -1324.0, py = 2682.5,  pz = 50.1, prz = 100 },
+        { name = "Bone County",          x = 611.9,   y = 1694.4,  z = 7.0,  px = 616.7,   py = 1689.5,  pz = 7.0,  prz = 60 },
+    },
+}
+
+function getFuelCapacity(model)
+    if FUEL.CAPACITY_BY_MODEL[model] then return FUEL.CAPACITY_BY_MODEL[model] end
+    local vtype = getVehicleType(model)
+    if vtype and FUEL.CAPACITY_BY_TYPE[vtype] then return FUEL.CAPACITY_BY_TYPE[vtype] end
+    return FUEL.CAPACITY_DEFAULT
+end
+
+function usesFuel(model)
+    local vtype = getVehicleType(model)
+    return vtype ~= nil and vtype ~= false and not FUEL.NO_FUEL_TYPES[vtype]
+end

@@ -79,14 +79,27 @@ ITEM_FAMILIES = {
         description = "Llave de un vehiculo. Usala cerca del vehiculo para abrirlo o cerrarlo.",
         use = { event = "vehicle_key" },
     } },
+    -- "bcard:12" es la tarjeta de debito de la cuenta del personaje 12 (rp_bank)
+    { pattern = "^bcard:%d+$", base = {
+        name = "Tarjeta de debito", icon = "💳", weight = 0.01, stack = 1,
+        description = "Tarjeta de debito. Sirve para pagar en los datafonos (p. ej. en la bencinera).",
+    } },
 }
 
-local itemLabels = {}   -- [itemId] = { name, description }
+local itemLabels = {}   -- [itemId] = { name, description, private, owner }
 
-function setItemLabel(itemId, name, description)
+-- private: texto extra que solo ve en su inventario el personaje ownerId
+-- (p. ej. el numero y la clave de una tarjeta)
+function setItemLabel(itemId, name, description, private, ownerId)
     if type(itemId) ~= "string" then return false end
-    itemLabels[itemId] = { name = name, description = description }
+    itemLabels[itemId] = { name = name, description = description, private = private, owner = tonumber(ownerId) }
     return true
+end
+
+function getItemPrivateNote(itemId, characterId)
+    local label = itemLabels[itemId]
+    if label and label.private and label.owner and label.owner == tonumber(characterId) then return label.private end
+    return nil
 end
 
 function getItemDefinition(itemId)

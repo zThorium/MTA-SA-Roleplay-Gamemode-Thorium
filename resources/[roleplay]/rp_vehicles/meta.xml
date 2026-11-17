@@ -1,5 +1,5 @@
 <meta>
-    <info author="Thorium" name="RP Vehicles" description="Vehiculos personales: llaves, motor, freno de mano, intermitentes, maletero, menu de interaccion (M), tuning persistente y herramientas de policia" version="2.0.0" type="script" />
+    <info author="Thorium" name="RP Vehicles" description="Vehiculos personales: llaves, motor, freno de mano, intermitentes, maletero, menu de interaccion (M), tuning persistente, bencina y bencineras, y herramientas de policia" version="2.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_database" />
@@ -8,6 +8,7 @@
     <include resource="rp_ids" />
     <include resource="rp_characters" />
     <include resource="rp_inventory" />
+    <include resource="rp_bank" />
     <include resource="object_preview" />
 
     <script src="shared/s_config.lua" type="shared" />
@@ -16,9 +17,11 @@
     <script src="server/s_police.lua" type="server" />
     <script src="server/s_tuning.lua" type="server" />
     <script src="server/s_admin.lua" type="server" />
+    <script src="server/s_fuel.lua" type="server" />
     <script src="client/c_controls.lua" type="client" cache="false" />
     <script src="client/c_interaction.lua" type="client" cache="false" />
     <script src="client/c_tuning.lua" type="client" cache="false" />
+    <script src="client/c_fuel.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
@@ -26,10 +29,20 @@
     <file src="html/tuning.html" />
     <file src="html/tuning.css" />
     <file src="html/tuning.js" />
+    <file src="html/fuel.html" />
+    <file src="html/fuel.css" />
+    <file src="html/fuel.js" />
+    <file src="sounds/pos_beep.wav" />
+    <file src="sounds/pos_ok.wav" />
+    <file src="sounds/pos_error.wav" />
+    <file src="sounds/pos_swipe.wav" />
+    <file src="sounds/pos_print.wav" />
 
     <export function="createOwnedVehicle" type="server" />
     <export function="countOwnedVehicles" type="server" />
     <export function="getVehicleOwner" type="server" />
     <export function="getVehicleDatabaseId" type="server" />
     <export function="saveVehicle" type="server" />
+    <export function="getVehicleFuel" type="server" />
+    <export function="setVehicleFuel" type="server" />
 </meta>

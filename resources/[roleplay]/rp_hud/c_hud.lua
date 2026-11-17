@@ -5,6 +5,8 @@
         extraido de la instalacion del jugador (images/map.png), blips y flecha.
       - Barras de vida, chaleco, hambre, sed y energia (rp_needs).
       - Hora del juego, dinero, zona y municion (arriba a la derecha).
+      - Velocimetro y bencina (abajo a la derecha) cuando vas en un vehiculo
+        (litros en el elementData "rp:fuel" / "rp:fuelMax" que pone rp_vehicles).
     /hud oculta o muestra el HUD.
 ]]
 
@@ -19,7 +21,7 @@ local MARGIN = math.floor(22 * s)
 local mapTexture, renderTarget
 
 -- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
-local BLIP_ICON_IDS = { 27, 41, 45, 52, 55 }
+local BLIP_ICON_IDS = { 27, 41, 45, 51, 52, 55 }   -- 51 = bencinera
 local zoomUnits = 300
 local BLIP_MAX_DISTANCE = 900   -- metros: mas lejos no se muestran en el minimapa (si en F11)
 local blipIcons = {}
@@ -239,12 +241,90 @@ local function drawTopRight()
 end
 
 ----------------------------------------------------------------
+-- Velocimetro y bencina
+----------------------------------------------------------------
+local SPEEDO_MAX = 240   -- km/h al final de la escala
+
+-- Arco grueso de a.. b grados (0 = derecha, sentido horario)
+local function drawArc(cx, cy, r, a, b, width, color)
+    local step = 4
+    local px, py = cx + math.cos(math.rad(a)) * r, cy + math.sin(math.rad(a)) * r
+    local ang = a
+    while ang < b do
+        ang = math.min(b, ang + step)
+        local x, y = cx + math.cos(math.rad(ang)) * r, cy + math.sin(math.rad(ang)) * r
+        dxDrawLine(px, py, x, y, color, width)
+        px, py = x, y
+    end
+end
+
+local function drawSpeedometer()
+    local vehicle = getPedOccupiedVehicle(localPlayer)
+    if not vehicle then return end
+    local R = 92 * s
+    local cx, cy = screenW - MARGIN - R, screenH - MARGIN - R
+    local vx, vy, vz = getElementVelocity(vehicle)
+    local speed = math.sqrt(vx * vx + vy * vy + vz * vz) * 180
+    local frac = math.min(1, speed / SPEEDO_MAX)
+
+    dxDrawCircle(cx, cy, R, 0, 360, COLORS.panel, COLORS.panel, 48)
+    -- Escala: de 135 grados (abajo a la izquierda) a 405 (abajo a la derecha)
+    local A0, SPAN = 135, 270
+    drawArc(cx, cy, R * 0.82, A0, A0 + SPAN, 7 * s, tocolor(255, 255, 255, 28))
+    if frac > 0.004 then
+        local hot = frac > 0.75
+        drawArc(cx, cy, R * 0.82, A0, A0 + SPAN * frac, 7 * s, hot and tocolor(229, 72, 77, 240) or COLORS.accent)
+    end
+    for kmh = 0, SPEEDO_MAX, 20 do
+        local ang = math.rad(A0 + SPAN * kmh / SPEEDO_MAX)
+        local major = kmh % 40 == 0
+        local r1, r2 = R * (major and 0.66 or 0.70), R * 0.74
+        dxDrawLine(cx + math.cos(ang) * r1, cy + math.sin(ang) * r1, cx + math.cos(ang) * r2, cy + math.sin(ang) * r2,
+            tocolor(255, 255, 255, major and 170 or 80), major and 2 or 1)
+        if major then
+            local tx, ty = cx + math.cos(ang) * R * 0.55, cy + math.sin(ang) * R * 0.55
+            dxDrawText(tostring(kmh), tx, ty, tx, ty, COLORS.muted, 0.75 * s, "default", "center", "center")
+        end
+    end
+
+    dxDrawText(("%d"):format(math.floor(speed + 0.5)), cx, cy - 18 * s, cx, cy - 18 * s, COLORS.text, 2.4 * s, "default-bold", "center", "center")
+    dxDrawText("km/h", cx, cy + 6 * s, cx, cy + 6 * s, COLORS.muted, 0.85 * s, "default", "center", "center")
+
+    -- Indicadores: freno de mano y motor
+    local engineOn = getVehicleEngineState(vehicle)
+    dxDrawText("MOTOR", cx - 26 * s, cy + 24 * s, cx - 26 * s, cy + 24 * s,
+        engineOn and COLORS.money or tocolor(255, 255, 255, 70), 0.75 * s, "default-bold", "center", "center")
+    dxDrawText("P", cx + 26 * s, cy + 24 * s, cx + 26 * s, cy + 24 * s,
+        getElementData(vehicle, "rp:handbrake") and tocolor(229, 72, 77, 255) or tocolor(255, 255, 255, 70), 1.0 * s, "default-bold", "center", "center")
+
+    -- Bencina
+    local fuel, max = tonumber(getElementData(vehicle, "rp:fuel")), tonumber(getElementData(vehicle, "rp:fuelMax"))
+    if fuel and max and max > 0 then
+        local f = math.max(0, math.min(1, fuel / max))
+        local low = f <= 0.15
+        local refueling = getElementData(vehicle, "rp:refueling")
+        local pulse = (low or refueling) and (math.sin(getTickCount() / 160) * 0.35 + 0.65) or 1
+        local bw, bh = R * 1.05, 7 * s
+        local bx, by = cx - bw / 2, cy + 44 * s
+        dxDrawRectangle(bx, by, bw, bh, tocolor(255, 255, 255, 30))
+        local r, g, b = 255, 200, 40
+        if low then r, g, b = 229, 72, 77 end
+        if refueling then r, g, b = 76, 211, 138 end
+        dxDrawRectangle(bx, by, bw * f, bh, tocolor(r, g, b, 255 * pulse))
+        for i = 1, 3 do dxDrawRectangle(bx + bw * i / 4, by, 1, bh, tocolor(0, 0, 0, 120)) end
+        local label = refueling and ("CARGANDO  %.1f L"):format(fuel) or ("BENCINA  %d / %d L"):format(math.floor(fuel + 0.5), max)
+        dxDrawText(label, cx, by + bh + 9 * s, cx, by + bh + 9 * s, low and tocolor(255, 140, 140) or COLORS.muted, 0.75 * s, "default-bold", "center", "center")
+    end
+end
+
+----------------------------------------------------------------
 addEventHandler("onClientRender", root, function()
     if not isActive() then return end
     local mapX, mapY = MARGIN, screenH - MARGIN - MS
     drawMinimap(mapX, mapY)
     drawBars(mapX + MS + 12 * s, screenH - MARGIN)
     drawTopRight()
+    drawSpeedometer()
 end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()

@@ -10,6 +10,7 @@
     <include resource="rp_inventory" />
 
     <script src="server/s_bank.lua" type="server" />
+    <script src="server/s_cards.lua" type="server" />
     <script src="client/c_bank.lua" type="client" cache="false" />
 
     <file src="html/atm.html" />
@@ -21,4 +22,7 @@
     <export function="transfer" type="server" />
     <export function="sendBankData" type="server" />
     <export function="isNearATM" type="server" />
+    <export function="getPlayerCards" type="server" />
+    <export function="payWithCard" type="server" />
+    <export function="chargeAccount" type="server" />
 </meta>

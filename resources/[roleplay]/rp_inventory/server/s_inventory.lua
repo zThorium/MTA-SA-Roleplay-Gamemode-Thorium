@@ -41,8 +41,10 @@ local function serialize(player)
         for itemId, amount in pairs(inv.items) do
             local def = getItemDefinition(itemId)
             if def then
+                local note = getItemPrivateNote(itemId, inv.characterId)
                 list[#list + 1] = {
-                    id = itemId, name = def.name, icon = def.icon, description = def.description,
+                    id = itemId, name = def.name, icon = def.icon,
+                    description = note and ((def.description or "") .. " " .. note) or def.description,
                     amount = amount, weight = def.weight, usable = def.use ~= nil,
                 }
             end
