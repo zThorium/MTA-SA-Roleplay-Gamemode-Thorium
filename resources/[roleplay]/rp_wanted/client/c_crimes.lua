@@ -14,11 +14,22 @@ local function keyOf(el)
     return (tostring(el):gsub("^userdata: ", ""))
 end
 
+-- /delitosdebug: muestra en el chat cada delito detectado y enviado al servidor
+local debugOn = false
+addCommandHandler("delitosdebug", function()
+    debugOn = not debugOn
+    outputChatBox("Depuracion de delitos " .. (debugOn and "activada." or "desactivada."), 245, 165, 36)
+end)
+local function dbg(fmt, ...)
+    if debugOn then outputChatBox("[delitos] " .. fmt:format(...), 200, 200, 200) end
+end
+
 local function report(crime, victim, dontCare)
     local key = crime .. keyOf(victim)
     local now = getTickCount()
-    if sent[key] and now - sent[key] < WANTED.QUEUE_TIME then return end
+    if sent[key] and now - sent[key] < WANTED.QUEUE_TIME then return dbg("%s repetido (cola de 10 s)", crime) end
     sent[key] = now
+    dbg("%s -> servidor", crime)
     triggerServerEvent("rp:wanted:crime", resourceRoot, crime, keyOf(victim), dontCare and true or false)
 end
 
@@ -50,12 +61,22 @@ end
 -- Peatones y policias
 ----------------------------------------------------------------
 addEventHandler("onClientPedDamage", root, function(attacker, weapon)
+    dbg("dano a ped: atacante=%s arma=%s", attacker and getElementType(attacker) or "nil", tostring(weapon))
     if not active() or not attacker then return end
     local byVehicle = false
     if attacker == myVehicle() then
         attacker, byVehicle = localPlayer, true
     end
     if attacker ~= localPlayer then return end
+    local crime = wantedCrimeForPedDamage(weapon, isCop(source), byVehicle)
+    if crime then report(crime, source, WANTED_DONT_CARE_SKINS[getElementModel(source)]) end
+end)
+
+-- Respaldo: muerte de un ped causada por el jugador o su vehiculo
+addEventHandler("onClientPedWasted", root, function(killer, weapon)
+    if not active() or not killer then return end
+    local byVehicle = killer == myVehicle()
+    if killer ~= localPlayer and not byVehicle then return end
     local crime = wantedCrimeForPedDamage(weapon, isCop(source), byVehicle)
     if crime then report(crime, source, WANTED_DONT_CARE_SKINS[getElementModel(source)]) end
 end)
@@ -76,7 +97,19 @@ end)
 -- Choques: solo cuenta si el jugador es el que embiste (va hacia el otro y no mas lento)
 addEventHandler("onClientVehicleCollision", root, function(hit, force)
     local mine = myVehicle()
-    if source ~= mine or not hit or not isElement(hit) or getElementType(hit) ~= "vehicle" or not active() then return end
+    if source ~= mine or not hit or not isElement(hit) or not active() then return end
+    -- Atropello: el auto del jugador golpea a un peaton (o policia) a pie
+    if getElementType(hit) == "ped" then
+        local vx, vy, vz = getElementVelocity(mine)
+        local kmh = math.sqrt(vx * vx + vy * vy + vz * vz) * 180
+        dbg("choque con ped a %d km/h", kmh)
+        if kmh > 12 and not isPedDead(hit) then
+            report(isCop(hit) and "cop_runover" or "ped_runover", hit, WANTED_DONT_CARE_SKINS[getElementModel(hit)])
+        end
+        return
+    end
+    if getElementType(hit) ~= "vehicle" then return end
+    dbg("choque con vehiculo, fuerza %d", force)
     if force < 150 then return end
     local mx, my = getElementPosition(mine)
     local hx, hy = getElementPosition(hit)

@@ -142,9 +142,14 @@ end
 function reportCrime(player, crimeKey, victimKey, dontCare)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
-    if not crime or not characterOf(player) then return false end
+    if not crime then return false end
+    if not characterOf(player) then
+        outputServerLog(("[rp_wanted] %s: %s ignorado (sin personaje activo)"):format(getPlayerName(player), crimeKey))
+        return false
+    end
     if isPoliceOnDuty(player) then
         local now = getTickCount()
+        outputServerLog(("[rp_wanted] %s: %s ignorado (policia de servicio)"):format(getPlayerName(player), crimeKey))
         if not dutyNotice[player] or now - dutyNotice[player] > 60000 then
             dutyNotice[player] = now
             notify(player, "Estas de servicio como policia: no acumulas busqueda.", "info")
@@ -162,6 +167,7 @@ function reportCrime(player, crimeKey, victimKey, dontCare)
         local points = crime.points
         if dontCare then points = points / WANTED.DONT_CARE_DIVISOR end
         local chaos = s.chaos + math.floor(points)
+        outputServerLog(("[rp_wanted] %s: %s +%d (caos %d -> %d)"):format(getPlayerName(player), crimeKey, math.floor(points), s.chaos, chaos))
         -- libertad condicional: un delito poco despues de un arresto devuelve el nivel anterior
         if s.parole and getTickCount() - s.parole.at < WANTED.PAROLE_TIME then
             chaos = math.max(chaos, s.parole.chaos)
@@ -370,6 +376,7 @@ end)
 local sprayCooldown = {}
 
 addEventHandler("onResourceStart", resourceRoot, function()
+    outputServerLog("[rp_wanted] Busqueda policial iniciada (/busquedainfo, /delitosdebug)")
     for _, spot in ipairs(WANTED.SPRAYS) do
         local marker = createMarker(spot.x, spot.y, spot.z - 1, "cylinder", 4, 245, 165, 36, 60)
         setElementData(marker, "rp:spray", spot.name, false)

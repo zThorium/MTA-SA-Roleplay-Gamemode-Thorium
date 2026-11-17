@@ -21,7 +21,6 @@
     <script src="client/c_roads.lua" type="client" cache="false" />
     <script src="client/c_crimes.lua" type="client" cache="false" />
     <script src="client/c_police.lua" type="client" cache="false" />
-    <script src="client/c_hud.lua" type="client" cache="false" />
 
     <export function="getWantedLevel" type="server" />
     <export function="getWantedChaos" type="server" />

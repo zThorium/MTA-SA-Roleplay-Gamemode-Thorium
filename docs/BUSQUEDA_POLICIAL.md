@@ -71,16 +71,17 @@ No sube solo por el tiempo: sube porque en una persecución sigues cometiendo de
 | Detección de delitos | `rp_wanted/client/c_crimes.lua` | Los peatones y el tráfico de `rp_citizens` existen solo en el cliente, así que los delitos contra ellos y contra la policía IA se avisan desde ahí (con límite de avisos en el servidor). Los delitos contra otros jugadores los detecta el servidor con `onPlayerDamage`. |
 | Policía IA | `rp_wanted/server/s_units.lua` + `client/c_police.lua` | El servidor crea patrulla, agentes y helicóptero (todos los ven) y hace syncer al buscado, como el auto IA de `rp_rides`. El cliente elige dónde aparecen (en la calle, fuera de la vista, con la red vial de `rp_citizens`) y conduce: A* por la red hasta el jugador, persecución directa cuando lo ve, embestidas desde 3 estrellas, bajarse cuando vas a pie, disparar desde 2 estrellas, volver a la patrulla si te escapas en auto, irse con la sirena apagada al terminar. |
 | Tráfico | `rp_citizens/c_citizens.lua` | 15 % del tráfico va en moto. 8 % son patrullas (Police LS/SF/LV o Ranger, y un tercio motos HPV1000) con su agente; cuentan como policía para los delitos y el exceso de velocidad, y prenden la sirena si estás buscado. |
-| HUD | `rp_wanted/client/c_hud.lua` | 6 estrellas dibujadas con primitivas (arte propio) debajo de la hora y el dinero de `rp_hud`. Parpadean al cambiar el nivel y laten mientras ningún policía está cerca. Respetan `/hud`. |
+| HUD | `rp_hud/c_wanted.lua` | 6 estrellas al estilo de GTA SA (doradas con borde negro, las que faltan oscuras), dibujadas con primitivas (arte propio) debajo de la hora y el dinero. Parpadean al cambiar el nivel y laten mientras ningún policía está cerca. Respetan `/hud`. |
 | Policía jugadora | `s_wanted.lua` | Los miembros de la facción 1 de servicio (con uniforme, skins 280-288, o en un vehículo policial) no acumulan búsqueda; de civil sí, reciben el aviso de la central en el chat y ven un punto rojo sobre los buscados en el mapa. Sus patrullas y su presencia cuentan para frenar el decaimiento. |
 
 Decisiones:
-- **Sin cambios en `schema.lua`** ni en `rp_hud`, para no chocar con el PR de vehículos (#6), que toca ambos archivos.
+- **Sin cambios en `schema.lua`**. En `rp_hud` solo se agrega `c_wanted.lua` y una línea en su `meta.xml` (el PR #6 también toca ese `meta.xml`: conflicto de una línea, fácil de resolver).
 - **Sin CEF**: el HUD usa dx, así no se crean navegadores.
 - Pay 'n' Spray solo repara (no repinta) para no desincronizar el color de los vehículos con dueño guardados en la base de datos.
 - Configuración en `rp_wanted/shared/s_config.lua`: puntos, umbrales, unidades por nivel, multa, ubicación de liberación y de los Pay 'n' Spray.
 
 ## 3. Comandos
+- `/delitosdebug`: muestra en el chat cada delito que detecta tu cliente (para probar).
 - `/busquedainfo`: tus estrellas, puntos de caos y si cuentas como policía de servicio.
 - `/busqueda <jugador>` (admin): muestra estrellas y caos.
 - `/busqueda <jugador> <0-6>` (admin): fija el nivel (con los valores de caos de GTA: 70, 200, 570, 1220, 2420, 4620).
