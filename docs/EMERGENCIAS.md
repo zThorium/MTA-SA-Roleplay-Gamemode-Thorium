@@ -19,13 +19,33 @@ pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de 
 
 ## Flujo de la ambulancia
 
-1. El servidor valida (personaje, exterior, sin llamada activa, cooldown, tope global) y pide al **cliente** un punto de la calle a 120-200 m fuera de la vista.
-2. Crea ambulancia (416) + conductor + 2 paramédicos. El jugador que llamó es el *syncer*: su cliente conduce con el A* de `rp_rides`/`rp_citizens`.
-3. Al llegar, los paramédicos bajan y buscan abatidos en `SEARCH_RADIUS`:
-   - **Abatidos**: caminan (el cliente camina, el servidor teletransporta si se atascan), RCP `REVIVE_TIME` s y `revivePlayer`. Varios: por cercanía, hasta `MAX_PATIENTS`.
-   - **Nadie**: miran alrededor `LOOK_TIME` s, vuelven al vehículo y esperan a que ambos estén dentro antes de irse.
-   - **Muerto** (siempre el último): camilla simulada (se pega al paramédico con `attachElements` y animación `CARRY`), sube a la ambulancia, viaja al hospital más cercano (el paciente pasa a ser syncer), se entrega en la puerta, pantalla en negro `TREAT_TIME` s y reaparece en la cama con `TREAT_HEALTH`.
-4. Se van y se desvanecen. Cualquier fallo (caller desconectado, no llega en `ENROUTE_TIMEOUT`, atasco) limpia todo y libera a los pacientes.
+1. **Despacho.** El servidor valida (personaje, exterior, sin llamada activa, cooldown, tope global) y pide al **cliente**
+   un punto de un carril a 110-170 m, fuera de la vista y **con ruta** hasta el jugador.
+2. Crea la ambulancia (416) con sirena, un conductor y 2 paramédicos con nombre (`PARAMEDIC_NAMES`) y número de unidad.
+   El jugador que llamó es el *syncer* **persistente** (`setElementSyncer(..., true)`): sin `persist`, MTA le quita el
+   control a más de 100 m del ped y la ambulancia no arrancaba.
+3. **Trayecto** (`client/c_graph.lua` + `client/c_driver.lua`): A* sobre la red vial de `rp_citizens` (con los cambios
+   del editor `/nodos`), desde el carril en el que está la ambulancia y sin giros en U, hasta el carril más cercano a
+   quien llamó. Puntos por el carril derecho con curvas Bézier en los cruces (como el tráfico), pure pursuit con
+   asistencia de dirección, frena en curvas, cruza los cruces a `JUNCTION_SPEED`, bocina y desvío si algo la bloquea,
+   marcha atrás si se atasca y **recalcula la ruta** si se sale de ella. Se detiene pegada a la acera. Solo se recoloca
+   como último recurso, si ningún jugador la ve ni está a menos de 70 m.
+4. **Llegada.** Radio a la central, se abren las puertas, los paramédicos bajan con la animación de salir (uno por la
+   puerta del copiloto, otro por atrás con el equipo) y buscan abatidos en `SEARCH_RADIUS`:
+   - **Abatidos**: corren hacia el paciente y hacen el guion de rol (~20 s): valoración, pulso, RCP contando
+     compresiones, parches del desfibrilador, "¡Despejen!", descarga (destello y temblor para el paciente), "¡Tenemos
+     pulso!", `revivePlayer` y consejos. Varios: por cercanía, hasta `MAX_PATIENTS`.
+   - **Nadie**: se acercan a quien llamó, preguntan, miran alrededor `LOOK_TIME` s y vuelven.
+   - **Muerto** (siempre el último): camilla simulada (`attachElements` + animación `CARRY`), sube a la ambulancia,
+     traslado con sirena al hospital más cercano (el paciente pasa a ser syncer), entrega en urgencias, pantalla en
+     negro `TREAT_TIME` s y reaparece en la cama con `TREAT_HEALTH`.
+5. **Partida.** Guardan el equipo, vuelven a sus puertas, suben con la animación de entrar, radio "unidad libre",
+   apagan la sirena, se alejan por la red vial y se desvanecen. Cualquier fallo (caller desconectado, no llega en
+   `ENROUTE_TIMEOUT`) limpia todo y libera a los pacientes.
+
+Los globos de rol (`client/c_bubbles.lua`) se ven sobre la cabeza del paramédico a menos de 32 m y salen en el chat de
+quien esté a menos de 20 m: lo que dice (blanco), sus acciones `/me` (morado) y la radio (azul). Las frases están en
+`EMERGENCY.LINES` (se elige una al azar).
 
 ## Contrato con el sistema de abatidos
 

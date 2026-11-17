@@ -105,26 +105,49 @@ local function stopWalking(report)
     if report then triggerServerEvent("rp:emergency:walked", resourceRoot, w.callId, w.token) end
 end
 
+-- Corren si estan lejos, caminan al acercarse y rodean lo que les tapa el paso
 local function walkTick()
     if not walking then return end
+    local now = getTickCount()
     local pending = 0
     for _, o in ipairs(walking.list) do
         local ped, tx, ty = o[1], o[2], o[3]
         if isElement(ped) and isElementStreamedIn(ped) then
-            local x, y = getElementPosition(ped)
+            local x, y, z = getElementPosition(ped)
             local d = getDistanceBetweenPoints2D(x, y, tx, ty)
             if d > EMERGENCY.WALK_ARRIVE_DIST then
                 pending = pending + 1
-                setElementRotation(ped, 0, 0, -math.deg(math.atan2(tx - x, ty - y)))
+                local rot = -math.deg(math.atan2(tx - x, ty - y))
+                -- atascado (no avanza): rodea durante un momento hacia un lado
+                o.lastX, o.lastY, o.checkAt = o.lastX or x, o.lastY or y, o.checkAt or now + 1200
+                if now >= o.checkAt then
+                    if getDistanceBetweenPoints2D(x, y, o.lastX, o.lastY) < 0.4 then
+                        o.side = (o.side == 60) and -60 or 60
+                        o.sideUntil = now + 900
+                    end
+                    o.lastX, o.lastY, o.checkAt = x, y, now + 1200
+                end
+                -- algo justo delante (auto, poste, muro): se aparta antes de chocar
+                local r = math.rad(rot)
+                local fx, fy = -math.sin(r), math.cos(r)
+                if d > 2 and not isLineOfSightClear(x, y, z, x + fx * 1.3, y + fy * 1.3, z, true, true, false, true, false, true, false, ped) then
+                    o.side = o.side or 60
+                    o.sideUntil = now + 600
+                end
+                if o.sideUntil and now < o.sideUntil then rot = rot + o.side end
+                setElementRotation(ped, 0, 0, rot, "default", true)
                 setPedControlState(ped, "forward", true)
-                setPedControlState(ped, "sprint", d > 8 and not getPedAnimation(ped))
+                local animated = getPedAnimation(ped)
+                setPedControlState(ped, "sprint", d > 7 and not animated)
+                setPedControlState(ped, "walk", d < 2.5 or (animated and true or false))
             else
                 setPedControlState(ped, "forward", false)
                 setPedControlState(ped, "sprint", false)
+                setPedControlState(ped, "walk", false)
             end
         end
     end
-    if pending == 0 or getTickCount() - walking.started > EMERGENCY.WALK_TIMEOUT * 1000 then stopWalking(true) end
+    if pending == 0 or now - walking.started > EMERGENCY.WALK_TIMEOUT * 1000 then stopWalking(true) end
 end
 
 addEventHandler("rp:emergency:walk", resourceRoot, function(callId, token, list)

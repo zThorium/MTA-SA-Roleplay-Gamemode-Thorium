@@ -1,17 +1,24 @@
 --[[
     rp_emergency / c_driver.lua
-    Conductor IA de la ambulancia. Es el mismo algoritmo que el conductor de
-    rp_rides: el servidor nos hace "syncer" y aqui se conduce al NPC con sus
-    controles siguiendo los puntos del carril de la ruta A*.
+    Conductor IA de la ambulancia. El servidor nos hace "syncer" (persistente) y aqui
+    se conduce al NPC con sus controles, como el trafico de rp_citizens:
 
-      target:   va hasta el jugador que llamo
-      hospital: lleva al paciente al hospital
-      leave:    se aleja por la calle (el servidor lo hace desaparecer)
+      - Ruta A* por la red vial (c_graph.lua): carril derecho, curvas en los cruces,
+        sin giros en U. Se detiene pegada a la acera junto a quien llamo.
+      - Pure pursuit + asistencia de direccion; frena en curvas y cruza los cruces
+        con precaucion (con sirena no espera semaforos).
+      - Bloqueos: bocina, desvio por el carril contrario o el arcen, marcha atras.
+      - Si se sale de la ruta o se atasca, recalcula desde el carril donde esta.
+        Nunca se teletransporta a la vista: solo como ultimo recurso, fuera de camara
+        y lejos de los jugadores.
 
+    Modos: target (va hasta quien llamo), hospital (lleva al paciente), leave (se aleja).
     Al llegar y quedar parado avisa al servidor con "rp:emergency:arrived".
 ]]
 
-local ai = nil   -- { callId, vehicle, ped, mode, wp, idx, timer, ... }
+local ai = nil   -- estado del conductor
+
+local CURB = { target = 1.3, hospital = 1.0, leave = 0 }
 
 local function heading(dx, dy) return -math.deg(math.atan2(dx, dy)) end
 local function angleDiff(a, b)
@@ -25,187 +32,354 @@ local function speedKmh(el)
     return math.sqrt(vx * vx + vy * vy + vz * vz) * 180
 end
 
-local function controls(accel, brake, steer, handbrake)
+local function pedals(accel, brake, handbrake)
     local ped = ai.ped
-    if not isElement(ped) then return end
     setPedControlState(ped, "accelerate", accel)
     setPedControlState(ped, "brake_reverse", brake)
     setPedControlState(ped, "handbrake", handbrake or false)
-    steer = math.max(-1, math.min(1, steer or 0))
-    setPedAnalogControlState(ped, "vehicle_left", steer > 0 and steer or 0)
-    setPedAnalogControlState(ped, "vehicle_right", steer < 0 and -steer or 0)
 end
 
-local function startNodeAhead(vehicle)
-    local x, y = getElementPosition(vehicle)
-    local m = getElementMatrix(vehicle)
+local function steerTo(value)
+    value = math.max(-1, math.min(1, value or 0))
+    setPedAnalogControlState(ai.ped, "vehicle_left", value > 0 and value or 0)
+    setPedAnalogControlState(ai.ped, "vehicle_right", value < 0 and -value or 0)
+end
+
+local function horn(on) setPedControlState(ai.ped, "horn", on) end
+
+-- Rayo desde el frente (angulo en grados, + = izquierda). wall = solo edificios/muros.
+local function ray(vehicle, m, angle, reach, wall)
     local fx, fy = m[2][1], m[2][2]
-    local best, bestD = nil, math.huge
-    for ox = -2, 2 do
-        for oy = -2, 2 do
-            local n = nearestRoadNode(x + ox * 25, y + oy * 25, 1)
-            if n then
-                local nx, ny = nodePosition(n)
-                local d = getDistanceBetweenPoints2D(x, y, nx, ny)
-                local dot = d > 0.1 and ((nx - x) * fx + (ny - y) * fy) / d or 1
-                if d < 70 and dot > 0.3 and d < bestD then best, bestD = n, d end
-            end
-        end
+    if angle ~= 0 then
+        local r = math.rad(angle)
+        local c, s = math.cos(r), math.sin(r)
+        fx, fy = fx * c - fy * s, fx * s + fy * c
     end
-    return best or nearestRoadNode(x, y)
+    local x, y, z = m[4][1], m[4][2], m[4][3]
+    local sx, sy, sz = x + m[2][1] * 3.2, y + m[2][2] * 3.2, z + 0.3
+    local hit, hx, hy, _, el = processLineOfSight(sx, sy, sz, sx + fx * reach, sy + fy * reach, sz,
+        wall, not wall, not wall, not wall, false, true, false, false, vehicle)
+    if hit and (wall or el ~= ai.ped) then return true, el, getDistanceBetweenPoints2D(sx, sy, hx, hy) end
+    return false
 end
 
-local function plan(tx, ty)
+-- Nadie (jugador) lo esta viendo de cerca: unico caso en que se permite recolocar
+local function hiddenFromPlayers(vehicle)
+    if isElementOnScreen(vehicle) then return false end
+    local x, y, z = getElementPosition(vehicle)
+    local players = getElementsByType("player", root, true)
+    players[#players + 1] = localPlayer
+    for _, p in ipairs(players) do
+        local px, py, pz = getElementPosition(p)
+        if getDistanceBetweenPoints3D(x, y, z, px, py, pz) < 70 then return false end
+    end
+    return true
+end
+
+----------------------------------------------------------------
+-- Planificacion
+----------------------------------------------------------------
+local function straightLine(x, y, z, tx, ty)
+    local wp = {}
+    local d = getDistanceBetweenPoints2D(x, y, tx, ty)
+    local steps = math.max(1, math.floor(d / 6))
+    for i = 1, steps do
+        local t = i / steps
+        wp[#wp + 1] = { x + (tx - x) * t, y + (ty - y) * t, z, 0 }
+    end
+    return wp
+end
+
+-- Ruta desde el carril donde esta la ambulancia hasta el carril mas cercano a (tx, ty)
+local function routeTo(tx, ty, curb)
     local vehicle = ai.vehicle
     local x, y, z = getElementPosition(vehicle)
-    local route = nil
-    if loadRoadGraph() then
-        local s = startNodeAhead(vehicle)
-        local g = nearestRoadNode(tx, ty)
-        route = s and g and findRoadRoute(s, g)
+    local m = getElementMatrix(vehicle)
+    if not loadRoadGraph() then return nil end
+    local from, start = laneAhead(x, y, m[2][1], m[2][2], 50)
+    if not from then from, start = laneAhead(x, y, m[2][1], m[2][2], 140) end
+    local a, b, t = laneNearest(tx, ty, 120)
+    if not from or not a then return nil end
+
+    -- Ya va por el mismo carril y el destino esta delante
+    if a == from and b == start then
+        local _, tv = laneProject(from, start, x, y)
+        if t > tv + 12 then return buildWaypoints({ from, start }, x, y, t, curb) end
     end
-    if route and #route >= 2 then
-        ai.wp = routeWaypoints(route)
-    else
-        -- Sin red vial: linea recta
-        ai.wp = {}
-        local d = getDistanceBetweenPoints2D(x, y, tx, ty)
-        local steps = math.max(1, math.floor(d / 8))
-        for i = 1, steps do
-            local t = i / steps
-            ai.wp[#ai.wp + 1] = { x + (tx - x) * t, y + (ty - y) * t, z }
+
+    local route = findRoute(from, start, a)
+    if route and route[#route - 1] ~= b then
+        route[#route + 1] = b
+        return buildWaypoints(route, x, y, t, curb)
+    end
+    -- Llegaria a "a" desde "b": se para en el carril contrario (b -> a), si existe
+    if laneDrivable(b, a) then
+        route = findRoute(from, start, b)
+        if route and route[#route - 1] ~= a then
+            route[#route + 1] = a
+            return buildWaypoints(route, x, y, laneLength(b, a) - t, curb)
         end
     end
-    ai.idx = 1
-    ai.legStart = getTickCount()
+    return nil
+end
+
+local function plan()
+    local vehicle = ai.vehicle
+    local x, y, z = getElementPosition(vehicle)
+    local wp = routeTo(ai.tx, ai.ty, CURB[ai.mode] or 0)
+    if not wp or #wp == 0 then
+        -- Sin ruta por la red vial: solo en el tramo final (cerca del destino) va en linea recta
+        if getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 45 then
+            wp = straightLine(x, y, z, ai.tx, ai.ty)
+        else
+            ai.wp, ai.i = {}, 1
+            ai.nextPlan = getTickCount() + 2000
+            return false
+        end
+    end
+    ai.wp, ai.i = wp, 1
     ai.lastProgress, ai.bestRemaining = getTickCount(), math.huge
-    ai.reached = false
+    ai.nextPlan = nil
+    return true
 end
 
-local function remainingDistance()
-    local last = ai.wp[#ai.wp]
-    if not last then return 0 end
-    local x, y = getElementPosition(ai.vehicle)
-    return getDistanceBetweenPoints2D(x, y, last[1], last[2])
+local function remainingDistance(x, y)
+    local wp, i = ai.wp, ai.i
+    local total = getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2])
+    for k = i, #wp - 1 do total = total + getDistanceBetweenPoints2D(wp[k][1], wp[k][2], wp[k + 1][1], wp[k + 1][2]) end
+    return total
 end
 
--- Atasco largo: recoloca el vehiculo sobre la ruta (mecanismo de recuperacion)
-local function warpAhead(steps)
-    local wp = ai.wp
-    local i = math.min(#wp, ai.idx + (steps or 3))
-    local p, q = wp[i], wp[math.min(#wp, i + 1)]
-    if not p then return end
-    local rot = q and q ~= p and heading(q[1] - p[1], q[2] - p[2]) or select(3, getElementRotation(ai.vehicle))
+-- Ultimo recurso (atasco largo, sin nadie mirando): recoloca unos metros mas adelante en su ruta
+local function hopAhead(meters)
+    local wp, i = ai.wp, ai.i
+    local acc, k = 0, i
+    while k < #wp - 2 and acc < meters do
+        acc = acc + getDistanceBetweenPoints2D(wp[k][1], wp[k][2], wp[k + 1][1], wp[k + 1][2])
+        k = k + 1
+    end
+    local p, q = wp[k], wp[k + 1] or wp[k]
     setElementPosition(ai.vehicle, p[1], p[2], p[3] + 1.2)
-    setElementRotation(ai.vehicle, 0, 0, rot)
+    setElementRotation(ai.vehicle, 0, 0, heading(q[1] - p[1], q[2] - p[2]))
     setElementVelocity(ai.vehicle, 0, 0, 0)
-    ai.idx = i
-    ai.stuckSince, ai.reverseUntil = nil, nil
+    ai.i = k
+    ai.stuckCount = 0
 end
 
-local function obstacleAhead(vehicle, m, speed)
+-- Desvio provisional por la izquierda (carril contrario) o la derecha (arcen)
+local function tryDetour(m)
+    local vehicle = ai.vehicle
     local x, y, z = m[4][1], m[4][2], m[4][3]
     local fx, fy = m[2][1], m[2][2]
-    local reach = 7 + speed * 0.18
-    local sx, sy = x + fx * 2.9, y + fy * 2.9
-    local hit, hx, hy, _, el = processLineOfSight(sx, sy, z + 0.3, sx + fx * reach, sy + fy * reach, z + 0.3,
-        false, true, true, true, false, true, false, false, vehicle)
-    if hit and el ~= ai.ped then
-        return getDistanceBetweenPoints2D(sx, sy, hx, hy)
+    local lx, ly = -fy, fx
+    local wp = ai.wp
+    local rejoin = nil
+    for k = ai.i, #wp do
+        if getDistanceBetweenPoints2D(x, y, wp[k][1], wp[k][2]) > 26 then rejoin = k break end
     end
+    if not rejoin then return false end
+    local rx, ry, rz = wp[rejoin][1], wp[rejoin][2], wp[rejoin][3]
+    local function clear(x1, y1, x2, y2, z2)
+        return isLineOfSightClear(x1, y1, z + 0.6, x2, y2, (z2 or z) + 0.6, true, true, true, true, false, true, false, vehicle)
+    end
+    for _, side in ipairs({ 5, 7, -4 }) do
+        local p1x, p1y = x + fx * 5 + lx * side * 0.6, y + fy * 5 + ly * side * 0.6
+        local p2x, p2y = x + fx * 12 + lx * side, y + fy * 12 + ly * side
+        local p3x, p3y = x + fx * 19 + lx * side * 0.7, y + fy * 19 + ly * side * 0.7
+        local ground = getGroundPosition(p2x, p2y, z + 3)
+        local flat = ground and ground ~= 0 and math.abs(ground - (z - 0.6)) < 1.6
+        if flat and clear(x, y, p1x, p1y) and clear(p1x, p1y, p2x, p2y) and clear(p2x, p2y, p3x, p3y)
+            and clear(p3x, p3y, rx, ry, rz) then
+            local new = { { p1x, p1y, z, 25 }, { p2x, p2y, z, 25 }, { p3x, p3y, z, 25 } }
+            for k = rejoin, #wp do new[#new + 1] = wp[k] end
+            ai.wp, ai.i = new, 1
+            return true
+        end
+    end
+    return false
 end
 
+----------------------------------------------------------------
+-- Conduccion
+----------------------------------------------------------------
 local function tick()
     if not ai then return end
     local vehicle, ped = ai.vehicle, ai.ped
     if not isElement(vehicle) or not isElement(ped) then return stopAIDriver() end
-    if not isElementSyncer(vehicle) then return end   -- el servidor aun no nos dio el control
+    if not isElementSyncer(vehicle) or not isElementStreamedIn(vehicle) then return end
 
     local now = getTickCount()
-    local x, y = getElementPosition(vehicle)
-    local m = getElementMatrix(vehicle)
-    local _, _, rz = getElementRotation(vehicle)
     local speed = speedKmh(vehicle)
-    local wp = ai.wp
+    local x, y = getElementPosition(vehicle)
+    local _, _, rz = getElementRotation(vehicle)
+    local m = getElementMatrix(vehicle)
 
-    -- Esperando parado (llego a su destino o termino de alejarse)
-    if ai.reached or #wp == 0 then return controls(false, speed > 1, 0, true) end
-
-    while ai.idx < #wp and getDistanceBetweenPoints2D(x, y, wp[ai.idx][1], wp[ai.idx][2]) < 7 do ai.idx = ai.idx + 1 end
-
-    local remaining = remainingDistance()
-    if ai.idx >= #wp and remaining < EMERGENCY.ARRIVE_RADIUS then
-        if speed < 3 then
-            ai.reached = true
-            if ai.mode ~= "leave" then
-                triggerServerEvent("rp:emergency:arrived", resourceRoot, ai.callId, ai.mode)
-            end
-        end
-        return controls(false, true, 0, speed < 8)
+    if ai.reached then
+        steerTo(0)
+        return pedals(false, speed > 1, true)
     end
 
-    local look = 6 + speed * 0.12
-    local ti = ai.idx
-    while ti < #wp and getDistanceBetweenPoints2D(x, y, wp[ti][1], wp[ti][2]) < look do ti = ti + 1 end
-    local t = wp[ti]
+    if #ai.wp == 0 then
+        steerTo(0)
+        pedals(false, speed > 1)
+        if now >= (ai.nextPlan or 0) then plan() end
+        return
+    end
+
+    -- Volcada: se endereza (solo si no la ve nadie de cerca, o tras un rato)
+    if m[3][3] < 0.3 then
+        ai.flipSince = ai.flipSince or now
+        if hiddenFromPlayers(vehicle) or now - ai.flipSince > 6000 then
+            setElementRotation(vehicle, 0, 0, rz)
+            local vx, vy, vz = getElementPosition(vehicle)
+            setElementPosition(vehicle, vx, vy, vz + 1)
+            ai.flipSince = nil
+        end
+        return pedals(false, false)
+    end
+    ai.flipSince = nil
+
+    -- Maniobra de marcha atras (atasco)
+    if ai.reverseUntil then
+        if now < ai.reverseUntil then
+            horn(false)
+            steerTo(-(ai.reverseSteer or 0))
+            local vx, vy = getElementVelocity(vehicle)
+            local backing = (vx * m[2][1] + vy * m[2][2]) * 180
+            return pedals(false, backing > -12)
+        end
+        ai.reverseUntil = nil
+        if ai.stuckCount >= 2 then plan() end   -- vuelve a calcular la ruta desde el carril donde quedo
+        if #ai.wp == 0 then return end
+    end
+
+    -- Pure pursuit: descarta puntos alcanzados o que quedaron detras
+    local wp = ai.wp
+    local i = ai.i
+    local inCurve = wp[i][4] > 20
+    local look = (inCurve and 3.5 or 6.5) + speed * (inCurve and 0.06 or 0.1)
+    local fwx, fwy = m[2][1], m[2][2]
+    while i < #wp and (getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) < look
+        or ((wp[i][1] - x) * fwx + (wp[i][2] - y) * fwy < 0 and (wp[i + 1][1] - x) * fwx + (wp[i + 1][2] - y) * fwy > -2)) do
+        i = i + 1
+    end
+    ai.i = i
+
+    -- Se salio de la ruta: recalcula (como mucho cada 3 s)
+    if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 22 and now - (ai.lastPlan or 0) > 3000 then
+        ai.lastPlan = now
+        plan()
+        return
+    end
+
+    local remaining = remainingDistance(x, y)
+    local last = wp[#wp]
+
+    -- Llegada
+    if i >= #wp and getDistanceBetweenPoints2D(x, y, last[1], last[2]) < 5 then
+        horn(false)
+        steerTo(0)
+        if speed < 2 then
+            ai.reached = true
+            if ai.mode ~= "leave" then triggerServerEvent("rp:emergency:arrived", resourceRoot, ai.callId, ai.mode) end
+        end
+        return pedals(false, true, speed < 10)
+    end
+
+    local t = wp[i]
     local diff = angleDiff(heading(t[1] - x, t[2] - y), rz)
 
-    local desired = EMERGENCY.CRUISE_SPEED
-    local a1, a2 = wp[math.min(#wp, ti + 1)], wp[math.min(#wp, ti + 4)]
-    if a1 and a2 and a1 ~= a2 then
-        local turn = math.abs(angleDiff(heading(a2[1] - a1[1], a2[2] - a1[2]), heading(t[1] - x, t[2] - y)))
-        if turn > 50 then desired = 20 elseif turn > 25 then desired = 32 end
+    -- Lo que viene en los proximos metros: mayor giro y cruces
+    local upcoming, dist, lx, ly, junctionDist = 0, 0, x, y, nil
+    for k = i, math.min(#wp, i + 14) do
+        dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[k][1], wp[k][2])
+        lx, ly = wp[k][1], wp[k][2]
+        if dist > 40 then break end
+        if dist <= 30 and wp[k][4] > upcoming then upcoming = wp[k][4] end
+        if wp[k][5] and not junctionDist then junctionDist = dist end
     end
-    if math.abs(diff) > 40 then desired = math.min(desired, 15) end
-    desired = math.min(desired, 8 + remaining * 0.9)
 
-    local obstacle = obstacleAhead(vehicle, m, speed)
-    if obstacle and obstacle < 9 then
-        desired = 0
-        ai.blockedSince = ai.blockedSince or now
-        setPedControlState(ped, "horn", (now % 1400) < 400)
+    local frontHit, obstacle, gap = ray(vehicle, m, 0, 9 + speed * 0.3, false)
+    local wallFront = ray(vehicle, m, 0, 3 + speed * 0.08, true)
+    local leftHit = ray(vehicle, m, 25, 3.5 + speed * 0.06, true)
+    local rightHit = ray(vehicle, m, -25, 3.5 + speed * 0.06, true)
+
+    local steer = diff / (inCurve and 18 or 25)
+    if leftHit and not rightHit then steer = steer - 0.2 end
+    if rightHit and not leftHit then steer = steer + 0.2 end
+    steerTo(steer)
+
+    -- Asistencia de direccion (igual que el trafico): menos derrape lateral y giro suave
+    if speed > 4 then
+        local vx, vy, vz = getElementVelocity(vehicle)
+        local fx, fy, rx, ry = m[2][1], m[2][2], m[1][1], m[1][2]
+        local along, side = vx * fx + vy * fy, vx * rx + vy * ry
+        if math.abs(side) > 0.02 then
+            setElementVelocity(vehicle, fx * along + rx * side * 0.8, fy * along + ry * side * 0.8, vz)
+        end
+        local ax, ay, az = getElementAngularVelocity(vehicle)
+        local desired = math.max(-0.015, math.min(0.015, math.rad(diff) * 0.025)) * math.min(1, speed / 20)
+        setElementAngularVelocity(vehicle, ax, ay, az + (desired - az) * 0.35)
+    end
+
+    -- Velocidad objetivo
+    local target = EMERGENCY.CRUISE_SPEED
+    if upcoming > 70 then target = 18 elseif upcoming > 40 then target = 26 elseif upcoming > 20 then target = 36 end
+    if junctionDist and junctionDist < 25 then target = math.min(target, EMERGENCY.JUNCTION_SPEED) end
+    if math.abs(diff) > 50 then target = math.min(target, 15) end
+    if wallFront then target = math.min(target, 12) end
+    target = math.min(target, 6 + remaining * 0.8)        -- se acerca despacio al punto de parada
+    if ai.mode == "leave" then target = math.min(target, 45) end
+
+    -- Ya junto al destino y alguien (p. ej. quien llamo) esta en el punto de parada: para aqui
+    if obstacle and remaining < 18 and ai.mode ~= "leave" then
+        horn(false)
+        if speed < 2 then
+            ai.reached = true
+            triggerServerEvent("rp:emergency:arrived", resourceRoot, ai.callId, ai.mode)
+        end
+        return pedals(false, true, speed < 10)
+    end
+
+    -- Algo delante: guarda distancia, toca la bocina y busca un hueco para pasar
+    if obstacle then
+        local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedKmh(obstacle) or 0
+        if gap and gap < 4 + speed * 0.12 then target = 0 else target = math.min(target, otherSpeed + 3) end
+        if target <= 1 and speed < 3 then
+            ai.blockedSince = ai.blockedSince or now
+            local waited = now - ai.blockedSince
+            horn(waited > 700 and (now % 1500) < 600)
+            if waited > 2500 and tryDetour(m) then
+                ai.blockedSince = nil
+            elseif waited > 5000 then
+                ai.reverseUntil, ai.reverseSteer, ai.blockedSince = now + 1000, 0, nil
+            end
+        end
     else
         ai.blockedSince = nil
-        setPedControlState(ped, "horn", false)
+        horn(false)
     end
 
-    if ai.reverseUntil and now < ai.reverseUntil then
-        return controls(false, true, -diff / 35)
-    end
+    pedals(speed < target - 1, speed > target + 6 or (target == 0 and speed > 1))
 
-    local steer = diff / 30
-    if desired == 0 then
-        controls(false, speed > 0.5, steer)
-    elseif speed < desired - 3 then
-        controls(true, false, steer)
-    elseif speed > desired + 6 then
-        controls(false, true, steer)
-    else
-        controls(false, false, steer)
-    end
-
-    -- Atasco: marcha atras corta y, si insiste, recoloca sobre la ruta
-    if desired > 0 and speed < 2.5 then
+    -- Atasco sin obstaculo visible (pared, bordillo): marcha atras y nueva ruta
+    if speed < 2 and target > 5 and not obstacle then
         ai.stuckSince = ai.stuckSince or now
-        if now - ai.stuckSince > 3500 then
-            ai.stuckCount = (ai.stuckCount or 0) + 1
-            ai.stuckSince = nil
-            if ai.stuckCount >= 3 then
-                ai.stuckCount = 0
-                warpAhead(3)
-            else
-                ai.reverseUntil = now + 1400
-            end
+        if now - ai.stuckSince > 3000 then
+            ai.stuckCount = ai.stuckCount + 1
+            ai.reverseUntil, ai.reverseSteer, ai.stuckSince = now + 1300, steer, nil
+            if ai.stuckCount >= 6 and hiddenFromPlayers(vehicle) then hopAhead(25) end
         end
     else
         ai.stuckSince = nil
+        if speed > 15 then ai.stuckCount = 0 end
     end
 
-    -- Sin progreso mucho tiempo: recoloca mas adelante
+    -- Sin avanzar mucho tiempo: nueva ruta; si sigue igual y nadie mira, recoloca
     if remaining < ai.bestRemaining - 5 then ai.bestRemaining, ai.lastProgress = remaining, now end
-    if now - ai.lastProgress > 25000 then
+    if now - ai.lastProgress > 30000 then
         ai.lastProgress = now
-        warpAhead(6)
+        if hiddenFromPlayers(vehicle) then hopAhead(40) else plan() end
     end
 end
 
@@ -214,6 +388,8 @@ function stopAIDriver()
     if isTimer(ai.timer) then killTimer(ai.timer) end
     if isElement(ai.ped) then
         for _, c in ipairs({ "accelerate", "brake_reverse", "handbrake", "horn" }) do setPedControlState(ai.ped, c, false) end
+        setPedAnalogControlState(ai.ped, "vehicle_left", 0)
+        setPedAnalogControlState(ai.ped, "vehicle_right", 0)
     end
     ai = nil
 end
@@ -221,10 +397,10 @@ end
 function isAIDriving(callId) return ai ~= nil and ai.callId == callId end
 
 local function leaveTarget(x, y)
-    local n = roadNodeAround(x, y, 300, 600)
-    if n then return nodePosition(n) end
-    local a = math.random() * math.pi * 2
-    return x + math.cos(a) * 400, y + math.sin(a) * 400
+    local a = roadNodeAround(x, y, 300, 600)
+    if a then return nodePosition(a) end
+    local ang = math.random() * math.pi * 2
+    return x + math.cos(ang) * 400, y + math.sin(ang) * 400
 end
 
 function startAIDriver(callId, vehicle, ped, mode, tx, ty)
@@ -232,30 +408,35 @@ function startAIDriver(callId, vehicle, ped, mode, tx, ty)
     if ai and ai.vehicle ~= vehicle then stopAIDriver() timer = nil end
     ai = ai or {}
     ai.callId, ai.vehicle, ai.ped, ai.mode = callId, vehicle, ped, mode
-    ai.reached, ai.stuckCount, ai.reverseUntil, ai.blockedSince = false, 0, nil, nil
-    if not isTimer(timer) then ai.timer = setTimer(tick, 50, 0) end
+    ai.reached, ai.stuckCount, ai.reverseUntil, ai.blockedSince, ai.stuckSince = false, 0, nil, nil, nil
+    ai.wp, ai.i = {}, 1
+    if not isTimer(timer) then ai.timer = setTimer(tick, 50, 0) else ai.timer = timer end
 
     local x, y = getElementPosition(vehicle)
     if mode == "leave" then tx, ty = leaveTarget(x, y) end
     if not (tx and ty) then return end
-    plan(tx, ty)
+    ai.tx, ai.ty = tx, ty
+    plan()
 end
 
--- Punto donde aparece la ambulancia: en la calle, fuera de la vista si se puede
+-- Punto donde aparece la ambulancia: en un carril, fuera de la vista y con ruta hasta el jugador
 function pickSpawnPoint()
     local px, py, pz = getElementPosition(localPlayer)
     local lo, hi = EMERGENCY.SPAWN_MIN, EMERGENCY.SPAWN_MAX
     if loadRoadGraph() then
-        for _ = 1, 8 do
+        local ta = laneNearest(px, py, 120)
+        local fallback = nil
+        for _ = 1, 12 do
             local a, b = roadNodeAround(px, py, lo, hi)
             if a then
                 local x, y, z, rot = laneStartPoint(a, b)
-                local onScreen = getScreenFromWorldPosition(x, y, z + 1, 0, false)
-                if not onScreen then return x, y, z, rot end
+                local routable = not ta or findRoute(a, b, ta, 4000) ~= nil
+                local hidden = not getScreenFromWorldPosition(x, y, z + 1, 0, false)
+                if routable and hidden then return x, y, z, rot end
+                if routable and not fallback then fallback = { x, y, z, rot } end
             end
         end
-        local a, b = roadNodeAround(px, py, lo, hi)
-        if a then return laneStartPoint(a, b) end
+        if fallback then return unpack(fallback) end
     end
     local cx, cy = getCameraMatrix()
     local dx, dy = px - cx, py - cy
