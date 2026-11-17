@@ -40,7 +40,7 @@ addEvent("rp:emergency:open", true)
 addEvent("rp:emergency:call", true)
 addEvent("rp:emergency:spawn", true)
 addEvent("rp:emergency:arrived", true)
-addEvent("rp:emergency:walked", true)
+addEvent("rp:emergency:paths", true)
 
 local function notify(p, t, k, d) exports.rp_notify:notify(p, t, k, d) end
 local function popup(p, t, m, k) exports.rp_notify:popup(p, t, m, k) end
@@ -224,6 +224,11 @@ end
 ----------------------------------------------------------------
 -- Movimiento de los paramedicos (el syncer camina, el servidor corrige)
 ----------------------------------------------------------------
+-- Los paramedicos se mueven por un camino a pie que calcula el cliente de quien llamo
+-- (tiene la colision del mapa) y que todos los clientes cercanos reproducen a la vez
+-- (client/c_walk.lua), con la animacion de correr o caminar. Ver la cabecera de c_walk.lua.
+local RUN_SPEED, WALK_SPEED, PATH_WAIT = 5.0, 1.45, 1500
+
 local function finishWalk(c, token)
     if c.ended or c.walkToken ~= token or not c.walkDone then return end
     if isTimer(c.stepTimer) then killTimer(c.stepTimer) end
@@ -231,35 +236,91 @@ local function finishWalk(c, token)
     c.walkDone = nil
     for _, o in ipairs(c.walkOrders or {}) do
         if ok(o.ped) then
-            local x, y, z = getElementPosition(o.ped)
-            if getDistanceBetweenPoints3D(x, y, z, o.x, o.y, o.z) > 3.5 then
-                setElementPosition(o.ped, o.x, o.y, o.z)      -- teletransporte controlado
-            end
+            local f = o.final
+            if not o.keep then setPedAnimation(o.ped) end
+            -- Ya esta ahi en todos los clientes: solo fija la posicion en el servidor
+            if f then setElementPosition(o.ped, f[1], f[2], f[3] + 1.0, not o.keep) end
             if o.face then face(o.ped, o.face[1], o.face[2]) end
+            if playerValid(c.syncer) then setElementSyncer(o.ped, c.syncer, true) end
         end
     end
     cb()
 end
 
--- orders = { { ped, x, y, z, face = {x, y} }, ... }; onDone se llama cuando todos llegaron
+local function pathLength(pts)
+    local len = 0
+    for i = 2, #pts do len = len + getDistanceBetweenPoints2D(pts[i - 1][1], pts[i - 1][2], pts[i][1], pts[i][2]) end
+    return len
+end
+
+-- Camino enviado por el cliente: puntos {x, y, zSuelo} seguidos (max 4 m entre si) que
+-- empiezan junto al ped y terminan en su destino
+local function validPath(pts, sx, sy, tx, ty)
+    if type(pts) ~= "table" or #pts < 1 or #pts > 300 then return nil end
+    local px, py = sx, sy
+    local out = {}
+    for _, p in ipairs(pts) do
+        if type(p) ~= "table" then return nil end
+        local x, y, z = tonumber(p[1]), tonumber(p[2]), tonumber(p[3])
+        if not (x and y and z) or getDistanceBetweenPoints2D(px, py, x, y) > 4 then return nil end
+        out[#out + 1] = { x, y, z }
+        px, py = x, y
+    end
+    if getDistanceBetweenPoints2D(px, py, tx, ty) > 2 then return nil end
+    return out
+end
+
+local function startMoves(c, token, paths)
+    if c.ended or c.walkToken ~= token or c.movingToken == token then return end
+    c.movingToken = token
+    if isTimer(c.stepTimer) then killTimer(c.stepTimer) end
+    local longest = 0
+    for i, o in ipairs(c.walkOrders) do
+        if ok(o.ped) then
+            local sx, sy, sz = getElementPosition(o.ped)
+            local pts = validPath(paths and paths[i], sx, sy, o.x, o.y) or { { o.x, o.y, o.z - 1.0 } }
+            table.insert(pts, 1, { sx, sy, sz - 1.0 })
+            local len = pathLength(pts)
+            local running = not o.keep and len > 3.5
+            local dur = math.floor(len / (running and RUN_SPEED or WALK_SPEED) * 1000)
+            if not o.keep then
+                setPedAnimation(o.ped, "PED", running and "run_civi" or "WALK_civi", -1, true, false, false, false)
+            end
+            -- Sin syncer mientras se mueve: nadie sobrescribe la posicion que dibuja cada cliente
+            setElementSyncer(o.ped, false)
+            o.final = pts[#pts]
+            if #pts >= 2 and dur > 0 then
+                local x, y, z = getElementPosition(o.ped)
+                local near = getElementsWithinRange(x, y, z, 250, "player")
+                if #near > 0 then triggerClientEvent(near, "rp:emergency:move", resourceRoot, o.ped, pts, dur) end
+            end
+            longest = math.max(longest, dur)
+        end
+    end
+    c.stepTimer = setTimer(finishWalk, longest + 150, 1, c, token)
+end
+
+-- orders = { { ped, x, y, z, face = {x, y}, keep }, ... }; onDone cuando todos llegaron.
+-- keep = conserva la animacion actual (cargando al paciente) y va caminando.
 local function walk(c, orders, onDone)
     c.walkToken = (c.walkToken or 0) + 1
     local token = c.walkToken
     c.walkOrders, c.walkDone = orders, onDone
     local list = {}
-    for _, o in ipairs(orders) do
-        if not o.keep then setPedAnimation(o.ped) end      -- keep = conserva la animacion (cargando camilla)
-        list[#list + 1] = { o.ped, o.x, o.y, o.z }
+    for i, o in ipairs(orders) do list[i] = { o.ped, o.x, o.y, o.z } end
+    if playerValid(c.syncer) then
+        toController(c, "rp:emergency:pathRequest", c.id, token, list)
+        if isTimer(c.stepTimer) then killTimer(c.stepTimer) end
+        c.stepTimer = setTimer(startMoves, PATH_WAIT, 1, c, token, nil)   -- sin respuesta: linea recta
+    else
+        startMoves(c, token, nil)
     end
-    toController(c, "rp:emergency:walk", c.id, token, list)
-    if isTimer(c.stepTimer) then killTimer(c.stepTimer) end
-    c.stepTimer = setTimer(finishWalk, (EMERGENCY.WALK_TIMEOUT + 4) * 1000, 1, c, token)
 end
 
-addEventHandler("rp:emergency:walked", resourceRoot, function(callId, token)
+addEventHandler("rp:emergency:paths", resourceRoot, function(callId, token, paths)
     local c = calls[tonumber(callId)]
     if not c or client ~= c.syncer then return end
-    finishWalk(c, tonumber(token))
+    startMoves(c, tonumber(token), type(paths) == "table" and paths or nil)
 end)
 
 ----------------------------------------------------------------

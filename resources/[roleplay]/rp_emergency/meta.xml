@@ -12,6 +12,7 @@
     <script src="client/c_graph.lua" type="client" cache="false" />
     <script src="client/c_offroad.lua" type="client" cache="false" />
     <script src="client/c_driver.lua" type="client" cache="false" />
+    <script src="client/c_walk.lua" type="client" cache="false" />
     <script src="client/c_bubbles.lua" type="client" cache="false" />
     <script src="client/c_emergency.lua" type="client" cache="false" />
 

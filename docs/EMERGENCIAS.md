@@ -39,7 +39,7 @@ pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de 
      `OFFROAD_STOP` m del paciente, a `OFFROAD_SPEED`. Si no hay calle cerca, sale directamente con su ruta propia.
 4. **Llegada.** Radio a la central, se abren las puertas, los paramédicos bajan con la animación de salir (uno por la
    puerta del copiloto, otro por atrás con el equipo) y buscan abatidos en `SEARCH_RADIUS`:
-   - **Abatidos**: corren hacia el paciente y hacen el guion de rol (~20 s): valoración, pulso, RCP contando
+   - **Abatidos**: corren (camino a pie, ver abajo) hacia el paciente y hacen el guion de rol (~20 s): valoración, pulso, RCP contando
      compresiones, parches del desfibrilador, "¡Despejen!", descarga (destello y temblor para el paciente), "¡Tenemos
      pulso!", `revivePlayer` y consejos. Varios: por cercanía, hasta `MAX_PATIENTS`.
    - **Nadie**: se acercan a quien llamó, preguntan, miran alrededor `LOOK_TIME` s y vuelven.
@@ -49,6 +49,14 @@ pedir otra persona, y los paramédicos reaniman a todos los abatidos en 45 m de 
 5. **Partida.** Guardan el equipo, vuelven a sus puertas, suben con la animación de entrar, radio "unidad libre",
    apagan la sirena, se alejan por la red vial y se desvanecen. Cualquier fallo (caller desconectado, no llega en
    `ENROUTE_TIMEOUT`) limpia todo y libera a los pacientes.
+
+**Movimiento a pie de los paramédicos** (`client/c_walk.lua`): el servidor pide al cliente de quien llamó un camino a
+pie (`footPath` en `client/c_offroad.lua`: línea recta si está libre, si no A* en rejilla de 1 m que rodea autos, muros,
+postes y la propia ambulancia), lo valida, pone la animación de correr (`run_civi`) o caminar sin que la animación mueva
+al ped, le quita el syncer y lo envía a todos los jugadores a menos de 250 m con la duración. Cada cliente desplaza el
+ped por el camino a la misma velocidad (5 m/s corriendo, 1,45 m/s caminando); al terminar el servidor fija la posición
+final (donde ya está) y le devuelve el syncer. No depende de que un cliente controle el ped, que era lo que fallaba y
+terminaba en teletransporte.
 
 Los globos de rol (`client/c_bubbles.lua`) se ven sobre la cabeza del paramédico a menos de 32 m y salen en el chat de
 quien esté a menos de 20 m: lo que dice (blanco), sus acciones `/me` (morado) y la radio (azul). Las frases están en
