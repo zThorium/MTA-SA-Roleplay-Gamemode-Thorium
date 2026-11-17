@@ -164,8 +164,10 @@ local function killTimers(c)
     end
 end
 
+local stopping = false   -- el recurso se detiene: los clientes ya no tienen los eventos
+
 local function toController(c, event, ...)
-    if playerValid(c.syncer) then triggerClientEvent(c.syncer, event, resourceRoot, ...) end
+    if not stopping and playerValid(c.syncer) then triggerClientEvent(c.syncer, event, resourceRoot, ...) end
 end
 
 local function setController(c, player)
@@ -1029,6 +1031,7 @@ addEventHandler("onPlayerQuit", root, function() playerGone(source) end)
 addEventHandler("rp:onCharacterLogout", root, function() playerGone(source) end)
 
 addEventHandler("onResourceStop", resourceRoot, function()
+    stopping = true
     for _, c in pairs(calls) do endCall(c, false) end
 end)
 
