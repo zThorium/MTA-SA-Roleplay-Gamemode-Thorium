@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Radio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window">
+        <header>
+            <div class="title">Radio del vehículo</div>
+            <div class="hint"><kbd>Esc</kbd> cerrar</div>
+            <button id="btn-close" class="close" title="Cerrar">&times;</button>
+        </header>
+        <div id="list" class="list"></div>
+        <footer>
+            <button id="btn-off" class="off">Apagar radio</button>
+            <label class="vol">Volumen
+                <input id="vol" type="range" min="0" max="100" step="5" value="60">
+                <span id="vol-val">60%</span>
+            </label>
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

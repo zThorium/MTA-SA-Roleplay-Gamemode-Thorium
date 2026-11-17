@@ -78,7 +78,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_shops` · `rp_bank` · `rp_dealership` | Economía |
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
-| `rp_properties` · `rp_vehicles` | Casas y vehículos |
+| `rp_properties` · `rp_vehicles` · `rp_radio` | Casas, vehículos y radio con emisoras de internet |
 
 Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
 
