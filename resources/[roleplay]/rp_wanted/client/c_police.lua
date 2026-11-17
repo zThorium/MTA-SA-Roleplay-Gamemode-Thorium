@@ -387,16 +387,63 @@ local function runTo(ped, x, y, tx, ty, sprint)
 end
 
 -- Arresto: se pide al servidor (que comprueba la distancia en sus unidades)
+-- Animaciones del arresto: mientras el policia las hace no se lo mueve
+local BUST_ANIMS = { car_open_lhs = true, car_pullout_lhs = true, arrestgun = true }
+local function inBustAnim(ped)
+    local _, anim = getPedAnimation(ped)
+    return anim and BUST_ANIMS[anim:lower()] or false
+end
+
+local function localAnim(ped, anim, time, loop)
+    if isElement(ped) and not isPedDead(ped) then
+        setPedAnimation(ped, "ped", anim, time, loop or false, false, false, true)
+    end
+end
+
 local function tryBust(u, ped, st, now, holdMs)
     st.bustSince = st.bustSince or now
     if now - st.bustSince < holdMs or now - (st.bustSent or 0) < 2500 then return end
     st.bustSent = now
+    local inVeh = isPedInVehicle(localPlayer)
     if u.isLocal then
-        triggerServerEvent("rp:wanted:bustedLocal", resourceRoot)
+        -- policia del trafico (solo existe aqui): las animaciones las hace este cliente
+        if inVeh then
+            localAnim(ped, "CAR_open_LHS", 700)
+            setTimer(localAnim, 700, 1, ped, "CAR_pullout_LHS", 1200)
+            setTimer(localAnim, 1900, 1, ped, "ARRESTgun", 2600, true)
+        else
+            localAnim(ped, "ARRESTgun", 4000, true)
+        end
+        triggerServerEvent("rp:wanted:bustedLocal", resourceRoot, inVeh)
     else
-        triggerServerEvent("rp:wanted:busted", resourceRoot, ped)
+        triggerServerEvent("rp:wanted:busted", resourceRoot, ped, inVeh)
     end
 end
+
+-- El servidor confirmo el arresto: se abre la puerta y, si el auto es del
+-- trafico (el servidor no lo ve), este cliente saca al jugador
+addEvent("rp:wanted:bustSequence", true)
+addEventHandler("rp:wanted:bustSequence", resourceRoot, function(cop, inVeh)
+    local v = getPedOccupiedVehicle(localPlayer)
+    if not v then return end
+    setElementVelocity(v, 0, 0, 0)
+    if isElementLocal(v) then setVehicleDoorOpenRatio(v, 2, 1, 500) end
+    setTimer(function()
+        local veh = getPedOccupiedVehicle(localPlayer)
+        if not veh then return end
+        local m = getElementMatrix(veh)
+        local x, y, z = getElementPosition(veh)
+        if removePedFromVehicle then pcall(removePedFromVehicle, localPlayer) end
+        if isPedInVehicle(localPlayer) then
+            -- teletransportar a un ped lo baja del vehiculo
+            setElementPosition(localPlayer, x - m[1][1] * 1.7, y - m[1][2] * 1.7, z + 0.2, true)
+        end
+        setElementVelocity(veh, 0, 0, 0)
+        if isElementLocal(veh) then
+            setTimer(function() if isElement(veh) then setVehicleDoorOpenRatio(veh, 2, 0, 400) end end, 3500, 1)
+        end
+    end, 700, 1)
+end)
 
 local function remount(u, ped, st, now)
     if now - (st.remountAt or 0) < 1500 then return end
@@ -406,6 +453,7 @@ end
 
 local function footCop(u, ped, now)
     if not controlled(u, ped) or isPedDead(ped) or isPedInVehicle(ped) then return end
+    if inBustAnim(ped) then return releaseFoot(ped) end
     local st = u.foot[ped]
     if not st then st = {} u.foot[ped] = st end
     local x, y, z = getElementPosition(ped)
@@ -448,10 +496,18 @@ local function footCop(u, ped, now)
 
     -- En un vehiculo detenido: va a la puerta y lo saca (arresto)
     if pveh then
-        if pvSpeed < 6 and dist < 3.4 then
+        -- puerta del conductor (lado izquierdo, un poco adelante del centro)
+        local m = getElementMatrix(pveh)
+        local isBike = getVehicleType(pveh) == "Bike" or getVehicleType(pveh) == "BMX" or getVehicleType(pveh) == "Quad"
+        local side = isBike and 0.9 or 1.45
+        local doorX = px - m[1][1] * side + m[2][1] * 0.25
+        local doorY = py - m[1][2] * side + m[2][2] * 0.25
+        local doorDist = getDistanceBetweenPoints2D(x, y, doorX, doorY)
+        if pvSpeed < 6 and doorDist < 1.3 and math.abs(z - pz) < 2 then
+            -- esta en la puerta: mira al auto y la abre (el servidor hace el resto)
             releaseFoot(ped)
             setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
-            return tryBust(u, ped, st, now, 900)
+            return tryBust(u, ped, st, now, 500)
         end
         st.bustSince = nil
         if cfg.shoot and armed and los and dist < 35 and dist > 6 then
@@ -463,10 +519,7 @@ local function footCop(u, ped, now)
             setPedControlState(ped, "fire", (now + (tonumber(u.id) or 0) * 300) % 1300 < 450)
             return
         end
-        -- puerta del conductor (lado izquierdo)
-        local m = getElementMatrix(pveh)
-        local dx, dy = px - m[1][1] * 1.6, py - m[1][2] * 1.6
-        return runTo(ped, x, y, dx, dy, dist > 4)
+        return runTo(ped, x, y, doorX, doorY, doorDist > 4)
     end
 
     -- A pie: en el suelo o quieto a su lado -> arresto

@@ -24,13 +24,43 @@ local function dbg(fmt, ...)
     if debugOn then outputChatBox("[delitos] " .. fmt:format(...), 200, 200, 200) end
 end
 
+-- Testigo: un policia (unidad IA, del trafico o jugador policia) a WITNESS_RADIUS
+-- que ve al jugador. GTA: los delitos que ve la policia se reportan al instante.
+local function sees(el, px, py, pz)
+    local x, y, z = getElementPosition(el)
+    return isLineOfSightClear(x, y, z + 0.7, px, py, pz + 0.6, true, false, false, true, false, true, false)
+end
+
+local function policeWitness(victim)
+    local px, py, pz = getElementPosition(localPlayer)
+    local r = WANTED.WITNESS_RADIUS
+    for _, ped in ipairs(getElementsWithinRange(px, py, pz, r, "ped")) do
+        if ped ~= victim and getElementData(ped, "rp:cop") and not isPedDead(ped) and sees(ped, px, py, pz) then
+            return true
+        end
+    end
+    for _, v in ipairs(getElementsWithinRange(px, py, pz, r, "vehicle")) do
+        local d = getVehicleController(v)
+        if d and d ~= localPlayer and d ~= victim and getElementData(v, "rp:copCar") and sees(v, px, py, pz) then
+            return true
+        end
+    end
+    for _, pl in ipairs(getElementsWithinRange(px, py, pz, r, "player")) do
+        if pl ~= localPlayer and WANTED_POLICE_SKINS[getElementModel(pl)] and not isPedDead(pl) and sees(pl, px, py, pz) then
+            return true
+        end
+    end
+    return false
+end
+
 local function report(crime, victim, dontCare)
     local key = crime .. keyOf(victim)
     local now = getTickCount()
     if sent[key] and now - sent[key] < WANTED.QUEUE_TIME then return dbg("%s repetido (cola de 10 s)", crime) end
     sent[key] = now
-    dbg("%s -> servidor", crime)
-    triggerServerEvent("rp:wanted:crime", resourceRoot, crime, keyOf(victim), dontCare and true or false)
+    local witnessed = policeWitness(victim)
+    dbg("%s -> servidor%s", crime, witnessed and " (lo vio la policia)" or "")
+    triggerServerEvent("rp:wanted:crime", resourceRoot, crime, keyOf(victim), dontCare and true or false, witnessed)
 end
 
 setTimer(function()

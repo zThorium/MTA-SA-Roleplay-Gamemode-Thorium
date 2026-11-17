@@ -415,32 +415,35 @@ addEventHandler("rp:wanted:unitLost", resourceRoot, function(id)
 end)
 
 -- Un policia te alcanzo: arresto (se comprueba la distancia en el servidor)
-addEventHandler("rp:wanted:busted", resourceRoot, function(ped)
+-- Las demas unidades se van cuando termina la animacion del arresto
+local function leaveAfterBust(player)
+    setTimer(function()
+        local p = isElement(player) and pursuits[player]
+        if p then leaveAll(player, p) end
+    end, 3000, 1)
+end
+
+addEventHandler("rp:wanted:busted", resourceRoot, function(ped, inVeh)
     local player = client
     if not ownedBy(player, ped) or isPedDead(ped) or isPedDead(player) then return end
     local x, y, z = getElementPosition(ped)
     local px, py, pz = getElementPosition(player)
-    local limit = isPedInVehicle(player) and 5 or 3.2
+    inVeh = inVeh == true or isPedInVehicle(player)
+    local limit = inVeh and 5 or 3.2
     if getDistanceBetweenPoints3D(x, y, z, px, py, pz) > limit then return end
-    if bustPlayer(player, ped) then
-        local p = pursuits[player]
-        if p then leaveAll(player, p) end
-    end
+    if bustPlayer(player, ped, inVeh) then leaveAfterBust(player) end
 end)
 
 -- Arresto por una patrulla del trafico (elementos solo del cliente: el servidor no
 -- puede medir la distancia; solo se acepta si el jugador esta buscado y vivo)
 local lastLocalBust = {}
-addEventHandler("rp:wanted:bustedLocal", resourceRoot, function()
+addEventHandler("rp:wanted:bustedLocal", resourceRoot, function(inVeh)
     local player = client
     local now = nowMs()
     if lastLocalBust[player] and now - lastLocalBust[player] < 5000 then return end
     lastLocalBust[player] = now
     if isPedDead(player) or getWantedLevel(player) <= 0 then return end
-    if bustPlayer(player) then
-        local p = pursuits[player]
-        if p then leaveAll(player, p) end
-    end
+    if bustPlayer(player, nil, inVeh == true) then leaveAfterBust(player) end
 end)
 addEventHandler("onPlayerQuit", root, function() lastLocalBust[source] = nil end)
 

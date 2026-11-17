@@ -82,6 +82,13 @@ No sube solo por el tiempo: sube porque en una persecución sigues cometiendo de
 | HUD | `rp_hud/c_wanted.lua` | 6 estrellas al estilo de GTA SA (doradas con borde negro, las que faltan oscuras), dibujadas con primitivas (arte propio) debajo de la hora y el dinero. Parpadean al cambiar el nivel y laten mientras ningún policía está cerca. Respetan `/hud`. |
 | Policía jugadora | `s_wanted.lua` | Los miembros de la facción 1 de servicio (con uniforme, skins 280-288, o en un vehículo policial) no acumulan búsqueda; de civil sí, reciben el aviso de la central en el chat y ven un punto rojo sobre los buscados en el mapa. Sus patrullas y su presencia cuentan para frenar el decaimiento. |
 
+Ajustes sobre GTA (más fácil, pedido del servidor):
+- Todos los puntos valen el **doble** (`CRIME_SCALE = 2`): dos atropellos ya son 1 estrella.
+- **Testigo policial**: si un policía (unidad IA, patrulla del tráfico o policía jugador) está a menos de 45 m y te ve, el delito vale el doble otra vez y te da **1 estrella al momento**.
+- **Estrella inmediata** sin testigos para delitos graves: disparar o apuñalar a un civil, cualquier agresión a un policía, embestir una patrulla y destruir un vehículo o helicóptero.
+- Al subir de nivel el caos queda con margen sobre el umbral (70, 200, 570…) y hay **30 s sin decaimiento** después de cada delito, así no aparece "Perdiste a la policía" apenas ganas la estrella.
+- Arresto en un vehículo: el policía llega a la puerta del conductor, la abre (`CAR_open_LHS`), te saca (`CAR_pullout_LHS`) y te deja en el suelo; recién ahí es Busted. Si el auto es del tráfico (solo existe en tu cliente) te saca tu propio cliente.
+
 Decisiones:
 - **Sin cambios en `schema.lua`**. En `rp_hud` solo se agrega `c_wanted.lua` y una línea en su `meta.xml` (el PR #6 también toca ese `meta.xml`: conflicto de una línea, fácil de resolver).
 - **Sin CEF**: el HUD usa dx, así no se crean navegadores.

@@ -33,6 +33,14 @@ WANTED = {
     DECAY_RADIUS = 18,          -- m: policia a esta distancia impide que baje el caos
     DECAY_CITY = 1,             -- puntos por segundo en la ciudad
     DECAY_ELUSIVE = 2,          -- fuera de la ciudad o en un interior
+    DECAY_GRACE = 30000,        -- ms sin decaimiento despues de un delito o de subir de nivel
+
+    -- Mas facil que GTA (pedido del servidor): todos los puntos se multiplican
+    CRIME_SCALE = 2,
+    -- Testigo: un policia (IA, del trafico o jugador) a esta distancia que ve el
+    -- delito da estrella inmediata y el delito vale el doble
+    WITNESS_RADIUS = 45,
+    WITNESS_MULTIPLIER = 2,
 
     -- La policia (faccion reservada en rp_factions / rp_database) de servicio (con
     -- uniforme o en un vehiculo policial) no acumula busqueda; de civil, si
@@ -47,7 +55,7 @@ WANTED = {
     -- Arresto ("Busted"): te sacan del auto o te reducen en el piso -> carcel
     BUST_TAKE_WEAPONS = true,
     BUST_RELEASE = { x = 1552.6, y = -1675.6, z = 16.2, rot = 90 },     -- puerta de la comisaria de Pershing Square (LSPD)
-    BUST_FREEZE = 4000,         -- ms entre el arresto y aparecer en la celda
+    BUST_FREEZE = 5000,         -- ms entre el arresto y aparecer en la celda
 
     -- Carcel: tiempo por estrella o fianza para salir antes (/fianza, en efectivo)
     JAIL_SECONDS_PER_STAR = 90,
@@ -83,21 +91,22 @@ WANTED = {
       speeding                   exceso de velocidad delante de la policia
       aim_gun                    apuntar con un arma a alguien
 ]]
+-- instant = N: el delito deja como minimo N estrellas al momento (aunque no haya testigos)
 WANTED_CRIMES = {
     ped_melee    = { points = 5,   label = "Agresion" },
-    cop_melee    = { points = 45,  label = "Agresion a un policia" },
-    ped_stab     = { points = 35,  label = "Apunalar a un civil" },
-    cop_stab     = { points = 100, label = "Apunalar a un policia" },
-    ped_shoot    = { points = 30,  label = "Disparar a un civil" },
-    cop_shoot    = { points = 80,  label = "Disparar a un policia" },
+    cop_melee    = { points = 45,  label = "Agresion a un policia", instant = 1 },
+    ped_stab     = { points = 35,  label = "Apunalar a un civil", instant = 1 },
+    cop_stab     = { points = 100, label = "Apunalar a un policia", instant = 1 },
+    ped_shoot    = { points = 30,  label = "Disparar a un civil", instant = 1 },
+    cop_shoot    = { points = 80,  label = "Disparar a un policia", instant = 1 },
     ped_runover  = { points = 18,  label = "Atropello" },
-    cop_runover  = { points = 80,  label = "Atropellar a un policia" },
-    cop_car      = { points = 80,  label = "Embestir una patrulla" },
+    cop_runover  = { points = 80,  label = "Atropellar a un policia", instant = 1 },
+    cop_car      = { points = 80,  label = "Embestir una patrulla", instant = 1 },
     car_hit      = { points = 2,   label = "Choque" },
     car_damage   = { points = 5,   label = "Danos a un vehiculo" },
     car_steal    = { points = 15,  label = "Robo de vehiculo" },
-    car_destroy  = { points = 70,  label = "Destruccion de un vehiculo" },
-    heli_destroy = { points = 400, label = "Derribar un helicoptero" },
+    car_destroy  = { points = 70,  label = "Destruccion de un vehiculo", instant = 1 },
+    heli_destroy = { points = 400, label = "Derribar un helicoptero", instant = 1 },
     explosion    = { points = 25,  label = "Explosion" },
     speeding     = { points = 5,   label = "Exceso de velocidad" },
     aim_gun      = { points = 2,   label = "Amenaza con arma" },

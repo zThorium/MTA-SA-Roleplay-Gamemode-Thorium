@@ -123,6 +123,12 @@ local function applyChaos(player, chaos)
     local level = wantedLevelFromChaos(s.chaos)
     if level == old then return end
     s.level = level
+    if level > old then
+        -- margen sobre el umbral (como SetWantedLevel de GTA) y unos segundos sin
+        -- decaimiento: la estrella recien ganada no se pierde al instante
+        s.chaos = math.max(s.chaos, WANTED.SET_LEVEL_CHAOS[level] or s.chaos)
+        s.graceUntil = getTickCount() + WANTED.DECAY_GRACE
+    end
     setElementData(player, "rp:wanted", level)
     if level == 0 then setLost(player, s, false) end
     triggerEvent("rp:onWantedLevelChange", player, level, old)
@@ -137,9 +143,12 @@ local function applyChaos(player, chaos)
     end
 end
 
+local policeNear
+
 -- Delito: se aplica medio segundo despues (cola de GTA) y no se repite con la
--- misma victima en QUEUE_TIME
-function reportCrime(player, crimeKey, victimKey, dontCare)
+-- misma victima en QUEUE_TIME. Si lo ve un policia (witnessed, o una unidad o
+-- policia jugador cerca) vale el doble y da estrella al momento.
+function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
     if not crime then return false end
@@ -165,10 +174,21 @@ function reportCrime(player, crimeKey, victimKey, dontCare)
     s.queue[key] = now + WANTED.QUEUE_TIME
     setTimer(function()
         if not isElement(player) or W[player] ~= s or s.busted then return end
-        local points = crime.points
+        local points = crime.points * (WANTED.CRIME_SCALE or 1)
         if dontCare then points = points / WANTED.DONT_CARE_DIVISOR end
+        local seen = witnessed or policeNear(player, WANTED.WITNESS_RADIUS)
+        if seen then points = points * WANTED.WITNESS_MULTIPLIER end
         local chaos = s.chaos + math.floor(points)
-        outputServerLog(("[rp_wanted] %s: %s +%d (caos %d -> %d)"):format(getPlayerName(player), crimeKey, math.floor(points), s.chaos, chaos))
+        -- estrella inmediata: delito grave o visto por la policia
+        local minLevel = crime.instant or 0
+        if seen and points > 0 then minLevel = math.max(minLevel, 1) end
+        if minLevel > 0 and wantedLevelFromChaos(chaos) < minLevel then
+            chaos = WANTED.SET_LEVEL_CHAOS[minLevel]
+        end
+        s.graceUntil = math.max(s.graceUntil or 0, getTickCount() + WANTED.DECAY_GRACE)
+        setLost(player, s, false)
+        outputServerLog(("[rp_wanted] %s: %s +%d%s (caos %d -> %d)"):format(getPlayerName(player), crimeKey,
+            math.floor(points), seen and " [testigo]" or "", s.chaos, chaos))
         -- libertad condicional: un delito poco despues de un arresto devuelve el nivel anterior
         if s.parole and getTickCount() - s.parole.at < WANTED.PAROLE_TIME then
             chaos = math.max(chaos, s.parole.chaos)
@@ -197,7 +217,7 @@ end
 ----------------------------------------------------------------
 -- Delitos detectados en el cliente (peatones y trafico son del cliente)
 ----------------------------------------------------------------
-addEventHandler("rp:wanted:crime", resourceRoot, function(crimeKey, victimKey, dontCare)
+addEventHandler("rp:wanted:crime", resourceRoot, function(crimeKey, victimKey, dontCare, witnessed)
     local player = client
     if type(crimeKey) ~= "string" or not WANTED_CRIMES[crimeKey] then return end
     local s = state(player)
@@ -206,7 +226,7 @@ addEventHandler("rp:wanted:crime", resourceRoot, function(crimeKey, victimKey, d
     if now - s.reportWindow > 1000 then s.reportWindow, s.reports = now, 0 end
     s.reports = s.reports + 1
     if s.reports > 12 then return end
-    reportCrime(player, crimeKey, type(victimKey) == "string" and victimKey:sub(1, 40) or "", dontCare == true)
+    reportCrime(player, crimeKey, type(victimKey) == "string" and victimKey:sub(1, 40) or "", dontCare == true, witnessed == true)
 end)
 
 -- Delitos contra otros jugadores (golpes, disparos, atropellos)
@@ -226,7 +246,9 @@ end)
 ----------------------------------------------------------------
 local CITIES = { ["Los Santos"] = true, ["San Fierro"] = true, ["Las Venturas"] = true }
 
-local function policeNear(player, radius)
+-- Unidades IA o policias jugadores cerca (la linea de vision solo se puede
+-- medir en el cliente: c_crimes.lua la manda como "witnessed")
+function policeNear(player, radius)
     local x, y, z = getElementPosition(player)
     if wantedUnitsNear and wantedUnitsNear(x, y, z, radius) then return true end
     for _, el in ipairs(getElementsWithinRange(x, y, z, radius, "player")) do
@@ -249,7 +271,9 @@ setTimer(function()
             W[player] = nil
         else
             if s.parole and now - s.parole.at > WANTED.PAROLE_TIME then s.parole = nil end
-            if s.chaos > 0 and not s.busted then
+            if s.chaos > 0 and not s.busted and now < (s.graceUntil or 0) then
+                setLost(player, s, false)
+            elseif s.chaos > 0 and not s.busted then
                 local x, y, z = getElementPosition(player)
                 local elusive = getElementInterior(player) ~= 0 or not CITIES[getZoneName(x, y, z, true)]
                 -- GTA: con 2+ estrellas en una zona apartada y dentro de un vehiculo policial no baja
@@ -278,23 +302,69 @@ end, 15000, 0)
 ----------------------------------------------------------------
 -- Arresto (lo pide s_units.lua cuando un policia te alcanza)
 ----------------------------------------------------------------
--- Te sacaron del vehiculo o te redujeron en el piso: manos arriba, pantalla
--- negra y a la celda (server/s_jail.lua). Se borra la busqueda.
-function bustPlayer(player, cop)
+-- GTA (CTaskComplexArrestPed): si vas en un vehiculo el policia abre la puerta
+-- del conductor y te saca; a pie te reduce en el piso. Recien ahi es "Busted":
+-- pantalla negra y a la celda (server/s_jail.lua). Se borra la busqueda.
+-- inVeh lo manda el cliente: el auto puede ser del trafico (solo existe en su
+-- cliente) y el servidor no lo ve.
+local function playAnim(ped, block, anim, time, loop, freeze)
+    if isElement(ped) and not isPedDead(ped) then
+        setPedAnimation(ped, block, anim, time or -1, loop or false, false, false, freeze ~= false)
+    end
+end
+
+function bustPlayer(player, cop, inVeh)
     local s = W[player]
     if not s or s.level <= 0 or s.busted then return false end
     local level, chaos = s.level, s.chaos
     s.busted = true
     applyChaos(player, 0)
-    outputServerLog(("[rp_wanted] %s arrestado con %d estrellas"):format(getPlayerName(player), level))
+    outputServerLog(("[rp_wanted] %s arrestado con %d estrellas%s"):format(getPlayerName(player), level,
+        inVeh and " (sacado del vehiculo)" or ""))
 
-    if isPedInVehicle(player) then removePedFromVehicle(player) end
+    local veh = getPedOccupiedVehicle(player)
+    inVeh = inVeh or veh ~= nil
     toggleAllControls(player, false, true, false)
-    setPedAnimation(player, "ped", "handsup", -1, false, false, false, true)
-    popup(player, "Arrestado", ("Te arresto la policia (%d estrella%s)."):format(level, level == 1 and "" or "s"), "error")
-    setTimer(function() if isElement(player) then fadeCamera(player, false, 1.0) end end, 1800, 1)
+    if cop and isElement(cop) then
+        local x, y = getElementPosition(cop)
+        local px, py = getElementPosition(player)
+        setElementRotation(cop, 0, 0, (360 - math.deg(math.atan2(px - x, py - y))) % 360, "default", true)
+    end
+    -- el cliente del arrestado abre la puerta y lo saca de un auto del trafico
+    triggerClientEvent(player, "rp:wanted:bustSequence", resourceRoot, cop, inVeh)
+
+    if inVeh then
+        if veh then
+            setElementVelocity(veh, 0, 0, 0)
+            setVehicleDoorOpenRatio(veh, 2, 1, 500)
+        end
+        playAnim(cop, "ped", "CAR_open_LHS", 700)
+        setTimer(function()
+            if not isElement(player) then return end
+            playAnim(cop, "ped", "CAR_pullout_LHS", 1200)
+            local v = getPedOccupiedVehicle(player)
+            if v then
+                local m = getElementMatrix(v)
+                local x, y, z = getElementPosition(v)
+                removePedFromVehicle(player)
+                setElementPosition(player, x - m[1][1] * 1.7, y - m[1][2] * 1.7, z + 0.2)
+            end
+        end, 700, 1)
+        setTimer(function() playAnim(player, "ped", "FLOOR_hit_f", -1, false, true) end, 1000, 1)
+        setTimer(function() playAnim(cop, "ped", "ARRESTgun", 2600, true) end, 1900, 1)
+    else
+        playAnim(cop, "ped", "ARRESTgun", 4000, true)
+        playAnim(player, "ped", "handsup", -1, false, true)
+    end
+    setTimer(function()
+        if isElement(player) then
+            popup(player, "Arrestado", ("Te arresto la policia (%d estrella%s)."):format(level, level == 1 and "" or "s"), "error")
+        end
+    end, inVeh and 1400 or 300, 1)
+    setTimer(function() if isElement(player) then fadeCamera(player, false, 1.0) end end, WANTED.BUST_FREEZE - 1300, 1)
 
     setTimer(function()
+        if isElement(veh) then setVehicleDoorOpenRatio(veh, 2, 0, 400) end
         if not isElement(player) then return end
         s.busted = nil
         setPedAnimation(player)
