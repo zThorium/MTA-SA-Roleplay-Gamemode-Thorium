@@ -130,8 +130,10 @@ local function setController(c, player)
     if not playerValid(player) then return end
     if c.syncer ~= player then toController(c, "rp:emergency:stop", c.id) end
     c.syncer = player
+    -- persist = true: sin el, MTA quita el control en cuanto el jugador esta a mas de
+    -- 100 m de un ped (la ambulancia aparece a 120-200 m) y la ambulancia no se movia nunca.
     for _, el in ipairs({ c.vehicle, c.driver, c.medics[1], c.medics[2] }) do
-        if ok(el) then setElementSyncer(el, player) end
+        if ok(el) then setElementSyncer(el, player, true) end
     end
 end
 

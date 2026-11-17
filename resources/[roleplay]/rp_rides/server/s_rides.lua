@@ -530,8 +530,9 @@ addEventHandler("rp:rides:aiSpawn", resourceRoot, function(rideId, x, y, z, rot)
     warpPedIntoVehicle(ped, vehicle, 0)
     setElementData(ped, "rp:rides:ai", ride.id)
     -- El cliente del pasajero conduce al NPC
-    setElementSyncer(vehicle, player)
-    setElementSyncer(ped, player)
+    -- persist = true: si no, MTA quita el control a mas de 100 m del ped y el auto no arranca
+    setElementSyncer(vehicle, player, true)
+    setElementSyncer(ped, player, true)
 
     ride.ai = { vehicle = vehicle, ped = ped, name = AI_NAMES[math.random(#AI_NAMES)] .. " (" .. RIDES.APP_NAME .. " Auto)" }
     ride.state = "assigned"
