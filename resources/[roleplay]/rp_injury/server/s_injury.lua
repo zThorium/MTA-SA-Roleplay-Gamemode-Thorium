@@ -75,28 +75,36 @@ end
 ----------------------------------------------------------------
 -- Tarifa del hospital
 ----------------------------------------------------------------
--- Cobra primero del efectivo y el resto del banco (sin dejar saldo negativo).
--- Devuelve lo que se pudo cobrar.
-local function chargeHospital(player)
+-- Cobra primero del efectivo (al momento, para que el guardado ya lo refleje) y el
+-- resto del banco con un descuento atomico, sin dejar saldo negativo.
+-- done(paid, fromCash, fromBank) se llama al terminar (puede ser tras salir el jugador).
+local function chargeHospital(player, done)
     local characterId = characterOf(player)
-    if not characterId then return 0 end
+    if not characterId then return done and done(0, 0, 0) end
     local fee = INJURY.HOSPITAL_FEE
 
     local fromCash = math.max(0, math.min(getPlayerMoney(player), fee))
     if fromCash > 0 then takePlayerMoney(player, fromCash) end
 
-    local rest, fromBank = fee - fromCash, 0
-    if rest > 0 then
-        local rows = dbPoll(dbQuery(db(), "SELECT bank_money FROM characters WHERE id = ?", characterId), -1)
+    local rest = fee - fromCash
+    if rest <= 0 then return done and done(fromCash, fromCash, 0) end
+
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0)
         local balance = rows and rows[1] and tonumber(rows[1].bank_money) or 0
-        fromBank = math.max(0, math.min(balance, rest))
-        if fromBank > 0 then
-            dbExec(db(), "UPDATE characters SET bank_money = GREATEST(bank_money - ?, 0) WHERE id = ?", fromBank, characterId)
-            dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'hospital', ?, ?)",
-                characterId, fromBank, "Hospital All Saints")
-        end
-    end
-    return fromCash + fromBank, fromCash, fromBank
+        local amount = math.max(0, math.min(balance, rest))
+        if amount <= 0 then return done and done(fromCash, fromCash, 0) end
+
+        dbQuery(function(qh2)
+            local _, affected = dbPoll(qh2, 0)
+            local fromBank = (affected and affected > 0) and amount or 0
+            if fromBank > 0 then
+                dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'hospital', ?, ?)",
+                    characterId, fromBank, "Hospital All Saints")
+            end
+            if done then done(fromCash + fromBank, fromCash, fromBank) end
+        end, db(), "UPDATE characters SET bank_money = bank_money - ? WHERE id = ? AND bank_money >= ?", amount, characterId, amount)
+    end, db(), "SELECT bank_money FROM characters WHERE id = ?", characterId)
 end
 
 ----------------------------------------------------------------
@@ -130,16 +138,18 @@ local function respawnAtHospital(player)
     exports.rp_characters:respawnAtHospital(player)
     triggerEvent("rp:onPlayerDownedEnd", player)   -- p. ej. rp_needs vuelve a aplicar el cansancio
 
-    local paid, fromCash, fromBank = chargeHospital(player)
-    exports.rp_characters:saveCharacter(player)
-    if paid >= INJURY.HOSPITAL_FEE then
-        local how = fromBank > 0 and (fromCash > 0 and " (efectivo y banco)" or " (banco)") or ""
-        exports.rp_notify:popup(player, "Hospital All Saints",
-            ("Te atendieron en el hospital. Tarifa cobrada: $%d%s."):format(paid, how), "info", 7000)
-    else
-        exports.rp_notify:popup(player, "Hospital All Saints",
-            ("Te atendieron en el hospital. Solo pudiste pagar $%d de $%d."):format(paid, INJURY.HOSPITAL_FEE), "warning", 7000)
-    end
+    chargeHospital(player, function(paid, fromCash, fromBank)
+        if not isElement(player) then return end
+        exports.rp_characters:saveCharacter(player)
+        if paid >= INJURY.HOSPITAL_FEE then
+            local how = fromBank > 0 and (fromCash > 0 and " (efectivo y banco)" or " (banco)") or ""
+            exports.rp_notify:popup(player, "Hospital All Saints",
+                ("Te atendieron en el hospital. Tarifa cobrada: $%d%s."):format(paid, how), "info", 7000)
+        else
+            exports.rp_notify:popup(player, "Hospital All Saints",
+                ("Te atendieron en el hospital. Solo pudiste pagar $%d de $%d."):format(paid, INJURY.HOSPITAL_FEE), "warning", 7000)
+        end
+    end)
     triggerClientEvent(player, "rp:injury:state", resourceRoot, false)
 end
 
