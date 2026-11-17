@@ -34,7 +34,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Inventario** | Inventario por personaje con catálogo de items (tecla `I`). |
 | **Teléfono** | Notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
 | **Propiedades** | Casas comprables con visita de un minuto, cierre y venta. |
-| **Vehículos** | Vehículos con dueño persistentes, bloqueo con `L` o `/bloquear`. |
+| **Vehículos** | Vehículos con dueño persistentes con llave en el inventario: abrir/cerrar (`L`), motor (`J`), freno de mano (`X`), intermitentes con luces que titilan (flechas), maletero, menú de interacción con `M` + click derecho, tuning guardado en BD, cepo y multas para la policía (facción 1) e historial de golpes y ocupantes para admins. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
 | **Interfaz** | HUD propio con minimapa giratorio (radar extraído del propio juego), notificaciones con sonido, scoreboard, nametags y sistema de IDs. |
 | **Ayuda y reportes** | Panel `F1` con guía para nuevos, reglas, conceptos de rol, teclas y comandos (con buscador), botón de Discord y formulario para reportar jugadores que avisa al staff y queda guardado. |
@@ -117,6 +117,7 @@ Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
    <resource src="rp_bank"       startup="1" protected="0" />
    <resource src="rp_phone"      startup="1" protected="0" />
    <resource src="rp_properties" startup="1" protected="0" />
+   <resource src="object_preview" startup="1" protected="0" />
    <resource src="rp_vehicles"   startup="1" protected="0" />
    <resource src="rp_dealership" startup="1" protected="0" />
    <resource src="rp_nametags"   startup="1" protected="0" />
@@ -153,6 +154,7 @@ UPDATE accounts SET admin_level = 1 WHERE username = 'TuUsuario';
 
 - **Cabezas (`rp_heads`)**: modelos y ajustes de **Aleks**, tomados de *Countryside-RP* y publicados por Neus. Su licencia exige dar crédito y **prohíbe venderlos**; esa restricción aplica a este repo mientras los incluya.
 - **`bone_attach`**: **CrystalMV**.
+- **`object_preview`** (vista 3D del panel de vehículos): **Ren712**, sin cambios.
 - El mapa del radar de `rp_hud` (`images/map.png`) se genera a partir de tu propio `gta3.img` con `rp_hud/tools/RadarExtract.cs`; no se incluye porque son archivos de Rockstar.
 - El resto del código es obra de **Thorium**. Grand Theft Auto: San Andreas es propiedad de Rockstar Games; este proyecto no está afiliado a Rockstar ni a MTA.
 

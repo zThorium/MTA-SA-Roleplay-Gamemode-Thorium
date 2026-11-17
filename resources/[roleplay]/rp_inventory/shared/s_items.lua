@@ -66,8 +66,58 @@ ITEMS = {
     },
 }
 
+--[[
+    Familias de items: ids con un sufijo variable que comparten definicion.
+    Ej.: "vkey:12" es la llave del vehiculo 12. Cada id es un item distinto
+    (se guardan por separado en character_items) y usan la plantilla "base".
+    Otro recurso puede darle un nombre propio a un id con setItemLabel
+    (p. ej. la matricula en la llave).
+]]
+ITEM_FAMILIES = {
+    { pattern = "^vkey:%d+$", base = {
+        name = "Llave de vehiculo", icon = "🔑", weight = 0.05, stack = 1,
+        description = "Llave de un vehiculo. Usala cerca del vehiculo para abrirlo o cerrarlo.",
+        use = { event = "vehicle_key" },
+    } },
+    -- "bcard:12" es la tarjeta de debito de la cuenta del personaje 12 (rp_bank)
+    { pattern = "^bcard:%d+$", base = {
+        name = "Tarjeta de debito", icon = "💳", weight = 0.01, stack = 1,
+        description = "Tarjeta de debito. Sirve para pagar en los datafonos (p. ej. en la bencinera).",
+    } },
+}
+
+local itemLabels = {}   -- [itemId] = { name, description, private, owner }
+
+-- private: texto extra que solo ve en su inventario el personaje ownerId
+-- (p. ej. el numero y la clave de una tarjeta)
+function setItemLabel(itemId, name, description, private, ownerId)
+    if type(itemId) ~= "string" then return false end
+    itemLabels[itemId] = { name = name, description = description, private = private, owner = tonumber(ownerId) }
+    return true
+end
+
+function getItemPrivateNote(itemId, characterId)
+    local label = itemLabels[itemId]
+    if label and label.private and label.owner and label.owner == tonumber(characterId) then return label.private end
+    return nil
+end
+
 function getItemDefinition(itemId)
-    return ITEMS[itemId]
+    if type(itemId) ~= "string" then return nil end
+    local def = ITEMS[itemId]
+    if def then return def end
+    for _, family in ipairs(ITEM_FAMILIES) do
+        if itemId:find(family.pattern) then
+            local label = itemLabels[itemId]
+            if not label then return family.base end
+            local copy = {}
+            for k, v in pairs(family.base) do copy[k] = v end
+            copy.name = label.name or copy.name
+            copy.description = label.description or copy.description
+            return copy
+        end
+    end
+    return nil
 end
 
 function getItemList()
