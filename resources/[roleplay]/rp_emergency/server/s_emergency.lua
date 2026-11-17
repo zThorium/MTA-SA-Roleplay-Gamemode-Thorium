@@ -739,6 +739,8 @@ end)
 -- Despacho
 ----------------------------------------------------------------
 -- Devuelve true si se envio la ambulancia (false = rechazada, ya se aviso al jugador)
+local requestSpawn   -- definida mas abajo (seccion "En camino")
+
 local function dispatchAmbulance(player)
     if byCaller[player] then notify(player, "Ya hay una ambulancia atendiendo tu llamada.", "warning") return false end
     if cooldown[player] and getTickCount() < cooldown[player] then
@@ -829,7 +831,7 @@ local function watch(c)
     end
 end
 
-local function requestSpawn(c, avoidX, avoidY)
+requestSpawn = function(c, avoidX, avoidY)
     c.state = "spawning"
     if isTimer(c.spawnTimer) then killTimer(c.spawnTimer) end
     c.spawnTimer = setTimer(function()
