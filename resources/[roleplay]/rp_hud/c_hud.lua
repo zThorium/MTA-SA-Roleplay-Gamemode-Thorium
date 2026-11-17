@@ -17,6 +17,15 @@ local MS = math.floor(220 * s) -- tamano del minimapa en pantalla
 local MARGIN = math.floor(22 * s)
 
 local mapTexture, renderTarget
+
+-- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
+local BLIP_ICON_IDS = { 27, 41, 45, 52, 55 }
+local BLIP_MAX_DISTANCE = 900   -- metros: mas lejos no se muestran en el minimapa (si en F11)
+local blipIcons = {}
+for _, id in ipairs(BLIP_ICON_IDS) do
+    local path = ("images/blips/%d.png"):format(id)
+    if fileExists(path) then blipIcons[id] = dxCreateTexture(path, "argb", true, "clamp") end
+end
 local enabled = true
 
 local COLORS = {
@@ -95,19 +104,32 @@ local function drawMinimap(x, y)
         dxDrawImageSection(MS / 2 - size / 2, MS / 2 - size / 2, size, size,
             mx - section / 2, my - section / 2, section, section, mapTexture, -heading)
 
-        -- Blips (tiendas, etc.)
+        -- Blips (tiendas, etc.): icono propio si existe images/blips/<icono>.png,
+        -- si no un cuadrado del color del blip. Solo dentro de su distancia visible.
         for _, blip in ipairs(getElementsByType("blip")) do
             if getElementDimension(blip) == getElementDimension(localPlayer) then
                 local bx, by = getElementPosition(blip)
-                local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
-                dx, dy = rotate(dx, dy, -heading)
-                local half = MS / 2 - 8 * s
-                local dist = math.sqrt(dx * dx + dy * dy)
-                if dist > half then dx, dy = dx / dist * half, dy / dist * half end
-                local r, g, b = getBlipColor(blip)
-                local bs = 9 * s
-                dxDrawRectangle(MS / 2 + dx - bs / 2 - 1, MS / 2 + dy - bs / 2 - 1, bs + 2, bs + 2, tocolor(0, 0, 0, 200))
-                dxDrawRectangle(MS / 2 + dx - bs / 2, MS / 2 + dy - bs / 2, bs, bs, tocolor(r, g, b, 255))
+                local worldDist = getDistanceBetweenPoints2D(px, py, bx, by)
+                local iconId = getBlipIcon(blip)
+                -- Marcadores de navegacion (0 = punto, 41 = destino) siempre; lugares solo cerca
+                local always = iconId == 0 or iconId == 41
+                if always or worldDist <= math.min(getBlipVisibleDistance(blip) or 99999, BLIP_MAX_DISTANCE) then
+                    local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
+                    dx, dy = rotate(dx, dy, -heading)
+                    local half = MS / 2 - 10 * s
+                    local dist = math.sqrt(dx * dx + dy * dy)
+                    if dist > half then dx, dy = dx / dist * half, dy / dist * half end
+                    local icon = blipIcons[iconId]
+                    if icon then
+                        local is = 18 * s
+                        dxDrawImage(MS / 2 + dx - is / 2, MS / 2 + dy - is / 2, is, is, icon)
+                    else
+                        local r, g, b = getBlipColor(blip)
+                        local bs = 9 * s
+                        dxDrawRectangle(MS / 2 + dx - bs / 2 - 1, MS / 2 + dy - bs / 2 - 1, bs + 2, bs + 2, tocolor(0, 0, 0, 200))
+                        dxDrawRectangle(MS / 2 + dx - bs / 2, MS / 2 + dy - bs / 2, bs, bs, tocolor(r, g, b, 255))
+                    end
+                end
             end
         end
 

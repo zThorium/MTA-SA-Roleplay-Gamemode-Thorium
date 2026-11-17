@@ -10,4 +10,9 @@
 
     <script src="c_hud.lua" type="client" />
     <file src="images/map.png" />
+    <file src="images/blips/27.png" />
+    <file src="images/blips/41.png" />
+    <file src="images/blips/45.png" />
+    <file src="images/blips/52.png" />
+    <file src="images/blips/55.png" />
 </meta>

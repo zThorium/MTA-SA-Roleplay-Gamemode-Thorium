@@ -63,7 +63,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
     for _, shop in ipairs(TUNING.SHOPS) do
         local m = createMarker(shop.x, shop.y, shop.z - 1, "cylinder", shop.radius, 255, 170, 0, 90)
         shopMarkers[m] = shop
-        createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 400)
+        createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 99999)
     end
 end)
 
