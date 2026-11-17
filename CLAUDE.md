@@ -41,7 +41,7 @@ Base: `rp_database` (conexión + esquema), `rp_login` (CEF + bcrypt), `rp_charac
 (terceros, ver créditos), `rp_needs`, `rp_injury` (abatido en vez de morir, hospital), `rp_inventory` (I), `rp_clothing` (ropa y toys).
 Economía: `rp_bank` (cajeros), `rp_shops`, `rp_dealership`, `rp_payday`.
 Comunidad: `rp_factions` (F3, roles con permisos y sueldo), `rp_phone` (P) con la app
-de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_citizens`
+de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` (radio de vehículos con emisoras de internet), `rp_citizens`
 (peatones y tráfico IA). Interfaz: `rp_hud`, `rp_scoreboard`, `rp_nametags`.
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
 Admin: `rp_admin` (`/freecam`).

@@ -1,0 +1,17 @@
+<meta>
+    <info author="Thorium" name="RP Radio" description="Radio de vehiculos con emisoras de internet (Los40 y otras)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_radio.lua" type="server" />
+    <script src="client/c_radio.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+
+    <export function="getVehicleStation" type="server" />
+    <export function="setVehicleStation" type="server" />
+</meta>
