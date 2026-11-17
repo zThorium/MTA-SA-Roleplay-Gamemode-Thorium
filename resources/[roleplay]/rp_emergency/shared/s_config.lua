@@ -14,7 +14,7 @@ EMERGENCY = {
     },
 
     -- Anti-abuso
-    CALL_COOLDOWN = 60,        -- s entre llamadas del mismo jugador (tras terminar la anterior)
+    CALL_COOLDOWN = 20,        -- s entre llamadas del mismo jugador (cuenta desde que la ambulancia se retira)
     MAX_ACTIVE_CALLS = 6,      -- ambulancias simultaneas en todo el servidor
 
     -- Ambulancia
@@ -27,7 +27,7 @@ EMERGENCY = {
     ENROUTE_TIMEOUT = 240,     -- s: si no llega, se cancela la llamada (recuperacion)
     SEARCH_RADIUS = 45,        -- m alrededor de la ambulancia para buscar abatidos
     LOOK_TIME = 4,             -- s que miran alrededor si no hay abatidos antes de volver
-    WALK_TIMEOUT = 30,         -- s: si no llego (atascado), el servidor lo coloca en el punto
+    WALK_TIMEOUT = 15,         -- s: si no llego (atascado), el servidor lo coloca en el punto
     WALK_ARRIVE_DIST = 1.4,    -- m al paciente / destino para considerarlo llegado
     CRUISE_SPEED = 62,         -- km/h
     JUNCTION_SPEED = 30,       -- km/h al cruzar un cruce (con sirena no espera semaforos)

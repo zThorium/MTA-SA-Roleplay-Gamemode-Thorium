@@ -104,7 +104,7 @@ local function drawFlash()
     local left = flashUntil - getTickCount()
     if left <= 0 then
         removeEventHandler("onClientRender", root, drawFlash)
-        if setCameraShakeLevel then setCameraShakeLevel(0) end
+        setCameraDrunkLevel(0)
         return
     end
     local sw, sh = guiGetScreenSize()
@@ -115,6 +115,6 @@ addEventHandler("rp:emergency:shock", resourceRoot, function()
     if flashUntil > getTickCount() then return end
     flashUntil = getTickCount() + 450
     addEventHandler("onClientRender", root, drawFlash)
-    if setCameraShakeLevel then setCameraShakeLevel(180) end
+    setCameraDrunkLevel(200)
     playSoundFrontEnd(40)
 end)

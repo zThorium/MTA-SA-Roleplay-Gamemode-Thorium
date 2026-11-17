@@ -78,6 +78,12 @@ end
 
 local function pick(list) return list[math.random(#list)] end
 
+-- Registro de cada llamada en server.log (para diagnosticar ambulancias que no llegan)
+local function log(c, text)
+    outputServerLog(("[rp_emergency] llamada #%d (%s): %s"):format(c.id,
+        ok(c.caller) and getPlayerName(c.caller) or "?", text))
+end
+
 -- Globo de texto de rol sobre un paramedico (kind: "say", "me" o "radio")
 local function say(c, ped, text, kind, ms)
     if not ok(ped) then return end
@@ -194,6 +200,7 @@ end
 local function endCall(c, fade, message)
     if c.ended then return end
     c.ended = true
+    log(c, "termina en estado " .. tostring(c.state) .. (message and (" (" .. message .. ")") or ""))
     killTimers(c)
     releasePatients(c)
     toController(c, "rp:emergency:stop", c.id)
@@ -329,6 +336,9 @@ end
 leave = function(c)
     if c.ended then return end
     c.state = "leaving"
+    -- Quien llamo ya puede pedir otra ambulancia mientras esta se va
+    if byCaller[c.caller] == c then byCaller[c.caller] = nil end
+    cooldown[c.caller] = getTickCount() + EMERGENCY.CALL_COOLDOWN * 1000
     local patient = c.patient
     if ok(c.vehicle) then
         openDoors(c, false)
@@ -600,19 +610,22 @@ local function onArrivedAtScene(c)
     c.deadline = nil
     popup(c.caller, "911", "La ambulancia ha llegado.", "success")
     say(c, c.driver, "Central, unidad " .. c.unit .. " en el lugar.", "radio")
+    log(c, "llego al lugar")
     openDoors(c, true)
-    -- Primero se abren las puertas, luego bajan; el de atras saca el equipo
+    -- Ya saben a quien atender antes de bajar: abren, bajan y salen corriendo
+    c.queue = scanPatients(c)
     c.workTimer = setTimer(function()
         if c.ended then return end
         exitMedics(c)
+        setController(c, c.syncer)       -- reafirma el control de los peds al bajar del vehiculo
         say(c, c.medics[2], "baja por las puertas traseras con el maletin y el desfibrilador.", "me")
         c.workTimer = setTimer(function()
             if c.ended then return end
-            c.queue = scanPatients(c)
+            if #c.queue == 0 then c.queue = scanPatients(c) end
             if #c.queue > 0 then return processNext(c) end
             searchScene(c)
-        end, 1300, 1)
-    end, 700, 1)
+        end, 800, 1)
+    end, 400, 1)
 end
 
 -- Sin abatidos a la vista: se acercan a quien llamo, preguntan, miran y se van
@@ -639,7 +652,14 @@ addEventHandler("rp:emergency:arrived", resourceRoot, function(callId, mode)
     local c = calls[tonumber(callId)]
     if not c or client ~= c.syncer or c.ended then return end
     if mode == "target" and c.state == "enroute" then
-        if not ok(c.caller) or dist3(c.vehicle, c.caller) > EMERGENCY.ARRIVE_MAX_DIST then return end
+        if not ok(c.caller) or dist3(c.vehicle, c.caller) > EMERGENCY.ARRIVE_MAX_DIST then
+            log(c, "aviso de llegada rechazado: la ambulancia esta lejos de quien llamo; sigue hacia el")
+            if ok(c.caller) then
+                local cx, cy = getElementPosition(c.caller)
+                toController(c, "rp:emergency:drive", c.id, c.vehicle, c.driver, "target", cx, cy)
+            end
+            return
+        end
         onArrivedAtScene(c)
     elseif mode == "hospital" and c.state == "transport" and c.hospital then
         local h = c.hospital.road
@@ -656,7 +676,7 @@ end)
 ----------------------------------------------------------------
 -- Devuelve true si se envio la ambulancia (false = rechazada, ya se aviso al jugador)
 local function dispatchAmbulance(player)
-    if byCaller[player] then notify(player, "Ya tienes una ambulancia en camino.", "warning") return false end
+    if byCaller[player] then notify(player, "Ya hay una ambulancia atendiendo tu llamada.", "warning") return false end
     if cooldown[player] and getTickCount() < cooldown[player] then
         notify(player, "Espera un momento antes de volver a llamar al 911.", "warning") return false
     end
@@ -681,6 +701,7 @@ local function dispatchAmbulance(player)
         if not c.ended and c.state == "spawning" then endCall(c, false, "No hay ambulancias disponibles ahora.") end
     end, EMERGENCY.SPAWN_REQUEST_TIMEOUT * 1000, 1)
 
+    log(c, "despacho solicitado")
     triggerClientEvent(player, "rp:emergency:spawnRequest", resourceRoot, c.id)
     popup(player, "911", "Tu llamada fue recibida. Buscando una ambulancia...", "info")
     return true
@@ -692,7 +713,9 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     x, y, z, rot = tonumber(x), tonumber(y), tonumber(z), tonumber(rot) or 0
     if not c or c.caller ~= player or c.state ~= "spawning" or not (x and y and z) then return end
     local d = getDistanceBetweenPoints2D(c.x, c.y, x, y)
-    if d < 40 or d > EMERGENCY.SPAWN_MAX + 150 then return end
+    if d < 40 or d > EMERGENCY.SPAWN_MAX + 150 then
+        return log(c, ("punto de aparicion rechazado a %.0f m"):format(d))
+    end
     if isTimer(c.spawnTimer) then killTimer(c.spawnTimer) end
 
     local vehicle = createVehicle(EMERGENCY.AMBULANCE_MODEL, x, y, z + 0.6, 0, 0, rot, "LSMD")
@@ -726,7 +749,18 @@ addEventHandler("rp:emergency:spawn", resourceRoot, function(callId, x, y, z, ro
     c.state = "enroute"
     c.deadline = setTimer(endCall, EMERGENCY.ENROUTE_TIMEOUT * 1000, 1, c, true,
         "La ambulancia no pudo llegar hasta ti. Vuelve a llamar.")
-    triggerClientEvent(player, "rp:emergency:drive", resourceRoot, c.id, vehicle, c.driver, "target", c.x, c.y)
+    -- Va directo al abatido mas cercano a quien llamo (si hay), si no a quien llamo
+    local tx, ty = c.x, c.y
+    local best = EMERGENCY.SEARCH_RADIUS
+    for _, p in ipairs(getElementsByType("player")) do
+        if p ~= player and isPlayerDowned(p) and getElementDimension(p) == 0 then
+            local px, py = getElementPosition(p)
+            local pd = getDistanceBetweenPoints2D(c.x, c.y, px, py)
+            if pd < best then tx, ty, best = px, py, pd end
+        end
+    end
+    log(c, ("ambulancia %s creada a %.0f m, en camino"):format(c.unit, d))
+    triggerClientEvent(player, "rp:emergency:drive", resourceRoot, c.id, vehicle, c.driver, "target", tx, ty)
     popup(player, "911", "Central: la ambulancia " .. c.unit .. " va en camino con sirena. Esperala fuera, junto a la calle.", "success")
 end)
 

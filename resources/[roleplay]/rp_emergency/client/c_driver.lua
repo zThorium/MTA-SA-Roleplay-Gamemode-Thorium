@@ -132,6 +132,7 @@ local function plan()
         if getDistanceBetweenPoints2D(x, y, ai.tx, ai.ty) < 45 then
             wp = straightLine(x, y, z, ai.tx, ai.ty)
         else
+            outputDebugString("[rp_emergency] la ambulancia no encontro ruta por la red vial; reintentando", 2)
             ai.wp, ai.i = {}, 1
             ai.nextPlan = getTickCount() + 2000
             return false
@@ -206,7 +207,15 @@ local function tick()
     if not ai then return end
     local vehicle, ped = ai.vehicle, ai.ped
     if not isElement(vehicle) or not isElement(ped) then return stopAIDriver() end
-    if not isElementSyncer(vehicle) or not isElementStreamedIn(vehicle) then return end
+    if not isElementSyncer(vehicle) or not isElementStreamedIn(vehicle) then
+        local now = getTickCount()
+        if now - (ai.warnAt or 0) > 10000 then
+            ai.warnAt = now
+            outputDebugString(("[rp_emergency] ambulancia sin control (syncer=%s, cargada=%s)"):format(
+                tostring(isElementSyncer(vehicle)), tostring(isElementStreamedIn(vehicle))), 2)
+        end
+        return
+    end
 
     local now = getTickCount()
     local speed = speedKmh(vehicle)

@@ -105,46 +105,73 @@ local function stopWalking(report)
     if report then triggerServerEvent("rp:emergency:walked", resourceRoot, w.callId, w.token) end
 end
 
--- Corren si estan lejos, caminan al acercarse y rodean lo que les tapa el paso
+-- Direccion libre mas parecida a la deseada: prueba angulos crecientes a cada lado
+-- (autos, muros, postes; a la altura de la cintura y de las rodillas). side = lado preferido.
+local PROBE = { 0, 25, 50, 75, 100, 130 }
+local function freeHeading(ped, x, y, z, rot, side)
+    for _, a in ipairs(PROBE) do
+        for _, sgn in ipairs(a == 0 and { 1 } or { side, -side }) do
+            local h = rot + a * sgn
+            local r = math.rad(h)
+            local ex, ey = x - math.sin(r) * 2.2, y + math.cos(r) * 2.2
+            if isLineOfSightClear(x, y, z, ex, ey, z, true, true, false, true, false, true, false, ped)
+                and isLineOfSightClear(x, y, z - 0.6, ex, ey, z - 0.6, true, true, false, true, false, true, false, ped) then
+                return h
+            end
+        end
+    end
+    return rot + 180
+end
+
+-- Corren hacia el punto, caminan al final y rodean lo que les tapa el paso. Si quedan
+-- atascados prueban por el otro lado; solo si siguen atascados y nadie los ve se recolocan.
 local function walkTick()
     if not walking then return end
     local now = getTickCount()
     local pending = 0
     for _, o in ipairs(walking.list) do
-        local ped, tx, ty = o[1], o[2], o[3]
+        local ped, tx, ty, tz = o[1], o[2], o[3], o[4]
         if isElement(ped) and isElementStreamedIn(ped) then
             local x, y, z = getElementPosition(ped)
             local d = getDistanceBetweenPoints2D(x, y, tx, ty)
             if d > EMERGENCY.WALK_ARRIVE_DIST then
                 pending = pending + 1
-                local rot = -math.deg(math.atan2(tx - x, ty - y))
-                -- atascado (no avanza): rodea durante un momento hacia un lado
-                o.lastX, o.lastY, o.checkAt = o.lastX or x, o.lastY or y, o.checkAt or now + 1200
+                o.side = o.side or 1
+                -- Atasco: en 1 s no avanzo ni medio metro -> cambia de lado y fuerza un rodeo
+                if not o.checkAt then o.checkAt, o.lastX, o.lastY = now + 1000, x, y end
                 if now >= o.checkAt then
-                    if getDistanceBetweenPoints2D(x, y, o.lastX, o.lastY) < 0.4 then
-                        o.side = (o.side == 60) and -60 or 60
-                        o.sideUntil = now + 900
+                    if getDistanceBetweenPoints2D(x, y, o.lastX, o.lastY) < 0.5 then
+                        o.stuckFor = (o.stuckFor or 0) + 1
+                        o.side = -o.side
+                        o.forceUntil = now + 900
+                    else
+                        o.stuckFor = 0
                     end
-                    o.lastX, o.lastY, o.checkAt = x, y, now + 1200
+                    o.checkAt, o.lastX, o.lastY = now + 1000, x, y
                 end
-                -- algo justo delante (auto, poste, muro): se aparta antes de chocar
-                local r = math.rad(rot)
-                local fx, fy = -math.sin(r), math.cos(r)
-                if d > 2 and not isLineOfSightClear(x, y, z, x + fx * 1.3, y + fy * 1.3, z, true, true, false, true, false, true, false, ped) then
-                    o.side = o.side or 60
-                    o.sideUntil = now + 600
+                if (o.stuckFor or 0) >= 6 and not isElementOnScreen(ped) then
+                    setElementPosition(ped, tx, ty, (tz or z) + 0.1)   -- ultimo recurso, fuera de la vista
+                    o.stuckFor = 0
                 end
-                if o.sideUntil and now < o.sideUntil then rot = rot + o.side end
+
+                local rot = -math.deg(math.atan2(tx - x, ty - y))
+                if o.forceUntil and now < o.forceUntil then
+                    rot = rot + 90 * o.side
+                elseif d > 1.6 then
+                    rot = freeHeading(ped, x, y, z, rot, o.side)
+                end
                 setElementRotation(ped, 0, 0, rot, "default", true)
                 setPedControlState(ped, "forward", true)
-                local animated = getPedAnimation(ped)
-                setPedControlState(ped, "sprint", d > 7 and not animated)
-                setPedControlState(ped, "walk", d < 2.5 or (animated and true or false))
+                local animated = getPedAnimation(ped) and true or false
+                setPedControlState(ped, "sprint", d > 4 and not animated)
+                setPedControlState(ped, "walk", d <= 4 or animated)
             else
                 setPedControlState(ped, "forward", false)
                 setPedControlState(ped, "sprint", false)
                 setPedControlState(ped, "walk", false)
             end
+        elseif isElement(ped) then
+            pending = pending + 1   -- no esta cargado en este cliente: el servidor lo resuelve al vencer el tiempo
         end
     end
     if pending == 0 or now - walking.started > EMERGENCY.WALK_TIMEOUT * 1000 then stopWalking(true) end
