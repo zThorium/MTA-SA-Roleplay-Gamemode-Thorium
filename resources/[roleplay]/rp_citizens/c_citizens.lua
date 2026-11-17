@@ -101,6 +101,7 @@ local BIKE_CHANCE = 0.15
 -- Patrullas de la policia en el trafico (sin persecucion: patrullan con las
 -- luces apagadas). Modelo y agente segun la ciudad; tambien motos de policia.
 local POLICE_CHANCE = 0.08       -- proporcion de autos de policia en el trafico
+local POLICE_CHANCE_WANTED = 0.4 -- con el jugador buscado
 local POLICE_BIKE_CHANCE = 0.35  -- de esas patrullas, cuantas son motos (HPV1000)
 local POLICE_BY_CITY = {
     ["Los Santos"] = { 596, 280 }, ["San Fierro"] = { 597, 281 }, ["Las Venturas"] = { 598, 282 },
@@ -117,8 +118,13 @@ local function pickCarModel(x, y, z)
 end
 
 -- Devuelve modelo y skin de una patrulla, o nil si este auto no es de policia
+local function playerWanted()
+    return (tonumber(getElementData(localPlayer, "rp:wanted")) or 0) > 0
+end
+
 local function pickPolice(x, y, z)
-    if math.random() >= POLICE_CHANCE then return nil end
+    -- Con estrellas aparecen muchas mas patrullas (GTA genera policia al estar buscado)
+    if math.random() >= (playerWanted() and POLICE_CHANCE_WANTED or POLICE_CHANCE) then return nil end
     if math.random() < POLICE_BIKE_CHANCE then return POLICE_BIKE[1], POLICE_BIKE[2] end
     local p = POLICE_BY_CITY[getZoneName(x, y, z, true)] or POLICE_RURAL
     return p[1], p[2]
@@ -864,8 +870,21 @@ end
 
 -- Atascado o volcado (como GTA SA): el conductor se baja y huye; el auto queda
 -- como obstaculo y se elimina cuando ya no se ve.
+-- Patrulla del trafico: pasa a rp_wanted (persigue al jugador buscado). Devuelve true si la tomo.
+local function handOverPolice(vehicle, s)
+    if not s.police or not playerWanted() or not isElement(s.driver) or isPedDead(s.driver) then return false end
+    local ok, adopted = pcall(function() return exports.rp_wanted:adoptLocalCop(vehicle, s.driver) end)
+    if not ok or not adopted then return false end
+    releaseLocks(vehicle)
+    if s.lod == "dummy" then makeReal(vehicle, s) end
+    cars[vehicle] = nil
+    carCount = carCount - 1
+    return true
+end
+
 function abandonCar(vehicle, s)
     if s.state == "ABANDONED" then return end
+    if handOverPolice(vehicle, s) then return end
     releaseLocks(vehicle)
     s.state = "ABANDONED"
     local driver = s.driver
@@ -1418,17 +1437,19 @@ local function carTick()
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     for v, s in pairs(cars) do
-        if isElement(v) and s.state ~= "ABANDONED" then
+        -- Patrulla del trafico (aunque el agente se haya caido de la moto) cerca de un
+        -- jugador buscado: se suma a la persecucion de rp_wanted y deja de ser trafico
+        local handed = false
+        if s.police and isElement(v) then
+            local x, y, z = getElementPosition(v)
+            handed = getDistanceBetweenPoints3D(px, py, pz, x, y, z) < 150 and handOverPolice(v, s)
+        end
+        if handed then
+            -- nada
+        elseif isElement(v) and s.state ~= "ABANDONED" then
             local x, y, z = getElementPosition(v)
             local d = getDistanceBetweenPoints3D(px, py, pz, x, y, z)
-            -- Patrulla del trafico: prende la sirena si el jugador esta buscado y cerca (rp_wanted)
-            if s.police then
-                local alert = d < 70 and (tonumber(getElementData(localPlayer, "rp:wanted")) or 0) > 0
-                if alert ~= (s.siren or false) then
-                    s.siren = alert
-                    setVehicleSirensOn(v, alert)
-                end
-            end
+            do
             -- cambio de LOD: fisica completa cerca; dummy lejos y fuera de camara
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)
@@ -1439,6 +1460,7 @@ local function carTick()
                 dummyDecide(v, s)
             elseif isElementStreamedIn(v) then
                 updateCar(v, s, now)
+            end
             end
         elseif isElement(v) and s.lod == "dummy" then
             makeReal(v, s)   -- un auto abandonado vuelve a tener fisica

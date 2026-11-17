@@ -44,10 +44,16 @@ WANTED = {
     REMEMBER_MINUTES = 30,
 
     -- Arresto ("Busted")
-    BUST_FINE_PER_STAR = 250,   -- $ en efectivo por estrella (lo que haya, sin quedar negativo)
+    -- Arresto ("Busted"): te sacan del auto o te reducen en el piso -> carcel
     BUST_TAKE_WEAPONS = true,
     BUST_RELEASE = { x = 1552.6, y = -1675.6, z = 16.2, rot = 90 },     -- puerta de la comisaria de Pershing Square (LSPD)
-    BUST_FREEZE = 4000,         -- ms con la pantalla negra
+    BUST_FREEZE = 4000,         -- ms entre el arresto y aparecer en la celda
+
+    -- Carcel: tiempo por estrella o fianza para salir antes (/fianza, en efectivo)
+    JAIL_SECONDS_PER_STAR = 90,
+    JAIL_BAIL_PER_STAR = 750,
+    JAIL_CELL = { x = 263.9, y = 77.5, z = 1001.04, rot = 270, interior = 6 },   -- celdas de la comisaria de LS
+    JAIL_MAX_DISTANCE = 7,      -- m: mas lejos de la celda te devuelven
 
     -- Pay 'n' Spray: pintura y reparacion borran la busqueda si ningun policia te ve entrar
     SPRAY_PRICE = 100,
@@ -150,12 +156,14 @@ WANTED_POLICE_MODELS = { [596] = true, [597] = true, [598] = true, [599] = true,
     [427] = true, [490] = true, [497] = true, [432] = true, [433] = true }
 
 WANTED_DISPATCH = {
-    TICK = 4000,               -- ms entre despachos (aparece una unidad por despacho)
-    FIRST_DELAY = 2500,        -- ms desde la primera estrella hasta la primera patrulla
-    SPAWN_MIN = 90,            -- m desde el jugador donde aparece una patrulla (en la calle, fuera de la vista)
-    SPAWN_MAX = 170,
+    TICK = 2500,               -- ms entre despachos (aparece una unidad por despacho)
+    FIRST_DELAY = 1200,        -- ms desde la primera estrella hasta la primera patrulla
+    SPAWN_MIN = 55,            -- m desde el jugador donde aparece una patrulla (en la calle, fuera de la vista,
+    SPAWN_MAX = 110,           --   preferentemente por delante si va en vehiculo)
+    CATCHUP_DISTANCE = 130,    -- m: una patrulla mas lejos y fuera de la vista se adelanta por su ruta
+    CATCHUP_TO = 80,           --   hasta quedar a esta distancia (como las de GTA, que aparecen cerca)
     HELI_SPAWN = 180,
-    LOST_DISTANCE = 320,       -- m: una unidad mas lejos se retira y se manda otra
+    LOST_DISTANCE = 250,       -- m: una unidad mas lejos se retira y se manda otra
     LEAVE_TIME = 20000,        -- ms que tardan en irse al terminar la busqueda
     ROADBLOCK_AHEAD_MIN = 110,
     ROADBLOCK_AHEAD_MAX = 190,

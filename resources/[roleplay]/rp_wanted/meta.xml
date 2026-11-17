@@ -18,9 +18,11 @@
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_wanted.lua" type="server" />
     <script src="server/s_units.lua" type="server" />
+    <script src="server/s_jail.lua" type="server" />
     <script src="client/c_roads.lua" type="client" cache="false" />
     <script src="client/c_crimes.lua" type="client" cache="false" />
     <script src="client/c_police.lua" type="client" cache="false" />
+    <script src="client/c_jail.lua" type="client" cache="false" />
 
     <export function="getWantedLevel" type="server" />
     <export function="getWantedChaos" type="server" />
@@ -28,4 +30,8 @@
     <export function="clearWanted" type="server" />
     <export function="reportCrime" type="server" />
     <export function="isWantedPolice" type="server" />
+    <export function="isPlayerJailed" type="server" />
+    <export function="jailPlayer" type="server" />
+    <!-- rp_citizens entrega sus patrullas cuando el jugador esta buscado -->
+    <export function="adoptLocalCop" type="client" />
 </meta>

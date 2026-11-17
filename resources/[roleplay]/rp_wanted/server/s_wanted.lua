@@ -143,6 +143,7 @@ function reportCrime(player, crimeKey, victimKey, dontCare)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
     if not crime then return false end
+    if isPlayerJailed and isPlayerJailed(player) then return false end
     if not characterOf(player) then
         outputServerLog(("[rp_wanted] %s: %s ignorado (sin personaje activo)"):format(getPlayerName(player), crimeKey))
         return false
@@ -277,40 +278,38 @@ end, 15000, 0)
 ----------------------------------------------------------------
 -- Arresto (lo pide s_units.lua cuando un policia te alcanza)
 ----------------------------------------------------------------
+-- Te sacaron del vehiculo o te redujeron en el piso: manos arriba, pantalla
+-- negra y a la celda (server/s_jail.lua). Se borra la busqueda.
 function bustPlayer(player, cop)
     local s = W[player]
     if not s or s.level <= 0 or s.busted then return false end
-    local level = s.level
+    local level, chaos = s.level, s.chaos
     s.busted = true
-    s.parole = { chaos = s.chaos, at = getTickCount() + WANTED.BUST_FREEZE }
     applyChaos(player, 0)
+    outputServerLog(("[rp_wanted] %s arrestado con %d estrellas"):format(getPlayerName(player), level))
 
+    if isPedInVehicle(player) then removePedFromVehicle(player) end
     toggleAllControls(player, false, true, false)
-    fadeCamera(player, false, 1.0)
+    setPedAnimation(player, "ped", "handsup", -1, false, false, false, true)
     popup(player, "Arrestado", ("Te arresto la policia (%d estrella%s)."):format(level, level == 1 and "" or "s"), "error")
+    setTimer(function() if isElement(player) then fadeCamera(player, false, 1.0) end end, 1800, 1)
 
     setTimer(function()
         if not isElement(player) then return end
         s.busted = nil
-        local fine = math.min(getPlayerMoney(player), level * WANTED.BUST_FINE_PER_STAR)
-        if fine > 0 then takePlayerMoney(player, fine) end
+        setPedAnimation(player)
         if WANTED.BUST_TAKE_WEAPONS then takeAllWeapons(player) end
-        if isPedInVehicle(player) then removePedFromVehicle(player) end
-        local r = WANTED.BUST_RELEASE
-        setElementInterior(player, 0)
-        setElementDimension(player, 0)
-        setElementPosition(player, r.x, r.y, r.z)
-        setElementRotation(player, 0, 0, r.rot)
-        setElementVelocity(player, 0, 0, 0)
         toggleAllControls(player, true, true, false)
-        setCameraTarget(player, player)
-        fadeCamera(player, true, 1.0)
-        local msg = "Quedas en libertad en la comisaria."
-        if fine > 0 then msg = ("Pagaste una multa de $%d. %s"):format(fine, msg) end
-        if WANTED.BUST_TAKE_WEAPONS then msg = msg .. " Te quitaron las armas." end
-        popup(player, "Comisaria", msg, "info")
+        jailPlayer(player, level * WANTED.JAIL_SECONDS_PER_STAR, level * WANTED.JAIL_BAIL_PER_STAR, chaos)
     end, WANTED.BUST_FREEZE, 1)
     return true
+end
+
+-- Libertad condicional al salir de la carcel: un delito en los 20 s siguientes
+-- devuelve el caos que tenias al ser arrestado (GTA: ClearWantedLevelAndGoOnParole)
+function setWantedParole(player, chaos)
+    if not isElement(player) or not chaos or chaos <= 0 then return end
+    state(player).parole = { chaos = chaos, at = getTickCount() }
 end
 
 function isPlayerBusted(player)

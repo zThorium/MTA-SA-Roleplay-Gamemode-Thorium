@@ -53,7 +53,13 @@ No sube solo por el tiempo: sube porque en una persecución sigues cometiendo de
 - **Libertad condicional**: si cometes otro delito en los 20 s siguientes a un arresto, vuelves al nivel que tenías.
 - A partir de 2 estrellas, en zonas apartadas y dentro de un vehículo policial, el caos no baja.
 
-### Comportamiento de la policía
+### Comportamiento de la policía (CTaskComplexCopInCar, CTaskComplexPolicePursuit, CTaskComplexArrestPed)
+- Si vas en un vehículo y te detienes cerca, el policía abre tu puerta y te saca (de una moto te tira). Eso es el arresto.
+- A pie, a 1 estrella el policía usa la porra para tirarte al suelo; desde 2 estrellas usa pistola. Te arresta cuando estás en el suelo a menos de 3 m.
+- Si vuelves a escapar en un vehículo, el policía que está a menos de 4 m de su patrulla se sube y sigue la persecución en auto; los demás siguen a pie.
+- Si el policía que conduce muere, la patrulla queda abandonada.
+- Las patrullas que ya circulan por la ciudad también se suman a la persecución, y al estar buscado aparecen muchas más.
+
 - **1 estrella**: una patrulla con un policía. No dispara: intenta arrestarte (porra).
 - **2 estrellas**: dos patrullas con dos agentes; disparan cuando te ven.
 - **3 estrellas**: helicóptero y controles de carretera; las patrullas te embisten.
@@ -61,16 +67,18 @@ No sube solo por el tiempo: sube porque en una persecución sigues cometiendo de
 - **5 estrellas**: FBI (FBI Rancher, MP5).
 - **6 estrellas**: ejército (Rhino y Barracks, M4).
 - Patrulla según la ciudad: Los Santos, San Fierro, Las Venturas o Ranger en el campo.
-- **Busted**: un policía te alcanza a pie, o te detienes en un vehículo con un policía al lado.
+- **Busted**: te sacan del vehículo o te reducen en el suelo.
 
 ## 2. Plan de implementación en el gamemode
 
 | Pieza | Dónde | Qué hace |
 |---|---|---|
-| Caos y estrellas | `rp_wanted/server/s_wanted.lua` | Tabla de puntos, cola de 10 s por víctima, decaimiento cada segundo, libertad condicional, Busted (multa de $250 por estrella en efectivo, quita armas, te deja en la puerta de la comisaría de Pershing Square), Wasted, Pay 'n' Spray. Se conserva 30 min al reconectar o cambiar de personaje (en memoria, sin tocar la base de datos). |
+| Caos y estrellas | `rp_wanted/server/s_wanted.lua` | Tabla de puntos, cola de 10 s por víctima, decaimiento cada segundo, libertad condicional, Busted: te quitan las armas y vas a la cárcel, Wasted, Pay 'n' Spray. Se conserva 30 min al reconectar o cambiar de personaje (en memoria, sin tocar la base de datos). |
 | Detección de delitos | `rp_wanted/client/c_crimes.lua` | Los peatones y el tráfico de `rp_citizens` existen solo en el cliente, así que los delitos contra ellos y contra la policía IA se avisan desde ahí (con límite de avisos en el servidor). Los delitos contra otros jugadores los detecta el servidor con `onPlayerDamage`. |
 | Policía IA | `rp_wanted/server/s_units.lua` + `client/c_police.lua` | El servidor crea patrulla, agentes y helicóptero (todos los ven) y hace syncer al buscado, como el auto IA de `rp_rides`. El cliente elige dónde aparecen (en la calle, fuera de la vista, con la red vial de `rp_citizens`) y conduce: A* por la red hasta el jugador, persecución directa cuando lo ve, embestidas desde 3 estrellas, bajarse cuando vas a pie, disparar desde 2 estrellas, volver a la patrulla si te escapas en auto, irse con la sirena apagada al terminar. |
 | Tráfico | `rp_citizens/c_citizens.lua` | 15 % del tráfico va en moto. 8 % son patrullas (Police LS/SF/LV o Ranger, y un tercio motos HPV1000) con su agente; cuentan como policía para los delitos y el exceso de velocidad, y prenden la sirena si estás buscado. |
+| Cárcel | `rp_wanted/server/s_jail.lua` + `client/c_jail.lua` | Tras el arresto vas a una celda de la comisaría de LS con un timer en pantalla: 90 s por estrella, o la fianza de $750 por estrella con `/fianza` (en efectivo). Al salir quedas en la puerta de la comisaría de Pershing Square. El tiempo se conserva al reconectar. Admin: `/liberar`, `/encarcelar`. |
+| Despacho agresivo | `client/c_police.lua` | Las patrullas aparecen a 55-110 m, por delante si vas en vehículo. Si una queda a más de 130 m y no se ve, avanza por su ruta hasta quedar a 80 m (en GTA las patrullas se generan cerca del jugador). Las patrullas del tráfico (`rp_citizens`) se suman a la persecución: hasta 3 a la vez, y con estrellas el 40 % del tráfico es policía. |
 | HUD | `rp_hud/c_wanted.lua` | 6 estrellas al estilo de GTA SA (doradas con borde negro, las que faltan oscuras), dibujadas con primitivas (arte propio) debajo de la hora y el dinero. Parpadean al cambiar el nivel y laten mientras ningún policía está cerca. Respetan `/hud`. |
 | Policía jugadora | `s_wanted.lua` | Los miembros de la facción 1 de servicio (con uniforme, skins 280-288, o en un vehículo policial) no acumulan búsqueda; de civil sí, reciben el aviso de la central en el chat y ven un punto rojo sobre los buscados en el mapa. Sus patrullas y su presencia cuentan para frenar el decaimiento. |
 
@@ -82,6 +90,7 @@ Decisiones:
 
 ## 3. Comandos
 - `/delitosdebug`: muestra en el chat cada delito que detecta tu cliente (para probar).
+- `/fianza`: paga la fianza y sales de la cárcel.
 - `/busquedainfo`: tus estrellas, puntos de caos y si cuentas como policía de servicio.
 - `/busqueda <jugador>` (admin): muestra estrellas y caos.
 - `/busqueda <jugador> <0-6>` (admin): fija el nivel (con los valores de caos de GTA: 70, 200, 570, 1220, 2420, 4620).

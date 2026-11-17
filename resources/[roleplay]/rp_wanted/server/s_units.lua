@@ -19,7 +19,7 @@ local pursuits = {}      -- [player] = { units = {[id] = unit}, next, pending, f
 local unitOwner = {}     -- [elemento de la unidad] = { player, unit }
 local nextId = 0
 
-for _, e in ipairs({ "spawnAt", "dismount", "remount", "unitLost", "busted", "ready" }) do
+for _, e in ipairs({ "spawnAt", "dismount", "remount", "unitLost", "busted", "bustedLocal", "ready" }) do
     addEvent("rp:wanted:" .. e, true)
 end
 
@@ -427,6 +427,22 @@ addEventHandler("rp:wanted:busted", resourceRoot, function(ped)
         if p then leaveAll(player, p) end
     end
 end)
+
+-- Arresto por una patrulla del trafico (elementos solo del cliente: el servidor no
+-- puede medir la distancia; solo se acepta si el jugador esta buscado y vivo)
+local lastLocalBust = {}
+addEventHandler("rp:wanted:bustedLocal", resourceRoot, function()
+    local player = client
+    local now = nowMs()
+    if lastLocalBust[player] and now - lastLocalBust[player] < 5000 then return end
+    lastLocalBust[player] = now
+    if isPedDead(player) or getWantedLevel(player) <= 0 then return end
+    if bustPlayer(player) then
+        local p = pursuits[player]
+        if p then leaveAll(player, p) end
+    end
+end)
+addEventHandler("onPlayerQuit", root, function() lastLocalBust[source] = nil end)
 
 -- El cliente (re)inicia el recurso: se le reenvian sus unidades
 addEventHandler("rp:wanted:ready", resourceRoot, function()

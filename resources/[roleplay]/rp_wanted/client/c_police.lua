@@ -14,6 +14,15 @@
                 vuelve a su patrulla.
     Helicoptero: vuela en circulo sobre el jugador; de noche lo sigue con un foco.
     Control de carretera: 2 patrullas atravesadas y policias que esperan.
+
+    Como en GTA SA (CTaskComplexCopInCar / CTaskComplexArrestPed):
+      - Si vas en un vehiculo y te detienes, el policia abre tu puerta y te saca: arresto.
+      - A pie te persiguen; a 1 estrella te golpean con la porra hasta tirarte al
+        suelo; desde 2 disparan. Si estas en el suelo o quieto a su lado: arresto.
+      - Si vuelves a moverte en un vehiculo, el policia que esta a menos de 25 m
+        de su patrulla corre a ella y sigue la persecucion; si no, sigue a pie.
+      - Las patrullas del trafico (rp_citizens) se suman a la persecucion
+        (adoptLocalCop): son elementos solo de este cliente y se manejan igual.
 ]]
 
 local units = {}        -- [id] = unidad
@@ -47,6 +56,16 @@ end
 
 local function levelCfg() return WANTED_LEVELS[level] end
 
+-- Las unidades del servidor se manejan si somos su syncer; las del trafico (locales) siempre
+local function controlled(u, el)
+    return u.isLocal or isElementSyncer(el)
+end
+
+local function playerIsDown()
+    local t = getPedSimplestTask(localPlayer)
+    return t == "TASK_SIMPLE_FALL" or t == "TASK_SIMPLE_GET_UP" or t == "TASK_SIMPLE_LAND"
+end
+
 ----------------------------------------------------------------
 -- Puntos de aparicion (los pide el servidor)
 ----------------------------------------------------------------
@@ -57,18 +76,30 @@ end
 local function carSpawnPoint()
     local px, py, pz = getElementPosition(localPlayer)
     if loadRoadGraph() then
-        local fallback
-        for _ = 1, 12 do
+        -- Si va en vehiculo, mejor por delante (le sale al paso, como en GTA)
+        local v = getPedOccupiedVehicle(localPlayer)
+        local fx, fy = 0, 0
+        if v then
+            local vx, vy = getElementVelocity(v)
+            local len = math.sqrt(vx * vx + vy * vy)
+            if len > 0.05 then fx, fy = vx / len, vy / len end
+        end
+        local best, bestScore, fallback = nil, -math.huge, nil
+        for _ = 1, 16 do
             local a, b = roadNodeAround(px, py, WANTED_DISPATCH.SPAWN_MIN, WANTED_DISPATCH.SPAWN_MAX)
             if a then
                 local x, y, z, rot = laneStartPoint(a, b)
-                -- que el auto mire mas o menos hacia el jugador
-                local toward = math.abs(angleDiff(heading(px - x, py - y), rot)) < 100
-                if not onScreen(x, y, z) and toward then return x, y, z, rot end
                 fallback = fallback or { x, y, z, rot }
+                if not onScreen(x, y, z) then
+                    local d = math.max(1, getDistanceBetweenPoints2D(px, py, x, y))
+                    local ahead = ((x - px) * fx + (y - py) * fy) / d
+                    local toward = math.abs(angleDiff(heading(px - x, py - y), rot)) < 100 and 0.5 or 0
+                    local score = ahead + toward + math.random() * 0.2
+                    if score > bestScore then best, bestScore = { x, y, z, rot }, score end
+                end
             end
         end
-        if fallback then return unpack(fallback) end
+        if best or fallback then return unpack(best or fallback) end
     end
     -- Sin red vial: detras de la camara
     local cx, cy = getCameraMatrix()
@@ -200,7 +231,7 @@ end
 local function driveCar(u, now)
     local v = u.vehicle
     local driver = getVehicleController(v)
-    if not driver or not u.pedSet[driver] or isPedDead(driver) or not isElementSyncer(v) then return end
+    if not driver or not u.pedSet[driver] or isPedDead(driver) or not controlled(u, v) then return end
     if isVehicleBlown(v) then return end
 
     local x, y, z = getElementPosition(v)
@@ -216,6 +247,7 @@ local function driveCar(u, now)
     -- Muy lejos y fuera de la vista: se retira y el servidor manda otra mas cerca
     if not u.leaving and dist > WANTED_DISPATCH.LOST_DISTANCE and not isElementOnScreen(v) and not u.lostSent then
         u.lostSent = true
+        if u.isLocal then return removeLocalUnit(u) end
         return triggerServerEvent("rp:wanted:unitLost", resourceRoot, u.id)
     end
 
@@ -241,7 +273,7 @@ local function driveCar(u, now)
             controls(driver, false, speed > 0.5, 0, true)
             if speed < 5 and now - (u.dismountAt or 0) > 3000 then
                 u.dismountAt = now
-                triggerServerEvent("rp:wanted:dismount", resourceRoot, v)
+                if u.isLocal then dismountLocal(u) else triggerServerEvent("rp:wanted:dismount", resourceRoot, v) end
             end
             return
         end
@@ -263,6 +295,26 @@ local function driveCar(u, now)
         else
             -- ROUTE: A* hasta el jugador, se recalcula cada 2.5 s
             if not u.wp or now - (u.planAt or 0) > 2500 then plan(u, px, py) end
+            -- Lejos y sin que se vea: se adelanta por su ruta hasta quedar cerca (GTA genera las
+            -- patrullas cerca del jugador; asi la persecucion no se pierde por la distancia)
+            if u.wp and dist > WANTED_DISPATCH.CATCHUP_DISTANCE and not isElementOnScreen(v)
+                and now - (u.catchAt or 0) > 3000 then
+                u.catchAt = now
+                for j = u.idx, #u.wp do
+                    local p = u.wp[j]
+                    if getDistanceBetweenPoints2D(p[1], p[2], px, py) <= WANTED_DISPATCH.CATCHUP_TO
+                        and not onScreen(p[1], p[2], p[3]) then
+                        local q = u.wp[math.min(#u.wp, j + 1)]
+                        local rot = (q ~= p) and heading(q[1] - p[1], q[2] - p[2]) or rz
+                        setElementPosition(v, p[1], p[2], p[3] + 1.2)
+                        setElementRotation(v, 0, 0, rot)
+                        local sp = math.min(90, 40 + pspeed) / 180
+                        setElementVelocity(v, -math.sin(math.rad(rot)) * sp, math.cos(math.rad(rot)) * sp, 0)
+                        u.idx = j
+                        break
+                    end
+                end
+            end
             desired = 120
             if u.wp and #u.wp > 0 then
                 local turn, last
@@ -334,48 +386,109 @@ local function runTo(ped, x, y, tx, ty, sprint)
     setPedControlState(ped, "walk", not sprint)
 end
 
+-- Arresto: se pide al servidor (que comprueba la distancia en sus unidades)
+local function tryBust(u, ped, st, now, holdMs)
+    st.bustSince = st.bustSince or now
+    if now - st.bustSince < holdMs or now - (st.bustSent or 0) < 2500 then return end
+    st.bustSent = now
+    if u.isLocal then
+        triggerServerEvent("rp:wanted:bustedLocal", resourceRoot)
+    else
+        triggerServerEvent("rp:wanted:busted", resourceRoot, ped)
+    end
+end
+
+local function remount(u, ped, st, now)
+    if now - (st.remountAt or 0) < 1500 then return end
+    st.remountAt = now
+    if u.isLocal then remountLocal(u, ped) else triggerServerEvent("rp:wanted:remount", resourceRoot, ped) end
+end
+
 local function footCop(u, ped, now)
-    if not isElementSyncer(ped) or isPedDead(ped) or isPedInVehicle(ped) then return end
+    if not controlled(u, ped) or isPedDead(ped) or isPedInVehicle(ped) then return end
     local st = u.foot[ped]
     if not st then st = {} u.foot[ped] = st end
     local x, y, z = getElementPosition(ped)
     local px, py, pz = getElementPosition(localPlayer)
     local dist = getDistanceBetweenPoints3D(x, y, z, px, py, pz)
     local pveh = getPedOccupiedVehicle(localPlayer)
+    local pvSpeed = pveh and speedKmh(pveh) or speedKmh(localPlayer)
     local cfg = levelCfg()
     local car = u.kind == "car" and isElement(u.vehicle) and not isVehicleBlown(u.vehicle) and u.vehicle or nil
-
-    -- Vuelve a su patrulla: termino la busqueda o el jugador se fue en auto
-    if car and (u.leaving or not cfg or (pveh and dist > 30)) then
+    local carDist = math.huge
+    if car then
         local cx, cy, cz = getElementPosition(car)
-        local d = getDistanceBetweenPoints3D(x, y, z, cx, cy, cz)
-        if d < 5 then
-            releaseFoot(ped)
-            if now - (st.remountAt or 0) > 2000 then
-                st.remountAt = now
-                triggerServerEvent("rp:wanted:remount", resourceRoot, ped)
-            end
-        else
-            runTo(ped, x, y, cx, cy, d > 8)
-        end
-        return
+        carDist = getDistanceBetweenPoints3D(x, y, z, cx, cy, cz)
     end
+
+    -- Termino la busqueda: vuelve a su vehiculo (o se va caminando)
     if u.leaving or not cfg then
-        return runTo(ped, x, y, x + (x - px), y + (y - py), false)   -- se aleja caminando
+        st.bustSince = nil
+        if car and carDist < 60 then
+            if carDist < 4 then releaseFoot(ped) return remount(u, ped, st, now) end
+            local cx, cy = getElementPosition(car)
+            return runTo(ped, x, y, cx, cy, false)
+        end
+        return runTo(ped, x, y, x + (x - px), y + (y - py), false)
+    end
+
+    -- El jugador se escapa en un vehiculo (o se aleja mucho a pie): si su patrulla esta
+    -- a menos de 25 m, corre a ella y sigue en auto; si no, sigue a pie (GTA)
+    local escaping = (pveh and (pvSpeed > 8 or dist > 12)) or (not pveh and dist > 50)
+    if escaping and car and carDist < 25 then
+        st.bustSince = nil
+        if carDist < 4 then releaseFoot(ped) return remount(u, ped, st, now) end
+        local cx, cy = getElementPosition(car)
+        return runTo(ped, x, y, cx, cy, true)
     end
 
     local los = isLineOfSightClear(x, y, z + 0.6, px, py, pz + 0.6, true, false, false, true, false, true, false)
     local weapon = getPedWeapon(ped)
+    local armed = weapon >= 22
 
-    -- Disparar (desde 2 estrellas, con arma de fuego, viendolo)
-    if cfg.shoot and weapon >= 22 and los and dist < 32 and dist > 3 then
+    -- En un vehiculo detenido: va a la puerta y lo saca (arresto)
+    if pveh then
+        if pvSpeed < 6 and dist < 3.4 then
+            releaseFoot(ped)
+            setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
+            return tryBust(u, ped, st, now, 900)
+        end
+        st.bustSince = nil
+        if cfg.shoot and armed and los and dist < 35 and dist > 6 then
+            setPedControlState(ped, "forwards", false)
+            setPedControlState(ped, "sprint", false)
+            setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
+            setPedAimTarget(ped, px, py, pz + 0.3)
+            setPedControlState(ped, "aim_weapon", true)
+            setPedControlState(ped, "fire", (now + (tonumber(u.id) or 0) * 300) % 1300 < 450)
+            return
+        end
+        -- puerta del conductor (lado izquierdo)
+        local m = getElementMatrix(pveh)
+        local dx, dy = px - m[1][1] * 1.6, py - m[1][2] * 1.6
+        return runTo(ped, x, y, dx, dy, dist > 4)
+    end
+
+    -- A pie: en el suelo o quieto a su lado -> arresto
+    if dist < 3 and playerIsDown() then
+        releaseFoot(ped)
+        return tryBust(u, ped, st, now, 400)
+    end
+    if dist < 1.9 and pvSpeed < 7 then
+        releaseFoot(ped)
+        setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
+        return tryBust(u, ped, st, now, 1200)
+    end
+    st.bustSince = nil
+
+    -- Desde 2 estrellas dispara si te ve
+    if cfg.shoot and armed and los and dist < 32 and dist > 3.5 then
         setPedControlState(ped, "forwards", false)
         setPedControlState(ped, "sprint", false)
         setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
         setPedAimTarget(ped, px, py, pz + 0.4)
         setPedControlState(ped, "aim_weapon", true)
-        setPedControlState(ped, "fire", (now + u.id * 300) % 1300 < 450)   -- rafagas
-        st.bustSince = nil
+        setPedControlState(ped, "fire", (now + (tonumber(u.id) or 0) * 300) % 1300 < 450)
         return
     end
 
@@ -386,24 +499,16 @@ local function footCop(u, ped, now)
         return
     end
 
-    if dist > 1.3 then
-        runTo(ped, x, y, px, py, dist > 5)
-    else
-        releaseFoot(ped)
+    -- Cuerpo a cuerpo (porra a 1 estrella, culatazo si esta muy cerca): te tira al suelo
+    if dist < 1.7 then
+        setPedControlState(ped, "forwards", false)
+        setPedControlState(ped, "sprint", false)
+        setPedControlState(ped, "aim_weapon", false)
         setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
+        setPedControlState(ped, "fire", (now % 700) < 250)
+        return
     end
-
-    -- Arresto: te alcanza a pie, o te quedas quieto en un vehiculo con el al lado
-    local close = (not pveh and dist < 2.2) or (pveh and speedKmh(pveh) < 3 and dist < 4.5)
-    if close and not isPedDead(localPlayer) then
-        st.bustSince = st.bustSince or now
-        if now - st.bustSince > 1300 and now - (st.bustSent or 0) > 3000 then
-            st.bustSent = now
-            triggerServerEvent("rp:wanted:busted", resourceRoot, ped)
-        end
-    else
-        st.bustSince = nil
-    end
+    runTo(ped, x, y, px, py, dist > 4)
 end
 
 ----------------------------------------------------------------
@@ -458,8 +563,105 @@ end
 ----------------------------------------------------------------
 -- Bucle
 ----------------------------------------------------------------
+----------------------------------------------------------------
+-- Patrullas del trafico (rp_citizens) que se suman a la persecucion
+----------------------------------------------------------------
+local localSeq = 0
+
+local function armLocal(ped)
+    if not givePedWeapon then return end
+    if level >= 2 then givePedWeapon(ped, 22, 500, true) else givePedWeapon(ped, 3, 1, true) end
+end
+
+-- Llamado por rp_citizens: devuelve true si la unidad pasa a la policia de rp_wanted
+function adoptLocalCop(vehicle, ped)
+    if level <= 0 or not isElement(ped) or isPedDead(ped) then return false end
+    local count = 0
+    for _, u in pairs(units) do if u.isLocal and not u.leaving then count = count + 1 end end
+    if count >= 3 then return false end
+    localSeq = localSeq + 1
+    local u = {
+        id = "L" .. localSeq, isLocal = true, kind = "car", fleet = "police", foot = {},
+        vehicle = isElement(vehicle) and vehicle or nil, vehicles = { isElement(vehicle) and vehicle or nil },
+        peds = { ped }, pedSet = { [ped] = true }, created = getTickCount(),
+    }
+    if isElement(vehicle) then setVehicleSirensOn(vehicle, true) end
+    armLocal(ped)
+    units[u.id] = u
+    return true
+end
+
+function dismountLocal(u)
+    local v = u.vehicle
+    if not isElement(v) then return end
+    local m = getElementMatrix(v)
+    for _, ped in ipairs(u.peds) do
+        if isElement(ped) and getPedOccupiedVehicle(ped) == v then
+            local seat = getPedOccupiedVehicleSeat(ped) or 0
+            local side = (seat % 2 == 0) and -1.9 or 1.9
+            local x, y, z = getElementPosition(v)
+            removePedFromVehicle(ped)
+            setElementPosition(ped, x + m[1][1] * side, y + m[1][2] * side, z + 0.3)
+        end
+    end
+end
+
+function remountLocal(u, ped)
+    local v = u.vehicle
+    if not isElement(v) or isVehicleBlown(v) or isPedInVehicle(ped) then return end
+    for seat = 0, getVehicleMaxPassengers(v) or 0 do
+        if not getVehicleOccupant(v, seat) then
+            warpPedIntoVehicle(ped, v, seat)
+            return
+        end
+    end
+end
+
+function removeLocalUnit(u)
+    units[u.id] = nil
+    if isElement(u.light) then destroyElement(u.light) end
+    for _, ped in ipairs(u.peds) do if isElement(ped) then destroyElement(ped) end end
+    for _, v in ipairs(u.vehicles) do
+        if isElement(v) and getVehicleController(v) ~= localPlayer and not getVehicleOccupant(v, 1) then destroyElement(v) end
+    end
+end
+
+-- Limpieza de las locales: se van al terminar la busqueda y desaparecen sin que se vea
+local function localHousekeeping(u, now)
+    local px, py, pz = getElementPosition(localPlayer)
+    local alive, nearest, seen = 0, math.huge, false
+    for _, list in ipairs({ u.peds, u.vehicles }) do
+        for _, el in ipairs(list) do
+            if isElement(el) then
+                local x, y, z = getElementPosition(el)
+                nearest = math.min(nearest, getDistanceBetweenPoints3D(px, py, pz, x, y, z))
+                seen = seen or isElementOnScreen(el)
+                if getElementType(el) == "ped" and not isPedDead(el) then alive = alive + 1 end
+            end
+        end
+    end
+    if alive == 0 then
+        u.deadAt = u.deadAt or now
+        if now - u.deadAt > WANTED_DISPATCH.BODY_TIME then removeLocalUnit(u) end
+        return
+    end
+    if u.leaving then
+        u.leaveAt = u.leaveAt or now
+        if (nearest > 120 and not seen) or now - u.leaveAt > 60000 then removeLocalUnit(u) end
+    end
+end
+
 local function tick()
     local now = getTickCount()
+    for _, u in pairs(units) do
+        if u.isLocal then
+            if level == 0 and not u.leaving then
+                u.leaving, u.wp, u.leaveTarget = true, nil, nil
+                if isElement(u.vehicle) then setVehicleSirensOn(u.vehicle, false) end
+            end
+            localHousekeeping(u, now)
+        end
+    end
     for _, u in pairs(units) do
         if u.kind == "heli" then
             if isElement(u.vehicle) then heliTick(u, now) end
@@ -505,7 +707,14 @@ end)
 
 addEvent("rp:wanted:level", true)
 addEventHandler("rp:wanted:level", resourceRoot, function(lv)
+    local old = level
     level = tonumber(lv) or 0
+    -- A 2 estrellas las patrullas del trafico sacan la pistola
+    if old < 2 and level >= 2 then
+        for _, u in pairs(units) do
+            if u.isLocal then for _, ped in ipairs(u.peds) do if isElement(ped) then armLocal(ped) end end end
+        end
+    end
 end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
@@ -528,5 +737,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()
-    for _, u in pairs(units) do cleanupUnit(u) end
+    for _, u in pairs(units) do
+        if u.isLocal then removeLocalUnit(u) else cleanupUnit(u) end
+    end
 end)
