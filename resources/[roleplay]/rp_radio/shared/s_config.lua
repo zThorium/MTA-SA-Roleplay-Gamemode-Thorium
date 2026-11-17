@@ -19,6 +19,7 @@ RADIO_STATIONS = {
     { id = 10, name = "Melodia FM",         genre = "Retro",      url = "https://playerservices.streamtheworld.com/api/livestream-redirect/MELODIA_FMAAC.aac" },
     { id = 11, name = "Radiole",            genre = "Flamenco",   url = "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOLEAAC.aac" },
     { id = 12, name = "Cadena SER",         genre = "Noticias",   url = "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASERAAC.aac" },
+    { id = 13, name = "Radio Corazon",      genre = "Romantica",  url = "https://playerservices.streamtheworld.com/api/livestream-redirect/CORAZONAAC.aac" },
 }
 
 RADIO_BY_ID = {}
