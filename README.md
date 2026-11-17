@@ -37,6 +37,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Vehículos** | Vehículos con dueño persistentes, bloqueo con `L` o `/bloquear`. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
 | **Interfaz** | HUD propio con minimapa giratorio (radar extraído del propio juego), notificaciones con sonido, scoreboard, nametags y sistema de IDs. |
+| **Ayuda y reportes** | Panel `F1` con guía para nuevos, reglas, conceptos de rol, teclas y comandos (con buscador), botón de Discord y formulario para reportar jugadores que avisa al staff y queda guardado. |
 
 ## Arquitectura
 
