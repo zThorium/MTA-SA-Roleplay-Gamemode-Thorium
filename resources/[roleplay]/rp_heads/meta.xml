@@ -1,0 +1,186 @@
+<meta>
+    <!--
+        Cabezas personalizadas para personajes masculinos (cuerpo de CJ).
+        CREDITOS: modelos y ajustes tomados de Countryside-RP, de Aleks
+        (https://forum.mtasa.com/profile/40470-mraleks/), publicado por Neus.
+        Su licencia prohibe vender estos recursos o modificaciones de ellos.
+    -->
+    <info author="Thorium (modelos: Aleks / Countryside-RP)" name="RP Heads" description="Cabezas personalizadas sobre el cuerpo de CJ con bone_attach" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="bone_attach" />
+
+    <script src="s_heads.lua" type="shared" />
+    <script src="c_heads.lua" type="client" />
+
+    <!-- Oculta la sangre que GTA dibuja en el cuello de un ped sin cabeza -->
+    <file src="texreplace.fx" />
+    <file src="textures/transparent.png" />
+
+    <export function="getRaces" type="server" />
+    <export function="getRaces" type="client" />
+    <export function="getHeadsByRace" type="server" />
+    <export function="getHeadsByRace" type="client" />
+    <export function="isValidHead" type="server" />
+    <export function="isValidHead" type="client" />
+    <export function="applyHead" type="client" />
+    <export function="removeHead" type="client" />
+    <export function="getPedHead" type="client" />
+
+    <file src="models/1.dff" />
+    <file src="models/1.txd" />
+    <file src="models/2.dff" />
+    <file src="models/2.txd" />
+    <file src="models/3.dff" />
+    <file src="models/3.txd" />
+    <file src="models/4.dff" />
+    <file src="models/4.txd" />
+    <file src="models/5.dff" />
+    <file src="models/5.txd" />
+    <file src="models/6.dff" />
+    <file src="models/6.txd" />
+    <file src="models/7.dff" />
+    <file src="models/7.txd" />
+    <file src="models/8.dff" />
+    <file src="models/8.txd" />
+    <file src="models/9.dff" />
+    <file src="models/9.txd" />
+    <file src="models/10.dff" />
+    <file src="models/10.txd" />
+    <file src="models/11.dff" />
+    <file src="models/11.txd" />
+    <file src="models/12.dff" />
+    <file src="models/12.txd" />
+    <file src="models/13.dff" />
+    <file src="models/13.txd" />
+    <file src="models/14.dff" />
+    <file src="models/14.txd" />
+    <file src="models/15.dff" />
+    <file src="models/15.txd" />
+    <file src="models/16.dff" />
+    <file src="models/16.txd" />
+    <file src="models/17.dff" />
+    <file src="models/17.txd" />
+    <file src="models/18.dff" />
+    <file src="models/18.txd" />
+    <file src="models/19.dff" />
+    <file src="models/19.txd" />
+    <file src="models/20.dff" />
+    <file src="models/20.txd" />
+    <file src="models/21.dff" />
+    <file src="models/21.txd" />
+    <file src="models/22.dff" />
+    <file src="models/22.txd" />
+    <file src="models/23.dff" />
+    <file src="models/23.txd" />
+    <file src="models/24.dff" />
+    <file src="models/24.txd" />
+    <file src="models/25.dff" />
+    <file src="models/25.txd" />
+    <file src="models/26.dff" />
+    <file src="models/26.txd" />
+    <file src="models/27.dff" />
+    <file src="models/27.txd" />
+    <file src="models/28.dff" />
+    <file src="models/28.txd" />
+    <file src="models/29.dff" />
+    <file src="models/29.txd" />
+    <file src="models/30.dff" />
+    <file src="models/30.txd" />
+    <file src="models/31.dff" />
+    <file src="models/31.txd" />
+    <file src="models/32.dff" />
+    <file src="models/32.txd" />
+    <file src="models/33.dff" />
+    <file src="models/33.txd" />
+    <file src="models/34.dff" />
+    <file src="models/34.txd" />
+    <file src="models/35.dff" />
+    <file src="models/35.txd" />
+    <file src="models/36.dff" />
+    <file src="models/36.txd" />
+    <file src="models/37.dff" />
+    <file src="models/37.txd" />
+    <file src="models/38.dff" />
+    <file src="models/38.txd" />
+    <file src="models/39.dff" />
+    <file src="models/39.txd" />
+    <file src="models/40.dff" />
+    <file src="models/40.txd" />
+    <file src="models/41.dff" />
+    <file src="models/41.txd" />
+    <file src="models/42.dff" />
+    <file src="models/42.txd" />
+    <file src="models/43.dff" />
+    <file src="models/43.txd" />
+    <file src="models/44.dff" />
+    <file src="models/44.txd" />
+    <file src="models/45.dff" />
+    <file src="models/45.txd" />
+    <file src="models/46.dff" />
+    <file src="models/46.txd" />
+    <file src="models/47.dff" />
+    <file src="models/47.txd" />
+    <file src="models/48.dff" />
+    <file src="models/48.txd" />
+    <file src="models/49.dff" />
+    <file src="models/49.txd" />
+    <file src="models/50.dff" />
+    <file src="models/50.txd" />
+    <file src="models/51.dff" />
+    <file src="models/51.txd" />
+    <file src="models/52.dff" />
+    <file src="models/52.txd" />
+    <file src="models/53.dff" />
+    <file src="models/53.txd" />
+    <file src="models/54.dff" />
+    <file src="models/54.txd" />
+    <file src="models/55.dff" />
+    <file src="models/55.txd" />
+    <file src="models/56.dff" />
+    <file src="models/56.txd" />
+    <file src="models/57.dff" />
+    <file src="models/57.txd" />
+    <file src="models/58.dff" />
+    <file src="models/58.txd" />
+    <file src="models/62.dff" />
+    <file src="models/62.txd" />
+    <file src="models/63.dff" />
+    <file src="models/63.txd" />
+    <file src="models/65.dff" />
+    <file src="models/65.txd" />
+    <file src="models/67.dff" />
+    <file src="models/67.txd" />
+    <file src="models/68.dff" />
+    <file src="models/68.txd" />
+    <file src="models/69.dff" />
+    <file src="models/69.txd" />
+    <file src="models/70.dff" />
+    <file src="models/70.txd" />
+    <file src="models/71.dff" />
+    <file src="models/71.txd" />
+    <file src="models/72.dff" />
+    <file src="models/72.txd" />
+    <file src="models/73.dff" />
+    <file src="models/73.txd" />
+    <file src="models/74.dff" />
+    <file src="models/74.txd" />
+    <file src="models/75.dff" />
+    <file src="models/75.txd" />
+    <file src="models/76.dff" />
+    <file src="models/76.txd" />
+    <file src="models/77.dff" />
+    <file src="models/77.txd" />
+    <file src="models/78.dff" />
+    <file src="models/78.txd" />
+    <file src="models/79.dff" />
+    <file src="models/79.txd" />
+    <file src="models/80.dff" />
+    <file src="models/80.txd" />
+    <file src="models/81.dff" />
+    <file src="models/81.txd" />
+    <file src="models/82.dff" />
+    <file src="models/82.txd" />
+    <file src="models/83.dff" />
+    <file src="models/83.txd" />
+</meta>

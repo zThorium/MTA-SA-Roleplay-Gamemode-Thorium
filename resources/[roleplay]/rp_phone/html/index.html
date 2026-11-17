@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Telefono</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="phone" id="phone">
+        <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+                <span id="clock">12:00</span>
+                <span class="icons"><span class="signal"><i></i><i></i><i></i><i></i></span> 5G <span class="battery"><i></i></span></span>
+            </div>
+
+            <!-- Inicio -->
+            <section class="view home active" id="view-home">
+                <div class="widget">
+                    <span id="widget-time">12:00</span>
+                    <small id="widget-date"></small>
+                </div>
+                <div class="apps">
+                    <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span>Notas</button>
+                    <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
+                    <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
+                    <button type="button" class="app" data-open="social"><span class="icon social">📷</span>Fotogram</button>
+                    <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
+                </div>
+                <div class="dock">
+                    <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span></button>
+                    <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span></button>
+                    <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span></button>
+                    <button type="button" class="app" data-open="social"><span class="icon social">📷</span></button>
+                </div>
+            </section>
+
+            <!-- Notas -->
+            <section class="view" id="view-notes">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Notas</h1><button type="button" class="action" id="note-new">＋</button></header>
+                <ul class="list" id="notes-list"></ul>
+            </section>
+            <section class="view" id="view-note">
+                <header><button type="button" class="back" data-to="notes">‹ Notas</button><h1></h1><button type="button" class="action" id="note-save">Listo</button></header>
+                <div class="editor">
+                    <input id="note-title" type="text" maxlength="64" placeholder="Titulo">
+                    <textarea id="note-body" maxlength="4000" placeholder="Escribe aqui..."></textarea>
+                    <button type="button" class="danger" id="note-delete">Eliminar nota</button>
+                </div>
+            </section>
+
+            <!-- Contactos -->
+            <section class="view" id="view-contacts">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Contactos</h1><button type="button" class="action" id="contact-new">＋</button></header>
+                <ul class="list" id="contacts-list"></ul>
+            </section>
+            <section class="view" id="view-contact-add">
+                <header><button type="button" class="back" data-to="contacts">‹ Contactos</button><h1>Nuevo</h1><span></span></header>
+                <div class="editor">
+                    <input id="contact-name" type="text" maxlength="32" placeholder="Nombre">
+                    <input id="contact-number" type="number" placeholder="Numero (7 digitos)">
+                    <button type="button" class="primary" id="contact-save">Guardar contacto</button>
+                    <h2 class="section-title">Personas cerca de ti</h2>
+                    <ul class="list compact" id="nearby-list"></ul>
+                </div>
+            </section>
+
+            <!-- Banco -->
+            <section class="view" id="view-bank">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Banco</h1><span></span></header>
+                <div class="editor">
+                    <div class="card">
+                        <small id="bank-holder">Titular</small>
+                        <strong id="bank-balance">$0</strong>
+                        <span>Efectivo: <b id="bank-cash">$0</b></span>
+                    </div>
+                    <div class="segmented">
+                        <button type="button" data-bank="deposit" class="active">Depositar</button>
+                        <button type="button" data-bank="transfer">Transferir</button>
+                    </div>
+                    <input id="bank-target" type="text" maxlength="32" placeholder="Destinatario (Nombre Apellido)" hidden>
+                    <input id="bank-amount" type="number" min="1" placeholder="Cantidad">
+                    <button type="button" class="primary" id="bank-go">Depositar</button>
+                    <p class="note">Para retirar efectivo ve a un cajero.</p>
+                    <h2 class="section-title">Movimientos</h2>
+                    <ul class="list compact" id="bank-history"></ul>
+                </div>
+            </section>
+
+            <!-- Fotogram -->
+            <section class="view" id="view-social">
+                <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text">Fotogram</h1><button type="button" class="action" id="social-camera">📷</button></header>
+                <div class="feed" id="feed"><p class="empty">Cargando...</p></div>
+            </section>
+            <section class="view" id="view-social-new">
+                <header><button type="button" class="back" data-to="social">‹ Cancelar</button><h1>Nueva foto</h1><button type="button" class="action" id="social-share">Publicar</button></header>
+                <div class="editor">
+                    <img id="photo-preview" alt="">
+                    <button type="button" class="secondary" id="social-retake">Repetir foto</button>
+                    <textarea id="social-caption" maxlength="280" placeholder="Escribe un pie de foto..."></textarea>
+                </div>
+            </section>
+
+            <!-- Ajustes -->
+            <section class="view" id="view-settings">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Ajustes</h1><span></span></header>
+                <div class="editor">
+                    <div class="card light">
+                        <small>Propietario</small>
+                        <strong id="settings-owner">-</strong>
+                        <span>Mi numero: <b id="settings-number">-</b></span>
+                    </div>
+                    <p class="note">Teclas: P abre o guarda el telefono, Esc lo guarda.</p>
+                </div>
+            </section>
+
+            <button type="button" class="home-bar" id="home-bar" aria-label="Inicio"></button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

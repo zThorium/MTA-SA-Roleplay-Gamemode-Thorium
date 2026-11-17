@@ -1,0 +1,22 @@
+<meta>
+    <info author="Thorium" name="RP Login" description="Login y registro CEF con cuentas en MySQL (bcrypt)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <!-- Garantiza que rp_database arranque antes que este recurso -->
+    <include resource="rp_database" />
+
+    <script src="server/s_config.lua" type="server" />
+    <script src="server/s_auth.lua" type="server" />
+
+    <script src="client/c_login.lua" type="client" cache="false" />
+
+    <!-- Archivos de la interfaz CEF (se cargan via http://mta/local/...) -->
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+
+    <export function="isPlayerLoggedIn" type="server" />
+    <export function="getPlayerAccountId" type="server" />
+    <export function="getPlayerAccountName" type="server" />
+    <export function="getPlayerAdminLevel" type="server" />
+</meta>

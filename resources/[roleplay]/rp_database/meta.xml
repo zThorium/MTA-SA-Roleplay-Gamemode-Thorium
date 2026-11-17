@@ -1,0 +1,16 @@
+<meta>
+    <info author="Thorium" name="RP Database" description="Conexion MySQL compartida del gamemode roleplay" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" />
+
+    <!-- Solo servidor: las credenciales nunca llegan al cliente -->
+    <script src="config.lua" type="server" />
+    <script src="schema.lua" type="server" />
+    <script src="s_database.lua" type="server" />
+
+    <!--
+        Las funciones no se pueden pasar entre recursos, asi que exportamos el
+        handle de conexion y cada recurso usa dbQuery/dbExec con sus callbacks.
+    -->
+    <export function="getConnection" type="server" />
+    <export function="isReady" type="server" />
+</meta>

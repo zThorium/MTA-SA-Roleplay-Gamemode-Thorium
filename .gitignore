@@ -1,0 +1,31 @@
+# Credenciales reales de la base de datos (copia config.example.lua)
+**/rp_database/config.lua
+
+# Logs, bases locales y basura de editor
+*.log
+*.db
+*.bak
+.vscode/
+.idea/
+Thumbs.db
+
+# --- Servidor MTA: binarios, estado y datos locales ---
+*.dll
+*.exe
+*.keys
+*.zip
+backups/
+databases/
+logs/
+resource-cache/
+internal.db
+registry.db
+banlist.xml
+settings.xml
+local.conf
+editor.conf
+editor_acl.xml
+mtaserver_test.conf
+
+# Mapa del radar extraido de gta3.img (material de Rockstar, no se redistribuye)
+resources/[[]roleplay]/rp_hud/images/map.png

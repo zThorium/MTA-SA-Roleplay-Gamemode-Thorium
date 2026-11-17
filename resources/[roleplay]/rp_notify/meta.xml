@@ -1,0 +1,22 @@
+<meta>
+    <info author="Thorium" name="RP Notify" description="Notificaciones reutilizables (toasts, popups y globos) con sonido" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <script src="s_notify.lua" type="server" />
+    <script src="c_notify.lua" type="client" />
+
+    <!-- Sonidos propios (generados para el proyecto) -->
+    <file src="sounds/info.wav" />
+    <file src="sounds/success.wav" />
+    <file src="sounds/warning.wav" />
+    <file src="sounds/error.wav" />
+    <file src="sounds/popup.wav" />
+
+    <export function="notify" type="server" />
+    <export function="popup" type="server" />
+    <export function="bubble" type="server" />
+    <export function="notify" type="client" />
+    <export function="popup" type="client" />
+    <export function="bubble" type="client" />
+    <export function="setNotificationsMuted" type="client" />
+</meta>

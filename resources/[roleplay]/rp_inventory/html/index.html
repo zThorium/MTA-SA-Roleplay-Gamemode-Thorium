@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Inventario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window">
+        <header>
+            <div>
+                <h1>Inventario</h1>
+                <p class="hint">Pulsa <kbd>I</kbd> o <kbd>Esc</kbd> para cerrar</p>
+            </div>
+            <div class="weight">
+                <span id="weight-label">0 / 15 kg</span>
+                <div class="bar"><div id="weight-bar"></div></div>
+            </div>
+            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+        </header>
+
+        <div class="content">
+            <section class="grid" id="grid"></section>
+
+            <aside class="details" id="details">
+                <p class="empty-details">Selecciona un objeto para ver sus detalles.</p>
+            </aside>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

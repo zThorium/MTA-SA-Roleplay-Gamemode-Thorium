@@ -1,0 +1,13 @@
+<meta>
+    <!--
+        images/map.png se genero a partir de los 144 tiles del radar (radar00-143.txd)
+        de gta3.img de la instalacion local de GTA SA (ver tools/RadarExtract.cs).
+    -->
+    <info author="Thorium" name="RP HUD" description="HUD propio: minimapa, vida, necesidades, hora y dinero" version="1.0.0" type="script" />
+    <min_mta_version client="1.6.0" />
+
+    <include resource="rp_notify" />
+
+    <script src="c_hud.lua" type="client" />
+    <file src="images/map.png" />
+</meta>

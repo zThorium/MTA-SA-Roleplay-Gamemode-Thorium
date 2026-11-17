@@ -1,0 +1,244 @@
+--[[
+    rp_hud / c_hud.lua
+    HUD propio que sustituye al de GTA:
+      - Minimapa giratorio (abajo a la izquierda) con el mapa del radar de GTA SA
+        extraido de la instalacion del jugador (images/map.png), blips y flecha.
+      - Barras de vida, chaleco, hambre, sed y energia (rp_needs).
+      - Hora del juego, dinero, zona y municion (arriba a la derecha).
+    /hud oculta o muestra el HUD.
+]]
+
+local screenW, screenH = guiGetScreenSize()
+local s = math.max(0.75, math.min(1.3, screenH / 900))
+
+local MAP_SIZE = 1536          -- px del archivo map.png
+local WORLD = 6000             -- unidades que cubre el mapa (-3000 a 3000)
+local MS = math.floor(220 * s) -- tamano del minimapa en pantalla
+local MARGIN = math.floor(22 * s)
+
+local mapTexture, renderTarget
+local enabled = true
+
+local COLORS = {
+    panel = tocolor(12, 14, 20, 200),
+    border = tocolor(255, 255, 255, 30),
+    text = tocolor(242, 244, 248),
+    muted = tocolor(154, 163, 178),
+    accent = tocolor(245, 165, 36),
+    money = tocolor(76, 211, 138),
+}
+
+local BARS = {
+    { key = "health", label = "Vida",    r = 229, g = 72,  b = 77 },
+    { key = "armor",  label = "Chaleco", r = 200, g = 205, b = 215, optional = true },
+    { key = "hunger", label = "Hambre",  r = 245, g = 165, b = 36 },
+    { key = "thirst", label = "Sed",     r = 70,  g = 150, b = 255 },
+    { key = "energy", label = "Energia", r = 168, g = 120, b = 255 },
+}
+
+----------------------------------------------------------------
+-- Componentes de GTA
+----------------------------------------------------------------
+local function hideGtaHud()
+    setPlayerHudComponentVisible("all", false)
+    setPlayerHudComponentVisible("crosshair", true)
+end
+
+local function isActive()
+    return enabled and getElementData(localPlayer, "rp:characterId") and not isPlayerMapVisible()
+        and not getElementData(localPlayer, "rp:hudHidden")   -- p. ej. al tomar una foto con el telefono
+end
+
+----------------------------------------------------------------
+-- Minimapa
+----------------------------------------------------------------
+local function worldToMap(x, y)
+    return (x + WORLD / 2) / WORLD * MAP_SIZE, (WORLD / 2 - y) / WORLD * MAP_SIZE
+end
+
+local function getCameraHeading()
+    local cx, cy, _, tx, ty = getCameraMatrix()
+    return math.deg(math.atan2(tx - cx, ty - cy))   -- 0 = norte, sentido horario
+end
+
+local function rotate(x, y, angle)
+    local r = math.rad(angle)
+    local c, sn = math.cos(r), math.sin(r)
+    return x * c - y * sn, x * sn + y * c
+end
+
+local function drawMinimap(x, y)
+    if not mapTexture or not renderTarget then return end
+    local px, py, pz = getElementPosition(localPlayer)
+    local heading = getCameraHeading()
+
+    -- Zoom: mas lejos cuanto mas rapido vas
+    local vehicle = getPedOccupiedVehicle(localPlayer)
+    local speed = 0
+    if vehicle then
+        local vx, vy, vz = getElementVelocity(vehicle)
+        speed = math.sqrt(vx * vx + vy * vy + vz * vz) * 180
+    end
+    local unitsAcross = 300 + math.min(speed, 160) * 2.5
+    local unitPx = MS / unitsAcross
+
+    local interior = getElementInterior(localPlayer) ~= 0
+
+    dxSetRenderTarget(renderTarget, true)
+    if interior then
+        dxDrawRectangle(0, 0, MS, MS, tocolor(30, 33, 40, 255))
+        dxDrawText("Interior", 0, 0, MS, MS, COLORS.muted, 1.1 * s, "default-bold", "center", "center")
+    else
+        local mx, my = worldToMap(px, py)
+        local section = unitsAcross / WORLD * MAP_SIZE * 1.5
+        local size = MS * 1.5
+        dxDrawImageSection(MS / 2 - size / 2, MS / 2 - size / 2, size, size,
+            mx - section / 2, my - section / 2, section, section, mapTexture, -heading)
+
+        -- Blips (tiendas, etc.)
+        for _, blip in ipairs(getElementsByType("blip")) do
+            if getElementDimension(blip) == getElementDimension(localPlayer) then
+                local bx, by = getElementPosition(blip)
+                local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
+                dx, dy = rotate(dx, dy, -heading)
+                local half = MS / 2 - 8 * s
+                local dist = math.sqrt(dx * dx + dy * dy)
+                if dist > half then dx, dy = dx / dist * half, dy / dist * half end
+                local r, g, b = getBlipColor(blip)
+                local bs = 9 * s
+                dxDrawRectangle(MS / 2 + dx - bs / 2 - 1, MS / 2 + dy - bs / 2 - 1, bs + 2, bs + 2, tocolor(0, 0, 0, 200))
+                dxDrawRectangle(MS / 2 + dx - bs / 2, MS / 2 + dy - bs / 2, bs, bs, tocolor(r, g, b, 255))
+            end
+        end
+
+        -- Norte
+        local nx, ny = rotate(0, -(MS / 2 - 12 * s), -heading)
+        dxDrawText("N", MS / 2 + nx - 10, MS / 2 + ny - 10, MS / 2 + nx + 10, MS / 2 + ny + 10, tocolor(255, 255, 255, 230), 1.0 * s, "default-bold", "center", "center")
+    end
+
+    -- Flecha del jugador
+    local _, _, rz = getElementRotation(vehicle or localPlayer)
+    -- GTA: rz=0 norte y crece en sentido antihorario -> rumbo horario = -rz
+    local angle = -rz - heading
+    local tip = { rotate(0, -11 * s, angle) }
+    local left = { rotate(-7 * s, 8 * s, angle) }
+    local right = { rotate(7 * s, 8 * s, angle) }
+    local back = { rotate(0, 4 * s, angle) }
+    local c, cx, cy = tocolor(245, 165, 36, 255), MS / 2, MS / 2
+    dxDrawPrimitive("trianglelist", false,
+        { cx + tip[1], cy + tip[2], c }, { cx + left[1], cy + left[2], c }, { cx + back[1], cy + back[2], c },
+        { cx + tip[1], cy + tip[2], c }, { cx + back[1], cy + back[2], c }, { cx + right[1], cy + right[2], c })
+    dxSetRenderTarget()
+
+    -- Marco + mapa
+    dxDrawRectangle(x - 3, y - 3, MS + 6, MS + 6, COLORS.panel)
+    dxDrawImage(x, y, MS, MS, renderTarget)
+    dxDrawRectangle(x, y, MS, 2, COLORS.accent)
+
+    -- Zona
+    local zone = interior and "Interior" or getZoneName(px, py, pz)
+    dxDrawRectangle(x - 3, y - 26 * s, MS + 6, 22 * s, COLORS.panel)
+    dxDrawText(zone, x, y - 26 * s, x + MS, y - 4 * s, COLORS.text, 1.0 * s, "default-bold", "center", "center", true)
+end
+
+----------------------------------------------------------------
+-- Barras
+----------------------------------------------------------------
+local function drawBars(x, bottom)
+    local needs = getElementData(localPlayer, "rp:needs") or {}
+    local values = {
+        health = getElementHealth(localPlayer), armor = getPedArmor(localPlayer),
+        hunger = needs.hunger, thirst = needs.thirst, energy = needs.energy,
+    }
+
+    local rows = {}
+    for _, bar in ipairs(BARS) do
+        local v = values[bar.key]
+        if v and not (bar.optional and v <= 0) then rows[#rows + 1] = { bar = bar, value = v } end
+    end
+
+    local rowH, w = 26 * s, 200 * s
+    local h = #rows * rowH + 14 * s
+    local y = bottom - h
+    dxDrawRectangle(x, y, w, h, COLORS.panel)
+
+    for i, row in ipairs(rows) do
+        local ry = y + 7 * s + (i - 1) * rowH
+        local bar, v = row.bar, math.max(0, math.min(100, row.value))
+        local low = v <= 20 and bar.key ~= "armor"
+        local pulse = low and (math.sin(getTickCount() / 150) * 0.3 + 0.7) or 1
+        dxDrawText(bar.label, x + 10 * s, ry, x + 70 * s, ry + rowH, COLORS.muted, 0.9 * s, "default", "left", "center")
+        local bx, by, bw, bh = x + 72 * s, ry + rowH / 2 - 4 * s, w - 112 * s, 8 * s
+        dxDrawRectangle(bx, by, bw, bh, tocolor(255, 255, 255, 25))
+        dxDrawRectangle(bx, by, bw * v / 100, bh, tocolor(bar.r, bar.g, bar.b, 255 * pulse))
+        dxDrawText(tostring(math.floor(v + 0.5)), bx + bw, ry, x + w - 8 * s, ry + rowH, COLORS.text, 0.9 * s, "default-bold", "right", "center")
+    end
+end
+
+----------------------------------------------------------------
+-- Hora, dinero y arma
+----------------------------------------------------------------
+local function formatMoney(n)
+    local digits = tostring(math.floor(math.abs(n)))
+    digits = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+    return (n < 0 and "-$" or "$") .. digits
+end
+
+local function drawTopRight()
+    local hour, minute = getTime()
+    local clock = ("%02d:%02d"):format(hour, minute)
+    local right, top = screenW - MARGIN, MARGIN
+
+    dxDrawText(clock, 0, top, right + 2, 0, tocolor(0, 0, 0, 160), 2.2 * s, "default-bold", "right", "top")
+    dxDrawText(clock, 0, top, right, 0, COLORS.text, 2.2 * s, "default-bold", "right", "top")
+
+    local money = formatMoney(getPlayerMoney(localPlayer))
+    local my = top + dxGetFontHeight(2.2 * s, "default-bold") + 2 * s
+    dxDrawText(money, 0, my + 1, right + 1, 0, tocolor(0, 0, 0, 160), 1.5 * s, "default-bold", "right", "top")
+    dxDrawText(money, 0, my, right, 0, COLORS.money, 1.5 * s, "default-bold", "right", "top")
+
+    local weapon = getPedWeapon(localPlayer)
+    if weapon and weapon ~= 0 then
+        local ay = my + dxGetFontHeight(1.5 * s, "default-bold") + 4 * s
+        local ammo = ("%s  %d / %d"):format(getWeaponNameFromID(weapon) or "Arma", getPedAmmoInClip(localPlayer), getPedTotalAmmo(localPlayer) - getPedAmmoInClip(localPlayer))
+        dxDrawText(ammo, 0, ay, right, 0, COLORS.text, 1.0 * s, "default-bold", "right", "top")
+    end
+end
+
+----------------------------------------------------------------
+addEventHandler("onClientRender", root, function()
+    if not isActive() then return end
+    local mapX, mapY = MARGIN, screenH - MARGIN - MS
+    drawMinimap(mapX, mapY)
+    drawBars(mapX + MS + 12 * s, screenH - MARGIN)
+    drawTopRight()
+end)
+
+addEventHandler("onClientResourceStart", resourceRoot, function()
+    mapTexture = dxCreateTexture("images/map.png", "dxt1", true, "wrap")
+    renderTarget = dxCreateRenderTarget(MS, MS, false)
+    if not mapTexture or not renderTarget then
+        outputDebugString("[rp_hud] No se pudo crear la textura del minimapa", 2)
+    end
+    hideGtaHud()
+end)
+
+-- Si el render target se pierde (al minimizar), se recrea
+addEventHandler("onClientRestore", root, function(cleared)
+    if cleared and isElement(renderTarget) then destroyElement(renderTarget) end
+    if cleared then renderTarget = dxCreateRenderTarget(MS, MS, false) end
+end)
+
+addEventHandler("onClientPlayerSpawn", localPlayer, hideGtaHud)
+addEventHandler("onClientElementDataChange", localPlayer, function(key)
+    if key == "rp:characterId" then hideGtaHud() end
+end)
+
+addEventHandler("onClientResourceStop", resourceRoot, function()
+    setPlayerHudComponentVisible("all", true)
+end)
+
+addCommandHandler("hud", function()
+    enabled = not enabled
+    exports.rp_notify:notify(enabled and "HUD visible." or "HUD oculto (/hud para mostrarlo).", "info")
+end)

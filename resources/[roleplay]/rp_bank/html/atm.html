@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Cajero</title>
+    <link rel="stylesheet" href="atm.css">
+</head>
+<body>
+    <main class="atm">
+        <header>
+            <div class="brand"><span class="logo">B</span> Banco de San Andreas</div>
+            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+        </header>
+
+        <section class="balance">
+            <p id="holder">Titular</p>
+            <span class="label">Saldo disponible</span>
+            <strong id="balance">$0</strong>
+            <span class="cash">Efectivo: <b id="cash">$0</b></span>
+        </section>
+
+        <nav class="tabs">
+            <button type="button" data-tab="withdraw" class="active">Retirar</button>
+            <button type="button" data-tab="deposit">Depositar</button>
+            <button type="button" data-tab="transfer">Transferir</button>
+        </nav>
+
+        <form id="form" autocomplete="off" novalidate>
+            <label id="target-row" hidden>Destinatario
+                <input id="target" type="text" maxlength="32" placeholder="Nombre Apellido" spellcheck="false">
+            </label>
+            <label>Cantidad
+                <input id="amount" type="number" min="1" placeholder="0">
+            </label>
+            <div class="quick" id="quick">
+                <button type="button" data-v="50">$50</button>
+                <button type="button" data-v="100">$100</button>
+                <button type="button" data-v="500">$500</button>
+                <button type="button" data-v="1000">$1.000</button>
+            </div>
+            <button type="submit" class="primary" id="submit">Retirar</button>
+        </form>
+
+        <section class="history">
+            <h2>Ultimos movimientos</h2>
+            <ul id="history"></ul>
+        </section>
+    </main>
+    <script src="atm.js"></script>
+</body>
+</html>

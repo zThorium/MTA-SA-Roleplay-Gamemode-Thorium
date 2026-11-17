@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Roleplay - Acceso</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="panel" id="panel">
+        <header class="brand">
+            <span class="brand-mark">RP</span>
+            <div>
+                <h1>San Andreas Roleplay</h1>
+                <p>Inicia sesion o crea tu cuenta para empezar</p>
+            </div>
+        </header>
+
+        <nav class="tabs" role="tablist">
+            <button type="button" class="tab active" data-tab="login" role="tab">Iniciar sesion</button>
+            <button type="button" class="tab" data-tab="register" role="tab">Registrarse</button>
+        </nav>
+
+        <form id="form-login" class="form active" autocomplete="off" novalidate>
+            <label>Usuario
+                <input name="username" type="text" maxlength="24" spellcheck="false" autofocus>
+            </label>
+            <label>Contrasena
+                <input name="password" type="password" maxlength="64">
+            </label>
+            <p class="message" aria-live="polite"></p>
+            <button type="submit" class="primary">Entrar</button>
+        </form>
+
+        <form id="form-register" class="form" autocomplete="off" novalidate>
+            <label>Usuario
+                <input name="username" type="text" maxlength="24" spellcheck="false">
+                <small>3-24 caracteres. Letras, numeros y _ (empieza por letra).</small>
+            </label>
+            <label>Contrasena
+                <input name="password" type="password" maxlength="64">
+                <small>Minimo 6 caracteres.</small>
+            </label>
+            <label>Repite la contrasena
+                <input name="confirm" type="password" maxlength="64">
+            </label>
+            <p class="message" aria-live="polite"></p>
+            <button type="submit" class="primary">Crear cuenta</button>
+        </form>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
