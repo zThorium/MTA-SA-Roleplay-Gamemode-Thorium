@@ -89,6 +89,17 @@ Ajustes sobre GTA (más fácil, pedido del servidor):
 - Al subir de nivel el caos queda con margen sobre el umbral (70, 200, 570…) y hay **30 s sin decaimiento** después de cada delito, así no aparece "Perdiste a la policía" apenas ganas la estrella.
 - Arresto en un vehículo: el policía llega a la puerta del conductor, la abre (`CAR_open_LHS`), te saca (`CAR_pullout_LHS`) y te deja en el suelo; recién ahí es Busted. Si el auto es del tráfico (solo existe en tu cliente) te saca tu propio cliente.
 
+Persecución más difícil (segunda ronda):
+- **Ruta probable**: cada medio segundo se calcula por dónde vas a pasar (en cada cruce, el camino más alineado con tu rumbo, hasta 400 m).
+- **Roles**: la patrulla más cercana te persigue; las demás **interceptan**: van por A* a un punto de tu ruta al que llegan antes que tú y se cruzan en la calle.
+- **Embestidas desde 2 estrellas** con maniobra PIT (apuntan a la esquina trasera de tu auto) y esquivan el tráfico.
+- Las patrullas aparecen **de frente** en tu ruta y tienen mejor motor, agarre y frenos (`WANTED_POLICE_HANDLING`); mientras van detrás aceleran más (rubber band como en GTA).
+- **Disparos desde la ventanilla**: el acompañante usa MP5 desde 2 estrellas y apunta a los neumáticos. Cada bala de la policía que pega en tu vehículo puede reventar un neumático.
+- **Pinchos** (modelo 2899) en tu ruta, a 90-170 m, con una patrulla al costado: si los pisas revientan los 4 neumáticos.
+- Controles de carretera desde 2 estrellas y más patrullas por nivel (2, 3, 4, 4, 5, 5).
+- **Tráfico**: 16 autos de día y 9 de noche (antes 7 y 4), 6 más durante una persecución. Yendo rápido, el 70 % aparece por delante.
+- **Lag**: si una patrulla no encontraba ruta, repetía el A* cada 50 ms. Ahora hay como mucho una búsqueda por tick y un fallo espera 1,2 s.
+
 Decisiones:
 - **Sin cambios en `schema.lua`**. En `rp_hud` solo se agrega `c_wanted.lua` y una línea en su `meta.xml` (el PR #6 también toca ese `meta.xml`: conflicto de una línea, fácil de resolver).
 - **Sin CEF**: el HUD usa dx, así no se crean navegadores.

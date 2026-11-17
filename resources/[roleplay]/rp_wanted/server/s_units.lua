@@ -40,7 +40,7 @@ local function sendUnit(player, unit)
     local cfg = levelCfg(player)
     triggerClientEvent(player, "rp:wanted:unit", resourceRoot, {
         id = unit.id, kind = unit.kind, vehicle = unit.vehicle, vehicles = unit.vehicles, peds = unit.peds,
-        fleet = unit.fleet, leaving = unit.leaving or false,
+        fleet = unit.fleet, leaving = unit.leaving or false, spike = unit.spike,
     })
 end
 
@@ -56,6 +56,7 @@ local function destroyUnitElements(unit)
     local list = {}
     for _, ped in ipairs(unit.peds) do list[#list + 1] = ped end
     for _, v in ipairs(unit.vehicles) do list[#list + 1] = v end
+    for _, o in ipairs(unit.objects or {}) do list[#list + 1] = o end
     for _, el in ipairs(list) do
         unitOwner[el] = nil
         if isElement(el) then destroyElement(el) end
@@ -67,6 +68,7 @@ local function removeUnit(player, unit, fade)
     if not p or not p.units[unit.id] then return end
     p.units[unit.id] = nil
     if p.roadblock == unit then p.roadblock = nil end
+    if p.spikes == unit then p.spikes = nil end
     if isTimer(unit.timer) then killTimer(unit.timer) end
     if isElement(player) then triggerClientEvent(player, "rp:wanted:unitRemoved", resourceRoot, unit.id) end
     if not fade then return destroyUnitElements(unit) end
@@ -74,7 +76,7 @@ local function removeUnit(player, unit, fade)
     local alpha = 255
     setTimer(function()
         alpha = alpha - 25
-        for _, list in ipairs({ unit.peds, unit.vehicles }) do
+        for _, list in ipairs({ unit.peds, unit.vehicles, unit.objects or {} }) do
             for _, el in ipairs(list) do
                 if isElement(el) then setElementAlpha(el, math.max(0, alpha)) end
             end
@@ -96,14 +98,29 @@ local function resolveFleet(name, x, y, z)
     return city.model, city.skin, f.crew, f.weapon
 end
 
-local function armCop(ped, weapon, level)
-    -- A 1 estrella la policia no dispara: solo porra
-    if level <= 1 or not weapon then
-        giveWeapon(ped, WANTED_FLEET.police.melee, 1, true)
-    else
-        giveWeapon(ped, weapon, 9999, true)
-    end
+-- Arma de cada policia: a 1 estrella solo porra; desde 2, su arma, y los
+-- acompanantes una MP5 para disparar desde la ventanilla (drive-by)
+local function copWeapon(weapon, level, seat)
+    if level <= 1 or not weapon then return WANTED_FLEET.police.melee end
+    if seat and seat > 0 then return WANTED_DRIVEBY_WEAPON end
+    return weapon
+end
+
+local function armCop(ped, weapon, level, seat)
+    local w = copWeapon(weapon, level, seat)
+    giveWeapon(ped, w, w == WANTED_FLEET.police.melee and 1 or 9999, true)
     setElementData(ped, "rp:cop", true)
+end
+
+-- Patrullas mas rapidas que un auto comun (en GTA la policia siempre te alcanza)
+local function boostHandling(vehicle)
+    local h = getVehicleHandling(vehicle)
+    if not h then return end
+    local b = WANTED_POLICE_HANDLING
+    setVehicleHandling(vehicle, "maxVelocity", h.maxVelocity * b.maxVelocity)
+    setVehicleHandling(vehicle, "engineAcceleration", h.engineAcceleration * b.engineAcceleration)
+    setVehicleHandling(vehicle, "tractionMultiplier", h.tractionMultiplier * b.tractionMultiplier)
+    setVehicleHandling(vehicle, "brakeDeceleration", h.brakeDeceleration * b.brakeDeceleration)
 end
 
 local function spawnCar(player, x, y, z, rot)
@@ -124,13 +141,14 @@ local function spawnCar(player, x, y, z, rot)
     setVehicleEngineState(vehicle, true)
     setVehicleSirensOn(vehicle, true)
     setElementData(vehicle, "rp:copCar", true)
+    boostHandling(vehicle)
     register(player, unit, vehicle)
     local seats = math.max(1, getVehicleMaxPassengers(vehicle) + 1)
     for seat = 0, math.min(crew, seats) - 1 do
         local ped = createPed(skin, x, y, z + 1)
         if ped then
             warpPedIntoVehicle(ped, vehicle, seat)
-            armCop(ped, weapon, level)
+            armCop(ped, weapon, level, seat)
             unit.peds[#unit.peds + 1] = ped
             register(player, unit, ped)
         end
@@ -199,6 +217,52 @@ local function spawnRoadblock(player, x, y, z, rot)
     sendUnit(player, unit)
 end
 
+-- Pinchos (stinger): cruzados en la calle por donde va el jugador, con una
+-- patrulla estacionada al costado y un policia. El cliente revienta los
+-- neumaticos al pasar por encima (client/c_police.lua).
+local function spawnSpikes(player, x, y, z, rot)
+    local p = pursuitOf(player)
+    local level = getWantedLevel(player)
+    local model, skin, _, weapon = resolveFleet("police", x, y, z)
+    local unit = newUnit("spikes", "police")
+    unit.objects = {}
+    local r = math.rad(rot)
+    local fx, fy = -math.sin(r), math.cos(r)
+    local rx, ry = fy, -fx
+    local cfg = WANTED_SPIKES
+    local gz = z
+    for i = 1, cfg.PIECES do
+        local off = (i - (cfg.PIECES + 1) / 2) * cfg.PIECE_LENGTH
+        local o = createObject(cfg.MODEL, x + rx * off, y + ry * off, gz + cfg.Z_OFFSET, 0, 0, rot + cfg.ROT_OFFSET)
+        if o then
+            setElementCollisionsEnabled(o, false)
+            unit.objects[#unit.objects + 1] = o
+        end
+    end
+    unit.spike = { x = x, y = y, z = z, rot = rot, half = cfg.PIECES * cfg.PIECE_LENGTH / 2 + 0.5 }
+    -- patrulla al costado de la calle, unos metros antes de los pinchos
+    local side = unit.spike.half + 3
+    local v = createVehicle(model, x + rx * side + fx * 6, y + ry * side + fy * 6, z + 0.8, 0, 0, rot + 180)
+    if v then
+        setVehicleSirensOn(v, true)
+        setVehicleEngineState(v, false)
+        setElementData(v, "rp:copCar", true)
+        unit.vehicles[1] = v
+        register(player, unit, v)
+    end
+    unit.vehicle = unit.vehicles[1]
+    local ped = createPed(skin, x + rx * (side - 1.5) + fx * 3, y + ry * (side - 1.5) + fy * 3, z + 1, rot + 180)
+    if ped then
+        armCop(ped, weapon, level)
+        unit.peds[1] = ped
+        register(player, unit, ped)
+    end
+    p.units[unit.id] = unit
+    p.spikes = unit
+    unit.timer = setTimer(function() removeUnit(player, unit, true) end, cfg.LIFE, 1)
+    sendUnit(player, unit)
+end
+
 ----------------------------------------------------------------
 -- Despacho: cada TICK ms se manda (como mucho) una unidad nueva
 ----------------------------------------------------------------
@@ -253,7 +317,7 @@ local function dispatch(player, p)
             local d = unitDistance(player, unit)
             if d > WANTED_DISPATCH.LOST_DISTANCE + 80 then
                 removeUnit(player, unit, false)
-            elseif aliveCount(unit) == 0 and unit.kind ~= "roadblock" then
+            elseif aliveCount(unit) == 0 and unit.kind ~= "roadblock" and unit.kind ~= "spikes" then
                 unit.leaving = true   -- los cuerpos quedan; se borra mas tarde
                 unit.timer = setTimer(function() removeUnit(player, unit, false) end, WANTED_DISPATCH.BODY_TIME, 1)
             elseif unit.kind == "car" then
@@ -285,14 +349,20 @@ local function dispatch(player, p)
         triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "car")
     elseif helis < cfg.heli then
         spawnHeli(player)
-    elseif cfg.roadblock > 0 and not p.roadblock and math.random(100) <= cfg.roadblock then
+    else
+        -- Control de carretera o pinchos por delante, si va rapido en un vehiculo
         local v = getPedOccupiedVehicle(player)
+        local speed = 0
         if v then
             local vx, vy = getElementVelocity(v)
-            if math.sqrt(vx * vx + vy * vy) * 180 > 40 then
-                p.pending = { kind = "roadblock", at = now }
-                triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "roadblock")
-            end
+            speed = math.sqrt(vx * vx + vy * vy) * 180
+        end
+        if speed > 40 and (cfg.spikes or 0) > 0 and not p.spikes and math.random(100) <= cfg.spikes then
+            p.pending = { kind = "spikes", at = now }
+            triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "spikes")
+        elseif speed > 40 and cfg.roadblock > 0 and not p.roadblock and math.random(100) <= cfg.roadblock then
+            p.pending = { kind = "roadblock", at = now }
+            triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "roadblock")
         end
     end
 end
@@ -322,7 +392,8 @@ addEventHandler("rp:onWantedLevelChange", root, function(level, old)
                 local _, _, _, weapon = resolveFleet(unit.fleet, getElementPosition(player))
                 for _, ped in ipairs(unit.peds) do
                     if isElement(ped) and not isPedDead(ped) and level > 1 and old <= 1 then
-                        giveWeapon(ped, weapon, 9999, true)
+                        local seat = getPedOccupiedVehicleSeat(ped)
+                        giveWeapon(ped, copWeapon(weapon, level, seat), 9999, true)
                     end
                 end
             end
@@ -364,6 +435,8 @@ addEventHandler("rp:wanted:spawnAt", resourceRoot, function(kind, x, y, z, rot)
         spawnCar(player, x, y, z, rot)
     elseif kind == "roadblock" and not p.roadblock then
         spawnRoadblock(player, x, y, z, rot)
+    elseif kind == "spikes" and not p.spikes then
+        spawnSpikes(player, x, y, z, rot)
     end
 end)
 

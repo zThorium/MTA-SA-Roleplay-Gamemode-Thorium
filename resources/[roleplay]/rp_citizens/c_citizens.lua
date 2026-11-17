@@ -20,7 +20,9 @@
 ----------------------------------------------------------------
 local CFG = {
     MAX_PEDS = 14, MAX_PEDS_NIGHT = 7,
-    MAX_CARS = 7,  MAX_CARS_NIGHT = 4,
+    MAX_CARS = 16, MAX_CARS_NIGHT = 9,
+    MAX_CARS_WANTED = 6,  -- autos extra durante una persecucion (mas trafico que esquivar)
+    CAR_SPAWN_AHEAD = 0.7, -- yendo rapido, proporcion de autos que aparecen por delante
     PED_SPAWN_MIN = 40, PED_SPAWN_MAX = 80, PED_DESPAWN = 105,
     CAR_SPAWN_MIN = 70, CAR_SPAWN_MAX = 130, CAR_DESPAWN = 170,
     PED_TICK = 300,      -- ms entre decisiones de peatones
@@ -764,9 +766,36 @@ local function nearestLane(x, y, fx, fy)
     return best, bestTarget
 end
 
+-- Yendo rapido en un vehiculo: los autos aparecen por delante (en la direccion
+-- de marcha), donde el jugador se los va a cruzar. Lejos (> 110 m) se aceptan
+-- aunque se vean: a esa distancia no se nota que aparecen.
+local function aheadSpawnNode(px, py)
+    local v = getPedOccupiedVehicle(localPlayer)
+    if not v then return end
+    local vx, vy = getElementVelocity(v)
+    local len = math.sqrt(vx * vx + vy * vy)
+    if len * 180 < 40 or math.random() > CFG.CAR_SPAWN_AHEAD then return end
+    local base = math.atan2(vy, vx)
+    for _ = 1, 6 do
+        local a = base + (math.random() - 0.5) * 1.6
+        local d = 110 + math.random() * 50
+        local tx, ty = px + math.cos(a) * d, py + math.sin(a) * d
+        local cell = vehGrid[math.floor(tx / CELL) * 1000 + math.floor(ty / CELL)]
+        if cell then
+            local i = cell[math.random(#cell)]
+            local x, y, z = nodePos(VEH_NODES, i)
+            local dd = getDistanceBetweenPoints2D(px, py, x, y)
+            if dd >= 105 and dd <= CFG.CAR_DESPAWN - 10 then return i, x, y, z end
+        end
+    end
+end
+
 local function spawnCar(px, py)
-    local node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, CFG.CAR_SPAWN_MIN, CFG.CAR_SPAWN_MAX)
-    if not node or visibleFromCamera(x, y, z) then return end
+    local node, x, y, z = aheadSpawnNode(px, py)
+    if not node then
+        node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, CFG.CAR_SPAWN_MIN, CFG.CAR_SPAWN_MAX)
+        if not node or visibleFromCamera(x, y, z) then return end
+    end
     local target
     for _, n in ipairs(VEH_LINKS[node] or {}) do
         if canDrive(node, n) then target = n break end
@@ -1413,7 +1442,11 @@ local function spawnTick()
     -- Spawn hasta el limite (uno por tick para repartir el coste)
     local night = isNight()
     if pedCount < (night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) then spawnPed(px, py) end
-    if carCount < (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) then spawnCar(px, py) end
+    local maxCars = (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
+    -- hasta 2 por tick cuando faltan muchos (yendo rapido se despawnean seguido)
+    for _ = 1, (maxCars - carCount > 4) and 2 or 1 do
+        if carCount < maxCars then spawnCar(px, py) end
+    end
 end
 
 local function pedTick()

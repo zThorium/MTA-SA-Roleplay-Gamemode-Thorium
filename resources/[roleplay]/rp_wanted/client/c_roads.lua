@@ -190,3 +190,56 @@ function laneStartPoint(a, b)
     local _, off = laneInfo(a, b)
     return ax + dy * off, ay - dx * off, az, -math.deg(math.atan2(dx, dy))
 end
+
+-- Ruta probable del jugador: desde el nodo mas cercano por delante, en cada
+-- cruce sigue el enlace mas alineado con su rumbo (los conductores suelen
+-- seguir derecho). Devuelve { {x, y, z, dist, node}, ... } hasta maxDist metros.
+-- Las patrullas la usan para adelantarse, cortarle el paso y poner pinchos.
+function predictRoadPath(x, y, fx, fy, maxDist)
+    if not loadRoadGraph() then return nil end
+    local start, bestD = nil, math.huge
+    local cx, cy = math.floor(x / CELL), math.floor(y / CELL)
+    for ox = -1, 1 do
+        for oy = -1, 1 do
+            local cell = grid[(cx + ox) * 1000 + (cy + oy)]
+            if cell then
+                for _, i in ipairs(cell) do
+                    local nx, ny = N[i * 3 - 2], N[i * 3 - 1]
+                    local dx, dy = nx - x, ny - y
+                    local d = math.sqrt(dx * dx + dy * dy)
+                    -- por delante (o casi encima) y a menos de 45 m
+                    if d < 45 and (d < 6 or (dx * fx + dy * fy) / d > 0.3) and d < bestD then start, bestD = i, d end
+                end
+            end
+        end
+    end
+    if not start then return nil end
+    local path, total, cur, prev = {}, bestD, start, nil
+    local hx, hy = fx, fy
+    local seen = {}
+    while total < maxDist and cur and not seen[cur] do
+        seen[cur] = true
+        local nx, ny, nz = nodePosition(cur)
+        path[#path + 1] = { nx, ny, nz, total, cur }
+        local best, bestDot = nil, -0.2
+        for _, n in ipairs(L[cur] or {}) do
+            if n ~= prev then
+                local kx, ky = nodePosition(n)
+                local dx, dy = kx - nx, ky - ny
+                local len = math.sqrt(dx * dx + dy * dy)
+                if len > 0.5 then
+                    local dot = (dx * hx + dy * hy) / len
+                    if dot > bestDot then best, bestDot = n, dot end
+                end
+            end
+        end
+        if not best then break end
+        local kx, ky = nodePosition(best)
+        local dx, dy = kx - nx, ky - ny
+        local len = math.sqrt(dx * dx + dy * dy)
+        hx, hy = dx / len, dy / len
+        total = total + len
+        prev, cur = cur, best
+    end
+    return path
+end

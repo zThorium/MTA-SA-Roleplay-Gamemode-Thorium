@@ -128,13 +128,33 @@ end
       shoot      los policias disparan (a 1 estrella solo intentan arrestarte)
       ram        las patrullas te embisten
 ]]
+-- Mas duro que GTA (pedido del servidor): mas patrullas, embestidas desde 2
+-- estrellas, controles y pinchos (spikes = % por despacho) por delante.
 WANTED_LEVELS = {
-    [1] = { cars = 1, heli = 0, roadblock = 0,  fleet = { "police" },                 shoot = false, ram = false },
-    [2] = { cars = 2, heli = 0, roadblock = 0,  fleet = { "police" },                 shoot = true,  ram = false },
-    [3] = { cars = 2, heli = 1, roadblock = 12, fleet = { "police" },                 shoot = true,  ram = true },
-    [4] = { cars = 2, heli = 2, roadblock = 18, fleet = { "swat", "police" },         shoot = true,  ram = true },
-    [5] = { cars = 3, heli = 2, roadblock = 24, fleet = { "fbi", "police", "fbi" },   shoot = true,  ram = true },
-    [6] = { cars = 3, heli = 2, roadblock = 30, fleet = { "tank", "army", "fbi" },    shoot = true,  ram = true },
+    [1] = { cars = 2, heli = 0, roadblock = 0,  spikes = 0,  fleet = { "police" },                 shoot = false, ram = false },
+    [2] = { cars = 3, heli = 0, roadblock = 20, spikes = 25, fleet = { "police" },                 shoot = true,  ram = true },
+    [3] = { cars = 4, heli = 1, roadblock = 35, spikes = 40, fleet = { "police" },                 shoot = true,  ram = true },
+    [4] = { cars = 4, heli = 1, roadblock = 45, spikes = 45, fleet = { "swat", "police" },         shoot = true,  ram = true },
+    [5] = { cars = 5, heli = 2, roadblock = 55, spikes = 50, fleet = { "fbi", "police", "fbi" },   shoot = true,  ram = true },
+    [6] = { cars = 5, heli = 2, roadblock = 60, spikes = 50, fleet = { "tank", "army", "fbi" },    shoot = true,  ram = true },
+}
+
+-- Arma de los acompanantes para disparar desde la ventanilla (MP5)
+WANTED_DRIVEBY_WEAPON = 29
+
+-- Probabilidad de reventarte un neumatico: por bala de policia que pega en tu
+-- vehiculo, y cada 1.5 s mientras te disparan desde una patrulla a menos de 30 m
+WANTED_TIRE_HIT_CHANCE = 0.2
+WANTED_TIRE_SHOT_CHANCE = 0.15
+
+-- Multiplicadores del handling de las patrullas de la persecucion
+WANTED_POLICE_HANDLING = { maxVelocity = 1.2, engineAcceleration = 1.5, tractionMultiplier = 1.15, brakeDeceleration = 1.2 }
+
+-- Pinchos (stinger). MODEL 2899 es la tira de pinchos del juego.
+WANTED_SPIKES = {
+    MODEL = 2899, PIECES = 2, PIECE_LENGTH = 4.6, Z_OFFSET = 0.1, ROT_OFFSET = 90,
+    AHEAD_MIN = 90, AHEAD_MAX = 170,  -- m por delante del jugador, en su ruta probable
+    LIFE = 60000,
 }
 
 -- Vehiculos y agentes. police depende de la ciudad (getZoneName con citiesonly).
@@ -165,12 +185,12 @@ WANTED_POLICE_MODELS = { [596] = true, [597] = true, [598] = true, [599] = true,
     [427] = true, [490] = true, [497] = true, [432] = true, [433] = true }
 
 WANTED_DISPATCH = {
-    TICK = 2500,               -- ms entre despachos (aparece una unidad por despacho)
+    TICK = 1500,               -- ms entre despachos (aparece una unidad por despacho)
     FIRST_DELAY = 1200,        -- ms desde la primera estrella hasta la primera patrulla
-    SPAWN_MIN = 55,            -- m desde el jugador donde aparece una patrulla (en la calle, fuera de la vista,
-    SPAWN_MAX = 110,           --   preferentemente por delante si va en vehiculo)
-    CATCHUP_DISTANCE = 130,    -- m: una patrulla mas lejos y fuera de la vista se adelanta por su ruta
-    CATCHUP_TO = 80,           --   hasta quedar a esta distancia (como las de GTA, que aparecen cerca)
+    SPAWN_MIN = 45,            -- m desde el jugador donde aparece una patrulla (en la calle, fuera de la vista,
+    SPAWN_MAX = 100,           --   preferentemente por delante si va en vehiculo)
+    CATCHUP_DISTANCE = 100,    -- m: una patrulla mas lejos y fuera de la vista se adelanta por su ruta
+    CATCHUP_TO = 60,           --   hasta quedar a esta distancia (como las de GTA, que aparecen cerca)
     HELI_SPAWN = 180,
     LOST_DISTANCE = 250,       -- m: una unidad mas lejos se retira y se manda otra
     LEAVE_TIME = 20000,        -- ms que tardan en irse al terminar la busqueda
