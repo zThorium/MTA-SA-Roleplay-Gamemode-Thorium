@@ -142,11 +142,14 @@
         $("back").classList.toggle("hidden", !T.cat);
         if (!T.cat) {
             $("crumb").textContent = "Categorias";
+            html += '<button type="button" class="item repair" id="repair">Reparar vehiculo<small>Estado ' + d.health + '%</small>' +
+                '<span class="price">' + money(d.repair) + "</span></button>";
             categories().forEach(function (c) {
                 html += '<button type="button" class="item" data-cat="' + c.id + '">' + esc(c.name) +
                     (isChanged(c) ? '<span class="dot">●</span>' : "") + '<span class="price">&rsaquo;</span></button>';
             });
             root.innerHTML = html;
+            $("repair").addEventListener("click", function () { this.disabled = true; send("rp:tune:ui:repair"); });
             root.querySelectorAll("[data-cat]").forEach(function (b) {
                 b.addEventListener("click", function () { open(b.getAttribute("data-cat")); });
             });

@@ -59,6 +59,8 @@ TUNING = {
         { name = "Transfender SF",   x = -1936.1, y = 237.6,  z = 34.3, radius = 4 },
         { name = "Transfender LV",   x = 2386.7, y = 1050.3,  z = 10.8, radius = 4 },
     },
+    REPAIR_BASE = 100,          -- reparar: base + (1000 - vida) * REPAIR_PER_POINT
+    REPAIR_PER_POINT = 2,
     PRICE_COLOR = 150,          -- cada cambio de color (primario, secundario o faros)
     PRICE_PAINTJOB = 1500,
     PRICE_REMOVE = 50,          -- quitar una pieza

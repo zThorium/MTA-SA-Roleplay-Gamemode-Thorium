@@ -14,6 +14,7 @@
 addEvent("rp:tune:open", true)
 addEvent("rp:tune:buy", true)
 addEvent("rp:tune:close", true)
+addEvent("rp:tune:repair", true)
 
 local shopMarkers = {}   -- [marker] = shop
 local tuning = {}        -- [player] = vehicle (panel abierto)
@@ -59,11 +60,77 @@ end
 ----------------------------------------------------------------
 -- Talleres
 ----------------------------------------------------------------
-addEventHandler("onResourceStart", resourceRoot, function()
-    for _, shop in ipairs(TUNING.SHOPS) do
+-- Posiciones de los talleres: las de shared/s_config.lua, salvo las que un
+-- admin movio con /taller mover <n> (se guardan en tuning_shops.json)
+local SHOPS_FILE = "tuning_shops.json"
+local shops = {}
+local shopElements = {}
+
+local function loadShops()
+    shops = {}
+    for i, shop in ipairs(TUNING.SHOPS) do
+        shops[i] = { name = shop.name, x = shop.x, y = shop.y, z = shop.z, rz = shop.rz, radius = shop.radius }
+    end
+    if fileExists(SHOPS_FILE) then
+        local f = fileOpen(SHOPS_FILE, true)
+        local saved = f and fromJSON(fileRead(f, fileGetSize(f)))
+        if f then fileClose(f) end
+        if type(saved) == "table" then
+            for k, pos in pairs(saved) do
+                local i = tonumber(k)
+                if shops[i] and type(pos) == "table" and tonumber(pos.x) then
+                    shops[i].x, shops[i].y, shops[i].z, shops[i].rz = tonumber(pos.x), tonumber(pos.y), tonumber(pos.z), tonumber(pos.rz)
+                end
+            end
+        end
+    end
+end
+
+local function saveShops()
+    local out = {}
+    for i, shop in ipairs(shops) do out[tostring(i)] = { x = shop.x, y = shop.y, z = shop.z, rz = shop.rz } end
+    if fileExists(SHOPS_FILE) then fileDelete(SHOPS_FILE) end
+    local f = fileCreate(SHOPS_FILE)
+    if f then fileWrite(f, toJSON(out, true)) fileClose(f) end
+end
+
+local function buildShops()
+    for _, el in ipairs(shopElements) do if isElement(el) then destroyElement(el) end end
+    shopElements, shopMarkers = {}, {}
+    for _, shop in ipairs(shops) do
         local m = createMarker(shop.x, shop.y, shop.z - 1, "cylinder", shop.radius, 255, 170, 0, 90)
         shopMarkers[m] = shop
-        createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 99999)
+        shopElements[#shopElements + 1] = m
+        shopElements[#shopElements + 1] = createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 99999)
+    end
+end
+
+addEventHandler("onResourceStart", resourceRoot, function()
+    loadShops()
+    buildShops()
+end)
+
+-- /taller lista | /taller mover <n> (admin): pone el taller donde esta tu auto,
+-- con su orientacion. Elige un lugar abierto: ahi se pone el auto al tunear.
+addCommandHandler("taller", function(player, _, action, index)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    if action == "lista" then
+        for i, shop in ipairs(shops) do
+            outputChatBox(("%d. %s (%.1f, %.1f, %.1f)"):format(i, shop.name, shop.x, shop.y, shop.z), player, 245, 165, 36)
+        end
+    elseif action == "mover" then
+        index = tonumber(index)
+        if not index or not shops[index] then return notify(player, "Uso: /taller mover <numero> (ver /taller lista)", "warning") end
+        local el = getPedOccupiedVehicle(player) or player
+        local x, y, z = getElementPosition(el)
+        local _, _, rz = getElementRotation(el)
+        local shop = shops[index]
+        shop.x, shop.y, shop.z, shop.rz = x, y, z, rz
+        saveShops()
+        buildShops()
+        notify(player, ("Taller %s movido a tu posicion."):format(shop.name), "success")
+    else
+        notify(player, "Uso: /taller lista | /taller mover <numero>", "warning")
     end
 end)
 
@@ -139,6 +206,13 @@ local function close(player)
     if isElement(v) then updateFrozen(v) end
 end
 
+-- Reparacion: base + segun el dano del motor (vida de 1000 a 0)
+function repairPrice(v)
+    local health = getElementHealth(v)
+    if health >= 999 then return TUNING.REPAIR_BASE end
+    return math.floor(TUNING.REPAIR_BASE + (1000 - health) * TUNING.REPAIR_PER_POINT)
+end
+
 -- Datos del panel (al entrar y tras cada compra, para seguir tuneando)
 function sendTuning(player, v, shop)
     local data = getVehicleData(v)
@@ -146,7 +220,7 @@ function sendTuning(player, v, shop)
         shop = shop.name, name = getVehicleNameFromModel(data.model), plate = data.plate,
         slots = catalog(v), state = captureTuning(v), paintjobs = PAINTJOB_MODELS[data.model] or 0,
         prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
-        money = getPlayerMoney(player),
+        money = getPlayerMoney(player), health = math.floor(getElementHealth(v) / 10), repair = repairPrice(v),
     })
 end
 
@@ -159,6 +233,11 @@ addEventHandler("rp:tune:open", resourceRoot, function()
     if vehicleSpeedKmh(v) > 5 then return notify(player, "Detente para entrar al taller.", "warning") end
     tuning[player] = v
     setElementFrozen(v, true)
+    -- Si el taller tiene orientacion guardada, el auto queda justo en el punto
+    if shop.rz then
+        setElementPosition(v, shop.x, shop.y, shop.z + 0.3)
+        setElementRotation(v, 0, 0, shop.rz)
+    end
     sendTuning(player, v, shop)
 end)
 
@@ -262,3 +341,17 @@ end)
 
 addEventHandler("onPlayerQuit", root, function() close(source) end)
 addEventHandler("onPlayerVehicleExit", root, function() if tuning[source] then close(source) triggerClientEvent(source, "rp:tune:done", resourceRoot, false) end end)
+
+addEventHandler("rp:tune:repair", resourceRoot, function()
+    local player = client
+    local v = tuning[player]
+    if not v or not isElement(v) or getPedOccupiedVehicle(player) ~= v or not shopOf(v) then return end
+    local price = repairPrice(v)
+    if getPlayerMoney(player) < price then return notify(player, ("Necesitas $%d en efectivo."):format(price), "error") end
+    takePlayerMoney(player, price)
+    fixVehicle(v)
+    saveVehicle(v)
+    exports.rp_characters:saveCharacter(player)
+    notify(player, ("Vehiculo reparado por $%d."):format(price), "success")
+    sendTuning(player, v, shopOf(v) or { name = "Taller" })
+end)

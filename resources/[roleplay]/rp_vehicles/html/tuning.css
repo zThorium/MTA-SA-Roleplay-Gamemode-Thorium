@@ -56,3 +56,5 @@ footer { padding: 12px 14px 14px; border-top: 1px solid var(--border); }
 .btn { padding: 11px; border: 0; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; background: var(--row-hover); color: var(--text); }
 .btn.primary { background: var(--accent); color: #1a1204; }
 .btn:disabled { opacity: 0.45; cursor: default; }
+.item.repair { border-color: rgba(76, 211, 138, 0.4); margin-bottom: 10px; }
+.item.repair small { color: var(--muted); font-size: 12px; margin-left: 6px; }

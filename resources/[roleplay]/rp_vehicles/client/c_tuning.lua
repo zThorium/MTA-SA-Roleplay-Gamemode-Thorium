@@ -32,6 +32,7 @@ addEvent("rp:tune:ui:preview", false)
 addEvent("rp:tune:ui:buy", false)
 addEvent("rp:tune:ui:exit", false)
 addEvent("rp:tune:ui:camera", false)
+addEvent("rp:tune:ui:repair", false)
 
 -- Vistas por categoria. yaw: 0 = delante del auto, 90 = lado derecho, 180 = detras.
 -- pitch: altura en grados. dist: multiplicador de la distancia base. focus: componente a mirar.
@@ -200,6 +201,16 @@ local function updateCamera()
         px, py = px - sideX / len * shift, py - sideY / len * shift
         tx, ty = tx - sideX / len * shift, ty - sideY / len * shift
     end
+    -- Si una pared o un objeto tapa el auto, la camara se pone delante del obstaculo
+    local hit, hx, hy, hz = processLineOfSight(tx, ty, tz, px, py, pz, true, false, false, true, false, true, true)
+    if hit then
+        local vx, vy, vz = tx - hx, ty - hy, tz - hz
+        local l = math.sqrt(vx * vx + vy * vy + vz * vz)
+        if l > 0.01 then
+            local pull = math.min(0.35, l * 0.5)
+            px, py, pz = hx + vx / l * pull, hy + vy / l * pull, hz + vz / l * pull
+        end
+    end
     setCameraMatrix(px, py, pz, tx, ty, tz, 0, 70)
 end
 
@@ -316,6 +327,7 @@ exitTuning = function(bought, silent)
 end
 
 addEventHandler("rp:tune:ui:exit", root, function() exitTuning(false) end)
+addEventHandler("rp:tune:ui:repair", root, function() if active then triggerServerEvent("rp:tune:repair", resourceRoot) end end)
 
 addEventHandler("rp:tune:show", resourceRoot, function(v, data)
     if active then
