@@ -7,7 +7,6 @@ Lo ejecuta el Programador de tareas cada 2 minutos.
 
 Cada ejecución hace `git fetch` en el repositorio git de la propia carpeta del servidor (`mods\deathmatch`; si esa carpeta no
 es un repo, usa un clon aparte en `Documents\mta-rp-sync\repo`). **Nunca hace checkout ni `reset --hard`**: lee los
-epo`). **Nunca hace checkout ni `reset --hard`**: lee los
 archivos nuevos directamente del commit de `main`. Si `main` no
 cambió, termina sin hacer ni escribir nada. Si cambió:
 
