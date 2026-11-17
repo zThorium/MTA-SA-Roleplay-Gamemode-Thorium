@@ -45,8 +45,9 @@ Requisitos: Git instalado y acceso al repositorio (el mismo que usa `git` o `gh`
    powershell -NoProfile -ExecutionPolicy Bypass -File "<ruta>\sync-local.ps1" -Init
    ```
 
-   Por defecto usa `%USERPROFILE%\Documents\mta-rp-sync` (clon en `repo\`, logs y estado al lado) y el servidor en
-   `C:\Program Files (x86)\MTA San Andreas 1.6\server\mods\deathmatch`. Se cambian con `-Root` y `-Server`.
+   Por defecto los logs y el estado van en `%USERPROFILE%\Documents\mta-rp-sync`, y el servidor es
+   `C:\Program Files (x86)\MTA San Andreas 1.6\server\mods\deathmatch`. Se cambian con `-Root` y `-Server`;
+   `-Repo` fuerza otro repo git.
 
 2. Prueba en seco (no copia nada, solo muestra lo que haría):
 
