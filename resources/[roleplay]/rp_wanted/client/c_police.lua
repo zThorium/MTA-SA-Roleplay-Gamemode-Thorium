@@ -35,6 +35,7 @@ local function angleDiff(a, b)
     if d > 180 then d = d - 360 end
     return d
 end
+local burstWheel   -- definida mas abajo (disparos a los neumaticos)
 local function speedKmh(el)
     local vx, vy, vz = getElementVelocity(el)
     return math.sqrt(vx * vx + vy * vy + vz * vz) * 180
@@ -710,20 +711,163 @@ local function isNight()
     return h >= 20 or h < 6
 end
 
+----------------------------------------------------------------
+-- Tirador del helicoptero (desde 4 estrellas): rafagas de M4 simuladas en este
+-- cliente (los NPC no disparan desde un helicoptero). Fogonazo, trazadoras e
+-- impactos; si acierta, el dano se aplica al jugador o a su vehiculo.
+----------------------------------------------------------------
+local tracers = {}
+
+local function damageLocal(amount)
+    local armor = getPedArmor(localPlayer)
+    if armor > 0 then
+        local used = math.min(armor, amount)
+        setPedArmor(localPlayer, armor - used)
+        amount = amount - used
+    end
+    if amount > 0 then setElementHealth(localPlayer, math.max(0, getElementHealth(localPlayer) - amount)) end
+end
+
+local function heliGun(u, now, h, x, y, z, px, py, pz)
+    local H = WANTED_HELI
+    if level < H.SHOOT_LEVEL or u.leaving or isPedDead(localPlayer) then return end
+    if (now + (tonumber(u.id) or 0) * 700) % H.CYCLE > H.BURST then return end
+    if now - (u.shotAt or 0) < H.SHOT_EVERY then return end
+    u.shotAt = now
+    local dist = getDistanceBetweenPoints3D(x, y, z, px, py, pz)
+    if dist > H.RANGE then return end
+    local sx, sy, sz = x, y, z - 1.4
+    if not isLineOfSightClear(sx, sy, sz, px, py, pz + 0.5, true, false, false, true, false, true, false) then return end
+    local pveh = getPedOccupiedVehicle(localPlayer)
+    local speed = speedKmh(pveh or localPlayer)
+    local acc = H.ACCURACY * (1 - math.min(0.6, speed / 250)) * (dist < 60 and 1 or 0.7)
+    local hit = math.random() < acc
+    local spread = hit and 0.4 or (1.5 + math.random() * 3)
+    local a = math.random() * math.pi * 2
+    local tx, ty, tz = px + math.cos(a) * spread, py + math.sin(a) * spread, pz + (hit and 0.3 or -0.8)
+    local dx, dy, dz = tx - sx, ty - sy, tz - sz
+    local len = math.sqrt(dx * dx + dy * dy + dz * dz)
+    dx, dy, dz = dx / len, dy / len, dz / len
+    fxAddGunshot(sx, sy, sz, dx, dy, dz, true)
+    local hitAny, ix, iy, iz = processLineOfSight(sx, sy, sz, sx + dx * (len + 20), sy + dy * (len + 20), sz + dz * (len + 20),
+        true, true, false, true, false, false, false, false, h)
+    if hitAny then
+        fxAddBulletImpact(ix, iy, iz, -dx, -dy, -dz, 1, 4, 1)
+        tracers[#tracers + 1] = { sx, sy, sz, ix, iy, iz, now }
+    else
+        tracers[#tracers + 1] = { sx, sy, sz, tx, ty, tz, now }
+    end
+    if not hit then return end
+    if pveh and getVehicleController(pveh) == localPlayer then
+        setElementHealth(pveh, math.max(0, getElementHealth(pveh) - H.DAMAGE_VEHICLE))
+        if math.random() < H.TIRE_CHANCE then burstWheel(pveh) end
+        -- en moto o descapotable tambien pega en el conductor
+        local vt = getVehicleType(pveh)
+        if vt == "Bike" or vt == "BMX" or vt == "Quad" then damageLocal(H.DAMAGE_PED) end
+    elseif not pveh then
+        damageLocal(H.DAMAGE_PED)
+    end
+end
+
+addEventHandler("onClientRender", root, function()
+    if #tracers == 0 then return end
+    local now = getTickCount()
+    for i = #tracers, 1, -1 do
+        local t = tracers[i]
+        if now - t[7] > 70 then
+            table.remove(tracers, i)
+        else
+            dxDrawLine3D(t[1], t[2], t[3], t[4], t[5], t[6], tocolor(255, 220, 120, 200), 1.2)
+        end
+    end
+end)
+
+----------------------------------------------------------------
+-- SWAT a rapel desde el helicoptero
+----------------------------------------------------------------
+local function wantsSwatDrop(u, now)
+    if level < WANTED_HELI.SWAT_LEVEL or u.leaving or getElementInterior(localPlayer) ~= 0 then return false end
+    if now - (u.dropReqAt or 0) < WANTED_HELI.SWAT_COOLDOWN then return false end
+    for _, o in pairs(units) do
+        if o.kind == "swat" and not o.leaving then return false end
+    end
+    return speedKmh(getPedOccupiedVehicle(localPlayer) or localPlayer) < WANTED_HELI.SWAT_MAX_SPEED
+end
+
+local function rappelTick(u, now)
+    if not u.rappel then return end
+    local done = true
+    local step = WANTED_HELI.RAPPEL_SPEED * TICK / 1000
+    for _, ped in ipairs(u.peds) do
+        if isElement(ped) and not isPedDead(ped) and controlled(u, ped) and not u.landed[ped] then
+            local x, y, z = getElementPosition(ped)
+            local ground = getGroundPosition(x, y, z + 1)
+            if not ground or ground == 0 then ground = z - 50 end
+            if z - step <= ground + 1.05 then
+                u.landed[ped] = true
+                setElementFrozen(ped, false)
+                setPedAnimation(ped)
+                setElementPosition(ped, x, y, ground + 1.05)
+            else
+                done = false
+                setElementFrozen(ped, true)
+                setElementPosition(ped, x, y, z - step)
+                local _, anim = getPedAnimation(ped)
+                if not anim or anim:lower() ~= "abseil" then
+                    setPedAnimation(ped, "ped", "ABSEIL", -1, true, false, false, true)
+                end
+            end
+        end
+    end
+    if done then u.rappel = nil end
+end
+
+-- Cuerdas del rapel
+addEventHandler("onClientRender", root, function()
+    for _, u in pairs(units) do
+        if u.rappel and isElement(u.drop) then
+            local hx, hy, hz = getElementPosition(u.drop)
+            for _, ped in ipairs(u.peds) do
+                if isElement(ped) and not u.landed[ped] then
+                    local x, y, z = getElementPosition(ped)
+                    dxDrawLine3D(hx, hy, hz - 1, x, y, z + 0.8, tocolor(40, 40, 40, 255), 2)
+                end
+            end
+        end
+    end
+end)
+
 local function heliTick(u, now)
     local h = u.vehicle
     if not isElementSyncer(h) or isVehicleBlown(h) then return end
     local px, py, pz = getElementPosition(localPlayer)
     local x, y, z = getElementPosition(h)
     local tx, ty, tz
+    local dropping = false
     if u.leaving or level == 0 then
         u.away = u.away or { x + (x - px) * 8, y + (y - py) * 8 }
         tx, ty, tz = u.away[1], u.away[2], z + 30
     else
-        local a = now / 1000 * 0.25 + u.id * 2
-        tx, ty = px + math.cos(a) * 22, py + math.sin(a) * 22
         local ground = getGroundPosition(px, py, pz + 80)
-        tz = math.max(pz, ground or pz) + 30
+        ground = math.max(pz - 2, (ground and ground ~= 0) and ground or pz)
+        -- Equipo SWAT: baja hasta quedar justo encima del jugador y lo suelta
+        local squad
+        for _, o in pairs(units) do
+            if o.kind == "swat" and o.rappel and o.drop == h then squad = o end
+        end
+        if squad or wantsSwatDrop(u, now) then
+            dropping = true
+            tx, ty, tz = px + 4, py + 4, ground + WANTED_HELI.HOVER_HEIGHT
+            if not squad and getDistanceBetweenPoints2D(x, y, tx, ty) < 12 and math.abs(z - tz) < 5 then
+                u.dropReqAt = now
+                triggerServerEvent("rp:wanted:heliDrop", resourceRoot, h)
+            end
+        else
+            local a = now / 1000 * 0.25 + (tonumber(u.id) or 0) * 2
+            tx, ty = px + math.cos(a) * 22, py + math.sin(a) * 22
+            tz = ground + 30
+        end
+        if not dropping then heliGun(u, now, h, x, y, z, px, py, pz) end
     end
     local dx, dy, dz = tx - x, ty - y, tz - z
     local d = math.sqrt(dx * dx + dy * dy + dz * dz)
@@ -917,7 +1061,7 @@ local function setDriveby(ped, on)
 end
 
 local wheelAt = 0
-local function burstWheel(veh)
+function burstWheel(veh)
     local states = { getVehicleWheelStates(veh) }
     local good = {}
     for i = 1, 4 do if states[i] == 0 then good[#good + 1] = i end end
@@ -1047,6 +1191,8 @@ local function tick()
     for _, u in pairs(units) do
         if u.kind == "heli" then
             if isElement(u.vehicle) then heliTick(u, now) end
+        elseif u.kind == "swat" and u.rappel then
+            rappelTick(u, now)
         else
             if u.kind == "car" and isElement(u.vehicle) then
                 driveCar(u, now)
@@ -1078,6 +1224,9 @@ addEventHandler("rp:wanted:unit", resourceRoot, function(data)
     if data.leaving and not u.leaving then u.wp, u.leaveTarget = nil, nil end
     u.leaving = data.leaving
     u.spike = data.spike
+    if data.drop and not u.drop then
+        u.drop, u.rappel, u.landed = data.drop, true, {}
+    end
     u.created = u.created or getTickCount()
     u.pedSet = {}
     for _, ped in ipairs(u.peds) do u.pedSet[ped] = true end

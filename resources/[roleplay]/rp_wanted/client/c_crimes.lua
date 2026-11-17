@@ -53,14 +53,39 @@ local function policeWitness(victim)
     return false
 end
 
-local function report(crime, victim, dontCare)
+-- Testigo civil: un peaton (que no sea la victima) o un jugador cerca que ve
+-- el delito y llama a la policia (GTA: sin testigos el delito no cuenta)
+local function civilWitness(victim)
+    local px, py, pz = getElementPosition(localPlayer)
+    local r = WANTED.CIVIL_WITNESS_RADIUS
+    for _, ped in ipairs(getElementsWithinRange(px, py, pz, r, "ped")) do
+        if ped ~= victim and not isPedDead(ped) and getPedOccupiedVehicle(ped) ~= getPedOccupiedVehicle(localPlayer)
+            and sees(ped, px, py, pz) then
+            return true
+        end
+    end
+    for _, pl in ipairs(getElementsWithinRange(px, py, pz, r, "player")) do
+        if pl ~= localPlayer and not isPedDead(pl) and sees(pl, px, py, pz) then return true end
+    end
+    return false
+end
+
+-- victimSees: la victima misma es testigo (le apuntan, le roban el auto, lo chocan)
+local function report(crime, victim, dontCare, victimSees)
     local key = crime .. keyOf(victim)
     local now = getTickCount()
     if sent[key] and now - sent[key] < WANTED.QUEUE_TIME then return dbg("%s repetido (cola de 10 s)", crime) end
+    local witness
+    -- los delitos contra la policia siempre los ve la policia
+    if crime:sub(1, 4) == "cop_" or crime == "speeding" or policeWitness(victim) then
+        witness = "police"
+    elseif victimSees or civilWitness(victim) then
+        witness = "civil"
+    end
+    if not witness then return dbg("%s sin testigos: no cuenta", crime) end
     sent[key] = now
-    local witnessed = policeWitness(victim)
-    dbg("%s -> servidor%s", crime, witnessed and " (lo vio la policia)" or "")
-    triggerServerEvent("rp:wanted:crime", resourceRoot, crime, keyOf(victim), dontCare and true or false, witnessed)
+    dbg("%s -> servidor (%s)", crime, witness == "police" and "lo vio la policia" or "testigo civil")
+    triggerServerEvent("rp:wanted:crime", resourceRoot, crime, keyOf(victim), dontCare and true or false, witness)
 end
 
 setTimer(function()
@@ -118,7 +143,7 @@ addEventHandler("onClientPlayerTarget", localPlayer, function(target)
     if t ~= "ped" then return end
     local weapon = getPedWeapon(localPlayer)
     if weapon < 22 or weapon > 38 or not getPedControlState(localPlayer, "aim_weapon") then return end
-    report("aim_gun", target, WANTED_DONT_CARE_SKINS[getElementModel(target)])
+    report("aim_gun", target, WANTED_DONT_CARE_SKINS[getElementModel(target)], not isPedDead(target))
 end)
 
 ----------------------------------------------------------------
@@ -151,7 +176,7 @@ addEventHandler("onClientVehicleCollision", root, function(hit, force)
     if isCopCar(hit) then
         if force >= 250 then report("cop_car", hit) end
     elseif getVehicleController(hit) then
-        report("car_hit", hit)
+        report("car_hit", hit, false, true)
     end
 end)
 
@@ -176,7 +201,7 @@ addEventHandler("onClientVehicleStartEnter", root, function(player, seat)
     if player ~= localPlayer or seat ~= 0 or not active() then return end
     local driver = getVehicleController(source)
     if (driver and driver ~= localPlayer) or getElementData(source, "rp:copCar") then
-        report("car_steal", source)
+        report("car_steal", source, false, true)
     end
 end)
 

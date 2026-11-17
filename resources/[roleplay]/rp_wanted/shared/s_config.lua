@@ -43,6 +43,14 @@ WANTED = {
     -- delito da estrella inmediata y el delito vale el doble
     WITNESS_RADIUS = 45,
     WITNESS_MULTIPLIER = 2,
+    -- Sin testigos el delito no cuenta. Un civil (peaton o jugador) a esta distancia
+    -- que te ve llama a la policia: el delito se aplica a los 3 s
+    CIVIL_WITNESS_RADIUS = 30,
+    CIVIL_REPORT_DELAY = 3000,
+
+    -- Tope de estrellas segun la antiguedad del personaje (dias desde que se creo),
+    -- como el progreso de la historia en GTA SA: 4 al empezar, 5 y luego 6
+    MAX_LEVEL_BY_AGE = { { days = 0, max = 4 }, { days = 3, max = 5 }, { days = 10, max = 6 } },
 
     -- La policia (faccion reservada en rp_factions / rp_database) de servicio (con
     -- uniforme o en un vehiculo policial) no acumula busqueda; de civil, si
@@ -145,6 +153,30 @@ WANTED_LEVELS = {
 
 -- Arma de los acompanantes para disparar desde la ventanilla (MP5)
 WANTED_DRIVEBY_WEAPON = 29
+
+-- Calibre mas pesado segun las estrellas: la policia comun pasa de pistola a
+-- escopeta (3) y MP5 (4); desde 5 estrellas todos llevan M4
+WANTED_HEAVY_WEAPON = { [3] = 25, [4] = 29, [5] = 31, [6] = 31 }
+
+-- Helicoptero desde 4 estrellas: un tirador con M4 dispara rafagas desde el
+-- aire y, si vas a pie o despacio, baja a rapel un equipo SWAT
+WANTED_HELI = {
+    SHOOT_LEVEL = 4,
+    GUNNER_SKIN = 285, GUNNER_WEAPON = 31,
+    RANGE = 110,              -- m
+    BURST = 1600, CYCLE = 4000, SHOT_EVERY = 110,   -- ms: rafaga de 1.6 s cada 4 s
+    ACCURACY = 0.28,          -- probabilidad de acierto por bala (baja si vas rapido o lejos)
+    DAMAGE_PED = 9,           -- vida por bala (M4)
+    DAMAGE_VEHICLE = 18,
+    TIRE_CHANCE = 0.08,
+    SWAT_LEVEL = 4,
+    SWAT_COUNT = 3,
+    SWAT_SKIN = 285, SWAT_WEAPON = 31,
+    SWAT_COOLDOWN = 45000,    -- ms entre equipos
+    SWAT_MAX_SPEED = 30,      -- km/h: solo baja si vas a pie o despacio
+    HOVER_HEIGHT = 14,        -- m sobre el suelo mientras bajan
+    RAPPEL_SPEED = 6,         -- m/s
+}
 
 -- Probabilidad de reventarte un neumatico: por bala de policia que pega en tu
 -- vehiculo, y cada 1.5 s mientras te disparan desde una patrulla a menos de 30 m

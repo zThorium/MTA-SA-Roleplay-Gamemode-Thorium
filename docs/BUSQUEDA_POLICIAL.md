@@ -106,6 +106,12 @@ Tercera ronda (comparado con el análisis de la wiki):
 - **Disparar, apuñalar o atropellar a un policía** deja 2 estrellas al instante; golpearlo, 1.
 - **Perseguidores**: 1 a 1 estrella, 2 de 2 a 4 y 3 en 5-6; el resto intercepta.
 
+Cuarta ronda:
+- **Testigos obligatorios**: un delito solo cuenta si alguien lo ve. Si es la policía (o el delito es contra un policía) se aplica al momento, vale el doble y da estrella. Si es un civil (peatón o jugador a menos de 30 m con línea de visión, o la víctima cuando le apuntas, le robas el auto o lo chocas), llama a la policía y el delito se aplica a los 3 s. Sin testigos no pasa nada.
+- **Tope de estrellas por antigüedad del personaje** (como el progreso de la historia): 4 al crearlo, 5 desde los 3 días y 6 desde los 10. Se lee de `characters.created_at`; `/busquedainfo` lo muestra.
+- **Helicóptero desde 4 estrellas**: lleva un tirador SWAT con M4. Las ráfagas (1,6 s cada 4 s) se simulan en el cliente con fogonazo, trazadoras e impactos; la puntería baja si vas rápido o lejos. Si vas a pie o despacio, baja a 14 m y suelta 3 SWAT con M4 a rapel (con cuerda y animación `ABSEIL`), como mucho un equipo cada 45 s.
+- **Calibre según estrellas**: la policía común lleva escopeta a 3 estrellas y MP5 a 4; desde 5 estrellas todos llevan M4.
+
 Decisiones:
 - **Sin cambios en `schema.lua`**. En `rp_hud` solo se agrega `c_wanted.lua` y una línea en su `meta.xml` (el PR #6 también toca ese `meta.xml`: conflicto de una línea, fácil de resolver).
 - **Sin CEF**: el HUD usa dx, así no se crean navegadores.

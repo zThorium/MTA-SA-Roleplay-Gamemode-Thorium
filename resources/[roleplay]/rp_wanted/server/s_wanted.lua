@@ -65,6 +65,30 @@ local function state(player)
 end
 
 ----------------------------------------------------------------
+-- Tope de estrellas por antiguedad del personaje (como el progreso de la
+-- historia en GTA SA). Se lee de characters.created_at al aparecer.
+----------------------------------------------------------------
+local maxLevels = {}   -- [player] = tope
+
+local function maxLevelOf(player)
+    return maxLevels[player] or WANTED.MAX_LEVEL
+end
+
+local function loadMaxLevel(player, characterId)
+    local ok, conn = pcall(function() return exports.rp_database:getConnection() end)
+    if not ok or not conn or not characterId then return end
+    dbQuery(function(q)
+        local rows = dbPoll(q, 0)
+        local days = rows and rows[1] and tonumber(rows[1].days) or 0
+        local cap = WANTED.MAX_LEVEL
+        for _, t in ipairs(WANTED.MAX_LEVEL_BY_AGE) do
+            if days >= t.days then cap = t.max end
+        end
+        if isElement(player) and characterOf(player) == characterId then maxLevels[player] = cap end
+    end, conn, "SELECT DATEDIFF(NOW(), created_at) AS days FROM characters WHERE id = ?", characterId)
+end
+
+----------------------------------------------------------------
 -- Policia jugadora: aviso de la central y punto en el mapa
 ----------------------------------------------------------------
 local blips = {}   -- [buscado] = blip
@@ -120,6 +144,8 @@ end
 local function applyChaos(player, chaos)
     local s = state(player)
     s.chaos = math.max(0, math.min(WANTED.MAX_CHAOS, math.floor(chaos)))
+    local cap = maxLevelOf(player)
+    if cap < WANTED.MAX_LEVEL then s.chaos = math.min(s.chaos, WANTED.THRESHOLDS[cap + 1] - 1) end
     local old = s.level
     local level = wantedLevelFromChaos(s.chaos)
     if level == old then return end
@@ -149,6 +175,8 @@ local policeNear
 -- Delito: se aplica medio segundo despues (cola de GTA) y no se repite con la
 -- misma victima en QUEUE_TIME. Si lo ve un policia (witnessed, o una unidad o
 -- policia jugador cerca) vale el doble y da estrella al momento.
+-- witnessed: "police" (lo vio la policia), "civil" (un testigo llamo a la policia)
+-- o nil/true desde otros recursos (cuenta como civil). Sin testigos el cliente ni lo avisa.
 function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
@@ -177,11 +205,11 @@ function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
         if not isElement(player) or W[player] ~= s or s.busted then return end
         local points = crime.points * (WANTED.CRIME_SCALE or 1)
         if dontCare then points = points / WANTED.DONT_CARE_DIVISOR end
-        local seen = witnessed or policeNear(player, WANTED.WITNESS_RADIUS)
+        local seen = witnessed == "police" or policeNear(player, WANTED.WITNESS_RADIUS)
         if seen then points = points * WANTED.WITNESS_MULTIPLIER end
         local chaos = s.chaos + math.floor(points)
         -- estrella inmediata: delito grave o visto por la policia
-        local minLevel = crime.instant or 0
+        local minLevel = math.min(crime.instant or 0, maxLevelOf(player))
         if seen and points > 0 then minLevel = math.max(minLevel, 1) end
         if minLevel > 0 and wantedLevelFromChaos(chaos) < minLevel then
             chaos = WANTED.SET_LEVEL_CHAOS[minLevel]
@@ -195,7 +223,8 @@ function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
             chaos = math.max(chaos, s.parole.chaos)
         end
         applyChaos(player, chaos)
-    end, WANTED.REPORT_DELAY, 1)
+    end, (witnessed == "police" or policeNear(player, WANTED.WITNESS_RADIUS)) and WANTED.REPORT_DELAY
+        or WANTED.CIVIL_REPORT_DELAY, 1)
     return true
 end
 
@@ -227,7 +256,9 @@ addEventHandler("rp:wanted:crime", resourceRoot, function(crimeKey, victimKey, d
     if now - s.reportWindow > 1000 then s.reportWindow, s.reports = now, 0 end
     s.reports = s.reports + 1
     if s.reports > 12 then return end
-    reportCrime(player, crimeKey, type(victimKey) == "string" and victimKey:sub(1, 40) or "", dontCare == true, witnessed == true)
+    -- sin testigo valido no cuenta (lo filtra el cliente; aqui se exige igual)
+    if witnessed ~= "police" and witnessed ~= "civil" then return end
+    reportCrime(player, crimeKey, type(victimKey) == "string" and victimKey:sub(1, 40) or "", dontCare == true, witnessed)
 end)
 
 -- Delitos contra otros jugadores (golpes, disparos, atropellos)
@@ -239,7 +270,8 @@ addEventHandler("onPlayerDamage", root, function(attacker, weapon)
     end
     if not attacker or attacker == source or getElementType(attacker) ~= "player" then return end
     local crime = wantedCrimeForPedDamage(weapon, isPoliceOnDuty(source), byVehicle)
-    if crime then reportCrime(attacker, crime, getPlayerSerial(source)) end
+    -- la victima (un jugador) es testigo
+    if crime then reportCrime(attacker, crime, getPlayerSerial(source), false, "civil") end
 end)
 
 ----------------------------------------------------------------
@@ -444,11 +476,13 @@ local function forget(player)
     end
 end
 
-addEventHandler("onPlayerQuit", root, function() forget(source) end)
+addEventHandler("onPlayerQuit", root, function() forget(source) maxLevels[source] = nil end)
 addEventHandler("rp:onCharacterLogout", root, function() forget(source) end)
 
 addEventHandler("rp:onCharacterSpawn", root, function(characterId)
     local player = source
+    maxLevels[player] = nil
+    loadMaxLevel(player, characterId)
     local saved = remembered[characterId]
     remembered[characterId] = nil
     W[player] = nil
@@ -468,6 +502,9 @@ local sprayCooldown = {}
 
 addEventHandler("onResourceStart", resourceRoot, function()
     outputServerLog("[rp_wanted] Busqueda policial iniciada (/busquedainfo, /delitosdebug)")
+    for _, p in ipairs(getElementsByType("player")) do
+        if characterOf(p) then loadMaxLevel(p, characterOf(p)) end
+    end
     for _, spot in ipairs(WANTED.SPRAYS) do
         local marker = createMarker(spot.x, spot.y, spot.z - 1, "cylinder", 4, 245, 165, 36, 60)
         setElementData(marker, "rp:spray", spot.name, false)
@@ -536,6 +573,8 @@ addCommandHandler("busquedainfo", function(player)
     outputChatBox(("Busqueda: %d estrellas, %d puntos de caos (siguiente estrella: %s)."):format(
         s and s.level or 0, s and s.chaos or 0,
         tostring(WANTED.THRESHOLDS[(s and s.level or 0) + 1] or "-")), player, 245, 165, 36)
+    outputChatBox(("Tope de estrellas de tu personaje: %d (sube con la antiguedad del personaje)."):format(maxLevelOf(player)),
+        player, 245, 165, 36)
     if isWantedPolice(player) then
         outputChatBox(isPoliceOnDuty(player)
             and "Eres policia de servicio (uniforme o vehiculo policial): tus delitos no suman."
