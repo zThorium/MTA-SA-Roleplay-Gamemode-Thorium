@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Faccion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window" id="window">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="tag" id="f-tag">--</span>
+                <div>
+                    <h1 id="f-name">Faccion</h1>
+                    <p class="sub" id="f-type"></p>
+                </div>
+            </div>
+            <nav id="tabs"></nav>
+            <div class="me">
+                <span class="label">Tu rol</span>
+                <strong id="me-rank">-</strong>
+                <span class="sub" id="me-salary"></span>
+            </div>
+        </aside>
+
+        <section class="content">
+            <header>
+                <h2 id="title">Resumen</h2>
+                <p class="hint"><kbd>F3</kbd> o <kbd>Esc</kbd> para cerrar</p>
+                <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+            </header>
+            <div class="panel" id="panel"></div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
