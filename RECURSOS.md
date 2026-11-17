@@ -25,6 +25,7 @@
 | `rp_dealership` | Concesionario Coutt and Schutz: autos al azar que cambian cada 60 min, compra con el banco, entrega segura. Admin: `/dealer puesto <n>`, `/dealer entrega`, `/dealer rotar`. |
 | `rp_factions` | Facciones con panel en F3: el lider crea roles con nivel, sueldo y permisos (ver miembros, invitar, expulsar, cambiar rol, gestionar roles, fondos, registro, anuncio). Cada miembro solo ve lo que su rol permite. `/f`, `/finvitar`, `/aceptarfaccion`, `/salirfaccion`. Admin: `/crearfaccion <tipo> <siglas> <nombre>`, `/setlider <jugador> <id>`, `/darfondos`, `/borrarfaccion`, `/facciones`. |
 | `rp_payday` | Sueldo cada 60 min de juego (sin contar AFK, se conserva entre sesiones) al banco: el del rol en la faccion (Estado o fondos de la faccion) o el sueldo base del Estado. `/payday`. Admin: `/forzarpayday <jugador>`. |
+| `rp_help` | Panel de ayuda CEF con **F1** (o `/ayuda`): inicio, guia para nuevos, reglas, conceptos de rol (MG, PG, DM, PK, CK...), teclas, comandos con buscador y boton de Discord (enlace en `shared/s_config.lua`, `DISCORD_URL`). Pestana **Reportar** (o `/reportar`): motivo, jugador y descripcion; se guarda en la tabla `reports` (la crea el propio recurso) y avisa al instante al staff conectado. El jugador ve el estado de sus reportes. Admin: `/reportes`, `/atender <id>`, `/cerrarreporte <id> [nota]`. Todo el contenido se edita en `shared/s_config.lua`. |
 
 Hombres = cuerpo de CJ (skin 0) sin cabeza + cabeza + ropa nativa de CJ. Mujeres = skin.
 

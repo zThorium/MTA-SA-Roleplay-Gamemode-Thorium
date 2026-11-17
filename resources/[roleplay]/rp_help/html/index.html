@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Ayuda</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window" id="window">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="logo">?</span>
+                <div>
+                    <h1 id="server-name">Servidor</h1>
+                    <p class="sub">Centro de ayuda</p>
+                </div>
+            </div>
+            <nav id="tabs"></nav>
+            <button type="button" class="discord" id="btn-discord">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.2a18.3 18.3 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1c-.7-.3-1.4-.6-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7zM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"/></svg>
+                <span>
+                    <strong>Nuestro Discord</strong>
+                    <small id="discord-sub">Proximamente</small>
+                </span>
+            </button>
+        </aside>
+
+        <section class="content">
+            <header>
+                <h2 id="title">Inicio</h2>
+                <input type="search" id="search" placeholder="Buscar..." autocomplete="off">
+                <p class="hint"><kbd>F1</kbd> o <kbd>Esc</kbd> para cerrar</p>
+                <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+            </header>
+            <div class="panel" id="panel"></div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
