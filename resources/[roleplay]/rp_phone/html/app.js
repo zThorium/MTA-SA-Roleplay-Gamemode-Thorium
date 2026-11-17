@@ -58,6 +58,10 @@
         b.addEventListener("click", function () { show(b.dataset.to || "home"); });
     });
     $("home-bar").addEventListener("click", function () { show("home"); });
+    // Apps de otros recursos (se abren en su propia interfaz)
+    document.querySelectorAll("[data-app]").forEach(function (b) {
+        b.addEventListener("click", function () { send("rp:phone:ui:openApp", b.dataset.app); });
+    });
     document.addEventListener("keydown", function (e) {
         var tag = document.activeElement && document.activeElement.tagName;
         if (e.key === "Escape" || ((e.key === "p" || e.key === "P") && tag !== "INPUT" && tag !== "TEXTAREA")) {

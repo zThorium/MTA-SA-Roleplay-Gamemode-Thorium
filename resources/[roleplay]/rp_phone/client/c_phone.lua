@@ -16,7 +16,7 @@ addEvent("rp:phone:contacts", true)
 addEvent("rp:social:feed", true)
 addEvent("rp:bank:data", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "feed", "capture", "post", "like" }) do
+    "bankOpen", "bankAction", "feed", "capture", "post", "like", "openApp" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -79,6 +79,14 @@ end)
 -- Telefono -> servidor
 ----------------------------------------------------------------
 addEventHandler("rp:phone:ui:close", root, close)
+-- Apps de otros recursos: se cierra el telefono y se abre la app (p. ej. Vroom de rp_rides)
+local EXTERNAL_APPS = { vroom = "rp:rides:openApp" }
+addEventHandler("rp:phone:ui:openApp", root, function(app)
+    local event = EXTERNAL_APPS[app]
+    if not event then return end
+    close()
+    triggerEvent(event, localPlayer)
+end)
 addEventHandler("rp:phone:ui:noteSave", root, function(id, title, body)
     triggerServerEvent("rp:phone:note:save", resourceRoot, tonumber(id), tostring(title or ""), tostring(body or ""))
 end)
