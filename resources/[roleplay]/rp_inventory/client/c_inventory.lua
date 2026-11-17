@@ -7,12 +7,19 @@
 
 local screenW, screenH = guiGetScreenSize()
 local browserGui, browser, ready = nil, nil, false
+local visible = false
 local lastData = nil
 
 addEvent("rp:inv:update", true)
 addEvent("rp:inv:ui:close", false)
 addEvent("rp:inv:ui:use", false)
 addEvent("rp:inv:ui:drop", false)
+
+-- El navegador CEF se crea UNA vez por personaje (oculto) y se reutiliza.
+-- Antes se creaba y destruia en cada pulsacion de I (arranque de Chromium +
+-- carga de HTML/CSS/JS + viaje al servidor), de ahi el retraso al abrir.
+-- Ahora abrir = mostrar la GUI ya cargada, con los datos que el servidor
+-- mantiene sincronizados en segundo plano (rp:inv:update).
 
 local function render()
     if not (isElement(browser) and ready and lastData) then return end
@@ -21,13 +28,32 @@ local function render()
 end
 
 local function isOpen()
-    return isElement(browserGui)
+    return visible and isElement(browserGui)
+end
+
+local function destroyBrowser()
+    if isElement(browserGui) then destroyElement(browserGui) end
+    browserGui, browser, ready, visible = nil, nil, false, false
+end
+
+local function createBrowser()
+    if isElement(browserGui) then return end
+    browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
+    guiSetVisible(browserGui, false)
+    browser = guiGetBrowser(browserGui)
+    addEventHandler("onClientBrowserCreated", browser, function()
+        loadBrowserURL(source, "http://mta/local/html/index.html")
+    end)
+    addEventHandler("onClientBrowserDocumentReady", browser, function()
+        ready = true
+        render()
+    end)
 end
 
 local function close()
-    if not isOpen() then return end
-    destroyElement(browserGui)
-    browserGui, browser, ready = nil, nil, false
+    if not visible then return end
+    visible = false
+    if isElement(browserGui) then guiSetVisible(browserGui, false) end
     showCursor(false)
     guiSetInputEnabled(false)
 end
@@ -37,18 +63,16 @@ local function open()
     if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
     if isCursorShowing() or isConsoleActive() or isChatBoxInputActive() or isMainMenuActive() then return end
 
-    browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
-    browser = guiGetBrowser(browserGui)
-    addEventHandler("onClientBrowserCreated", browser, function()
-        loadBrowserURL(source, "http://mta/local/html/index.html")
-    end)
-    addEventHandler("onClientBrowserDocumentReady", browser, function()
-        ready = true
-        render()
-    end)
+    if not isElement(browserGui) then createBrowser() end   -- por si aun no existia
+    visible = true
+    guiSetVisible(browserGui, true)
+    guiBringToFront(browserGui)
+    focusBrowser(browser)
     showCursor(true)
     guiSetInputEnabled(true)
-    triggerServerEvent("rp:inv:request", resourceRoot)
+    render()
+    -- Solo pedimos datos si aun no llegaron (normalmente ya estan sincronizados)
+    if not lastData then triggerServerEvent("rp:inv:request", resourceRoot) end
 end
 
 addEventHandler("rp:inv:update", resourceRoot, function(items, weight, maxWeight)
@@ -70,19 +94,30 @@ end)
 -- Cerrar si el personaje muere o sale
 addEventHandler("onClientPlayerWasted", localPlayer, close)
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
-    if key == "rp:characterId" and not new then
+    if key ~= "rp:characterId" then return end
+    if new then
+        createBrowser()
+    else
         close()
+        destroyBrowser()
         lastData = nil
     end
 end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
+    if getElementData(localPlayer, "rp:characterId") then
+        createBrowser()
+        triggerServerEvent("rp:inv:request", resourceRoot)
+    end
     bindKey("i", "down", function()
         if isOpen() then close() else open() end
     end)
 end)
 
-addEventHandler("onClientResourceStop", resourceRoot, close)
+addEventHandler("onClientResourceStop", resourceRoot, function()
+    close()
+    destroyBrowser()
+end)
 
 -- Export cliente: permite a otros recursos saber si el inventario esta abierto
 function isInventoryOpen()

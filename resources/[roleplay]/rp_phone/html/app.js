@@ -58,6 +58,10 @@
         b.addEventListener("click", function () { show(b.dataset.to || "home"); });
     });
     $("home-bar").addEventListener("click", function () { show("home"); });
+    // Apps de otros recursos (se abren en su propia interfaz)
+    document.querySelectorAll("[data-app]").forEach(function (b) {
+        b.addEventListener("click", function () { send("rp:phone:ui:openApp", b.dataset.app); });
+    });
     document.addEventListener("keydown", function (e) {
         var tag = document.activeElement && document.activeElement.tagName;
         if (e.key === "Escape" || ((e.key === "p" || e.key === "P") && tag !== "INPUT" && tag !== "TEXTAREA")) {
@@ -239,7 +243,7 @@
             list.innerHTML = "";
             var rows = Array.isArray(d.history) ? d.history : [];
             if (!rows.length) return emptyItem(list, "Sin movimientos");
-            var TYPES = { deposit: ["Deposito", 1], withdraw: ["Retiro", 0], transfer_in: ["De ", 1], transfer_out: ["A ", 0], purchase: ["Compra: ", 0], sale: ["Venta: ", 1] };
+            var TYPES = { deposit: ["Deposito", 1], withdraw: ["Retiro", 0], transfer_in: ["De ", 1], transfer_out: ["A ", 0], purchase: ["Compra: ", 0], sale: ["Venta: ", 1], payday: ["Sueldo: ", 1] };
             rows.forEach(function (r) {
                 var t = TYPES[r.type] || [r.type, 1];
                 var li = el("li");

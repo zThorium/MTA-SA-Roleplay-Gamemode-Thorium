@@ -43,9 +43,10 @@ function saveCharacter(player)
 
     local x, y, z = getElementPosition(player)
     local _, _, rot = getElementRotation(player)
+    -- La skin sale de la fila (no del modelo actual) para no guardar una prenda en prueba
     return dbExec(db(),
         "UPDATE characters SET skin = ?, money = ?, health = ?, armor = ?, pos_x = ?, pos_y = ?, pos_z = ?, rotation = ?, interior = ?, dimension = ? WHERE id = ?",
-        getElementModel(player), getPlayerMoney(player), getElementHealth(player), getPedArmor(player),
+        tonumber(row.skin) or getElementModel(player), getPlayerMoney(player), getElementHealth(player), getPedArmor(player),
         x, y, z, rot, getElementInterior(player), getElementDimension(player), row.id)
 end
 
@@ -67,3 +68,48 @@ setTimer(function()
         saveCharacter(player)
     end
 end, SPAWN.AUTOSAVE_INTERVAL, 0)
+
+----------------------------------------------------------------
+-- Apariencia (usado por rp_clothing)
+----------------------------------------------------------------
+local LOOK_COLUMNS = { skin = true, clothes_torso = true, clothes_legs = true, clothes_shoes = true }
+
+-- Apariencia guardada del personaje activo
+function getCharacterLook(player)
+    local row = active[player]
+    if not row then return false end
+    return {
+        gender = tonumber(row.gender), skin = tonumber(row.skin), race = tonumber(row.race), head = tonumber(row.head),
+        clothes_torso = tonumber(row.clothes_torso), clothes_legs = tonumber(row.clothes_legs), clothes_shoes = tonumber(row.clothes_shoes),
+    }
+end
+
+-- Guarda cambios de apariencia (solo columnas permitidas) y los aplica
+function setCharacterLook(player, changes)
+    local row = active[player]
+    if not row or type(changes) ~= "table" then return false end
+    local sets, params = {}, {}
+    for column, value in pairs(changes) do
+        if LOOK_COLUMNS[column] and type(value) == "number" and value == math.floor(value) and value >= 0 then
+            row[column] = value
+            sets[#sets + 1] = column .. " = ?"
+            params[#params + 1] = value
+        end
+    end
+    if #sets == 0 then return false end
+    params[#params + 1] = row.id
+    dbExec(db(), "UPDATE characters SET " .. table.concat(sets, ", ") .. " WHERE id = ?", unpack(params))
+    applyPlayerLook(player, row)
+    return true
+end
+
+-- Vuelve a poner la apariencia guardada (p. ej. al salir del probador sin comprar)
+function restoreCharacterLook(player)
+    if not active[player] then return false end
+    applyPlayerLook(player, active[player])
+    return true
+end
+
+function getAllowedSkins(gender)
+    return SKINS[tonumber(gender)] or {}
+end

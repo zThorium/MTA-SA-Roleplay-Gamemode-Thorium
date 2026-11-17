@@ -1,0 +1,20 @@
+<meta>
+    <info author="Thorium" name="RP Rides" description="Vroom: app de viajes del telefono con conductores jugadores y conductor IA" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="rp_citizens" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_rides.lua" type="server" />
+    <script src="client/c_graph.lua" type="client" cache="false" />
+    <script src="client/c_driver.lua" type="client" cache="false" />
+    <script src="client/c_rides.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+</meta>

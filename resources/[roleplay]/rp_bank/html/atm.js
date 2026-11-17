@@ -15,7 +15,8 @@
     var TYPES = {
         deposit: ["Deposito", true], withdraw: ["Retiro", false],
         transfer_in: ["Transferencia de ", true], transfer_out: ["Transferencia a ", false],
-        purchase: ["Compra: ", false], sale: ["Venta: ", true]
+        purchase: ["Compra: ", false], sale: ["Venta: ", true],
+        payday: ["Sueldo: ", true]
     };
 
     function setTab(name) {

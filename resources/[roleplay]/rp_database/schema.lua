@@ -161,6 +161,36 @@ SCHEMA = {
         CONSTRAINT fk_contacts_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- App de viajes (rp_rides): conductores con su calificacion y viajes realizados
+    [[
+    CREATE TABLE IF NOT EXISTS ride_drivers (
+        character_id INT UNSIGNED NOT NULL,
+        rating_sum   INT UNSIGNED NOT NULL DEFAULT 0,
+        rating_count INT UNSIGNED NOT NULL DEFAULT 0,
+        rides        INT UNSIGNED NOT NULL DEFAULT 0,
+        earnings     INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_ride_drivers_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- driver_id NULL = conductor IA
+    [[
+    CREATE TABLE IF NOT EXISTS rides (
+        id           INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        passenger_id INT UNSIGNED     NOT NULL,
+        driver_id    INT UNSIGNED     NULL,
+        fare         INT UNSIGNED     NOT NULL,
+        tip          INT UNSIGNED     NOT NULL DEFAULT 0,
+        rating       TINYINT UNSIGNED NULL,
+        distance     INT UNSIGNED     NOT NULL DEFAULT 0,
+        created_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_rides_passenger (passenger_id),
+        KEY idx_rides_driver (driver_id),
+        CONSTRAINT fk_rides_passenger FOREIGN KEY (passenger_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_rides_driver FOREIGN KEY (driver_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     [[
     CREATE TABLE IF NOT EXISTS social_posts (
         id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -232,6 +262,46 @@ SCHEMA = {
         PRIMARY KEY (type, a, b)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- Tiendas de ropa con interior propio (rp_clothing). ix..irot: interior corregido en juego (NULL = el del tipo)
+    [[
+    CREATE TABLE IF NOT EXISTS clothing_stores (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name       VARCHAR(48)  NOT NULL,
+        type       VARCHAR(16)  NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        ix         FLOAT        NULL,
+        iy         FLOAT        NULL,
+        iz         FLOAT        NULL,
+        irot       FLOAT        NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Accesorios (toys) del personaje: hueso, posicion, rotacion y escala por eje
+    [[
+    CREATE TABLE IF NOT EXISTS character_toys (
+        id           INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED     NOT NULL,
+        toy          VARCHAR(32)      NOT NULL,
+        bone         TINYINT UNSIGNED NOT NULL,
+        x            FLOAT            NOT NULL DEFAULT 0,
+        y            FLOAT            NOT NULL DEFAULT 0,
+        z            FLOAT            NOT NULL DEFAULT 0,
+        rx           FLOAT            NOT NULL DEFAULT 0,
+        ry           FLOAT            NOT NULL DEFAULT 0,
+        rz           FLOAT            NOT NULL DEFAULT 0,
+        sx           FLOAT            NOT NULL DEFAULT 1,
+        sy           FLOAT            NOT NULL DEFAULT 1,
+        sz           FLOAT            NOT NULL DEFAULT 1,
+        worn         TINYINT(1)       NOT NULL DEFAULT 0,
+        created_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_toys_character (character_id),
+        CONSTRAINT fk_toys_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- Hito 5: vehiculos de los personajes
     [[
     CREATE TABLE IF NOT EXISTS vehicles (
@@ -281,6 +351,66 @@ SCHEMA = {
         CONSTRAINT fk_shop_items_shop FOREIGN KEY (shop_id)
             REFERENCES shops (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Facciones: roles definidos por el lider con permisos (bitmask, ver rp_factions/shared/s_config.lua) y sueldo
+    [[
+    CREATE TABLE IF NOT EXISTS factions (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name         VARCHAR(48)  NOT NULL,
+        tag          VARCHAR(8)   NOT NULL,
+        type         VARCHAR(16)  NOT NULL DEFAULT 'otra',
+        color        CHAR(7)      NOT NULL DEFAULT '#f5a524',
+        state_funded TINYINT(1)   NOT NULL DEFAULT 0,
+        bank         INT          NOT NULL DEFAULT 0,
+        motd         VARCHAR(255) NOT NULL DEFAULT '',
+        leader_id    INT UNSIGNED NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_factions_name (name),
+        CONSTRAINT fk_factions_leader FOREIGN KEY (leader_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS faction_ranks (
+        id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED     NOT NULL,
+        name        VARCHAR(32)      NOT NULL,
+        level       TINYINT UNSIGNED NOT NULL DEFAULT 1,
+        salary      INT UNSIGNED     NOT NULL DEFAULT 0,
+        permissions INT UNSIGNED     NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_faction_ranks_name (faction_id, name),
+        CONSTRAINT fk_faction_ranks_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS faction_members (
+        character_id INT UNSIGNED NOT NULL,
+        faction_id   INT UNSIGNED NOT NULL,
+        rank_id      INT UNSIGNED NULL,
+        joined_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        KEY idx_faction_members_faction (faction_id),
+        CONSTRAINT fk_faction_members_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_faction_members_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE,
+        CONSTRAINT fk_faction_members_rank FOREIGN KEY (rank_id) REFERENCES faction_ranks (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS faction_log (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id INT UNSIGNED NOT NULL,
+        text       VARCHAR(255) NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_log (faction_id, id),
+        CONSTRAINT fk_faction_log_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Payday: minutos jugados desde el ultimo sueldo (se conservan entre sesiones)
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS payday_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER energy
     ]],
     -- Vehiculos personales: llaves, freno de mano, cepo policial, tuning y ultimo conductor
     [[
