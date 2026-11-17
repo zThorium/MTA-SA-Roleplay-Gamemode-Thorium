@@ -20,6 +20,7 @@ RADIO_STATIONS = {
     { id = 11, name = "Radiole",            genre = "Flamenco",   url = "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOLEAAC.aac" },
     { id = 12, name = "Cadena SER",         genre = "Noticias",   url = "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASERAAC.aac" },
     { id = 13, name = "Radio Corazon",      genre = "Romantica",  url = "https://playerservices.streamtheworld.com/api/livestream-redirect/CORAZONAAC.aac" },
+    { id = 14, name = "Radio Carolina",     genre = "Pop",        url = "https://mdstrm.com/audio/637f68ddce4b1208597d8a86/live.m3u8" },
 }
 
 RADIO_BY_ID = {}
