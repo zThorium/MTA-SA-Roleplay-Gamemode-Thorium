@@ -93,6 +93,8 @@ end)
 
 -- Cerrar si el personaje muere o sale
 addEventHandler("onClientPlayerWasted", localPlayer, close)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
     if key ~= "rp:characterId" then return end
     if new then
@@ -110,7 +112,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         triggerServerEvent("rp:inv:request", resourceRoot)
     end
     bindKey("i", "down", function()
-        if isOpen() then close() else open() end
+        if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") then open() end
     end)
 end)
 

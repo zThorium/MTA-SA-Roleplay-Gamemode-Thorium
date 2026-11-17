@@ -71,11 +71,13 @@ end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey(FACTIONS.KEY, "down", function()
-        if isOpen() then close() else open() end
+        if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") then open() end
     end)
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, function() close() end)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, function() close() end)
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
     if (key == "rp:characterId" or key == "rp:faction") and not new then close(false) end
 end)

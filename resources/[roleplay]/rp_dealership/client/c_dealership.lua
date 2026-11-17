@@ -57,7 +57,7 @@ addEventHandler("rp:dealer:ui:close", root, close)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if not nearEntry or isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() then return end
+        if not nearEntry or isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() or getElementData(localPlayer, "rp:downed") then return end
         triggerServerEvent("rp:dealer:open", resourceRoot)
     end)
 end)
@@ -78,3 +78,7 @@ addEventHandler("onClientVehicleDamage", root, function()
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, close)
+
+-- Abatido (rp_injury): se cierra la interfaz
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)

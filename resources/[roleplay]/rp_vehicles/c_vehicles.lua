@@ -8,7 +8,7 @@ addEvent("rp:veh:lockFx", true)
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("l", "down", function()
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
-        if not getElementData(localPlayer, "rp:characterId") then return end
+        if not getElementData(localPlayer, "rp:characterId") or getElementData(localPlayer, "rp:downed") then return end
         triggerServerEvent("rp:veh:toggleLock", resourceRoot)
     end)
 end)

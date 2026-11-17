@@ -147,7 +147,10 @@ local function toggleLock(player)
     triggerClientEvent(player, "rp:veh:lockFx", resourceRoot, best)
 end
 
-addEventHandler("rp:veh:toggleLock", resourceRoot, function() toggleLock(client) end)
+addEventHandler("rp:veh:toggleLock", resourceRoot, function()
+    if getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
+    toggleLock(client)
+end)
 addCommandHandler("bloquear", toggleLock)
 
 addEventHandler("onElementDestroy", root, function()

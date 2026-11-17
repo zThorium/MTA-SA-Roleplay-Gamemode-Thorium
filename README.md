@@ -29,6 +29,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Personajes** | 3 slots por cuenta, creación con vista previa del ped en vivo, skins por género y guardado periódico. |
 | **Cabezas** | 78 cabezas personalizadas sobre el cuerpo de CJ para hombres, cargadas con `engineRequestModel`. |
 | **Supervivencia** | Hambre, sed y energía por personaje; `/dormir` solo en interiores. |
+| **Heridas** | Estado abatido en vez de morir: 2 minutos desangrándose en el suelo con pantalla gris, sin poder moverse, hablar ni usar el teléfono; luego hospital con tarifa. |
 | **Economía** | Dinero en mano, cuenta bancaria con historial de transacciones, cajeros (el retiro solo se hace en cajero) y tiendas con NPC. |
 | **Inventario** | Inventario por personaje con catálogo de items (tecla `I`). |
 | **Teléfono** | Notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
@@ -73,6 +74,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_scoreboard` · `rp_nametags` · `rp_hud` | Interfaz en pantalla |
 | `rp_inventory` | Items por personaje |
 | `rp_needs` | Hambre, sed, energía |
+| `rp_injury` | Estado abatido, sangrado y respawn en el hospital |
 | `rp_shops` · `rp_bank` · `rp_dealership` | Economía |
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |

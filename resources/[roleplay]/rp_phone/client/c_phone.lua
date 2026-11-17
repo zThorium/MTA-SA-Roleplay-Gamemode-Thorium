@@ -171,10 +171,13 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("p", "down", function()
         if isOpen() then return close() end
         if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
+        if getElementData(localPlayer, "rp:downed") then return end   -- abatido (rp_injury)
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
         triggerServerEvent("rp:phone:open", resourceRoot)
     end)
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, close)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)
 addEventHandler("onClientResourceStop", resourceRoot, close)

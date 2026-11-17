@@ -64,7 +64,7 @@ end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if not nearATM or isElement(browserGui) then return end
+        if not nearATM or isElement(browserGui) or getElementData(localPlayer, "rp:downed") then return end
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
         triggerServerEvent("rp:bank:open", resourceRoot, "atm")
     end)
@@ -91,4 +91,6 @@ addEventHandler("onClientElementStreamIn", root, function()
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, close)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)
 addEventHandler("onClientResourceStop", resourceRoot, close)

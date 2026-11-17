@@ -82,7 +82,7 @@ addEventHandler("rp:shop:ui:close", root, close)
 -- Tecla E junto al vendedor
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if not nearShop or isElement(browserGui) then return end
+        if not nearShop or isElement(browserGui) or getElementData(localPlayer, "rp:downed") then return end
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
         triggerServerEvent("rp:shop:open", resourceRoot, nearShop)
     end)
@@ -105,4 +105,6 @@ addEventHandler("onClientPedDamage", root, function()
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, close)
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, close)
 addEventHandler("onClientResourceStop", resourceRoot, close)

@@ -243,7 +243,10 @@ end)
 ----------------------------------------------------------------
 local function closeCharacter(player)
     if active[player] then
-        saveCharacter(player)
+        -- Abatido o desangrandose (rp_injury): se cobra el hospital y vuelve alli
+        local downed = isElement(player) and getElementData(player, "rp:downed")
+        if downed then triggerEvent("rp:onDownedLogout", player) end
+        saveCharacter(player, downed and true or false)
         triggerEvent("rp:onCharacterLogout", player, active[player].id)
         active[player] = nil
         if isElement(player) then

@@ -177,6 +177,7 @@ local function closeFitting(player, restore)
 end
 
 addEventHandler("rp:cloth:enter", resourceRoot, function(id)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local s = stores[tonumber(id) or -1]
     if not s or not characterOf(player) or isPedInVehicle(player) or throttled(player) then return end
@@ -195,6 +196,7 @@ addEventHandler("rp:cloth:enter", resourceRoot, function(id)
 end)
 
 addEventHandler("rp:cloth:exit", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local id, s, t = getPlayerStore(player)
     if not id or throttled(player) then return end
@@ -245,6 +247,7 @@ local function sendShop(player)
 end
 
 addEventHandler("rp:cloth:open", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local id = getPlayerStore(player)
     if not id or not characterOf(player) then return end
@@ -272,6 +275,7 @@ local function validChoice(player, slot, index)
 end
 
 addEventHandler("rp:cloth:try", resourceRoot, function(slot, index)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     index = tonumber(index)
     if not fitting[player] or not getPlayerStore(player) then return end
@@ -287,6 +291,7 @@ addEventHandler("rp:cloth:try", resourceRoot, function(slot, index)
 end)
 
 addEventHandler("rp:cloth:buy", resourceRoot, function(slot, index)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     index = tonumber(index)
     local storeId = fitting[player]
@@ -308,6 +313,7 @@ addEventHandler("rp:cloth:buy", resourceRoot, function(slot, index)
 end)
 
 addEventHandler("rp:cloth:buyToy", resourceRoot, function(toyKey)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local storeId = fitting[player]
     if not storeId or getPlayerStore(player) ~= storeId or throttled(player) then return end
@@ -320,6 +326,8 @@ end
 addEventHandler("onPlayerQuit", root, function() forget(source) end)
 addEventHandler("rp:onCharacterLogout", root, function() forget(source) end)
 addEventHandler("onPlayerWasted", root, function() closeFitting(source, false) end)
+addEvent("rp:onPlayerDowned", false)
+addEventHandler("rp:onPlayerDowned", root, function() closeFitting(source, false) end)
 
 ----------------------------------------------------------------
 -- Administracion

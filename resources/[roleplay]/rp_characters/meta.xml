@@ -26,4 +26,5 @@
     <export function="setCharacterLook" type="server" />
     <export function="restoreCharacterLook" type="server" />
     <export function="getAllowedSkins" type="server" />
+    <export function="respawnAtHospital" type="server" />
 </meta>

@@ -192,6 +192,7 @@ addEventHandler("rp:inv:request", resourceRoot, function()
 end)
 
 addEventHandler("rp:inv:use", resourceRoot, function(itemId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if throttled(player) or type(itemId) ~= "string" then return end
     local def = ITEMS[itemId]
@@ -234,6 +235,7 @@ addEventHandler("rp:inv:use", resourceRoot, function(itemId)
 end)
 
 addEventHandler("rp:inv:drop", resourceRoot, function(itemId, amount)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if throttled(player) or type(itemId) ~= "string" then return end
     amount = tonumber(amount) or 1

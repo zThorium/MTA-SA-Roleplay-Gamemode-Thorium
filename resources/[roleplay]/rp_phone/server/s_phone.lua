@@ -87,7 +87,10 @@ local function openPhone(player)
     end)
 end
 
-addEventHandler("rp:phone:open", resourceRoot, function() openPhone(client) end)
+addEventHandler("rp:phone:open", resourceRoot, function()
+    if getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
+    openPhone(client)
+end)
 
 -- Usar el item "phone" desde el inventario
 addEventHandler("rp:onItemUse", root, function(itemId)
@@ -98,6 +101,7 @@ end)
 -- Notas
 ----------------------------------------------------------------
 addEventHandler("rp:phone:note:save", resourceRoot, function(id, title, body)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) then return end
     title, body = cleanText(title, 64, false), cleanText(body or " ", 4000, true) or ""
@@ -114,6 +118,7 @@ addEventHandler("rp:phone:note:save", resourceRoot, function(id, title, body)
 end)
 
 addEventHandler("rp:phone:note:delete", resourceRoot, function(id)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) or not tonumber(id) then return end
     dbExec(db(), "DELETE FROM phone_notes WHERE id = ? AND character_id = ?", tonumber(id), characterOf(player))
@@ -140,6 +145,7 @@ local function addContact(player, name, number)
 end
 
 addEventHandler("rp:phone:contact:add", resourceRoot, function(name, number)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) then return end
     name, number = cleanText(name, 32, false), tonumber(number)
@@ -151,6 +157,7 @@ end)
 
 -- Agregar a un jugador cercano (comparten numero al estar juntos)
 addEventHandler("rp:phone:contact:addPlayer", resourceRoot, function(target)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) or not isElement(target) or getElementType(target) ~= "player" or target == player then return end
     local x1, y1, z1 = getElementPosition(player)
@@ -172,6 +179,7 @@ addEventHandler("rp:phone:contact:addPlayer", resourceRoot, function(target)
 end)
 
 addEventHandler("rp:phone:contact:delete", resourceRoot, function(id)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) or not tonumber(id) then return end
     dbExec(db(), "DELETE FROM phone_contacts WHERE id = ? AND character_id = ?", tonumber(id), characterOf(player))
@@ -205,10 +213,12 @@ local function sendFeed(player)
 end
 
 addEventHandler("rp:social:feed", resourceRoot, function()
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     if hasPhone(client) then sendFeed(client) end
 end)
 
 addEventHandler("rp:social:post", resourceRoot, function(caption, image)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     if not hasPhone(player) or busy[player] then return end
     caption = cleanText(caption or "", 280, false) or ""
@@ -230,6 +240,7 @@ addEventHandler("rp:social:post", resourceRoot, function(caption, image)
 end)
 
 addEventHandler("rp:social:like", resourceRoot, function(postId)
+    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     postId = tonumber(postId)
     if not hasPhone(player) or not postId then return end

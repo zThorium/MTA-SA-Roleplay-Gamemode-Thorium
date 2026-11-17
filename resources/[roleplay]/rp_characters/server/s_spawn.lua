@@ -31,14 +31,17 @@ function spawnCharacter(player, row)
     fadeCamera(player, true, 1.5)
 end
 
--- Guarda el personaje activo. Si esta muerto no guarda la posicion (volvera al spawn).
-function saveCharacter(player)
+-- Guarda el personaje activo. Si esta muerto o abatido (rp_injury) guarda el hospital:
+-- la proxima vez aparece alli con la vida completa.
+function saveCharacter(player, toHospital)
     local row = active[player]
     if not row or not isElement(player) then return false end
 
-    if isPedDead(player) or getElementHealth(player) <= 0 then
-        return dbExec(db(), "UPDATE characters SET money = ?, health = 100, armor = 0, pos_x = NULL, pos_y = NULL, pos_z = NULL WHERE id = ?",
-            getPlayerMoney(player), row.id)
+    if toHospital or isPedDead(player) or getElementHealth(player) <= 0 or getElementData(player, "rp:downed") then
+        local h = SPAWN.HOSPITAL
+        return dbExec(db(),
+            "UPDATE characters SET money = ?, health = 100, armor = 0, pos_x = ?, pos_y = ?, pos_z = ?, rotation = ?, interior = 0, dimension = 0 WHERE id = ?",
+            getPlayerMoney(player), h.x, h.y, h.z, h.rot, row.id)
     end
 
     local x, y, z = getElementPosition(player)
@@ -50,16 +53,31 @@ function saveCharacter(player)
         x, y, z, rot, getElementInterior(player), getElementDimension(player), row.id)
 end
 
+-- Respawn en el hospital con la vida completa (lo usa rp_injury tras desangrarse)
+function respawnAtHospital(player)
+    if not isElement(player) or not active[player] then return false end
+    local h = SPAWN.HOSPITAL
+    spawnPlayer(player, h.x, h.y, h.z, h.rot, getElementModel(player), 0, 0)
+    applyPlayerLook(player, active[player])
+    setElementHealth(player, 100)
+    setCameraTarget(player, player)
+    fadeCamera(player, true)
+    return true
+end
+
+local function injuryRunning()
+    local res = getResourceFromName("rp_injury")
+    return res and getResourceState(res) == "running"
+end
+
+-- Sin rp_injury: respawn directo en el hospital. Con rp_injury, el jugador queda abatido
+-- y es ese recurso el que lo manda al hospital.
 addEventHandler("onPlayerWasted", root, function()
     local player = source
-    if not active[player] then return end
+    if not active[player] or injuryRunning() then return end
     setTimer(function()
         if not isElement(player) or not active[player] then return end
-        local h = SPAWN.HOSPITAL
-        spawnPlayer(player, h.x, h.y, h.z, h.rot, getElementModel(player), 0, 0)
-        applyPlayerLook(player, active[player])
-        setCameraTarget(player, player)
-        fadeCamera(player, true)
+        respawnAtHospital(player)
     end, SPAWN.RESPAWN_DELAY, 1)
 end)
 

@@ -71,7 +71,7 @@ addEventHandler("rp:prop:ui:close", root, closeModal)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if not current or isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() then return end
+        if not current or isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() or getElementData(localPlayer, "rp:downed") then return end
         if current.inside then
             triggerServerEvent("rp:prop:exit", resourceRoot)
         elseif current.info.owner then
@@ -109,3 +109,7 @@ addEventHandler("onClientRender", root, function()
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, closeModal)
+
+-- Abatido (rp_injury): se cierra la interfaz
+addEvent("rp:onClientPlayerDowned", false)
+addEventHandler("rp:onClientPlayerDowned", localPlayer, closeModal)
