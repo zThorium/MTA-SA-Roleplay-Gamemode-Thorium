@@ -16,7 +16,7 @@
 | `rp_bank` | Cuenta bancaria + cajeros (retiro solo en cajero). Admin: `/crearatm`, `/borraratm <id>`, `/dardinero <id> <cantidad>`. |
 | `rp_phone` | Teléfono (tecla P o usar el item): Notas, Contactos, Banco, Fotogram (fotos del juego) y Ajustes. |
 | `rp_properties` | 138 casas de Los Santos generadas de los datos del juego (`server/s_seed_ls.lua`: ENEX con interior real + edificios residenciales de los IPL). Pickup verde = en venta (modal Comprar / Previsualizar 1 min), flecha blanca = con dueño. `/cerrarcasa`, `/vendercasa`. Admin: `/crearcasa <tipo> <precio> <nombre>`, `/borrarcasa <id>`, `/tiposcasa`. |
-| `rp_vehicles` | Vehículos con dueño (`vehicles`). Tecla L o `/bloquear`. |
+| `rp_vehicles` | Vehículos personales (`vehicles`). Llave en el inventario (`vkey:<id>`): **L** abre/cierra, **J** o `/toggleengine` motor, **X** freno de mano, **flechas ←/→** intermitentes y **↓** balizas (rebindeables en Ajustes > Binds). **M** muestra el cursor y click derecho sobre un auto abre el menú: maletero, matrícula, multas (dueño), policía (facción 1: cepo, multas, historial) y admin (vista 3D, golpes y ocupantes de las últimas 24 h). Taller de tuning (círculo naranja, E o `/tunear`): colores, faros, paintjob y piezas, guardado en BD. `/copiallave`, `/darllave <jugador>`, admin `/allave <idVeh> <jugador>`. |
 | `rp_dealership` | Concesionario Coutt and Schutz: autos al azar que cambian cada 60 min, compra con el banco, entrega segura. Admin: `/dealer puesto <n>`, `/dealer entrega`, `/dealer rotar`. |
 | `rp_nametags` | Nombre Apellido (ID) sobre la cabeza con barras de vida y chaleco. |
 | `rp_scoreboard` | Mantener Tab: servidor, jugadores activos, ID, nombre y ping. |
@@ -27,6 +27,7 @@
 ## Créditos
 - Modelos y ajustes de cabezas: Aleks (https://forum.mtasa.com/profile/40470-mraleks/), Countryside-RP, publicado por Neus. Su licencia prohíbe vender estos recursos.
 - bone_attach: CrystalMV.
+- object_preview 0.7.0: Ren712 (https://community.multitheftauto.com/index.php?p=resources&s=details&id=11836), sin cambios. Lo usa la vista 3D del panel de admin de vehiculos.
 - Mapa del radar, caminos y casas: generados a partir de los archivos de la instalación local de GTA SA.
 
 ## Base de datos
