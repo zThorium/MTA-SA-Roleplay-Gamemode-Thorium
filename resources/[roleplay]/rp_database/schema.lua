@@ -161,6 +161,36 @@ SCHEMA = {
         CONSTRAINT fk_contacts_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- App de viajes (rp_rides): conductores con su calificacion y viajes realizados
+    [[
+    CREATE TABLE IF NOT EXISTS ride_drivers (
+        character_id INT UNSIGNED NOT NULL,
+        rating_sum   INT UNSIGNED NOT NULL DEFAULT 0,
+        rating_count INT UNSIGNED NOT NULL DEFAULT 0,
+        rides        INT UNSIGNED NOT NULL DEFAULT 0,
+        earnings     INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_ride_drivers_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- driver_id NULL = conductor IA
+    [[
+    CREATE TABLE IF NOT EXISTS rides (
+        id           INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        passenger_id INT UNSIGNED     NOT NULL,
+        driver_id    INT UNSIGNED     NULL,
+        fare         INT UNSIGNED     NOT NULL,
+        tip          INT UNSIGNED     NOT NULL DEFAULT 0,
+        rating       TINYINT UNSIGNED NULL,
+        distance     INT UNSIGNED     NOT NULL DEFAULT 0,
+        created_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_rides_passenger (passenger_id),
+        KEY idx_rides_driver (driver_id),
+        CONSTRAINT fk_rides_passenger FOREIGN KEY (passenger_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_rides_driver FOREIGN KEY (driver_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     [[
     CREATE TABLE IF NOT EXISTS social_posts (
         id           INT UNSIGNED NOT NULL AUTO_INCREMENT,

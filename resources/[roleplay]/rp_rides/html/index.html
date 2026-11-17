@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vroom</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="phone" id="phone">
+        <div class="screen">
+            <div class="island"></div>
+            <header class="top">
+                <div class="logo">vroom<span>.</span></div>
+                <nav class="tabs">
+                    <button type="button" data-tab="ride" class="active">Viajar</button>
+                    <button type="button" data-tab="drive">Conducir</button>
+                </nav>
+                <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+            </header>
+
+            <div class="map-wrap" id="map-wrap">
+                <canvas id="map"></canvas>
+                <div class="map-tools">
+                    <button type="button" id="zoom-in">+</button>
+                    <button type="button" id="zoom-out">&minus;</button>
+                    <button type="button" id="recenter" title="Centrar">&#9678;</button>
+                </div>
+                <div class="map-label" id="map-label"></div>
+            </div>
+
+            <section class="sheet" id="sheet"></section>
+            <div class="hint" id="hint">M: usar la app · Esc: ocultar</div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

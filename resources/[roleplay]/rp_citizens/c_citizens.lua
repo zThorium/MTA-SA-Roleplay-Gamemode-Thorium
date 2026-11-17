@@ -1439,3 +1439,11 @@ end)
 addCommandHandler("poblacioninfo", function()
     outputChatBox(("Peatones: %d  Autos: %d  Nodos: %d peatonales, %d viales"):format(pedCount, carCount, #PED_NODES / 3, #VEH_NODES / 3), 120, 200, 255)
 end)
+
+----------------------------------------------------------------
+-- Export: red vial actual (incluye los cambios del editor) para otros
+-- recursos, p. ej. rp_rides (conductor IA y mapa de rutas).
+----------------------------------------------------------------
+function getRoadGraph()
+    return VEH_NODES, VEH_LINKS, VEH_LANES, VEH_OFFSET
+end

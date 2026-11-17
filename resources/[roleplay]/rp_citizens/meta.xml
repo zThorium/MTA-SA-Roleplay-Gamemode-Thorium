@@ -18,4 +18,7 @@
 
     <!-- Bocina de los autos de la poblacion (sonido generado para el proyecto) -->
     <file src="sounds/horn.wav" />
+
+    <!-- Red vial (con los cambios del editor) para otros recursos, p. ej. rp_rides -->
+    <export function="getRoadGraph" type="client" />
 </meta>
