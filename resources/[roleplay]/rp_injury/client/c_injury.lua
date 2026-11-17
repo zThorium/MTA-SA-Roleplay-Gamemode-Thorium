@@ -2,7 +2,8 @@
     rp_injury / c_injury.lua
     Lado cliente del estado abatido:
       - Intercepta el dano mortal y avisa al servidor.
-      - Pantalla gris con vinyeta y latido rojo (shader), cuenta atras y barra.
+      - Pantalla gris con vinyeta y latido rojo (shader).
+      - Contador: reloj de arena verde en el centro; cuando se vacia, muere.
       - Sangrado: gotas de sangre (fxAddBlood) y un charco que crece bajo cada abatido.
       - Avisa a los demas recursos con "rp:onClientPlayerDowned" para que cierren sus interfaces.
 ]]
@@ -148,33 +149,68 @@ local function drawScreen()
     end
 end
 
-local function formatTime(ms)
-    local s = math.max(0, math.ceil(ms / 1000))
-    return ("%d:%02d"):format(math.floor(s / 60), s % 60)
+-- Reloj de arena (contador de los 2 minutos). Texturas de 256 px: circulo verde, marco
+-- y la arena de cada bulbo por separado; la arena de arriba baja y la de abajo sube.
+local HOURGLASS = {
+    circle = dxCreateTexture("files/hourglass_circle.png", "argb", true, "clamp"),
+    frame  = dxCreateTexture("files/hourglass_frame.png", "argb", true, "clamp"),
+    top    = dxCreateTexture("files/hourglass_sand_top.png", "argb", true, "clamp"),
+    bottom = dxCreateTexture("files/hourglass_sand_bottom.png", "argb", true, "clamp"),
+    TOP_Y0 = 72, TOP_Y1 = 128,      -- filas de la arena del bulbo superior (en la textura)
+    BOT_Y0 = 128, BOT_Y1 = 184,     -- filas de la arena del bulbo inferior
+    TEX = 256,
+}
+
+local function drawHourglass(cx, cy, size, left, alpha)
+    local h = HOURGLASS
+    if not (h.circle and h.frame and h.top and h.bottom) then return false end
+    local k = size / h.TEX
+    local x, y = cx - size / 2, cy - size / 2
+    local white = tocolor(255, 255, 255, alpha)
+
+    dxDrawImage(x, y, size, size, h.circle, 0, 0, 0, white)
+
+    -- Los bulbos son casi triangulos: la altura de la arena va con la raiz del area
+    local topH = math.sqrt(left) * (h.TOP_Y1 - h.TOP_Y0)
+    if topH > 0.5 then
+        local v = h.TOP_Y1 - topH
+        dxDrawImageSection(x, y + v * k, size, topH * k, 0, v, h.TEX, topH, h.top, 0, 0, 0, white)
+    end
+    local botH = (1 - math.sqrt(left)) * (h.BOT_Y1 - h.BOT_Y0)
+    if botH > 0.5 then
+        local v = h.BOT_Y1 - botH
+        dxDrawImageSection(x, y + v * k, size, botH * k, 0, v, h.TEX, botH, h.bottom, 0, 0, 0, white)
+    end
+    -- Hilo de arena cayendo por el cuello
+    if left > 0.005 then
+        local sy = y + h.BOT_Y0 * k
+        local ey = y + (h.BOT_Y1 - botH) * k
+        local flicker = 0.75 + 0.25 * math.sin(getTickCount() / 60)
+        dxDrawRectangle(cx - 1.2 * k, sy, 2.4 * k, math.max(0, ey - sy), tocolor(255, 255, 255, alpha * flicker))
+    end
+
+    dxDrawImage(x, y, size, size, h.frame, 0, 0, 0, white)
+    return true
 end
 
--- Texto encima de todo (prioridad baja)
+-- Encima de todo (prioridad baja): el reloj es el contador; cuando se vacia, muere
 local function drawOverlay()
     local now = getTickCount()
-    local left = expiresAt - now
+    local left = math.max(0, math.min(1, (expiresAt - now) / total))
     local alpha = math.min(1, (now - startedAt) / 1000) * 255
+    local size = 120 * scale
 
-    local cx = sw / 2
-    local y = sh * 0.68
-    dxDrawText("ABATIDO", 0, y + 2 * scale, sw + 2 * scale, y + 60 * scale, tocolor(0, 0, 0, alpha * 0.7), 2.6 * scale, "default-bold", "center", "top")
-    dxDrawText("ABATIDO", 0, y, sw, y + 60 * scale, tocolor(200, 30, 30, alpha), 2.6 * scale, "default-bold", "center", "top")
-    y = y + 52 * scale
-    dxDrawText(("Te estas desangrando  -  %s"):format(formatTime(left)), 0, y, sw, y + 30 * scale,
-        tocolor(235, 235, 235, alpha), 1.4 * scale, "default-bold", "center", "top")
-    y = y + 34 * scale
-
-    local bw, bh = 360 * scale, 6 * scale
-    local frac = math.max(0, math.min(1, left / total))
-    dxDrawRectangle(cx - bw / 2, y, bw, bh, tocolor(0, 0, 0, alpha * 0.6))
-    dxDrawRectangle(cx - bw / 2, y, bw * frac, bh, tocolor(170, 20, 20, alpha))
-    y = y + 16 * scale
+    if not drawHourglass(sw / 2, sh / 2, size, left, alpha) then
+        -- Sin texturas: contador en texto
+        local s = math.max(0, math.ceil((expiresAt - now) / 1000))
+        dxDrawText(("%d:%02d"):format(math.floor(s / 60), s % 60), 0, 0, sw, sh,
+            tocolor(255, 255, 255, alpha), 2 * scale, "default-bold", "center", "center")
+    end
+    local y = sh / 2 + size / 2 + 14 * scale
+    dxDrawText("Espera a que alguien te atienda", 1, y + 1, sw + 1, y + 25 * scale,
+        tocolor(0, 0, 0, alpha * 0.6), 1.1 * scale, "default-bold", "center", "top")
     dxDrawText("Espera a que alguien te atienda", 0, y, sw, y + 24 * scale,
-        tocolor(190, 190, 190, alpha * 0.9), 1.1 * scale, "default", "center", "top")
+        tocolor(225, 225, 225, alpha * 0.9), 1.1 * scale, "default-bold", "center", "top")
 end
 
 -- Si la animacion se corta (stream, empujon...), se pide reponerla al servidor

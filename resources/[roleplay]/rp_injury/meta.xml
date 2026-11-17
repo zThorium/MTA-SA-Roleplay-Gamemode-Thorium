@@ -14,6 +14,10 @@
 
     <file src="files/downed.fx" />
     <file src="files/blood_pool.png" />
+    <file src="files/hourglass_circle.png" />
+    <file src="files/hourglass_frame.png" />
+    <file src="files/hourglass_sand_top.png" />
+    <file src="files/hourglass_sand_bottom.png" />
 
     <export function="isPlayerDowned" type="server" />
     <export function="downPlayer" type="server" />
