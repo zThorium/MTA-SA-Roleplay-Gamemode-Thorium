@@ -239,7 +239,7 @@
             list.innerHTML = "";
             var rows = Array.isArray(d.history) ? d.history : [];
             if (!rows.length) return emptyItem(list, "Sin movimientos");
-            var TYPES = { deposit: ["Deposito", 1], withdraw: ["Retiro", 0], transfer_in: ["De ", 1], transfer_out: ["A ", 0], purchase: ["Compra: ", 0], sale: ["Venta: ", 1] };
+            var TYPES = { deposit: ["Deposito", 1], withdraw: ["Retiro", 0], transfer_in: ["De ", 1], transfer_out: ["A ", 0], purchase: ["Compra: ", 0], sale: ["Venta: ", 1], payday: ["Sueldo: ", 1] };
             rows.forEach(function (r) {
                 var t = TYPES[r.type] || [r.type, 1];
                 var li = el("li");

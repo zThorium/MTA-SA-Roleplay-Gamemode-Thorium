@@ -23,6 +23,8 @@
 | `rp_hud` | HUD propio: minimapa giratorio (radar extraído de gta3.img, `tools/RadarExtract.cs`), barras, hora, dinero. `/hud`. |
 | `rp_citizens` | Peatones y tráfico 100% en el cliente sobre la red de caminos de GTA SA (`c_nodes_ls.lua`). Máquina de estados: pasear, esperar, huir, pelear / conducir, frenar, bocina, esquivar, huir. `/poblacion`, `/poblacioninfo`. Editor de rutas para admins: `/nodos` (cambios en `path_nodes` / `path_links`, aplicados en vivo). |
 | `rp_admin` | Herramientas de administración: `/freecam`. |
+| `rp_factions` | Facciones con panel en F3: el lider crea roles con nivel, sueldo y permisos (ver miembros, invitar, expulsar, cambiar rol, gestionar roles, fondos, registro, anuncio). Cada miembro solo ve lo que su rol permite. `/f`, `/finvitar`, `/aceptarfaccion`, `/salirfaccion`. Admin: `/crearfaccion <tipo> <siglas> <nombre>`, `/setlider <jugador> <id>`, `/darfondos`, `/borrarfaccion`, `/facciones`. |
+| `rp_payday` | Sueldo cada 60 min de juego (sin contar AFK, se conserva entre sesiones) al banco: el del rol en la faccion (Estado o fondos de la faccion) o el sueldo base del Estado. `/payday`. Admin: `/forzarpayday <jugador>`. |
 
 ## Créditos
 - Modelos y ajustes de cabezas: Aleks (https://forum.mtasa.com/profile/40470-mraleks/), Countryside-RP, publicado por Neus. Su licencia prohíbe vender estos recursos.
@@ -32,7 +34,7 @@
 ## Base de datos
 - MariaDB de XAMPP (`C:\Users\fabia\Documents\Programas`), puerto 3306.
 - Base `mtarp`, usuario dedicado `mtarp` (sin permisos fuera de esa base).
-- Tablas: `accounts`, `login_log`, `characters`, `character_items`, `shops`, `shop_items`, `bank_transactions`, `atms`, `phone_notes`, `phone_contacts`, `social_posts`, `social_likes`, `properties`, `vehicles`.
+- Tablas: `accounts`, `login_log`, `characters`, `character_items`, `shops`, `shop_items`, `bank_transactions`, `atms`, `phone_notes`, `phone_contacts`, `social_posts`, `social_likes`, `properties`, `vehicles`, `factions`, `faction_ranks`, `faction_members`, `faction_log`.
 
 ## Arrancar
 1. Abre el XAMPP Control Panel y pulsa **Start** en MySQL.
