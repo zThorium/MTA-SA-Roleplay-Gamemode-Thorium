@@ -27,7 +27,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .window {
     width: 1020px; height: 660px;
     max-width: calc(100vw - 32px); max-height: calc(100vh - 60px);
-    display: grid; grid-template-columns: 240px 1fr;
+    display: grid; grid-template-columns: 240px 1fr; grid-template-rows: minmax(0, 1fr);
     background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); overflow: hidden;
 }
@@ -35,7 +35,7 @@ body { display: flex; align-items: center; justify-content: center; }
 @keyframes enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
 /* Barra lateral */
-.sidebar { display: flex; flex-direction: column; background: var(--side); border-right: 1px solid var(--border); padding: 20px 14px; gap: 18px; }
+.sidebar { min-height: 0; display: flex; flex-direction: column; background: var(--side); border-right: 1px solid var(--border); padding: 20px 14px; gap: 18px; }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 6px; }
 .logo {
     width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; flex: none;
@@ -65,7 +65,7 @@ nav .ico { width: 22px; text-align: center; font-size: 15px; }
 .discord small { color: var(--muted); font-size: 12px; }
 
 /* Contenido */
-.content { display: flex; flex-direction: column; min-width: 0; }
+.content { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 header { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-bottom: 1px solid var(--border); }
 header h2 { font-size: 20px; flex: 1; }
 #search {
@@ -83,7 +83,9 @@ kbd {
 .close { background: none; border: 0; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
 .close:hover { color: var(--text); }
 
-.panel { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; user-select: text; }
+.panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; user-select: text; }
+/* Los bloques no se encogen: el panel es el que hace scroll */
+.panel > * { flex-shrink: 0; }
 .panel::-webkit-scrollbar, nav::-webkit-scrollbar { width: 8px; }
 .panel::-webkit-scrollbar-thumb, nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
