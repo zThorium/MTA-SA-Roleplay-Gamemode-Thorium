@@ -33,7 +33,7 @@
 ## Base de datos
 - MariaDB de XAMPP (`C:\Users\fabia\Documents\Programas`), puerto 3306.
 - Base `mtarp`, usuario dedicado `mtarp` (sin permisos fuera de esa base).
-- Tablas: `accounts`, `login_log`, `characters`, `character_items`, `shops`, `shop_items`, `bank_transactions`, `atms`, `phone_notes`, `phone_contacts`, `social_posts`, `social_likes`, `properties`, `vehicles`, `clothing_stores`, `character_toys`.
+- Tablas: `accounts`, `login_log`, `characters`, `character_items`, `shops`, `shop_items`, `bank_transactions`, `atms`, `phone_notes`, `phone_contacts`, `social_posts`, `social_likes`, `properties`, `vehicles`.
 
 ## Arrancar
 1. Abre el XAMPP Control Panel y pulsa **Start** en MySQL.
