@@ -70,5 +70,6 @@ Patrón de `rp_shops`: la fila en SQL es la verdad, el mundo se reconstruye desd
 
 ## Al terminar
 
+- Añade el comando de admin al catálogo del panel: `resources/[roleplay]/rp_adminpanel/server/s_catalog.lua`.
 - Añade los comandos a la fila del recurso en `RECURSOS.md` (separando los de admin con "Admin:").
 - Pruébalos con una cuenta sin `admin_level` (debe rechazar) y con una de nivel 1.
