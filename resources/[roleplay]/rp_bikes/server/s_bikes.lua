@@ -25,7 +25,6 @@ local points = {}       -- [i] = { cfg, marker, colshape, blip }
 
 addEvent("rp:onCharacterLogout", false)
 addEvent("rp:bikes:rent", true)
-addEvent("rp:bikes:near", true)
 
 local function notify(p, t, k, d) exports.rp_notify:notify(p, t, k, d) end
 local function characterOf(p) return exports.rp_characters:getPlayerCharacterId(p) end

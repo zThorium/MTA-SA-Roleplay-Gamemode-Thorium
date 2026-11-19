@@ -7,6 +7,7 @@
 local screenW, screenH = guiGetScreenSize()
 local nearIndex, nearName, nearPrice, nearPays = false, nil, 0, false
 
+addEvent("rp:bikes:near", true)
 addEventHandler("rp:bikes:near", resourceRoot, function(index, name, price, pays)
     nearIndex, nearName, nearPrice, nearPays = index, name, tonumber(price) or 0, pays and true or false
 end)
