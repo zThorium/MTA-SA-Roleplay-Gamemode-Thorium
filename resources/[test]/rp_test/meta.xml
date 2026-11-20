@@ -8,7 +8,9 @@
     <include resource="rp_characters" />
     <include resource="rp_inventory" />
     <include resource="rp_bank" />
+    <include resource="rp_phone" />
 
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
+    <script src="server/s_tests_social.lua" type="server" />
 </meta>

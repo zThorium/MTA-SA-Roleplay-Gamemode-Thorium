@@ -2,16 +2,11 @@
     rp_phone / s_phone.lua
     Telefono movil (item "phone" de rp_inventory). Se abre usandolo desde el
     inventario o con la tecla P. Apps: Notas, Contactos, Banco (rp_bank) y
-    Fotogram (red social con fotos tomadas en el juego).
+    Fotogram (red social con fotos tomadas en el juego, en s_social.lua).
 
-    Tablas: phone_notes, phone_contacts, social_posts, social_likes y
-    characters.phone_number (se asigna la primera vez que se usa el telefono).
+    Tablas: phone_notes, phone_contacts y characters.phone_number (se asigna
+    la primera vez que se usa el telefono).
 ]]
-
-local MAX_IMAGE = 350 * 1024       -- bytes del base64 de una foto
-local FEED_SIZE = 15
-
-local busy = {}
 
 addEvent("rp:onItemUse", false)
 addEvent("rp:phone:open", true)
@@ -20,9 +15,6 @@ addEvent("rp:phone:note:delete", true)
 addEvent("rp:phone:contact:add", true)
 addEvent("rp:phone:contact:addPlayer", true)
 addEvent("rp:phone:contact:delete", true)
-addEvent("rp:social:feed", true)
-addEvent("rp:social:post", true)
-addEvent("rp:social:like", true)
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(player, text, kind) exports.rp_notify:notify(player, text, kind) end
@@ -185,73 +177,3 @@ addEventHandler("rp:phone:contact:delete", resourceRoot, function(id)
     dbExec(db(), "DELETE FROM phone_contacts WHERE id = ? AND character_id = ?", tonumber(id), characterOf(player))
     sendContacts(player)
 end)
-
-----------------------------------------------------------------
--- Fotogram (red social)
-----------------------------------------------------------------
-local function sendFeed(player)
-    local characterId = characterOf(player)
-    dbQuery(function(qh)
-        local rows = dbPoll(qh, 0) or {}
-        if not isElement(player) then return end
-        for _, r in ipairs(rows) do
-            r.author = tostring(r.author):gsub("_", " ")
-            r.liked = tonumber(r.liked) == 1
-            r.mine = tonumber(r.character_id) == characterId
-            r.character_id = nil
-        end
-        -- Evento latente: las fotos pueden pesar varios cientos de KB
-        triggerLatentClientEvent(player, "rp:social:feed", 200000, false, resourceRoot, rows)
-    end, db(), [[
-        SELECT p.id, p.caption, p.image, p.character_id, c.name AS author,
-               DATE_FORMAT(p.created_at, '%d/%m %H:%i') AS date,
-               (SELECT COUNT(*) FROM social_likes l WHERE l.post_id = p.id) AS likes,
-               EXISTS(SELECT 1 FROM social_likes l WHERE l.post_id = p.id AND l.character_id = ?) AS liked
-        FROM social_posts p JOIN characters c ON c.id = p.character_id
-        ORDER BY p.id DESC LIMIT ?
-    ]], characterId, FEED_SIZE)
-end
-
-addEventHandler("rp:social:feed", resourceRoot, function()
-    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
-    if hasPhone(client) then sendFeed(client) end
-end)
-
-addEventHandler("rp:social:post", resourceRoot, function(caption, image)
-    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
-    local player = client
-    if not hasPhone(player) or busy[player] then return end
-    caption = cleanText(caption or "", 280, false) or ""
-    if type(image) ~= "string" or #image < 100 or #image > MAX_IMAGE or not image:match("^[%w%+/=]+$") then
-        return notify(player, "La foto no es valida o es demasiado grande.", "error")
-    end
-    busy[player] = true
-    dbQuery(function(qh)
-        busy[player] = nil
-        local ok = dbPoll(qh, 0)
-        if not isElement(player) then return end
-        if ok then
-            notify(player, "Publicaste una foto en Fotogram.", "success")
-            sendFeed(player)
-        else
-            notify(player, "No se pudo publicar la foto.", "error")
-        end
-    end, db(), "INSERT INTO social_posts (character_id, caption, image) VALUES (?, ?, ?)", characterOf(player), caption, image)
-end)
-
-addEventHandler("rp:social:like", resourceRoot, function(postId)
-    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
-    local player = client
-    postId = tonumber(postId)
-    if not hasPhone(player) or not postId then return end
-    local characterId = characterOf(player)
-    dbQuery(function(qh)
-        local _, affected = dbPoll(qh, 0)
-        if affected and affected > 0 then
-            return   -- se quito el like
-        end
-        dbExec(db(), "INSERT IGNORE INTO social_likes (post_id, character_id) VALUES (?, ?)", postId, characterId)
-    end, db(), "DELETE FROM social_likes WHERE post_id = ? AND character_id = ?", postId, characterId)
-end)
-
-addEventHandler("onPlayerQuit", root, function() busy[source] = nil end)
