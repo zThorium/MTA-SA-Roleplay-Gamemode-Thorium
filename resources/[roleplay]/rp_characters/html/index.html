@@ -51,17 +51,42 @@
                     <div id="selectors" class="selectors"></div>
                 </div>
 
-                <div class="row three">
-                    <label>Edad<input name="age" type="number" min="16" max="90" value="25"></label>
-                    <label>Peso (kg)<input name="weight" type="number" min="40" max="200" value="75"></label>
-                    <label>Altura (cm)<input name="height" type="number" min="140" max="220" value="175"></label>
+                <div class="appearance">
+                    <div class="appearance-head">
+                        <span class="label">Cuerpo</span>
+                        <span class="hint" id="weight-value">≈ 75 kg</span>
+                    </div>
+                    <div class="slider">
+                        <span class="name">Altura</span>
+                        <input type="range" id="body-height" min="155" max="200" step="1" value="175">
+                        <span class="value" id="height-value">175 cm</span>
+                    </div>
+                    <div id="cj-body">
+                        <div class="slider">
+                            <span class="name">Complexion</span>
+                            <input type="range" id="body-fat" min="0" max="100" step="1" value="15">
+                            <span class="value" id="fat-value">Normal</span>
+                        </div>
+                        <div class="slider">
+                            <span class="name">Musculatura</span>
+                            <input type="range" id="body-muscle" min="0" max="100" step="1" value="15">
+                            <span class="value" id="muscle-value">Poca</span>
+                        </div>
+                        <div class="field">
+                            <span class="label">Color de piel <em id="tone-name"></em></span>
+                            <div class="swatches" id="tones"></div>
+                        </div>
+                    </div>
+                    <p class="hint" id="body-note" hidden>La complexion y el color de piel solo se ajustan en el cuerpo masculino (CJ); en las skins femeninas vienen dados por la skin.</p>
                 </div>
+
+                <label>Edad<input name="age" type="number" min="16" max="90" value="25"></label>
 
                 <label>Lugar de origen<input name="origin" type="text" maxlength="48" placeholder="Los Santos, San Andreas"></label>
 
                 <label>Historia del personaje
                     <textarea name="story" maxlength="2000" rows="7" placeholder="De donde viene, a que se dedica, que busca en Los Santos..."></textarea>
-                    <small id="story-count">0 / 2000 (minimo 100)</small>
+                    <small id="story-count">0 / 2000 (minimo 30)</small>
                 </label>
 
                 <p class="message" id="create-message" aria-live="polite"></p>

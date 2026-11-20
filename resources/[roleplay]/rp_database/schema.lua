@@ -417,4 +417,12 @@ SCHEMA = {
     ALTER TABLE characters
         ADD COLUMN IF NOT EXISTS downed_ms INT UNSIGNED NOT NULL DEFAULT 0 AFTER payday_minutes
     ]],
+    -- rp_characters: complexion (0-100, stats FAT y BODY_MUSCLE de CJ) y tono de piel
+    -- (indice de BODY.TONES en rp_characters/shared/s_body.lua; 0 = piel original de CJ)
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS body_fat    TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER clothes_shoes,
+        ADD COLUMN IF NOT EXISTS body_muscle TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER body_fat,
+        ADD COLUMN IF NOT EXISTS skin_tone   TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER body_muscle
+    ]],
 }

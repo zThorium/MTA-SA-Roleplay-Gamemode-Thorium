@@ -5,12 +5,15 @@
  *
  * Apariencia:
  *  - Hombre: raza + cabeza (rp_heads) + ropa de CJ (torso, piernas, zapatos)
+ *    + complexion (grasa/musculo) y color de piel
  *  - Mujer: skin
+ *  - Ambos: altura (se ve en la vista previa)
  */
 (function () {
     "use strict";
 
-    var LIMITS = { storyMin: 100, storyMax: 2000 };
+    var LIMITS = { storyMin: 30, storyMax: 2000 };
+    var BODY_DEFAULT = { height: 175, fat: 15, muscle: 15, tone: 2 };
     var NAME_RE = /^[A-Z][a-z]{1,14}$/;
 
     var state = {
@@ -22,8 +25,12 @@
             male: [26], female: [12],
             races: ["Blanco", "Negro", "Latino", "Asiatico"],
             heads: { "1": [2], "2": [6], "3": [28], "4": [1] },
-            clothes: { torso: 1, legs: 1, shoes: 1 }
+            clothes: { torso: 1, legs: 1, shoes: 1 },
+            tones: [{ name: "Claro", hex: "#d7a582" }],
+            toneByRace: { "1": 1 },
+            body: { heightMin: 155, heightMax: 200, heightBase: 175, fatMax: 100, muscleMax: 100 }
         },
+        body: Object.assign({}, BODY_DEFAULT),
         gender: 0,
         race: 1,
         index: { head: 0, torso: 0, legs: 0, shoes: 0, skin: 0 },
@@ -84,10 +91,11 @@
     function previewCharacter(c) {
         if (c.head) {
             send("rp:chars:ui:look", JSON.stringify({
-                head: c.head, torso: c.clothes_torso || 0, legs: c.clothes_legs || 0, shoes: c.clothes_shoes || 0
+                head: c.head, torso: c.clothes_torso || 0, legs: c.clothes_legs || 0, shoes: c.clothes_shoes || 0,
+                fat: c.body_fat || 0, muscle: c.body_muscle || 0, height: c.height, tone: c.skin_tone || 0
             }));
         } else {
-            send("rp:chars:ui:look", JSON.stringify({ skin: c.skin }));
+            send("rp:chars:ui:look", JSON.stringify({ skin: c.skin, height: c.height }));
         }
     }
 
@@ -99,15 +107,30 @@
                 head: heads[wrap(state.index.head, heads.length)],
                 torso: wrap(state.index.torso, state.data.clothes.torso),
                 legs: wrap(state.index.legs, state.data.clothes.legs),
-                shoes: wrap(state.index.shoes, state.data.clothes.shoes)
+                shoes: wrap(state.index.shoes, state.data.clothes.shoes),
+                fat: state.body.fat,
+                muscle: state.body.muscle,
+                height: state.body.height,
+                tone: state.body.tone
             };
         }
         var skins = state.data.female;
-        return { skin: skins[wrap(state.index.skin, skins.length)] };
+        return { skin: skins[wrap(state.index.skin, skins.length)], height: state.body.height };
     }
 
     function sendLook() {
         send("rp:chars:ui:look", JSON.stringify(currentLook()));
+    }
+
+    // Los sliders disparan muchos eventos: como mucho una vista previa cada 90 ms
+    var lookTimer = null, lookPending = false;
+    function sendLookSoon() {
+        if (lookTimer) { lookPending = true; return; }
+        sendLook();
+        lookTimer = setTimeout(function () {
+            lookTimer = null;
+            if (lookPending) { lookPending = false; sendLookSoon(); }
+        }, 90);
     }
 
     // ---------------------------------------------------------- Seleccion
@@ -220,6 +243,9 @@
             b.addEventListener("click", function () {
                 state.race = race;
                 state.index.head = 0;
+                var tone = state.data.toneByRace[String(race)];
+                if (tone) state.body.tone = tone;
+                renderBody();
                 setCamera("face");
                 renderAppearance();
                 sendLook();
@@ -260,8 +286,81 @@
             b.classList.toggle("active", Number(b.dataset.gender) === g);
         });
         renderAppearance();
+        renderBody();
         sendLook();
     }
+
+    // ---------------------------------------------------------- Cuerpo
+    // Mismo calculo que estimateWeight() en shared/s_body.lua (el servidor guarda el suyo)
+    function estimateWeight(height, fat, muscle) {
+        var m = height / 100;
+        return Math.round((19.5 + fat * 0.14 + muscle * 0.05) * m * m);
+    }
+
+    function fatLabel(v) {
+        return v <= 12 ? "Delgado" : v <= 40 ? "Normal" : v <= 70 ? "Robusto" : "Obeso";
+    }
+
+    function muscleLabel(v) {
+        return v <= 20 ? "Poca" : v <= 50 ? "Tonificado" : v <= 80 ? "Atletico" : "Musculoso";
+    }
+
+    var sliders = {
+        height: $("body-height"),
+        fat: $("body-fat"),
+        muscle: $("body-muscle")
+    };
+
+    function renderBody() {
+        var male = state.gender === 0;
+        var b = state.body;
+        var limits = state.data.body;
+
+        sliders.height.min = limits.heightMin;
+        sliders.height.max = limits.heightMax;
+        sliders.fat.max = limits.fatMax;
+        sliders.muscle.max = limits.muscleMax;
+        sliders.height.value = b.height;
+        sliders.fat.value = b.fat;
+        sliders.muscle.value = b.muscle;
+
+        $("height-value").textContent = b.height + " cm";
+        $("fat-value").textContent = fatLabel(b.fat);
+        $("muscle-value").textContent = muscleLabel(b.muscle);
+        $("weight-value").textContent = "≈ " + estimateWeight(b.height, male ? b.fat : 15, male ? b.muscle : 15) + " kg";
+
+        $("cj-body").hidden = !male;
+        $("body-note").hidden = male;
+
+        var box = $("tones");
+        box.innerHTML = "";
+        state.data.tones.forEach(function (tone, i) {
+            var index = i + 1;
+            var b2 = el("button", index === b.tone ? "active" : "");
+            b2.type = "button";
+            b2.title = tone.name;
+            b2.style.background = tone.hex;
+            b2.addEventListener("click", function () {
+                state.body.tone = index;
+                setCamera("body");
+                renderBody();
+                sendLook();
+            });
+            box.appendChild(b2);
+        });
+        var current = state.data.tones[b.tone - 1];
+        $("tone-name").textContent = current ? current.name : "";
+    }
+
+    Object.keys(sliders).forEach(function (key) {
+        sliders[key].addEventListener("input", function () {
+            state.body[key] = Number(this.value);
+            setCamera("body");
+            renderBody();
+            sendLookSoon();
+        });
+        sliders[key].addEventListener("change", sendLook);
+    });
 
     // ---------------------------------------------------------- Creacion
     function openCreate() {
@@ -269,6 +368,7 @@
         form.querySelectorAll(".invalid").forEach(function (n) { n.classList.remove("invalid"); });
         state.race = 1;
         state.index = { head: 0, torso: 0, legs: 0, shoes: 0, skin: 0 };
+        state.body = Object.assign({}, BODY_DEFAULT, { tone: state.data.toneByRace["1"] || BODY_DEFAULT.tone });
         updateStoryCount();
         setMessage("create-message", "");
         showView("create");
@@ -282,9 +382,11 @@
     }
 
     function updateStoryCount() {
-        var len = form.story.value.length;
+        var len = form.story.value.trim().length;
         var counter = $("story-count");
-        counter.textContent = len + " / " + LIMITS.storyMax + (len < LIMITS.storyMin ? " (minimo " + LIMITS.storyMin + ")" : "");
+        counter.textContent = len < LIMITS.storyMin
+            ? len + " / " + LIMITS.storyMax + " · faltan " + (LIMITS.storyMin - len) + " para el minimo (" + LIMITS.storyMin + ")"
+            : len + " / " + LIMITS.storyMax;
         counter.className = len >= LIMITS.storyMin ? "ok" : "";
     }
 
@@ -312,24 +414,20 @@
 
         var age = readNumber(form.age, 16, 90);
         if (age === null) return fail(form.age, "La edad debe estar entre 16 y 90 anos.");
-        var weight = readNumber(form.weight, 40, 200);
-        if (weight === null) return fail(form.weight, "El peso debe estar entre 40 y 200 kg.");
-        var height = readNumber(form.height, 140, 220);
-        if (height === null) return fail(form.height, "La altura debe estar entre 140 y 220 cm.");
 
         var origin = form.origin.value.trim();
         if (origin.length < 3) return fail(form.origin, "Indica el lugar de origen de tu personaje.");
 
         var story = form.story.value.trim();
-        if (story.length < LIMITS.storyMin) return fail(form.story, "La historia debe tener al menos " + LIMITS.storyMin + " caracteres.");
+        if (story.length < LIMITS.storyMin) {
+            return fail(form.story, "La historia debe tener al menos " + LIMITS.storyMin + " caracteres (llevas " + story.length + "). Basta con una o dos frases.");
+        }
 
         var data = {
             firstName: form.firstName.value,
             lastName: form.lastName.value,
             gender: state.gender,
             age: age,
-            weight: weight,
-            height: height,
             origin: origin,
             story: story
         };
@@ -373,7 +471,7 @@
     window.RP = {
         setAppearance: function (data) {
             if (!data) return;
-            ["male", "female", "races", "heads", "clothes"].forEach(function (k) {
+            ["male", "female", "races", "heads", "clothes", "tones", "toneByRace", "body"].forEach(function (k) {
                 if (data[k]) state.data[k] = data[k];
             });
         },

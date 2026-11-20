@@ -59,7 +59,7 @@ local function setPreviewCamera()
     end
 end
 
--- Apariencia de la vista previa: { skin } o { head, torso, legs, shoes }
+-- Apariencia de la vista previa: { skin, height } o { head, torso, legs, shoes, fat, muscle, height, tone }
 local function setPreviewLook(look)
     if not isElement(previewPed) or type(look) ~= "table" then return end
     local head = applyCharacterLook(previewPed, look)
@@ -68,6 +68,7 @@ local function setPreviewLook(look)
     else
         exports.rp_heads:removeHead(previewPed)
     end
+    setPedBody(previewPed, look.height, head and tonumber(look.tone or look.skin_tone) or 0)   -- c_body.lua
 end
 
 -- Datos de apariencia para la interfaz
@@ -80,7 +81,16 @@ local function appearanceData()
     for _, slot in ipairs(CLOTHES_SLOTS) do
         clothes[slot.key] = getClothesCount(slot.type)
     end
-    return { male = SKINS[0], female = SKINS[1], races = exports.rp_heads:getRaces(), heads = heads, clothes = clothes }
+    local tones = {}
+    for i, tone in ipairs(BODY.TONES) do tones[i] = { name = tone.name, hex = tone.hex } end
+    local toneByRace = {}
+    for race, tone in pairs(BODY.TONE_BY_RACE) do toneByRace[tostring(race)] = tone end
+    return {
+        male = SKINS[0], female = SKINS[1], races = exports.rp_heads:getRaces(), heads = heads, clothes = clothes,
+        tones = tones, toneByRace = toneByRace,
+        body = { heightMin = BODY.HEIGHT_MIN, heightMax = BODY.HEIGHT_MAX, heightBase = BODY.HEIGHT_BASE,
+                 fatMax = BODY.FAT_MAX, muscleMax = BODY.MUSCLE_MAX },
+    }
 end
 
 local function createScene()
@@ -95,6 +105,7 @@ end
 local function destroyScene()
     if isElement(previewPed) then
         exports.rp_heads:removeHead(previewPed)
+        removePedBody(previewPed)
         destroyElement(previewPed)
     end
     previewPed = nil
@@ -190,8 +201,8 @@ addEventHandler("rp:chars:ui:create", root, function(payload)
     if type(data) ~= "table" then return end
     triggerServerEvent("rp:chars:create", resourceRoot, {
         firstName = data.firstName, lastName = data.lastName,
-        gender = tonumber(data.gender), age = tonumber(data.age),
-        weight = tonumber(data.weight), height = tonumber(data.height),
+        gender = tonumber(data.gender), age = tonumber(data.age), height = tonumber(data.height),
+        fat = tonumber(data.fat), muscle = tonumber(data.muscle), tone = tonumber(data.tone),
         origin = data.origin, story = data.story, skin = tonumber(data.skin),
         race = tonumber(data.race), head = tonumber(data.head),
         torso = tonumber(data.torso), legs = tonumber(data.legs), shoes = tonumber(data.shoes),

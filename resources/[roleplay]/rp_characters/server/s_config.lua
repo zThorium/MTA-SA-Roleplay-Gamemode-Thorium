@@ -7,10 +7,10 @@ CHARS = {
     NAME_PART_MIN = 2,          -- Nombre y Apellido, cada uno
     NAME_PART_MAX = 15,
     AGE_MIN = 16, AGE_MAX = 90,
-    WEIGHT_MIN = 40, WEIGHT_MAX = 200,   -- kg
-    HEIGHT_MIN = 140, HEIGHT_MAX = 220,  -- cm
+    -- Altura, complexion y tono: limites en shared/s_body.lua (BODY). El peso lo
+    -- calcula el servidor a partir de la altura y la complexion.
     ORIGIN_MIN = 3, ORIGIN_MAX = 48,
-    STORY_MIN = 100, STORY_MAX = 2000,
+    STORY_MIN = 30, STORY_MAX = 2000,   -- caracteres (no bytes)
     START_MONEY = 500,
 }
 
