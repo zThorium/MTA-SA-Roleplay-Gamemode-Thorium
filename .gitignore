@@ -29,3 +29,7 @@ mtaserver_test.conf
 
 # Mapa del radar extraido de gta3.img (material de Rockstar, no se redistribuye)
 resources/[[]roleplay]/rp_hud/images/map.png
+
+# --- Docker (docs/DOCKER.md) ---
+.env
+docker/logs/

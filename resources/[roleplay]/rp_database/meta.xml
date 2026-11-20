@@ -13,4 +13,5 @@
     -->
     <export function="getConnection" type="server" />
     <export function="isReady" type="server" />
+    <export function="getSchema" type="server" />
 </meta>

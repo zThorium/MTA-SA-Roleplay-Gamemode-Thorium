@@ -3,7 +3,7 @@
 ## Recursos
 | Recurso | Qué hace |
 |---|---|
-| `rp_database` | Conexión MySQL única (`dbConnect`) y creación automática de tablas. Export: `getConnection()`, `isReady()`. Credenciales en `config.lua` (solo servidor). |
+| `rp_database` | Conexión MySQL única (`dbConnect`) y creación automática de tablas. Export: `getConnection()`, `isReady()`, `getSchema()` (copia de las sentencias de `schema.lua`, la usa `rp_test`). Credenciales en `config.lua` (solo servidor). |
 | `rp_login` | Login/registro CEF (`html/`), contraseñas bcrypt (`passwordHash`/`passwordVerify` asíncronos). Al iniciar sesión dispara el evento de servidor `rp:onAccountLogin`. Exports: `isPlayerLoggedIn`, `getPlayerAccountId`, `getPlayerAccountName`. |
 | `rp_characters` | Selección y creación de personajes (3 slots) en CEF con vista previa del ped y cambio de skin; spawn, guardado periódico y respawn en el hospital. Evento `rp:onCharacterSpawn`. Exports: `getPlayerCharacterId`, `getPlayerCharacterName`, `saveCharacter`. |
 | `bone_attach` | Bone Attach 1.2.0 de CrystalMV (solo fuentes .lua). Pega objetos a huesos de peds. |
@@ -29,6 +29,8 @@
 | `rp_payday` | Sueldo cada 60 min de juego (sin contar AFK, se conserva entre sesiones) al banco: el del rol en la faccion (Estado o fondos de la faccion) o el sueldo base del Estado. `/payday`. Admin: `/forzarpayday <jugador>`. |
 | `rp_emergency` | Emergencias **911** (`/911`, menú CEF con Policía, Bomberos y Ambulancia; teclas 1-3). La **ambulancia IA** aparece en la calle fuera de tu vista, conduce por la red vial de `rp_citizens` (A*, reutilizada de `rp_rides`), se detiene cerca, los 2 paramédicos bajan y reaniman con RCP a los abatidos en 45 m (por orden de cercanía); si no hay nadie, miran, vuelven a subir y se van. Un muerto se carga en una camilla simulada, se traslada al hospital más cercano, se entrega y reaparece tratado. Policía y bomberos solo disparan el evento `rp:emergency:onCall`. Contrato con el sistema de abatidos en `docs/EMERGENCIAS.md`. Exports (servidor): `isPlayerDowned`, `revivePlayer`, `getActiveCall`. Admin: `/cancelar911 <jugador>`. |
 | `rp_adminpanel` | Panel CEF para administradores con todos los comandos de admin agrupados por categoría (herramientas, jugadores, economía, facciones, mundo), descripción, argumentos y recurso de origen; búsqueda y clic para copiar el comando. El catálogo está en `server/s_catalog.lua` y solo se envía a admins (`admin_level` ≥ 1). **Al crear un comando de admin nuevo, añádelo al catálogo.** Admin: `/adminpanel` (o `/apanel`, tecla `F10`). |
+
+| `rp_test` | (`resources/[test]`, no arranca solo) Pruebas de humo del servidor: BD y esquema completo, recursos en marcha, bcrypt, registro/login, personaje, inventario, banco con cobro atómico. Imprime `[rp_test] PASS/FAIL` y `FIN OK`/`FIN FALLOS` en el log. Se lanza con `scripts/test.sh` (ver `docs/DOCKER.md`), `start rp_test` o, ya arrancado, el comando de consola `rptest`. |
 
 Hombres = cuerpo de CJ (skin 0) sin cabeza + cabeza + ropa nativa de CJ. Mujeres = skin.
 

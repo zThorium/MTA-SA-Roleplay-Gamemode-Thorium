@@ -13,6 +13,7 @@ Lua 5.1 (servidor y cliente), interfaces en **CEF** (HTML/CSS/JS) y dx, y
 - Exports y comandos de cada recurso: [`RECURSOS.md`](RECURSOS.md)
 - Hoja de ruta y prioridades: [`docs/PLAN_MVP.md`](docs/PLAN_MVP.md)
 - Montar el entorno local y sincronizar con el servidor: [`docs/ENTORNO_LOCAL.md`](docs/ENTORNO_LOCAL.md)
+- Entorno Docker (Mac/Linux) y pruebas del servidor por CLI: [`docs/DOCKER.md`](docs/DOCKER.md)
 - Patrones de código, BD y seguridad: [`docs/CONVENCIONES.md`](docs/CONVENCIONES.md)
 
 ## Estructura
@@ -22,6 +23,10 @@ mtaserver.conf          orden de arranque de los recursos (importa)
 acl.xml                 ACL base (sin cuentas personales)
 vehiclecolors.conf
 docs/                   plan y guías
+docker-compose.yml      servidor MTA (Linux) + MariaDB; ver docs/DOCKER.md
+docker/mta/             Dockerfile y entrypoint del servidor
+scripts/                mta.sh (arrancar, logs, consola) y test.sh (pruebas, código 0/1)
+resources/[test]/       rp_test: pruebas de humo del servidor (no arranca con mtaserver.conf)
 resources/[roleplay]/   un recurso por sistema
   rp_<sistema>/
     meta.xml            scripts, <include> de dependencias, <file> CEF, <export>
@@ -98,7 +103,10 @@ Si una forma de hacer algo funciona mejor que lo que dice una skill, actualiza l
 
 - `main` siempre arranca. Trabaja en una **rama por feature** (`feat/...`, `fix/...`) y abre **PR a `main`**.
 - Commits y PRs en español, describiendo qué cambia en el juego.
-- No hay tests automáticos: **prueba en juego antes de fusionar** (consola del servidor
+- Pruebas del servidor: `scripts/test.sh` (Docker) arranca todo, ejecuta `rp_test` y sale
+  con 0/1; debe pasar antes de abrir un PR. Si tu cambio toca BD o flujos de servidor,
+  añade una prueba en `resources/[test]/rp_test/server/s_tests.lua`.
+- El cliente no tiene tests: **prueba en juego antes de fusionar** (consola del servidor
   sin errores, `/debugscript 3` limpio, el flujo probado con al menos un personaje).
 - Si cambias comandos, exports o tablas, actualiza `RECURSOS.md` (y el `README.md` si es una feature visible)
   en el mismo PR. Si cierras algo del plan, márcalo en `docs/PLAN_MVP.md`.

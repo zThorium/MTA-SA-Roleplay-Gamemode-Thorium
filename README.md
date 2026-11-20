@@ -86,6 +86,10 @@ Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
 
 **Requisitos:** servidor MTA:SA 1.6 y MariaDB/MySQL 10.4+ (XAMPP sirve).
 
+> **Con Docker (Mac/Linux):** `cp .env.example .env && scripts/mta.sh up` levanta el servidor
+> MTA de Linux y MariaDB ya configurados, y `scripts/test.sh` ejecuta las pruebas del servidor.
+> Ver [`docs/DOCKER.md`](docs/DOCKER.md). Los pasos de abajo son para el servidor de Windows.
+
 1. **Clona** el repo y copia su contenido sobre la carpeta `mods/deathmatch` de tu servidor (`resources/`, `mtaserver.conf`, `acl.xml`):
    ```bash
    git clone https://github.com/zThorium/MTA-SA-Roleplay-Gamemode-Thorium.git thorium

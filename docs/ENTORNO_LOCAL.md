@@ -2,6 +2,9 @@
 
 Cómo levantar Thorium en Windows para desarrollar y probar.
 
+> ¿Mac o Linux, o solo quieres probar el servidor por consola? Usa el entorno Docker
+> (servidor MTA de Linux + MariaDB, con pruebas automáticas): [`DOCKER.md`](DOCKER.md).
+
 ## Requisitos
 
 - **MTA:SA 1.6** con su servidor. Ruta habitual:
