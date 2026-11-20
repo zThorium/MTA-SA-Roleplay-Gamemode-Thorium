@@ -50,6 +50,12 @@ ADMIN_CATALOG = {
         id = "mundo", name = "Mundo y propiedades",
         items = {
             { cmd = "/crearshop", args = "<nombre>", desc = "Crea una tienda con NPC en tu posicion.", res = "rp_shops" },
+            { cmd = "/crearrobo", args = "<tipo> <nombre>", desc = "Crea una tienda 24/7 robable. Parate en la puerta mirando a la calle (ahi esperan las patrullas).", res = "rp_robbery" },
+            { cmd = "/borrarrobo", args = "<id>", desc = "Elimina una tienda robable.", res = "rp_robbery" },
+            { cmd = "/robos", args = "", desc = "Lista las tiendas robables y si estan disponibles, vacias o con un robo en curso.", res = "rp_robbery" },
+            { cmd = "/tiposrobo", args = "", desc = "Tipos de interior 24/7 para /crearrobo.", res = "rp_robbery" },
+            { cmd = "/robopunto", args = "<id> puerta|salida|cajero|caja|cliente|clientes", desc = "Corrige un punto de la tienda parado en el sitio (cajero mirando a los clientes; cliente anade un sitio, clientes los borra).", res = "rp_robbery" },
+            { cmd = "/resetrobo", args = "<id>", desc = "Termina el robo en curso, quita la espera y repone cajero y clientes.", res = "rp_robbery" },
             { cmd = "/borrarshop", args = "<id>", desc = "Elimina una tienda.", res = "rp_shops" },
             { cmd = "/crearcasa", args = "<tipo> <precio> <nombre>", desc = "Crea una propiedad en venta frente a la puerta (solo en exteriores). Tipos con /tiposcasa.", res = "rp_properties" },
             { cmd = "/borrarcasa", args = "<id>", desc = "Elimina una propiedad.", res = "rp_properties" },

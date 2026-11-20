@@ -911,6 +911,8 @@ end
 -- Llamado por rp_citizens: devuelve true si la unidad pasa a la policia de rp_wanted
 function adoptLocalCop(vehicle, ped)
     if level <= 0 or not isElement(ped) or isPedDead(ped) then return false end
+    -- persecucion retenida por un robo negociado (rp_robbery): el trafico tampoco persigue
+    if getElementData(localPlayer, "rp:wantedHeld") then return false end
     local count = 0
     for _, u in pairs(units) do if u.isLocal and not u.leaving then count = count + 1 end end
     if count >= 3 then return false end
@@ -1062,6 +1064,8 @@ end
 
 local wheelAt = 0
 function burstWheel(veh)
+    -- Condicion negociada en un robo (rp_robbery): no disparan a las llantas
+    if getElementData(localPlayer, "rp:wantedNoTires") then return end
     local states = { getVehicleWheelStates(veh) }
     local good = {}
     for i = 1, 4 do if states[i] == 0 then good[#good + 1] = i end end

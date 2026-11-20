@@ -13,7 +13,15 @@
       rp:wantedLost   true mientras ningun policia esta cerca (las estrellas parpadean)
 
     Exports (servidor): getWantedLevel, getWantedChaos, setWantedLevel,
-    clearWanted, reportCrime, isWantedPolice
+    clearWanted, reportCrime, isWantedPolice, holdPursuit, isPursuitHeld,
+    setPursuitTerms, getPursuitTerms
+      setWantedLevel(player, nivel, force): force = true ignora el tope por
+        antiguedad del personaje (lo usa rp_robbery: 5 estrellas al matar al cajero).
+      holdPursuit(player, true/false): las estrellas se ven pero la policia IA no
+        sale ni baja la busqueda (cuenta regresiva de un robo negociado).
+      setPursuitTerms(player, sinTrampas, sinLlantas): condiciones negociadas.
+        Sin trampas = sin pinchos ni controles de carretera; sin llantas = la
+        policia no revienta neumaticos. Se borran al quedar en 0 estrellas.
     Evento: rp:onWantedLevelChange (source = jugador; nuevo, anterior)
 
     Admin: /busqueda <jugador> [0-6]
@@ -145,6 +153,7 @@ local function applyChaos(player, chaos)
     local s = state(player)
     s.chaos = math.max(0, math.min(WANTED.MAX_CHAOS, math.floor(chaos)))
     local cap = maxLevelOf(player)
+    if (s.forcedCap or 0) > cap then cap = s.forcedCap end
     if cap < WANTED.MAX_LEVEL then s.chaos = math.min(s.chaos, WANTED.THRESHOLDS[cap + 1] - 1) end
     local old = s.level
     local level = wantedLevelFromChaos(s.chaos)
@@ -157,7 +166,10 @@ local function applyChaos(player, chaos)
         s.graceUntil = getTickCount() + WANTED.DECAY_GRACE
     end
     setElementData(player, "rp:wanted", level)
-    if level == 0 then setLost(player, s, false) end
+    if level == 0 then
+        setLost(player, s, false)
+        clearPursuitExtras(player, s)
+    end
     triggerEvent("rp:onWantedLevelChange", player, level, old)
     refreshPoliceBlip(player)
     if level > old then
@@ -231,17 +243,57 @@ end
 function getWantedLevel(player) return W[player] and W[player].level or 0 end
 function getWantedChaos(player) return W[player] and W[player].chaos or 0 end
 
-function setWantedLevel(player, level)
+function setWantedLevel(player, level, force)
     level = math.max(0, math.min(WANTED.MAX_LEVEL, math.floor(tonumber(level) or 0)))
-    if not isElement(player) then return false end
+    if not isElement(player) or getElementType(player) ~= "player" then return false end
     local s = state(player)
     s.parole = nil
+    if force and level > 0 then s.forcedCap = math.max(s.forcedCap or 0, level) end
     applyChaos(player, level == 0 and 0 or WANTED.SET_LEVEL_CHAOS[level])
     return true
 end
 
 function clearWanted(player)
     return setWantedLevel(player, 0)
+end
+
+----------------------------------------------------------------
+-- Persecucion retenida y condiciones negociadas (rp_robbery)
+----------------------------------------------------------------
+function clearPursuitExtras(player, s)
+    s.forcedCap, s.held, s.terms = nil, nil, nil
+    if isElement(player) then
+        setElementData(player, "rp:wantedHeld", false)
+        setElementData(player, "rp:wantedNoTires", false)
+    end
+end
+
+function holdPursuit(player, held)
+    if not isElement(player) or getElementType(player) ~= "player" then return false end
+    local s = state(player)
+    s.held = held and true or nil
+    setElementData(player, "rp:wantedHeld", s.held or false)
+    -- al soltarla, la estrella no empieza a bajar al instante
+    if not held then s.graceUntil = getTickCount() + WANTED.DECAY_GRACE end
+    return true
+end
+
+function isPursuitHeld(player)
+    return W[player] and W[player].held or false
+end
+
+function setPursuitTerms(player, noTraps, noTires)
+    if not isElement(player) or getElementType(player) ~= "player" then return false end
+    local s = state(player)
+    s.terms = { noTraps = noTraps and true or false, noTires = noTires and true or false }
+    setElementData(player, "rp:wantedNoTires", s.terms.noTires)
+    return true
+end
+
+function getPursuitTerms(player)
+    local t = W[player] and W[player].terms
+    if not t then return false, false end
+    return t.noTraps, t.noTires
 end
 
 ----------------------------------------------------------------
@@ -315,7 +367,10 @@ setTimer(function()
             end
             s.inCity = inCity
             local unseen = now - (s.seenAt or 0) > WANTED.EVADE_TIME
-            if s.chaos > 0 and not s.busted and now < (s.graceUntil or 0) then
+            if s.held then
+                -- persecucion retenida (robo negociado): no baja hasta que se suelte
+                setLost(player, s, false)
+            elseif s.chaos > 0 and not s.busted and now < (s.graceUntil or 0) then
                 setLost(player, s, false)
             elseif s.chaos > 0 and not s.busted and not unseen then
                 -- algun policia te ve (lo informa tu cliente): no baja
@@ -473,6 +528,8 @@ local function forget(player)
     if isElement(player) then
         setElementData(player, "rp:wanted", 0)
         setElementData(player, "rp:wantedLost", false)
+        setElementData(player, "rp:wantedHeld", false)
+        setElementData(player, "rp:wantedNoTires", false)
     end
 end
 

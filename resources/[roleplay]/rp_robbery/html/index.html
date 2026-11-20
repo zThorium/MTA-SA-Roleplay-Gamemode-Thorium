@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Negociacion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="stage">
+        <div id="flash"></div>
+        <div id="lines"></div>
+
+        <section id="status" class="hidden">
+            <header>NEGOCIACION <span id="round"></span></header>
+            <div class="row"><span>Rehenes</span><b id="chips"></b></div>
+            <div class="row"><span>Ventaja</span><b id="seconds"></b></div>
+            <div class="row"><span>Sin pinchos ni barricadas</span><b id="traps"></b></div>
+            <div class="row"><span>Sin disparos a las llantas</span><b id="tires"></b></div>
+            <div class="row"><span>Paciencia del sargento</span><b id="patience"></b></div>
+        </section>
+
+        <div id="burst" class="hidden"><span id="burst-text"></span></div>
+
+        <ol id="options"></ol>
+
+        <section id="dialog" class="hidden">
+            <div id="nameplate"></div>
+            <p id="text"></p>
+            <div id="next">▼</div>
+        </section>
+
+        <div id="hint">Clic o <kbd>Espacio</kbd> para avanzar · <kbd>1</kbd>-<kbd>6</kbd> para elegir</div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

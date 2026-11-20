@@ -33,6 +33,11 @@
     <export function="isWantedPolice" type="server" />
     <export function="isPlayerJailed" type="server" />
     <export function="jailPlayer" type="server" />
+    <!-- rp_robbery: cuenta regresiva y condiciones negociadas -->
+    <export function="holdPursuit" type="server" />
+    <export function="isPursuitHeld" type="server" />
+    <export function="setPursuitTerms" type="server" />
+    <export function="getPursuitTerms" type="server" />
     <!-- rp_citizens entrega sus patrullas cuando el jugador esta buscado -->
     <export function="adoptLocalCop" type="client" />
 </meta>

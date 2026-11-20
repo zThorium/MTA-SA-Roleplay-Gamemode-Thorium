@@ -320,6 +320,8 @@ local function dispatch(player, p)
     if level <= 0 or isPlayerBusted(player) then return leaveAll(player, p) end
     -- En interiores u otra dimension no hay persecucion (GTA: la policia no entra)
     if getElementInterior(player) ~= 0 or getElementDimension(player) ~= 0 then return end
+    -- Persecucion retenida (robo negociado en cuenta regresiva): nadie sale aun
+    if isPursuitHeld(player) then return end
     local cfg = WANTED_LEVELS[level]
     local now = nowMs()
 
@@ -370,6 +372,9 @@ local function dispatch(player, p)
             local vx, vy = getElementVelocity(v)
             speed = math.sqrt(vx * vx + vy * vy) * 180
         end
+        -- Condicion negociada en un robo: sin pinchos ni controles de carretera
+        local noTraps = getPursuitTerms(player)
+        if noTraps then return end
         if speed > 40 and (cfg.spikes or 0) > 0 and not p.spikes and math.random(100) <= cfg.spikes then
             p.pending = { kind = "spikes", at = now }
             triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "spikes")

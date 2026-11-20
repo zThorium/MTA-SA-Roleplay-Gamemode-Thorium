@@ -37,6 +37,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Vehículos** | Vehículos con dueño persistentes con llave en el inventario: abrir/cerrar (`L`), motor (`J`), freno de mano (`X`), intermitentes con luces que titilan (flechas), maletero, menú de interacción con `M` + click derecho, tuning guardado en BD, cepo y multas para la policía (facción 1) e historial de golpes y ocupantes para admins. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
 | **Interfaz** | HUD propio con minimapa giratorio (radar extraído del propio juego), notificaciones con sonido, scoreboard, nametags y sistema de IDs. |
+| **Robos** | Robo de tiendas 24/7: apuntas al cajero, barra de miedo que hay que mantener amenazando, cinemática en la caja con el botín subiendo fardo a fardo, patrullas esperando afuera, negociación por turnos con burbujas de diálogo (rehenes a cambio de ventaja, sin pinchos, sin disparos a las llantas) y cuenta regresiva antes de la persecución. 3 a 5 estrellas según lo que hiciste dentro. |
 | **Ayuda y reportes** | Panel `F1` con guía para nuevos, reglas, conceptos de rol, teclas y comandos (con buscador), botón de Discord y formulario para reportar jugadores que avisa al staff y queda guardado. |
 
 ## Arquitectura
@@ -80,6 +81,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
 | `rp_properties` · `rp_vehicles` · `rp_radio` | Casas, vehículos y radio con emisoras de internet |
+| `rp_robbery` | Robo de tiendas con miedo, cinemática, negociación y persecución |
 
 Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
 

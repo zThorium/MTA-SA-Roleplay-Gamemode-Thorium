@@ -54,7 +54,8 @@ Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: lista de co
 **En PR abierto, aún no en `main`** (revisa el PR antes de tocar esas áreas):
 vehículos con llaves/interacción M/tuning y combustible (#6), panel de ayuda F1 con
 reportes (#7), estrellas de búsqueda y policía IA (#8), comandos de admin
-`/goto`, `/get`, `/givemoney`, `/kick`... (#9).
+`/goto`, `/get`, `/givemoney`, `/kick`... (#9), robo de tiendas 24/7 con miedo, cinemática,
+negociación y persecución (`rp_robbery`, se apoya en `rp_wanted` de #8/#17).
 
 ## Reglas de arquitectura (no romper)
 

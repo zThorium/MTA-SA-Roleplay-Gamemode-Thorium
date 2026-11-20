@@ -532,4 +532,19 @@ SCHEMA = {
         CONSTRAINT fk_bank_cards_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_robbery: tiendas 24/7 robables (puerta por fuera; points = JSON con cajero, caja, salida y clientes corregidos en juego)
+    [[
+    CREATE TABLE IF NOT EXISTS robbery_stores (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name       VARCHAR(48)  NOT NULL,
+        type       VARCHAR(16)  NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        rot        FLOAT        NOT NULL DEFAULT 0,
+        points     TEXT         NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

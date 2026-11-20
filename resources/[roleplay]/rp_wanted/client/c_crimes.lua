@@ -123,6 +123,8 @@ addEventHandler("onClientPedDamage", root, function(attacker, weapon)
         attacker, byVehicle = localPlayer, true
     end
     if attacker ~= localPlayer then return end
+    -- Cajeros, rehenes y policias de un robo: las estrellas las pone rp_robbery
+    if getElementData(source, "rp:robberyPed") then return end
     local crime = wantedCrimeForPedDamage(weapon, isCop(source), byVehicle)
     if crime then report(crime, source, WANTED_DONT_CARE_SKINS[getElementModel(source)]) end
 end)
@@ -132,6 +134,7 @@ addEventHandler("onClientPedWasted", root, function(killer, weapon)
     if not active() or not killer then return end
     local byVehicle = killer == myVehicle()
     if killer ~= localPlayer and not byVehicle then return end
+    if getElementData(source, "rp:robberyPed") then return end
     local crime = wantedCrimeForPedDamage(weapon, isCop(source), byVehicle)
     if crime then report(crime, source, WANTED_DONT_CARE_SKINS[getElementModel(source)]) end
 end)
@@ -140,7 +143,7 @@ end)
 addEventHandler("onClientPlayerTarget", localPlayer, function(target)
     if not target or not active() then return end
     local t = getElementType(target)
-    if t ~= "ped" then return end
+    if t ~= "ped" or getElementData(target, "rp:robberyPed") then return end
     local weapon = getPedWeapon(localPlayer)
     if weapon < 22 or weapon > 38 or not getPedControlState(localPlayer, "aim_weapon") then return end
     report("aim_gun", target, WANTED_DONT_CARE_SKINS[getElementModel(target)], not isPedDead(target))
