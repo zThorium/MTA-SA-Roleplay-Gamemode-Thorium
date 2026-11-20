@@ -79,13 +79,17 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_shops` · `rp_bank` · `rp_dealership` | Economía |
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
-| `rp_properties` · `rp_vehicles` | Casas y vehículos |
+| `rp_properties` · `rp_vehicles` · `rp_radio` | Casas, vehículos y radio con emisoras de internet |
 
 Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
 
 ## Instalación
 
 **Requisitos:** servidor MTA:SA 1.6 y MariaDB/MySQL 10.4+ (XAMPP sirve).
+
+> **Con Docker (Mac/Linux):** `cp .env.example .env && scripts/mta.sh up` levanta el servidor
+> MTA de Linux y MariaDB ya configurados, y `scripts/test.sh` ejecuta las pruebas del servidor.
+> Ver [`docs/DOCKER.md`](docs/DOCKER.md). Los pasos de abajo son para el servidor de Windows.
 
 1. **Clona** el repo y copia su contenido sobre la carpeta `mods/deathmatch` de tu servidor (`resources/`, `mtaserver.conf`, `acl.xml`):
    ```bash

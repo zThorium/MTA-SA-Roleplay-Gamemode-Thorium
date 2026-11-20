@@ -1,0 +1,54 @@
+# Entorno Docker de Thorium: servidor MTA:SA 1.6 (Linux) + MariaDB.
+# Guia: docs/DOCKER.md. Atajos: scripts/mta.sh (arrancar, logs, consola) y scripts/test.sh.
+# Credenciales en .env (copia .env.example). No subas .env.
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-mtarp}
+      MARIADB_USER: ${DB_USER:-mtarp}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en .env (copia .env.example)}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Falta DB_ROOT_PASSWORD en .env}
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      # Solo en localhost del Mac, para abrirla con TablePlus/DBeaver/mysql si quieres
+      - "127.0.0.1:${DB_HOST_PORT:-3307}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  mta:
+    build: ./docker/mta
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-mtarp}
+      DB_USER: ${DB_USER:-mtarp}
+      DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Recursos del repo en vivo: editas en el Mac, haces "refresh"/"restart rp_x" y listo
+      - ./resources:/opt/mta/mods/deathmatch/resources
+      - ./mtaserver.conf:/config/mtaserver.conf:ro
+      - ./acl.xml:/config/acl.xml:ro
+      - ./vehiclecolors.conf:/config/vehiclecolors.conf:ro
+      # server.log visible desde el Mac en docker/logs/ (ignorado por git)
+      - ./docker/logs:/opt/mta/mods/deathmatch/logs
+    ports:
+      - "${MTA_PORT:-22003}:22003/udp"
+      - "${MTA_HTTP_PORT:-22005}:22005/tcp"
+      - "${MTA_ASE_PORT:-22126}:22126/udp"
+    stop_grace_period: 15s
+
+volumes:
+  db-data:

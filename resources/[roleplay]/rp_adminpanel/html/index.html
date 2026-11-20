@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Panel de administracion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window">
+        <header>
+            <div>
+                <h1>Panel de administracion</h1>
+                <p class="hint"><kbd>Esc</kbd> cierra &middot; clic en un comando para copiarlo</p>
+            </div>
+            <input id="search" type="text" placeholder="Buscar comando o descripcion..." autocomplete="off" maxlength="40">
+            <button id="btn-close" class="close" title="Cerrar">&times;</button>
+        </header>
+        <nav id="tabs"></nav>
+        <main id="list" class="list"></main>
+        <footer><span id="count"></span><span>Requiere <code>admin_level &ge; 1</code></span></footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
