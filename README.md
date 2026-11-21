@@ -145,7 +145,7 @@ UPDATE accounts SET admin_level = 1 WHERE username = 'TuUsuario';
 - [ ] Verificar en juego las coordenadas de casas y concesionario
 - [ ] Tono de piel de brazos según raza
 - [ ] Trabajos y facciones
-- [ ] Licencias y documentos
+- [ ] Licencias y documentos (licencia de conducir con autoescuela ✅)
 - [ ] Panel de administración
 
 ## Créditos y licencia

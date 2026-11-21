@@ -43,6 +43,7 @@ Economía: `rp_bank` (cajeros), `rp_shops`, `rp_dealership`, `rp_payday`.
 Comunidad: `rp_factions` (F3, roles con permisos y sueldo), `rp_phone` (P) con la app
 de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` (radio de vehículos con emisoras de internet), `rp_citizens`
 (peatones y tráfico IA). Interfaz: `rp_hud`, `rp_scoreboard`, `rp_nametags`.
+Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
 Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: lista de comandos de admin; añade ahí cada comando de admin nuevo).
 

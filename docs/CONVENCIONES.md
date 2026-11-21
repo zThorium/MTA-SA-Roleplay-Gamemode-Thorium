@@ -58,7 +58,8 @@ Patrones que ya usa el gamemode. Copia el estilo del recurso más parecido antes
 Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank_transactions`, `atms`,
 `phone_notes`, `phone_contacts`, `ride_drivers`, `rides`, `social_posts`, `social_likes`, `properties`,
 `path_nodes`, `path_links`, `clothing_stores`, `character_toys`, `vehicles`, `shops`, `shop_items`,
-`factions`, `faction_ranks`, `faction_members`, `faction_log`.
+`factions`, `faction_ranks`, `faction_members`, `faction_log`, `driving_schools`, `driving_scores`,
+`driving_licenses`.
 
 ## Eventos y seguridad
 
