@@ -688,7 +688,7 @@ handle("image", function(player, _, postId)
     local w = imageWindow[player]
     if not w or now - w.start > 10000 then w = { start = now, n = 0 }; imageWindow[player] = w end
     w.n = w.n + 1
-    if w.n > 60 then return end
+    if w.n > 120 then return reply(player, "rp:social:image", postId, false, true) end   -- el telefono reintenta luego
     Social.image(postId, function(ok, data)
         if not isElement(player) then return end
         if ok then triggerLatentClientEvent(player, "rp:social:image", 200000, false, resourceRoot, postId, data)

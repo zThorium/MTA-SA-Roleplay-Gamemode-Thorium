@@ -1,13 +1,13 @@
 /*
  * rp_phone / app.js
- * Lua -> RP.boot / setNotes / setContacts / setNearby / setBank / setFeed / setPhoto
+ * Lua -> RP.boot / setNotes / setContacts / setNearby / setBank (Fotogram: RP.social y RP.camera en social.js)
  * JS  -> mta.triggerEvent("rp:phone:ui:*", ...)
  */
 (function () {
     "use strict";
 
     var $ = function (id) { return document.getElementById(id); };
-    var state = { notes: [], contacts: [], editing: null, bankMode: "deposit", photo: null };
+    var state = { notes: [], contacts: [], editing: null, bankMode: "deposit" };
     var DAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
     var MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
@@ -30,7 +30,7 @@
         document.querySelectorAll(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
         document.querySelector(".screen").classList.toggle("dark-status", name === "home");
         if (name === "bank") send("rp:phone:ui:bankOpen");
-        if (name === "social") send("rp:phone:ui:feed");
+        if (window.Fotogram) Fotogram.onShow(name);
         if (name === "contact-add") send("rp:phone:ui:nearby");
     }
 
@@ -63,6 +63,7 @@
         b.addEventListener("click", function () { send("rp:phone:ui:openApp", b.dataset.app); });
     });
     document.addEventListener("keydown", function (e) {
+        if (document.body.classList.contains("camera-mode")) return;   // la camara usa sus propias teclas (social.js)
         var tag = document.activeElement && document.activeElement.tagName;
         if (e.key === "Escape" || ((e.key === "p" || e.key === "P") && tag !== "INPUT" && tag !== "TEXTAREA")) {
             e.preventDefault();
@@ -156,61 +157,6 @@
         $("bank-amount").value = "";
     });
 
-    // ---------------------------------------------------------------- Fotogram
-    function renderFeed(posts) {
-        var feed = $("feed");
-        feed.innerHTML = "";
-        if (!posts.length) {
-            feed.appendChild(el("p", "empty", "Todavia no hay publicaciones. Pulsa 📷 para subir la primera."));
-            return;
-        }
-        posts.forEach(function (p) {
-            var post = el("article", "post");
-            var head = el("div", "post-head");
-            head.appendChild(el("span", "avatar", String(p.author || "?").charAt(0)));
-            head.appendChild(el("span", null, p.author));
-            post.appendChild(head);
-
-            var img = el("img");
-            img.src = "data:image/jpeg;base64," + p.image;
-            post.appendChild(img);
-
-            var actions = el("div", "post-actions");
-            var like = el("button", "like", p.liked ? "❤️" : "🤍");
-            like.type = "button";
-            var count = el("span", null, p.likes + " Me gusta");
-            like.addEventListener("click", function () {
-                p.liked = !p.liked;
-                p.likes = Number(p.likes) + (p.liked ? 1 : -1);
-                like.textContent = p.liked ? "❤️" : "🤍";
-                count.textContent = p.likes + " Me gusta";
-                send("rp:phone:ui:like", p.id);
-            });
-            actions.appendChild(like);
-            actions.appendChild(count);
-            post.appendChild(actions);
-
-            if (p.caption) {
-                var caption = el("div", "post-caption");
-                caption.appendChild(el("b", null, p.author));
-                caption.appendChild(document.createTextNode(p.caption));
-                post.appendChild(caption);
-            }
-            post.appendChild(el("div", "post-date", p.date));
-            feed.appendChild(post);
-        });
-    }
-
-    function capture() { send("rp:phone:ui:capture"); }
-    $("social-camera").addEventListener("click", capture);
-    $("social-retake").addEventListener("click", capture);
-    $("social-share").addEventListener("click", function () {
-        if (!state.photo) return;
-        send("rp:phone:ui:post", $("social-caption").value.trim(), state.photo);
-        state.photo = null;
-        show("social");
-    });
-
     // ---------------------------------------------------------------- API para Lua
     window.RP = {
         boot: function (info) {
@@ -255,12 +201,8 @@
                 list.appendChild(li);
             });
         },
-        setFeed: function (rows) { renderFeed(Array.isArray(rows) ? rows : []); },
-        setPhoto: function (base64) {
-            state.photo = base64;
-            $("photo-preview").src = "data:image/jpeg;base64," + base64;
-            $("social-caption").value = "";
-            show("social-new");
-        }
     };
+
+    // Para social.js (Fotogram)
+    window.Phone = { $: $, el: el, send: send, show: show };
 })();
