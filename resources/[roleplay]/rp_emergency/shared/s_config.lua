@@ -14,28 +14,51 @@ EMERGENCY = {
     },
 
     -- Anti-abuso
-    CALL_COOLDOWN = 60,        -- s entre llamadas del mismo jugador (tras terminar la anterior)
+    CALL_COOLDOWN = 20,        -- s entre llamadas del mismo jugador (cuenta desde que la ambulancia se retira)
     MAX_ACTIVE_CALLS = 6,      -- ambulancias simultaneas en todo el servidor
 
     -- Ambulancia
     AMBULANCE_MODEL = 416,
     PARAMEDIC_SKINS = { 274, 275, 276 },   -- paramedicos de LS
-    SPAWN_MIN = 120,           -- m desde el jugador donde aparece (fuera de la vista si se puede)
-    SPAWN_MAX = 200,
+    SPAWN_MIN = 80,            -- m desde el jugador donde aparece (fuera de la vista y con ruta por la red vial)
+    SPAWN_MAX = 140,
     SPAWN_REQUEST_TIMEOUT = 10,
     ARRIVE_MAX_DIST = 120,     -- m: el servidor acepta "llego" si la ambulancia esta a menos de esto del jugador
-    ENROUTE_TIMEOUT = 240,     -- s: si no llega, se cancela la llamada (recuperacion)
-    SEARCH_RADIUS = 45,        -- m alrededor de la ambulancia para buscar abatidos
+    ENROUTE_TIMEOUT = 240,     -- s: plazo del traslado al hospital
+    -- Tiempo estimado de llegada = metros de la ruta / ETA_SPEED * ETA_MARGIN + 15 s,
+    -- entre ETA_MIN y ETA_MAX. Si no llega a tiempo, o pasa NO_PROGRESS s sin acercarse,
+    -- se manda otra ambulancia desde otro punto (hasta MAX_ATTEMPTS unidades por llamada).
+    ETA_SPEED = 11,            -- m/s de media (~40 km/h contando curvas y cruces)
+    ETA_MARGIN = 1.5,
+    ETA_MIN = 35,
+    ETA_MAX = 150,
+    NO_PROGRESS = 30,
+    MAX_ATTEMPTS = 3,
+    SEARCH_RADIUS = 60,        -- m alrededor de la ambulancia para buscar abatidos
     LOOK_TIME = 4,             -- s que miran alrededor si no hay abatidos antes de volver
-    WALK_TIMEOUT = 20,         -- s: a partir de aqui el paramedico se teletransporta al punto
-    WALK_ARRIVE_DIST = 1.4,    -- m al paciente / destino para considerarlo llegado
-    CRUISE_SPEED = 62,         -- km/h
+    CRUISE_SPEED = 85,         -- km/h en recta (va con sirena)
+    JUNCTION_SPEED = 45,       -- km/h al cruzar un cruce (con sirena no espera semaforos)
+    OFFROAD_SPEED = 28,        -- km/h fuera de la calle (parques, plazas, estacionamientos)
+    OFFROAD_STOP = 7,          -- m del paciente donde se detiene cuando sale de la calle
     LEAVE_TIME = 18,           -- s alejandose antes de desaparecer
     ARRIVE_RADIUS = 12,        -- m al ultimo punto de la ruta para detenerse
 
-    -- Reanimacion
-    REVIVE_TIME = 9,           -- s de RCP por paciente (configurable)
+    -- Reanimacion (la secuencia de rol dura ~20 s: valoracion, RCP, desfibrilador y pulso)
     REVIVE_HEALTH = 40,        -- vida al reanimar
+
+    -- Rol: nombres y frases (se elige una al azar). Se ven en globos sobre la cabeza
+    -- y en el chat de quien este a menos de 20 m.
+    PARAMEDIC_NAMES = { "Ruiz", "Navarro", "Castro", "Herrera", "Molina", "Ortega", "Vargas", "Rojas", "Mendoza", "Reyes" },
+    LINES = {
+        running   = { "¡Paramedicos! ¡Abran paso!", "¡Emergencias medicas, ya estamos aqui!", "¡Vamos, vamos, rapido!" },
+        callout   = { "¿Hola? ¿Alguien llamo al 911?", "¿Hay algun herido por aqui?", "Servicios de emergencia, ¿quien necesita ayuda?" },
+        noone     = { "Aqui no hay nadie herido. Volvemos a la unidad.", "Falsa alarma, no hay pacientes. Nos retiramos." },
+        assess    = { "¿Me escucha? ¡Abra los ojos!", "Senor, ¿me oye? Apriete mi mano si me escucha.", "Tranquilo, somos paramedicos. ¿Me escucha?" },
+        noPulse   = { "No responde y casi no respira. ¡Empiezo RCP!", "Pulso muy debil, sin respuesta. ¡Iniciando compresiones!" },
+        pulse     = { "¡Tenemos pulso! Esta volviendo.", "¡Ritmo recuperado! Respira por si solo." },
+        advice    = { "Tranquilo, ya esta estable. No haga esfuerzos y pase por el hospital.", "Ya paso lo peor. Descanse y que lo revisen en el hospital." },
+        dead      = { "Sin signos vitales. ¡Lo subimos a la unidad, rapido!", "No hay pulso. Hay que trasladarlo ya al hospital." },
+    },
     MAX_PATIENTS = 3,          -- pacientes que atiende una ambulancia por llamada
 
     -- Traslado de muertos

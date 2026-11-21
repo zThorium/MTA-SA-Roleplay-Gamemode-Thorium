@@ -122,6 +122,8 @@ html, body {
 .icon.bank { background: linear-gradient(180deg, #5be08f, #1e9e55); }
 .icon.social { background: linear-gradient(45deg, #f9ce34, #ee2a7b 50%, #6228d7); }
 .icon.vroom { background: linear-gradient(180deg, #2b2f36, #0d0f12); box-shadow: inset 0 0 0 1px rgba(47, 210, 122, 0.6); }
+.icon.call { background: linear-gradient(180deg, #5df27e, #1fbf45); }
+.icon svg { width: 30px; height: 30px; fill: #fff; }
 .icon.settings { background: linear-gradient(180deg, #c7c9ce, #7d8088); }
 
 .dock {
@@ -236,6 +238,35 @@ header .action { justify-self: end; font-weight: 600; }
 .post-date { padding: 2px 12px; font-size: 11px; color: #8e8e93; }
 #photo-preview { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: #ddd; }
 
+/* ---------- Telefono ---------- */
+.tab[hidden] { display: none; }
+.tab { display: flex; flex-direction: column; gap: 10px; }
+.em-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 700; }
+.em-icon.ambulance { background: #ff3b30; }
+.em-icon.police { background: #0a7aff; }
+.em-icon.fire { background: #ff9500; }
+.em-row { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.mini-call { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #34c759; cursor: pointer; }
+.mini-call svg, .call-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+.dial-display { height: 52px; display: grid; place-items: center; font-size: 32px; font-weight: 300; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.keypad { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 12px 22px; }
+.keypad button { width: 64px; height: 64px; border: 0; border-radius: 50%; background: #e5e5ea; color: #111; font: inherit; font-size: 26px; cursor: pointer; }
+.keypad button:active { background: #c7c7cc; }
+.dial-actions { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 22px; align-items: center; margin-top: 4px; }
+.dial-del { border: 0; background: none; color: #8e8e93; font-size: 22px; cursor: pointer; }
+.call-btn { display: grid; place-items: center; width: 64px; height: 64px; border: 0; border-radius: 50%; background: #34c759; cursor: pointer; }
+.call-btn svg { width: 28px; height: 28px; }
+.call-btn.hangup { background: #ff3b30; }
+.call-btn.hangup svg { transform: rotate(135deg); }
+
+.call-view { align-items: center; justify-content: space-between; padding: 90px 20px 70px; background: linear-gradient(180deg, #2c3e50, #0f1419); color: #fff; }
+.call-info { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.call-avatar { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 34px; font-weight: 600; }
+.call-info h1 { font-size: 26px; font-weight: 500; }
+.call-info span { font-size: 15px; opacity: 0.7; }
+.call-info p { margin-top: 10px; max-width: 240px; font-size: 14px; line-height: 1.4; opacity: 0.9; }
+
 .home-bar {
     position: absolute;
     left: 50%;
@@ -249,4 +280,33 @@ header .action { justify-self: end; font-weight: 600; }
     cursor: pointer;
     z-index: 40;
 }
-.home.active ~ .home-bar { background: rgba(255, 255, 255, 0.85); }
+.home.active ~ /* ---------- Telefono ---------- */
+.tab[hidden] { display: none; }
+.tab { display: flex; flex-direction: column; gap: 10px; }
+.em-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 700; }
+.em-icon.ambulance { background: #ff3b30; }
+.em-icon.police { background: #0a7aff; }
+.em-icon.fire { background: #ff9500; }
+.em-row { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.mini-call { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #34c759; cursor: pointer; }
+.mini-call svg, .call-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+.dial-display { height: 52px; display: grid; place-items: center; font-size: 32px; font-weight: 300; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.keypad { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 12px 22px; }
+.keypad button { width: 64px; height: 64px; border: 0; border-radius: 50%; background: #e5e5ea; color: #111; font: inherit; font-size: 26px; cursor: pointer; }
+.keypad button:active { background: #c7c7cc; }
+.dial-actions { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 22px; align-items: center; margin-top: 4px; }
+.dial-del { border: 0; background: none; color: #8e8e93; font-size: 22px; cursor: pointer; }
+.call-btn { display: grid; place-items: center; width: 64px; height: 64px; border: 0; border-radius: 50%; background: #34c759; cursor: pointer; }
+.call-btn svg { width: 28px; height: 28px; }
+.call-btn.hangup { background: #ff3b30; }
+.call-btn.hangup svg { transform: rotate(135deg); }
+
+.call-view { align-items: center; justify-content: space-between; padding: 90px 20px 70px; background: linear-gradient(180deg, #2c3e50, #0f1419); color: #fff; }
+.call-info { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.call-avatar { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 34px; font-weight: 600; }
+.call-info h1 { font-size: 26px; font-weight: 500; }
+.call-info span { font-size: 15px; opacity: 0.7; }
+.call-info p { margin-top: 10px; max-width: 240px; font-size: 14px; line-height: 1.4; opacity: 0.9; }
+
+.home-bar { background: rgba(255, 255, 255, 0.85); }

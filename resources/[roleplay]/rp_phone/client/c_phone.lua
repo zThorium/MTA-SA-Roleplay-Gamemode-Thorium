@@ -1,6 +1,6 @@
 --[[
     rp_phone / c_phone.lua
-    Telefono estilo smartphone en la esquina inferior derecha (CEF).
+    Telefono estilo smartphone (app Telefono con numeros de emergencia) en la esquina inferior derecha (CEF).
     Tecla P o usar el item desde el inventario. Esc / P para guardarlo.
 ]]
 
@@ -12,8 +12,9 @@ addEvent("rp:phone:show", true)
 addEvent("rp:phone:notes", true)
 addEvent("rp:phone:contacts", true)
 addEvent("rp:bank:data", true)
+addEvent("rp:phone:callResult", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "openApp" }) do
+    "bankOpen", "bankAction", "openApp", "call" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -68,6 +69,10 @@ end)
 addEventHandler("rp:phone:notes", resourceRoot, function(rows) callJS(("RP.setNotes(%s)"):format(json(rows or {}))) end)
 addEventHandler("rp:phone:contacts", resourceRoot, function(rows) callJS(("RP.setContacts(%s)"):format(json(rows or {}))) end)
 
+addEventHandler("rp:phone:callResult", resourceRoot, function(number, ok)
+    callJS(("RP.callResult(%s, %s)"):format(jsString(number), tostring(ok == true)))
+end)
+
 addEventHandler("rp:bank:data", root, function(view, data)
     if view == "phone" then callJS(("RP.setBank(%s)"):format(json(data or {}))) end
 end)
@@ -83,6 +88,11 @@ addEventHandler("rp:phone:ui:openApp", root, function(app)
     if not event then return end
     close()
     triggerEvent(event, localPlayer)
+end)
+addEventHandler("rp:phone:ui:call", root, function(number)
+    number = tostring(number or ""):gsub("%D", "")
+    if #number == 0 or #number > 12 then return end
+    triggerServerEvent("rp:phone:call", resourceRoot, number)
 end)
 addEventHandler("rp:phone:ui:noteSave", root, function(id, title, body)
     triggerServerEvent("rp:phone:note:save", resourceRoot, tonumber(id), tostring(title or ""), tostring(body or ""))

@@ -1,12 +1,24 @@
 --[[
     rp_phone / s_phone.lua
     Telefono movil (item "phone" de rp_inventory). Se abre usandolo desde el
-    inventario o con la tecla P. Apps: Notas, Contactos, Banco (rp_bank) y
-    Fotogram (red social con fotos tomadas en el juego, en s_social.lua).
+    inventario o con la tecla P. Apps: Telefono (numeros de emergencia que
+    llaman a rp_emergency), Notas, Contactos, Banco (rp_bank) y Fotogram
+    (red social con fotos tomadas en el juego, en s_social.lua).
 
     Tablas: phone_notes, phone_contacts y characters.phone_number (se asigna
     la primera vez que se usa el telefono).
 ]]
+
+local lastCall = {}
+
+-- Numeros de emergencia que trae la app Telefono. service = id de rp_emergency.
+local EMERGENCY_NUMBERS = {
+    { number = "911", service = "ambulance", name = "Ambulancia", desc = "Paramedicos LSMD" },
+    { number = "912", service = "police",    name = "Policia",    desc = "LSPD" },
+    { number = "913", service = "fire",      name = "Bomberos",   desc = "LSFD" },
+}
+local BY_NUMBER = {}
+for _, e in ipairs(EMERGENCY_NUMBERS) do BY_NUMBER[e.number] = e end
 
 addEvent("rp:onItemUse", false)
 addEvent("rp:phone:open", true)
@@ -15,6 +27,7 @@ addEvent("rp:phone:note:delete", true)
 addEvent("rp:phone:contact:add", true)
 addEvent("rp:phone:contact:addPlayer", true)
 addEvent("rp:phone:contact:delete", true)
+addEvent("rp:phone:call", true)
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(player, text, kind) exports.rp_notify:notify(player, text, kind) end
@@ -73,6 +86,7 @@ local function openPhone(player)
         if not isElement(player) then return end
         triggerClientEvent(player, "rp:phone:show", resourceRoot, {
             number = number or 0, owner = (getPlayerName(player):gsub("_", " ")),
+            emergency = EMERGENCY_NUMBERS,
         })
         sendNotes(player)
         sendContacts(player)
@@ -177,3 +191,29 @@ addEventHandler("rp:phone:contact:delete", resourceRoot, function(id)
     dbExec(db(), "DELETE FROM phone_contacts WHERE id = ? AND character_id = ?", tonumber(id), characterOf(player))
     sendContacts(player)
 end)
+----------------------------------------------------------------
+-- Telefono: llamadas (por ahora solo a los numeros de emergencia)
+----------------------------------------------------------------
+addEventHandler("rp:phone:call", resourceRoot, function(number)
+    local player = client
+    if not hasPhone(player) or getElementData(player, "rp:downed") or isPedDead(player) then return end   -- abatido (rp_injury)
+    local now = getTickCount()
+    if lastCall[player] and now - lastCall[player] < 3000 then return end
+    lastCall[player] = now
+    if type(number) ~= "string" or #number > 12 then return end
+    local entry = BY_NUMBER[number]
+    if not entry then
+        triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
+        return notify(player, "El numero marcado no esta disponible.", "info")
+    end
+    local emergency = getResourceFromName("rp_emergency")
+    if not emergency or getResourceState(emergency) ~= "running" then
+        triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
+        return notify(player, "No hay servicio de emergencias en este momento.", "error")
+    end
+    -- rp_emergency valida todo y avisa al jugador si rechaza la llamada
+    local ok = exports.rp_emergency:callService(player, entry.service)
+    triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, ok == true)
+end)
+
+addEventHandler("onPlayerQuit", root, function() lastCall[source] = nil end)

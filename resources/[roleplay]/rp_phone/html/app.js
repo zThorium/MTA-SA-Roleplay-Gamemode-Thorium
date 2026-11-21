@@ -1,13 +1,14 @@
 /*
  * rp_phone / app.js
- * Lua -> RP.boot / setNotes / setContacts / setNearby / setBank (Fotogram: RP.social y RP.camera en social.js)
+ * Lua -> RP.boot / callResult / setNotes / setContacts / setNearby / setBank (Fotogram: RP.social y RP.camera en social.js)
  * JS  -> mta.triggerEvent("rp:phone:ui:*", ...)
  */
 (function () {
     "use strict";
 
     var $ = function (id) { return document.getElementById(id); };
-    var state = { notes: [], contacts: [], editing: null, bankMode: "deposit" };
+    var state = { notes: [], contacts: [], editing: null, bankMode: "deposit", emergency: [], dial: "", call: null };
+    var CALL_SVG = document.querySelector(".icon.call").innerHTML;
     var DAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
     var MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
@@ -28,7 +29,7 @@
 
     function show(name) {
         document.querySelectorAll(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
-        document.querySelector(".screen").classList.toggle("dark-status", name === "home");
+        document.querySelector(".screen").classList.toggle("dark-status", name === "home" || name === "call");
         if (name === "bank") send("rp:phone:ui:bankOpen");
         if (window.Fotogram) Fotogram.onShow(name);
         if (name === "contact-add") send("rp:phone:ui:nearby");
@@ -70,6 +71,90 @@
             send("rp:phone:ui:close");
         }
     });
+
+    // ---------------------------------------------------------------- Telefono
+    function formatNumber(n) { return String(n).replace(/^(\d{3})(\d{4})$/, "$1-$2"); }
+
+    function contactFor(number) {
+        for (var i = 0; i < state.emergency.length; i++) {
+            if (state.emergency[i].number === number) return { name: state.emergency[i].name, service: state.emergency[i].service };
+        }
+        for (var j = 0; j < state.contacts.length; j++) {
+            if (String(state.contacts[j].number) === number) return { name: state.contacts[j].name };
+        }
+        return null;
+    }
+
+    function renderEmergency() {
+        var list = $("emergency-list");
+        list.innerHTML = "";
+        if (!state.emergency.length) return emptyItem(list, "Sin numeros de emergencia");
+        state.emergency.forEach(function (e) {
+            var li = el("li");
+            var row = el("div", "em-row");
+            row.appendChild(el("span", "em-icon " + e.service, e.number));
+            var text = el("div");
+            text.appendChild(el("strong", null, e.name));
+            text.appendChild(el("span", "sub", e.desc + " · " + e.number));
+            row.appendChild(text);
+            li.appendChild(row);
+            var btn = el("button", "mini-call");
+            btn.type = "button";
+            btn.innerHTML = CALL_SVG;   // icono fijo, sin datos del jugador
+            li.appendChild(btn);
+            li.addEventListener("click", function () { startCall(e.number); });
+            list.appendChild(li);
+        });
+    }
+
+    function setDial(value) {
+        state.dial = value.slice(0, 12);
+        $("dial-display").textContent = state.dial;
+    }
+
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].forEach(function (k) {
+        var b = el("button", null, k);
+        b.type = "button";
+        b.addEventListener("click", function () { if (/\d/.test(k)) setDial(state.dial + k); });
+        $("keypad").appendChild(b);
+    });
+    $("dial-del").addEventListener("click", function () { setDial(state.dial.slice(0, -1)); });
+    $("dial-call").innerHTML = CALL_SVG;
+    $("call-hangup").innerHTML = CALL_SVG;
+    $("dial-call").addEventListener("click", function () { if (state.dial) startCall(state.dial); });
+
+    document.querySelectorAll("[data-tab]").forEach(function (b) {
+        b.addEventListener("click", function () {
+            document.querySelectorAll("[data-tab]").forEach(function (x) { x.classList.toggle("active", x === b); });
+            $("tab-emergency").hidden = b.dataset.tab !== "emergency";
+            $("tab-keypad").hidden = b.dataset.tab !== "keypad";
+        });
+    });
+
+    function endCall(text) {
+        var c = state.call;
+        if (!c) return;
+        clearTimeout(c.timer);
+        state.call = null;
+        $("call-status").textContent = text || "Llamada finalizada";
+        setTimeout(function () { if (!state.call) show("phone"); }, 1200);
+    }
+
+    function startCall(number) {
+        if (state.call) return;
+        var who = contactFor(number);
+        state.call = { number: number, timer: null };
+        $("call-name").textContent = who ? who.name : formatNumber(number);
+        $("call-number").textContent = who ? formatNumber(number) : "";
+        $("call-avatar").textContent = who ? who.name.charAt(0) : "#";
+        $("call-status").textContent = "Llamando...";
+        show("call");
+        send("rp:phone:ui:call", number);
+        // Si el servidor no responde, se cuelga sola
+        state.call.timer = setTimeout(function () { endCall("Sin respuesta"); }, 8000);
+    }
+
+    $("call-hangup").addEventListener("click", function () { endCall(); });
 
     // ---------------------------------------------------------------- Notas
     function renderNotes() {
@@ -162,7 +247,23 @@
         boot: function (info) {
             $("settings-owner").textContent = info.owner || "-";
             $("settings-number").textContent = String(info.number || "-").replace(/^(\d{3})(\d{4})$/, "$1-$2");
+            state.emergency = Array.isArray(info.emergency) ? info.emergency : [];
+            renderEmergency();
             show("home");
+        },
+        callResult: function (number, ok) {
+            var c = state.call;
+            if (!c || c.number !== number) return;
+            clearTimeout(c.timer);
+            var who = contactFor(number);
+            if (!ok) {
+                endCall(who && who.service ? "La central no pudo atender tu llamada" : "El numero marcado no esta disponible");
+                return;
+            }
+            $("call-status").textContent = who && who.service === "ambulance"
+                ? "Operador 911: \"Enviamos una ambulancia a tu ubicacion. Espera en la calle.\""
+                : "Operador: \"Tu llamada quedo registrada.\"";
+            c.timer = setTimeout(function () { endCall(); }, 4500);
         },
         setNotes: function (rows) { state.notes = Array.isArray(rows) ? rows : []; renderNotes(); },
         setContacts: function (rows) { state.contacts = Array.isArray(rows) ? rows : []; renderContacts(); },

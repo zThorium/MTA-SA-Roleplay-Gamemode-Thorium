@@ -22,6 +22,7 @@
                     <small id="widget-date"></small>
                 </div>
                 <div class="apps">
+                    <button type="button" class="app" data-open="phone"><span class="icon call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></span>Telefono</button>
                     <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span>Notas</button>
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
@@ -30,11 +31,44 @@
                     <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
                 </div>
                 <div class="dock">
+                    <button type="button" class="app" data-open="phone"><span class="icon call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></span></button>
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span></button>
-                    <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span></button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span></button>
                     <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span></button>
                 </div>
+            </section>
+
+            <!-- Telefono -->
+            <section class="view" id="view-phone">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Telefono</h1><span></span></header>
+                <div class="editor">
+                    <div class="segmented">
+                        <button type="button" data-tab="emergency" class="active">Emergencias</button>
+                        <button type="button" data-tab="keypad">Teclado</button>
+                    </div>
+                    <div class="tab" id="tab-emergency">
+                        <ul class="list compact" id="emergency-list"></ul>
+                        <p class="note">La ambulancia llega a donde estas: espera fuera, en la calle.</p>
+                    </div>
+                    <div class="tab" id="tab-keypad" hidden>
+                        <div class="dial-display" id="dial-display"></div>
+                        <div class="keypad" id="keypad"></div>
+                        <div class="dial-actions">
+                            <span></span>
+                            <button type="button" class="call-btn" id="dial-call" aria-label="Llamar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></button>
+                            <button type="button" class="dial-del" id="dial-del" aria-label="Borrar">⌫</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="view call-view" id="view-call">
+                <div class="call-info">
+                    <div class="call-avatar" id="call-avatar"></div>
+                    <h1 id="call-name"></h1>
+                    <span id="call-number"></span>
+                    <p id="call-status"></p>
+                </div>
+                <button type="button" class="call-btn hangup" id="call-hangup" aria-label="Colgar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></button>
             </section>
 
             <!-- Notas -->

@@ -1,17 +1,19 @@
 <meta>
-    <info author="Thorium" name="RP Emergency" description="Emergencias 911: menu de policia, bomberos y ambulancia; ambulancia IA con paramedicos que reaniman o trasladan al hospital" version="1.0.0" type="script" />
+    <info author="Thorium" name="RP Emergency" description="Emergencias 911: menu de policia, bomberos y ambulancia; ambulancia IA por la red vial con paramedicos que rolean, reaniman o trasladan al hospital" version="1.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_notify" />
     <include resource="rp_login" />
     <include resource="rp_characters" />
     <include resource="rp_citizens" />
-    <include resource="rp_rides" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_emergency.lua" type="server" />
     <script src="client/c_graph.lua" type="client" cache="false" />
+    <script src="client/c_offroad.lua" type="client" cache="false" />
     <script src="client/c_driver.lua" type="client" cache="false" />
+    <script src="client/c_walk.lua" type="client" cache="false" />
+    <script src="client/c_bubbles.lua" type="client" cache="false" />
     <script src="client/c_emergency.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
@@ -20,5 +22,6 @@
 
     <export function="isPlayerDowned" type="server" />
     <export function="getActiveCall" type="server" />
+    <export function="callService" type="server" />
     <export function="revivePlayer" type="server" />
 </meta>
