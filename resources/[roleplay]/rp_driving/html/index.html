@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Autoescuela</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Menu del instructor -->
+    <section class="window hidden" id="menu">
+        <header>
+            <div class="logo">A</div>
+            <div>
+                <h1>Autoescuela</h1>
+                <p class="hint"><kbd>Esc</kbd> para cerrar</p>
+            </div>
+            <div class="summary" id="summary"></div>
+            <button class="close" data-close>&times;</button>
+        </header>
+        <nav class="tabs">
+            <button data-tab="tests" class="active">Pruebas</button>
+            <button data-tab="ranking">Clasificacion</button>
+            <button data-tab="license">Licencia</button>
+        </nav>
+        <div class="tab" id="tab-tests"><div class="tests" id="tests"></div></div>
+        <div class="tab hidden" id="tab-ranking">
+            <div class="ranking-grid">
+                <div>
+                    <h2>General</h2>
+                    <p class="hint">Suma de tu mejor puntaje en cada prueba. Desempata el tiempo total.</p>
+                    <ol class="board" id="overall"></ol>
+                </div>
+                <div>
+                    <h2>Por prueba</h2>
+                    <select id="ranking-test"></select>
+                    <ol class="board" id="per-test"></ol>
+                </div>
+            </div>
+        </div>
+        <div class="tab hidden" id="tab-license"><div id="license"></div></div>
+    </section>
+
+    <!-- Resultado de un intento -->
+    <section class="window result hidden" id="result">
+        <div class="result-top">
+            <div class="medal big" id="result-medal"></div>
+            <div>
+                <p class="kicker" id="result-kicker"></p>
+                <h1 id="result-title"></h1>
+                <p class="hint" id="result-sub"></p>
+            </div>
+            <div class="score" id="result-score"></div>
+        </div>
+        <div class="badges" id="result-badges"></div>
+        <table class="breakdown" id="result-breakdown"></table>
+        <div class="tiers" id="result-tiers"></div>
+        <footer>
+            <button class="ghost" id="btn-menu">Volver al menu</button>
+            <button class="ghost" id="btn-retry">Reintentar</button>
+            <button class="primary hidden" id="btn-next">Siguiente prueba</button>
+        </footer>
+    </section>
+
+    <!-- Tarjeta de la licencia -->
+    <section class="card-wrap hidden" id="card">
+        <p class="card-caption" id="card-caption"></p>
+        <div class="license-card" id="license-card">
+            <div class="lc-head">
+                <span>ESTADO DE SAN ANDREAS</span>
+                <strong>LICENCIA DE CONDUCIR</strong>
+            </div>
+            <div class="lc-body">
+                <div class="lc-photo" id="lc-photo"></div>
+                <dl>
+                    <dt>Nombre</dt><dd id="lc-name"></dd>
+                    <dt>N.º</dt><dd id="lc-number"></dd>
+                    <dt>Clase</dt><dd>B - Automoviles</dd>
+                    <dt>Edad / Sexo</dt><dd id="lc-age"></dd>
+                    <dt>Expedida</dt><dd id="lc-issued"></dd>
+                    <dt>Distincion</dt><dd id="lc-medal"></dd>
+                </dl>
+            </div>
+            <div class="lc-stamp" id="lc-stamp"></div>
+        </div>
+        <p class="card-note" id="card-note"></p>
+        <button class="ghost" data-close>Cerrar</button>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -64,6 +64,12 @@ ITEMS = {
         description = "Telefono movil: notas, agenda, banco y Fotogram. Tambien se abre con la tecla P.",
         use = { event = "phone" },
     },
+    -- Documento (rp_driving): los datos viven en driving_licenses; el item es solo el papel
+    driver_license = {
+        name = "Licencia de conducir", icon = "🪪", weight = 0.02, stack = 1, document = true,
+        description = "Licencia de conducir clase B. Usala para verla; /mostrarlicencia [id] para ensenarla.",
+        use = { event = "driver_license" },
+    },
 }
 
 function getItemDefinition(itemId)
