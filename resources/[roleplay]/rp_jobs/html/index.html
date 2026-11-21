@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Trabajos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="games.css">
+</head>
+<body>
+    <div id="backdrop" class="hidden"></div>
+
+    <!-- Minijuego -->
+    <section id="game" class="window game hidden">
+        <header>
+            <div>
+                <h1 id="game-title">Minijuego</h1>
+                <p id="game-help" class="muted"></p>
+            </div>
+            <div class="game-meta">
+                <span id="game-timer" class="timer hidden">0</span>
+                <button id="game-close" class="close" title="Abandonar (Esc)">×</button>
+            </div>
+        </header>
+        <div id="game-stage" class="stage"></div>
+        <footer id="game-foot" class="foot"></footer>
+    </section>
+
+    <!-- Sede del trabajo -->
+    <section id="panel" class="window panel hidden">
+        <header>
+            <div>
+                <h1 id="panel-title">Trabajo</h1>
+                <p id="panel-location" class="muted"></p>
+            </div>
+            <button class="close" data-close title="Cerrar (Esc)">×</button>
+        </header>
+        <div class="panel-body">
+            <p id="panel-desc"></p>
+            <div class="stats">
+                <div><span class="muted">Nivel</span><b id="panel-level">1</b></div>
+                <div><span class="muted">Ganado</span><b id="panel-earned">$0</b></div>
+                <div><span class="muted">Mejor turno</span><b id="panel-best">$0</b></div>
+                <div><span class="muted">Tareas</span><b id="panel-tasks">0</b></div>
+            </div>
+            <div class="xpbar"><div id="panel-xp"></div></div>
+            <p id="panel-xptext" class="muted small"></p>
+            <ul id="panel-perks" class="perks"></ul>
+            <p id="panel-pay" class="pay"></p>
+            <div id="panel-actions" class="actions"></div>
+        </div>
+    </section>
+
+    <!-- Punto de venta -->
+    <section id="market" class="window market hidden">
+        <header>
+            <div>
+                <h1 id="market-title">Punto de venta</h1>
+                <p class="muted">Los precios cambian cada pocos minutos y bajan si se vende mucho de lo mismo.</p>
+            </div>
+            <button class="close" data-close title="Cerrar (Esc)">×</button>
+        </header>
+        <div id="market-list" class="market-list"></div>
+        <footer class="foot"><span class="muted">Efectivo:</span> <b id="market-money">$0</b></footer>
+    </section>
+
+    <!-- Resumen del turno -->
+    <section id="summary" class="window summary hidden">
+        <h1 id="summary-title">Turno terminado</h1>
+        <p id="summary-reason" class="muted"></p>
+        <div class="stats">
+            <div><span class="muted">Ganado</span><b id="summary-earned">$0</b></div>
+            <div><span class="muted">Tareas</span><b id="summary-tasks">0</b></div>
+            <div><span class="muted">Minutos</span><b id="summary-minutes">0</b></div>
+        </div>
+        <button class="btn primary" data-close>Cerrar</button>
+    </section>
+
+    <script src="app.js"></script>
+    <script src="games/garbage.js"></script>
+    <script src="games/farm.js"></script>
+    <script src="games/lumber.js"></script>
+    <script src="games/hunt.js"></script>
+    <script src="games/fish.js"></script>
+    <script src="games/mine.js"></script>
+</body>
+</html>
