@@ -26,6 +26,7 @@ ADMIN_CATALOG = {
             { cmd = "/abatir", args = "<id o nombre>", desc = "Deja abatido a un jugador (empieza la cuenta atras de 2 minutos).", res = "rp_injury" },
             { cmd = "/cancelar911", args = "<id o nombre>", desc = "Cancela la emergencia 911 activa de un jugador.", res = "rp_emergency" },
             { cmd = "/borrarpost", args = "<id>", desc = "Borra una foto de Fotogram (con sus likes, comentarios y avisos). El id sale en la base de datos (social_posts).", res = "rp_phone" },
+            { cmd = "/darlicencia", args = "<id o nombre>", desc = "Entrega o rehabilita la licencia de conducir sin hacer las pruebas.", res = "rp_driving" },
             { cmd = "/forzarpayday", args = "[id o nombre]", desc = "Paga el sueldo (payday) al instante a un jugador; sin argumento, a ti.", res = "rp_payday" },
         },
     },
@@ -71,6 +72,10 @@ ADMIN_CATALOG = {
             { cmd = "/dealer puesto", args = "<n>", desc = "Guarda tu posicion (o la de tu auto) como puesto de exhibicion n del concesionario.", res = "rp_dealership" },
             { cmd = "/dealer entrega", args = "", desc = "Guarda tu posicion como punto de entrega de los autos comprados.", res = "rp_dealership" },
             { cmd = "/dealer rotar", args = "", desc = "Renueva al instante los autos del concesionario.", res = "rp_dealership" },
+            { cmd = "/crearautoescuela", args = "", desc = "Crea una autoescuela con el instructor en tu posicion y rumbo.", res = "rp_driving" },
+            { cmd = "/borrarautoescuela", args = "<id>", desc = "Elimina una autoescuela.", res = "rp_driving" },
+            { cmd = "/arenaautoescuela", args = "<id>", desc = "Fija la pista de pruebas en tu posicion y rumbo (terreno plano, ~200 m libres hacia delante y 30 m a los lados).", res = "rp_driving" },
+            { cmd = "/autoescuelas", args = "", desc = "Lista las autoescuelas con su instructor y su pista.", res = "rp_driving" },
         },
     },
 }

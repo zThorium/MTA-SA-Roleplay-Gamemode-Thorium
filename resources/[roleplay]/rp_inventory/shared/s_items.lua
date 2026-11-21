@@ -167,6 +167,12 @@ ITEMS = {
         name = "Telefono roto", icon = "📵", weight = 0.2, stack = 5,
         description = "No enciende, pero tiene piezas. Se vende en la compraventa.",
     },
+    -- Documento (rp_driving): los datos viven en driving_licenses; el item es solo el papel
+    driver_license = {
+        name = "Licencia de conducir", icon = "🪪", weight = 0.02, stack = 1, document = true,
+        description = "Licencia de conducir clase B. Usala para verla; /mostrarlicencia [id] para ensenarla.",
+        use = { event = "driver_license" },
+    },
 }
 
 --[[

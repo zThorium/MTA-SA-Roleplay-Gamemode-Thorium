@@ -674,4 +674,54 @@ SCHEMA = {
         CONSTRAINT fk_job_stats_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_driving: autoescuelas (instructor en el mundo) y su pista de pruebas (arena_* NULL = la de config)
+    [[
+    CREATE TABLE IF NOT EXISTS driving_schools (
+        id         INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+        x          FLOAT             NOT NULL,
+        y          FLOAT             NOT NULL,
+        z          FLOAT             NOT NULL,
+        rotation   FLOAT             NOT NULL DEFAULT 0,
+        interior   TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+        dimension  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        arena_x    FLOAT             NULL,
+        arena_y    FLOAT             NULL,
+        arena_z    FLOAT             NULL,
+        arena_rot  FLOAT             NULL,
+        created_at DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_driving: mejor resultado de cada personaje en cada prueba (tabla de puntajes)
+    [[
+    CREATE TABLE IF NOT EXISTS driving_scores (
+        character_id INT UNSIGNED     NOT NULL,
+        test_id      VARCHAR(24)      NOT NULL,
+        best_score   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        best_time_ms INT UNSIGNED     NOT NULL DEFAULT 0,
+        medal        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        attempts     INT UNSIGNED     NOT NULL DEFAULT 0,
+        updated_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, test_id),
+        KEY idx_driving_scores_rank (test_id, best_score, best_time_ms),
+        CONSTRAINT fk_driving_scores_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_driving: licencia de conducir del personaje (el item driver_license es solo el papel)
+    [[
+    CREATE TABLE IF NOT EXISTS driving_licenses (
+        character_id   INT UNSIGNED NOT NULL,
+        number         VARCHAR(16)  NOT NULL,
+        status         VARCHAR(12)  NOT NULL DEFAULT 'valid',
+        revoked_reason VARCHAR(120) NULL,
+        revoked_by     VARCHAR(32)  NULL,
+        revoked_at     DATETIME     NULL,
+        issued_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        UNIQUE KEY uq_driving_licenses_number (number),
+        CONSTRAINT fk_driving_licenses_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

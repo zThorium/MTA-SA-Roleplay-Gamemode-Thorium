@@ -59,7 +59,9 @@ Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank
 `phone_notes`, `phone_contacts`, `ride_drivers`, `rides`, `social_posts`, `social_likes`, `properties`,
 `path_nodes`, `path_links`, `clothing_stores`, `character_toys`, `vehicles`, `shops`, `shop_items`,
 `factions`, `faction_ranks`, `faction_members`, `faction_log`, `robbery_stores`,
-`identity_cards`.
+`identity_cards`,
+`driving_schools`, `driving_scores`,
+`driving_licenses`.
 
 ## Eventos y seguridad
 

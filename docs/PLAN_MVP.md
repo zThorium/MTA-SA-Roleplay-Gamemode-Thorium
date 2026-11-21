@@ -32,7 +32,7 @@ mindmap
       rp_inventory ✅
       rp_clothing ropa y toys 🚧
       Animaciones ⬜
-      Licencias y DNI 🚧
+      Licencias y DNI 🚧 (autoescuela y licencia de conducir en rp_driving)
     Comunidad
       rp_factions 🚧
       Chat RP ⬜
@@ -92,9 +92,7 @@ Ordenado por prioridad. La **fase 1** es lo mínimo para abrir el servidor a jug
 | 1 | `rp_chat` | Chat por proximidad. `/me`, `/do`, `/b` (OOC local), `/s` (gritar), `/w` (susurrar), `/o` (OOC global, admin lo puede apagar). Colores por distancia. | `rp_characters` |
 | 2 | `rp_police` | Facción de estado sobre `rp_factions`: esposar, cachear, arrestar, multas, cárcel con tiempo, sirena y `/buscados`. Permisos del rol controlan qué puede hacer cada agente. | `rp_factions`, `rp_inventory` |
 | 3 | `rp_medic` | 🚧 Ya hecho: estado **abatido** en `rp_injury` (2 minutos, se reanuda al reconectar, hospital y factura) y el 911 con ambulancia IA en `rp_emergency`, cuyos paramédicos reaniman a los abatidos. Falta la facción de médicos jugadores (reaniman con el export `revivePlayer` de `rp_injury`). | `rp_factions`, `rp_bank`, `rp_injury` |
-| 4 | `rp_licenses` | 🚧 DNI hecho en `rp_agency` (agencia de empleo, ítem `id_card`, `/mostrardni`). Falta: licencia de conducir con examen en autoescuela y licencia de armas. Se muestran con `/mostrar`. Ítems en el inventario. | `rp_inventory` |
-| 5 | `rp_jobs` | Dos o tres trabajos civiles con rutas (camionero, basurero, taxista). Pago por tarea. Es la vía de ingreso de quien no tiene facción. | `rp_vehicles`, `rp_bank` |
-| 4 | `rp_licenses` | DNI del personaje, licencia de conducir con examen en autoescuela y licencia de armas. Se muestran con `/mostrar`. Ítems en el inventario. | `rp_inventory` |
+| 4 | `rp_licenses` | 🚧 Hecho: DNI en `rp_agency` (agencia de empleo, ítem `id_card`, `/mostrardni`) y licencia de conducir con autoescuela en `rp_driving` (ítem `driver_license`). Falta: licencia de armas. Se muestran con `/mostrar`. Ítems en el inventario. | `rp_inventory` |
 | 5 | `rp_jobs` | ✅ Seis trabajos civiles con minijuegos (basurero, granjero, leñador, cazador, pescador, minero), niveles y mercados dinámicos. Ver `docs/TRABAJOS.md`. Quedan como ideas: camionero, taxista, mecánico. | `rp_vehicles`, `rp_bank` |
 | 6 | `rp_fuel` | Combustible por vehículo, gasolineras con pago. Sin gasolina el motor se apaga. | `rp_vehicles` |
 | 7 | `rp_reports` + panel admin | `/reporte` de jugadores, cola para admins, `/ir`, `/traer`, `/spec`, `/kick`, `/ban` (temporal y permanente en SQL), `/jail` OOC. Niveles de admin según `accounts.admin_level`. | `rp_login`, `rp_ids` |
