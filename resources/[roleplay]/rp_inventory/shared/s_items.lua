@@ -64,6 +64,11 @@ ITEMS = {
         description = "Telefono movil: notas, agenda, banco y Fotogram. Tambien se abre con la tecla P.",
         use = { event = "phone" },
     },
+    id_card = {
+        name = "DNI", icon = "🆔", weight = 0.02, stack = 1, document = true,
+        description = "Documento Nacional de Identidad. Usalo para verlo o ensenalo con /mostrardni [id]. Se tramita en la agencia de empleo.",
+        use = { event = "id_card" },
+    },
 }
 
 --[[

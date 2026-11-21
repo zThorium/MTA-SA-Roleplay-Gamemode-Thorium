@@ -50,6 +50,8 @@ ADMIN_CATALOG = {
     {
         id = "mundo", name = "Mundo y propiedades",
         items = {
+            { cmd = "/agenciacola", args = "", desc = "Muestra en el chat la cola de la agencia de empleo y el estado de cada mostrador.", res = "rp_agency" },
+            { cmd = "/agenciareset", args = "", desc = "Vacia la cola de turnos de la agencia y libera los mostradores.", res = "rp_agency" },
             { cmd = "/crearshop", args = "<nombre>", desc = "Crea una tienda con NPC en tu posicion.", res = "rp_shops" },
             { cmd = "/crearrobo", args = "<tipo> <nombre>", desc = "Crea una tienda 24/7 robable. Parate en la puerta mirando a la calle (ahi esperan las patrullas).", res = "rp_robbery" },
             { cmd = "/borrarrobo", args = "<id>", desc = "Elimina una tienda robable.", res = "rp_robbery" },

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Agencia de Empleo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Dispensador de turnos -->
+<section id="dispenser" class="view hidden">
+    <div class="window disp-window">
+        <div class="disp-art">
+            <div class="machine">
+                <div class="machine-body"><span class="machine-logo">TURNO</span></div>
+                <div class="machine-mouth"></div>
+                <div class="ticket" id="ticket">
+                    <span class="ticket-num" id="ticket-num">00</span>
+                    <span class="ticket-label" id="ticket-label"></span>
+                </div>
+            </div>
+        </div>
+        <div class="disp-side">
+            <header>
+                <div>
+                    <h1>Tome su numero</h1>
+                    <div class="hint" id="disp-agency"></div>
+                </div>
+                <button class="close" id="disp-close" title="Cerrar">&times;</button>
+            </header>
+            <p class="disp-question" id="disp-question">¿Por que motivo nos visita hoy?</p>
+            <div class="disp-options" id="disp-options">
+                <button class="disp-btn" data-reason="dni"><kbd>1</kbd><span><strong>Obtencion de DNI</strong><small>Documento de identidad o duplicado</small></span></button>
+                <button class="disp-btn" data-reason="job"><kbd>2</kbd><span><strong>Obtencion de trabajo</strong><small>Ofertas de empleo disponibles</small></span></button>
+            </div>
+            <p class="disp-result hidden" id="disp-result"></p>
+            <div class="hint disp-keys"><kbd>1</kbd> <kbd>2</kbd> elegir &nbsp; <kbd>Esc</kbd> cerrar</div>
+        </div>
+    </div>
+</section>
+
+<!-- Tramite en el mostrador -->
+<section id="service" class="view hidden">
+    <div class="bar top"></div>
+    <div class="bar bottom"></div>
+    <button class="leave-btn" id="leave-btn">Marcharse</button>
+
+    <!-- Ficha que va rellenando la trabajadora -->
+    <div class="form hidden" id="form">
+        <div class="form-head">FICHA DE IDENTIDAD <span id="form-kind">ALTA</span></div>
+        <div class="form-photo" id="form-photo"><div class="silhouette"></div></div>
+        <dl id="form-fields"></dl>
+    </div>
+
+    <!-- Ofertas de trabajo -->
+    <div class="jobs hidden" id="jobs"></div>
+
+    <!-- Firma -->
+    <div class="sign hidden" id="sign">
+        <div class="sign-title">Firme dentro del recuadro</div>
+        <canvas id="sign-canvas" width="420" height="140"></canvas>
+        <div class="sign-actions">
+            <button class="btn ghost" id="sign-clear">Borrar</button>
+            <button class="btn" id="sign-ok" disabled>Firmar</button>
+        </div>
+    </div>
+
+    <!-- DNI recien impreso -->
+    <div class="reveal hidden" id="reveal">
+        <div class="card-slot" id="reveal-card"></div>
+        <button class="btn" id="reveal-ok">Guardar en el inventario</button>
+    </div>
+
+    <!-- Subtitulos de la cinematica de un trabajo -->
+    <div class="caption hidden" id="caption">
+        <div class="caption-step" id="caption-step"></div>
+        <div class="caption-text" id="caption-text"></div>
+    </div>
+
+    <div class="flash" id="flash"></div>
+
+    <!-- Dialogo -->
+    <div class="dialog hidden" id="dialog">
+        <div class="dialog-name" id="dialog-name"></div>
+        <div class="dialog-text" id="dialog-text"></div>
+        <div class="dialog-reply hidden" id="dialog-reply"></div>
+        <div class="dialog-options" id="dialog-options"></div>
+    </div>
+</section>
+
+<!-- DNI (usar el item, /mostrardni, /consultardni) -->
+<section id="cardview" class="view hidden">
+    <div class="card-wrap">
+        <div class="card-owner" id="card-owner"></div>
+        <div class="card-slot" id="card-slot"></div>
+        <div class="hint"><kbd>Esc</kbd> o clic para cerrar</div>
+    </div>
+</section>
+
+<template id="card-template">
+    <div class="idcard">
+        <div class="idcard-head">
+            <span class="idcard-flag"></span>
+            <div>
+                <div class="idcard-state">ESTADO DE SAN ANDREAS</div>
+                <div class="idcard-title">DOCUMENTO NACIONAL DE IDENTIDAD</div>
+            </div>
+            <div class="idcard-num" data-f="number"></div>
+        </div>
+        <div class="idcard-body">
+            <div class="idcard-photo"><div class="silhouette"></div></div>
+            <div class="idcard-data">
+                <div class="row"><label>APELLIDOS</label><b data-f="last"></b></div>
+                <div class="row"><label>NOMBRE</label><b data-f="first"></b></div>
+                <div class="grid">
+                    <div><label>SEXO</label><b data-f="gender"></b></div>
+                    <div><label>NACIMIENTO</label><b data-f="birth"></b></div>
+                    <div><label>ESTATURA</label><b data-f="height"></b></div>
+                    <div><label>EXPEDICION</label><b data-f="issued"></b></div>
+                    <div><label>VALIDEZ</label><b data-f="expires"></b></div>
+                    <div><label>EJEMPLAR</label><b data-f="copies"></b></div>
+                </div>
+                <div class="row"><label>LUGAR DE NACIMIENTO</label><b data-f="origin"></b></div>
+            </div>
+        </div>
+        <div class="idcard-sign"><label>FIRMA DEL TITULAR</label><canvas width="260" height="70"></canvas></div>
+        <div class="idcard-mrz" data-f="mrz"></div>
+    </div>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
