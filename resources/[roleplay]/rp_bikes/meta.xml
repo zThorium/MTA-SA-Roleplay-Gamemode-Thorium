@@ -1,0 +1,16 @@
+<meta>
+    <info author="Thorium" name="RP Bicicletas" description="Arriendo de bicicletas en puntos del mapa (60 min por arriendo)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+
+    <!-- La configuracion solo la lee el servidor (precio, puntos, tiempos) -->
+    <script src="server/s_config.lua" type="server" />
+    <script src="server/s_bikes.lua" type="server" />
+    <script src="client/c_bikes.lua" type="client" cache="false" />
+
+    <export function="hasActiveBikeRental" type="server" />
+    <export function="returnBike" type="server" />
+</meta>
