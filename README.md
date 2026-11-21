@@ -35,6 +35,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Teléfono** | Notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
 | **Propiedades** | Casas comprables con visita de un minuto, cierre y venta. |
 | **Vehículos** | Vehículos con dueño persistentes, bloqueo con `L` o `/bloquear`. |
+| **Trabajos** | Seis trabajos civiles dinámicos con minijuegos en CEF: basurero (ordenar el compactador y encontrar objetos de valor), granjero (arar, sembrar, plagas, riego, cosecha), leñador (dirección de caída, hachazos, aserradero), cazador (rastros, mira con viento, despiece), pescador (lanzar, picada, recoger; muelle o barco) y minero (grietas, dinamita, derrumbes). Niveles con bonus de pago y mercados con precios que fluctúan. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
 | **Interfaz** | HUD propio con minimapa giratorio (radar extraído del propio juego), notificaciones con sonido, scoreboard, nametags y sistema de IDs. |
 
@@ -78,6 +79,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_shops` · `rp_bank` · `rp_dealership` | Economía |
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
+| `rp_jobs` | Trabajos civiles con minijuegos, niveles y mercados dinámicos |
 | `rp_properties` · `rp_vehicles` · `rp_radio` | Casas, vehículos y radio con emisoras de internet |
 
 Exports y comandos de cada recurso, en [`RECURSOS.md`](RECURSOS.md).
