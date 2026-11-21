@@ -3,8 +3,9 @@
 
     Modo muelle (a pie) o barco (nivel FISHER.BOAT_LEVEL). Cada punto de pesca tiene unas
     pocas capturas; al agotarse hay que moverse a otro. En cada lanzamiento el servidor elige
-    la especie (según muelle/mar y nivel) y el minijuego "fish" la pelea:
-    lanzar con fuerza justa, no picar a los amagos y mantener la barra sobre el pez.
+    la especie (según muelle/mar y nivel). Se lanza y se espera la picada en el mundo (pulsar E
+    a tiempo, sin picar a los amagos). Los peces pequeños salen solos; los grandes (dificultad
+    >= FISHER.REEL_DIFFICULTY) pelean y se abre el minijuego "fish" para recogerlos.
     Lo pescado va al inventario y se vende en la lonja.
 ]]
 
@@ -77,14 +78,17 @@ Jobs.register("fisher", {
         d.species = pickSpecies(player, s)
         Jobs.hold(player, 338, { 0, 0, 0, 0, 0, 0 })
         local level = Jobs.level(player, "fisher")
-        Jobs.game(player, "fish", {
-            difficulty = d.species.difficulty, sea = d.boat,
-            biteWindow = 700 + level * 60, fakes = math.random(0, 2),
-        }, 4500)
+        Jobs.anim(player, "SWORD", "sword_IDLE", true)
+        Jobs.action(player, "_bite", { waitMin = 2500, waitMax = 7000, window = 700 + level * 60, fakes = math.random(0, 2) }, "bite")
     end,
 
     onGame = function(player, s, name, r, ctx)
         local d = s.data
+        Jobs.anim(player, false)
+        if name == "_bite" and r.caught and not r.fail and not r.cancel and d.species.difficulty >= F.REEL_DIFFICULTY then
+            Jobs.notify(player, "¡Es grande! Recoge sin romper el sedal.", "info")
+            return Jobs.game(player, "fish", { difficulty = d.species.difficulty, sea = d.boat, reelOnly = true }, 2500)
+        end
         Jobs.hold(player, false)
         if r.cancel then return askCast(player, s, false) end
         if r.caught and not r.fail then

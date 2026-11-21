@@ -1,76 +1,14 @@
 /*
  * rp_jobs / games/farm.js
- *   sow    sembrar en el momento justo cuando la sembradora pasa sobre la tierra blanda
  *   pests  aplastar los bichos antes de que se coman las plantas
  *   water  regar la tierra seca arrastrando la manguera sin gastar el agua en charcos
  *   weeds  arrancar malas hierbas (arrastrar hacia arriba) sin arrancar el cultivo
+ * Son los problemas que a veces trae una temporada (la siembra se hace a pie en el mundo).
  * Todos devuelven { score: 0..1 }
  */
 (function () {
     "use strict";
     function clamp(v) { return Math.max(0, Math.min(1, v)); }
-
-    JG.register("sow", {
-        title: "Siembra a mano",
-        help: "Haz clic (o pulsa Espacio) cuando la sembradora pase sobre la tierra blanda. Fallar desperdicia semillas.",
-        start: function (stage, p, api) {
-            var rows = p.rows || 3, seeds = p.seeds || 6, speed = (p.speed || 1) * 230;
-            var row = 0, x = 0, planted = 0, misses = 0, spots = [], planter, furrow;
-            var line = api.el("div", "hud-line");
-            stage.appendChild(line);
-            function info() { line.textContent = "Surco " + (row + 1) + "/" + rows + " · Sembradas " + planted + "/" + rows * seeds + " · Fallos " + misses; }
-
-            function buildRow() {
-                stage.querySelectorAll(".furrow").forEach(function (f) { f.style.opacity = 0.35; });
-                furrow = api.el("div", "furrow");
-                furrow.style.top = (140 + row * 110) + "px";
-                stage.appendChild(furrow);
-                spots = [];
-                var width = 800 - 80;
-                for (var i = 0; i < seeds; i++) {
-                    var s = api.el("div", "soft");
-                    var sx = 40 + (i + 0.5) * width / seeds + api.rand(-25, 25);
-                    s.style.left = (sx - 40 - 27) + "px";
-                    furrow.appendChild(s);
-                    spots.push({ x: sx, node: s, done: false });
-                }
-                planter = api.el("div", "planter");
-                planter.style.top = (130 + row * 110) + "px";
-                stage.appendChild(planter);
-                x = 20;
-                info();
-            }
-
-            function plant() {
-                var hit = null;
-                spots.forEach(function (s) { if (!s.done && Math.abs(s.x - x) < 26) hit = s; });
-                if (hit) {
-                    hit.done = true; planted++;
-                    hit.node.appendChild(api.el("div", "sprout emoji", p.crop || "🌱"));
-                    api.sfx("hit");
-                } else { misses++; api.sfx("miss"); }
-                info();
-            }
-
-            function finish() {
-                api.done({ score: clamp(planted / (rows * seeds) - misses * 0.04) });
-            }
-
-            buildRow();
-            api.loop(function (dt) {
-                x += speed * dt;
-                planter.style.left = x + "px";
-                if (x > 840) {
-                    if (planter.parentNode) planter.parentNode.removeChild(planter);
-                    row++;
-                    if (row >= rows) return finish();
-                    buildRow();
-                }
-            });
-            api.on(stage, "mousedown", plant);
-            api.on(document, "keydown", function (e) { if (e.code === "Space") { e.preventDefault(); plant(); } });
-        }
-    });
 
     JG.register("pests", {
         title: "¡Plaga!",
@@ -213,7 +151,6 @@
     });
 
     window.JG_DEMOS = window.JG_DEMOS || {};
-    window.JG_DEMOS.sow = { crop: "🌽", rows: 3, seeds: 6, speed: 1, jobColor: [230, 190, 60] };
     window.JG_DEMOS.pests = { crop: "🍅", bugs: 16, time: 20, jobColor: [230, 190, 60] };
     window.JG_DEMOS.water = { cells: 24, time: 20, jobColor: [230, 190, 60] };
     window.JG_DEMOS.weeds = { crop: "🥔", weeds: 10, time: 20, jobColor: [230, 190, 60] };

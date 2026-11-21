@@ -3,9 +3,10 @@
 
     En cada turno hay MINER.VEINS_PER_SHIFT vetas repartidas por la cantera (rocas que solo
     ve el minero). En cada una:
-      - Minijuego "vein": golpear las grietas que brillan antes de que se apaguen; los golpes
-        en roca sana cansan. Desde nivel 2 se puede poner dinamita (más mineral y más gemas,
-        pero el doble de riesgo de derrumbe).
+      - Se pica en el mundo con la pala/pico (pulsar E varias veces).
+      - Las vetas ricas (plata, oro o MINER.RICH_CHANCE de las demás) abren el minijuego "vein":
+        golpear las grietas que brillan; los golpes en roca sana cansan. Desde nivel 2 se puede
+        poner dinamita (más mineral y más gemas, pero el doble de riesgo de derrumbe).
       - Posible derrumbe: minijuego "cavein" (pulsar las teclas que salen a tiempo) o daño.
     El mineral va al inventario y se vende en la fundición. Al acabar las vetas salen otras.
 ]]
@@ -79,6 +80,11 @@ Jobs.register("miner", {
         local vein = d.veins[d.idx]
         Jobs.hold(player, 337, { 0, 0, 0, 0, 0, 0 })
         Jobs.anim(player, "BASEBALL", "Bat_4", true)
+        local rich = vein.ore.item == "ore_silver" or vein.ore.item == "ore_gold" or math.random() < M.RICH_CHANCE
+        if not rich then
+            return Jobs.action(player, "_tap", { text = "Picando la veta", taps = 10 }, "dig")
+        end
+        Jobs.notify(player, "¡Veta rica! Busca las grietas.", "info")
         Jobs.game(player, "vein", {
             ore = vein.ore.item, color = ORE_COLORS[vein.ore.item] or "#999",
             cracks = 8 + math.random(0, 4), dynamite = Jobs.level(player, "miner") >= 2, time = 22,
@@ -88,6 +94,11 @@ Jobs.register("miner", {
     onGame = function(player, s, name, r, ctx)
         local d = s.data
         Jobs.anim(player, false)
+        if name == "_tap" and ctx == "dig" then
+            -- Picado normal: mismo resultado que una veta mediocre del minijuego
+            name = "vein"
+            r = (r.cancel or r.fail) and r or { hits = 6, total = 10, misses = 0 }
+        end
         if name == "vein" then
             Jobs.hold(player, false)
             if r.cancel then

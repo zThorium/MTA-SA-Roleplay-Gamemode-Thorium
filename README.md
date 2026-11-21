@@ -35,7 +35,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | **Teléfono** | Notas, contactos, banco y *Fotogram* (red social con fotos tomadas en el juego). Tecla `P`. |
 | **Propiedades** | Casas comprables con visita de un minuto, cierre y venta. |
 | **Vehículos** | Vehículos con dueño persistentes, bloqueo con `L` o `/bloquear`. |
-| **Trabajos** | Seis trabajos civiles dinámicos con minijuegos en CEF: basurero (ordenar el compactador y encontrar objetos de valor), granjero (arar, sembrar, plagas, riego, cosecha), leñador (dirección de caída, hachazos, aserradero), cazador (rastros, mira con viento, despiece), pescador (lanzar, picada, recoger; muelle o barco) y minero (grietas, dinamita, derrumbes). Niveles con bonus de pago y mercados con precios que fluctúan. |
+| **Trabajos** | Seis trabajos civiles que se hacen en el mundo, con minijuegos en CEF en momentos puntuales: basurero (ruta y bolsas; ordenar el compactador y encontrar objetos de valor), granjero (arar, sembrar, cosechar; plagas, sequía o malas hierbas), leñador (talar y cargar; árboles complicados y aserradero), cazador (rastros, mira con viento, despiece), pescador (picada en el mundo; recoger los peces grandes) y minero (picar; vetas ricas, dinamita, derrumbes). Niveles con bonus de pago y mercados con precios que fluctúan. |
 | **Concesionario** | Coutt and Schutz: stock al azar que rota cada 60 minutos, pago desde el banco y entrega segura. |
 | **Interfaz** | HUD propio con minimapa giratorio (radar extraído del propio juego), notificaciones con sonido, scoreboard, nametags y sistema de IDs. |
 

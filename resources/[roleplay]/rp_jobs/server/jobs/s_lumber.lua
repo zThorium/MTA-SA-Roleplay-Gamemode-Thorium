@@ -2,8 +2,9 @@
     rp_jobs / jobs/s_lumber.lua  -  Leñador
 
     Carga de LUMBER.TREES_PER_LOAD árboles del bosque de Shady Creeks:
-      1. En cada árbol, minijuego "fell": eliges hacia dónde cae (hay obstáculos alrededor que
-         decide el servidor) y lo talas golpeando en el momento justo.
+      1. En cada árbol talas con la motosierra en el mundo (pulsar E varias veces). Algunos
+         árboles son complicados (LUMBER.TRICKY_CHANCE, junto a un camino, cables, una cabaña...):
+         ahí sale el minijuego "fell" para elegir hacia dónde cae y talar con precisión.
       2. El árbol cae hacia el lado elegido; llevas el tronco al camión (se ve cargado en la caja).
       3. Con la carga completa vas al aserradero y cortas los troncos en tablas (minijuego "saw").
     Pago por tronco entre PAY_PER_LOG y PAY_PER_LOG_MAX según el corte y las tablas.
@@ -58,9 +59,21 @@ local function rollObstacles()
     return dirs
 end
 
+-- El árbol cae y toca llevar el tronco al camión
+local function afterFell(player, s, q, dir)
+    local d = s.data
+    d.quality[#d.quality + 1] = math.max(0.1, math.min(1, q))
+    Jobs.xp(player, 6 + math.floor(q * 6))
+    Jobs.propFx(player, "tree" .. d.idx, "fall", dir * 45)
+    Jobs.sound(player, "timber")
+    Jobs.hud(player, "Lleva el tronco al camión", ("Árbol %d/%d"):format(d.idx, #d.trees))
+    Jobs.waypoint(player, { kind = "log", attach = "vehicle", offset = { 0, -4.5, 0 }, r = 2.5, mode = "foot", act = "press",
+        text = "Pulsa E para cargar el tronco", label = "Camión", marker = "cylinder", blip = false })
+end
+
 Jobs.register("lumber", {
     perks = {
-        "Elegir bien hacia dónde cae el árbol evita dañar la madera.",
+        "En los árboles complicados, elegir bien hacia dónde caen evita dañar la madera.",
         "Las tablas bien cortadas en el aserradero se pagan casi al doble.",
     },
 
@@ -74,10 +87,15 @@ Jobs.register("lumber", {
     onReach = function(player, s, wp)
         local d = s.data
         if wp.kind == "tree" then
-            d.dirs = rollObstacles()
             Jobs.hold(player, 341, { 0, 0, 0, 0, 0, 0 })
             Jobs.anim(player, "CHAINSAW", "WEAPON_csaw", true)
-            Jobs.game(player, "fell", { dirs = d.dirs, hits = 5 + math.floor(Jobs.level(player) / 2), speed = 1 + d.idx * 0.08 }, 5000)
+            if math.random() < L.TRICKY_CHANCE then
+                d.dirs = rollObstacles()
+                Jobs.notify(player, "Este árbol está complicado: mira bien hacia dónde va a caer.", "warning")
+                Jobs.game(player, "fell", { dirs = d.dirs, hits = 5 + math.floor(Jobs.level(player) / 2), speed = 1 + d.idx * 0.08 }, 5000)
+            else
+                Jobs.action(player, "_tap", { text = "Talando", taps = 8 }, "chop")
+            end
 
         elseif wp.kind == "log" then
             Jobs.sound(player, "wood")
@@ -109,6 +127,15 @@ Jobs.register("lumber", {
     onGame = function(player, s, name, r, ctx)
         local d = s.data
         Jobs.anim(player, false)
+        if name == "_tap" and ctx == "chop" then
+            Jobs.hold(player, false)
+            if r.cancel or r.fail then
+                local t = d.trees[d.idx]
+                return Jobs.waypoint(player, { kind = "tree", x = t[1], y = t[2], z = t[3], r = 3.5, mode = "foot", act = "press",
+                    flat = true, text = "Pulsa E para talar el árbol", label = ("Árbol %d"):format(d.idx), marker = "cylinder" })
+            end
+            return afterFell(player, s, 0.75, math.random(0, 7))
+        end
         if name == "fell" then
             Jobs.hold(player, false)
             local q = 0.3
@@ -128,13 +155,7 @@ Jobs.register("lumber", {
                 return Jobs.waypoint(player, { kind = "tree", x = t[1], y = t[2], z = t[3], r = 3.5, mode = "foot", act = "press",
                     flat = true, text = "Pulsa E para talar el árbol", label = ("Árbol %d"):format(d.idx), marker = "cylinder" })
             end
-            d.quality[#d.quality + 1] = math.max(0.1, math.min(1, q))
-            Jobs.xp(player, 6 + math.floor(q * 6))
-            Jobs.propFx(player, "tree" .. d.idx, "fall", ((dir or math.random(0, 7)) * 45))
-            Jobs.sound(player, "timber")
-            Jobs.hud(player, "Lleva el tronco al camión", ("Árbol %d/%d"):format(d.idx, #d.trees))
-            Jobs.waypoint(player, { kind = "log", attach = "vehicle", offset = { 0, -4.5, 0 }, r = 2.5, mode = "foot", act = "press",
-                text = "Pulsa E para cargar el tronco", label = "Camión", marker = "cylinder", blip = false })
+            afterFell(player, s, q, entry and dir or math.random(0, 7))
 
         elseif name == "saw" then
             local acc = {}

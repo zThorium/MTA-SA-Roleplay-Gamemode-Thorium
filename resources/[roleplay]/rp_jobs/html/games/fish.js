@@ -4,6 +4,8 @@
  *         2) esperar: no piques a los amagos; cuando se hunda la boya, ¡clic!
  *         3) recoger: mantén pulsado para subir la zona verde y que el pez quede dentro
  *   -> { caught, reason: "early"|"late"|"escaped"|"line" }
+ *   Con params.reelOnly (lo normal en el juego: el lanzamiento y la picada se hacen en el mundo)
+ *   empieza directamente en la fase 3.
  */
 (function () {
     "use strict";
@@ -116,10 +118,11 @@
                 }
                 fill.style.height = (power * 100) + "%";
             });
+            if (p.reelOnly) { pw.parentNode.removeChild(pw); reel(); }
             api.timer(45, function () { if (phase !== "end") api.done({ caught: false, reason: "escaped" }); });
         }
     });
 
     window.JG_DEMOS = window.JG_DEMOS || {};
-    window.JG_DEMOS.fish = { difficulty: 0.5, sea: false, biteWindow: 900, fakes: 1, jobColor: [70, 170, 230] };
+    window.JG_DEMOS.fish = { difficulty: 0.5, sea: false, biteWindow: 900, fakes: 1, reelOnly: true, jobColor: [70, 170, 230] };
 })();

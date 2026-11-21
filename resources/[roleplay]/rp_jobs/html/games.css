@@ -64,16 +64,9 @@
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 /* ---------- Granja ---------- */
-.stage-sow, .stage-pests, .stage-water, .stage-weeds {
+.stage-pests, .stage-water, .stage-weeds {
     background: linear-gradient(180deg, #7ec8e3 0%, #b9e2ef 18%, #5b8c3a 18.5%, #4a7330 100%);
 }
-.furrow { position: absolute; left: 40px; right: 40px; height: 70px; border-radius: 35px;
-    background: repeating-linear-gradient(90deg, #6b4a2b 0 18px, #5a3d22 18px 36px); box-shadow: inset 0 6px 10px rgba(0,0,0,0.4); }
-.soft { position: absolute; top: 15px; width: 54px; height: 40px; border-radius: 50%; background: radial-gradient(#3b2512, #4d321a 70%); }
-.soft.done { background: radial-gradient(#3b2512, #4d321a 70%); }
-.soft .sprout { position: absolute; left: 50%; top: -18px; transform: translateX(-50%); font-size: 30px; animation: grow 0.4s ease-out; }
-@keyframes grow { from { transform: translateX(-50%) scale(0); } }
-.planter { position: absolute; width: 8px; height: 90px; margin-left: -4px; background: var(--job); border-radius: 4px; box-shadow: 0 0 12px var(--job); }
 .plant { position: absolute; width: 70px; height: 80px; text-align: center; font-size: 44px; }
 .plant .hp { position: absolute; left: 10px; right: 10px; bottom: -6px; height: 5px; background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden; }
 .plant .hp > div { height: 100%; background: var(--success); }

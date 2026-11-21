@@ -177,7 +177,8 @@ for _, m in ipairs(MARKETS) do MARKETS_BY_ID[m.id] = m end
 GARBAGE = {
     STOPS_PER_ROUTE = 5,
     BAGS_MIN = 2, BAGS_MAX = 4,
-    PAY_PER_STOP = 60, PAY_PER_STOP_MAX = 120,  -- según la puntuación del compactador
+    PAY_PER_STOP = 60, PAY_PER_STOP_MAX = 120,  -- 60 al cargar; hasta +60 por parada según el compactador
+    COMPACT_EVERY = 2,                          -- paradas hasta que el camión se llena y toca ordenar
     ROUTE_BONUS = 150,                          -- al volver a la planta con la ruta completa
     TRUCK_REAR = { 0, -5.2, 0 },                -- dónde se cargan las bolsas (relativo al camión)
     -- Probabilidad base de que una parada esconda algo de valor (+3% por nivel)
@@ -201,7 +202,8 @@ FARMER = {
     FIELD = { x = -140, y = 20, z = 3.0, width = 80, rows = 4, rowGap = 14, angle = 0 },
     PLOW_POINTS = 8,
     HARVEST_MODEL = 532,
-    SOW_SPOT = { -110.0, 40.0, 3.0 },          -- borde del campo donde se siembra a mano
+    SOW_POINTS = 5,                            -- puntos del surco que se siembran a pie
+    CARE_CHANCE = 0.6,                         -- probabilidad de que la temporada traiga un problema
     SILO = { -40.0, 60.0, 3.1 },               -- donde se entrega la cosecha
     PAY_MIN = 250, PAY_MAX = 500,
     CROPS = {
@@ -210,12 +212,13 @@ FARMER = {
         { id = "tomato", name = "Tomate", icon = "🍅" },
         { id = "potato", name = "Papa", icon = "🥔" },
     },
-    -- Eventos de cuidado posibles en cada temporada (se eligen 1 o 2 al azar)
+    -- Problemas posibles (minijuego) cuando la temporada trae uno
     CARE_EVENTS = { "pests", "water", "weeds" },
 }
 
 LUMBER = {
     TREES_PER_LOAD = 4,
+    TRICKY_CHANCE = 0.3,                        -- árboles complicados (minijuego de dirección de caída)
     TREE_MODELS = { 654, 655, 656, 657 },       -- pinos de Flint County
     LOG_MODEL = 1463,                           -- pila de troncos (se carga en el camión)
     SAWMILL = { -1995.0, -2375.0, 30.6 },       -- donde se entrega y se corta
@@ -245,6 +248,7 @@ HUNTER = {
 
 FISHER = {
     BOAT_LEVEL = 2,
+    REEL_DIFFICULTY = 0.45,                      -- desde esta dificultad el pez pelea (minijuego de recoger)
     SPOT_STOCK = { 3, 6 },                       -- capturas por punto antes de agotarse
     PIER_SPOTS = {
         { 836.5, -1950, 12.9 }, { 836.5, -2010, 12.9 }, { 836.5, -2060, 12.9 }, { 826, -2063, 12.9 },
@@ -267,6 +271,7 @@ FISHER = {
 
 MINER = {
     VEINS_PER_SHIFT = 5,
+    RICH_CHANCE = 0.25,            -- vetas de carbón/hierro/cobre que también son "ricas" (minijuego)
     ROCK_MODELS = { 905, 897, 896 },
     VEINS = {
         { 560, 820, -40 }, { 610, 800, -38 }, { 650, 860, -36 }, { 640, 930, -34 }, { 560, 920, -38 },

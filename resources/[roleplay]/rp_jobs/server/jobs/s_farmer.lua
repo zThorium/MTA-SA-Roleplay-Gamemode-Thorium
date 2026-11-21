@@ -3,8 +3,9 @@
 
     Cada temporada (un cultivo al azar):
       1. Arar: recorrer las filas del campo con el tractor (puntos en zigzag). Cuenta el tiempo.
-      2. Sembrar a mano: minijuego "sow" (sembrar en el momento justo a lo largo del surco).
-      3. Cuidar: 1 o 2 eventos al azar entre plaga ("pests"), sequía ("water") y malas hierbas ("weeds").
+      2. Sembrar a pie: recorrer los puntos de un surco y sembrar en cada uno (mantener E).
+      3. A veces sale un problema (FARMER.CARE_CHANCE): plaga ("pests"), sequía ("water") o
+         malas hierbas ("weeds"), que se resuelven con un minijuego. Si no, se pasa directo.
       4. Cosechar con la cosechadora (mismos surcos) y llevar el grano al silo.
     Pago entre FARMER.PAY_MIN y PAY_MAX según la calidad media de todos los pasos.
 ]]
@@ -67,11 +68,30 @@ local function nextCare(player, s)
         act = "press", text = CARE_TEXT[ev][1], label = CARE_TEXT[ev][2], flat = true, marker = "cylinder" })
 end
 
+-- Puntos del surco que se siembran a pie (una fila al borde del campo)
+local function sowPoints()
+    local f, pts = F.FIELD, {}
+    local y = f.y + (f.rows - 1) * f.rowGap / 2 + 6
+    for i = 1, F.SOW_POINTS do
+        pts[i] = { f.x - f.width / 2 + 8 + (i - 1) * (f.width - 16) / math.max(1, F.SOW_POINTS - 1), y, f.z }
+    end
+    return pts
+end
+
+local function nextSow(player, s, retry)
+    local d = s.data
+    if not retry then d.si = d.si + 1 end
+    local p = d.sowPoints[d.si]
+    Jobs.hud(player, "Siembra a pie a lo largo del surco", ("%s %s · punto %d/%d"):format(d.crop.icon, d.crop.name, d.si, #d.sowPoints))
+    Jobs.waypoint(player, { kind = "sow", x = p[1], y = p[2], z = p[3], r = 2.5, mode = "foot", act = "press", flat = true,
+        text = "Pulsa E para sembrar aquí", label = "Sembrar", marker = "cylinder", blip = d.si == 1 })
+end
+
 local function newSeason(player, s)
     local crop = F.CROPS[math.random(#F.CROPS)]
     local care = Jobs.shuffle(F.CARE_EVENTS)
-    local count = math.random() < 0.45 and 2 or 1
-    s.data = { crop = crop, points = fieldPoints(F.PLOW_POINTS), pi = 0, scores = {}, care = {}, ci = 0, plowStart = nil }
+    local count = math.random() < F.CARE_CHANCE and 1 or 0
+    s.data = { crop = crop, points = fieldPoints(F.PLOW_POINTS), pi = 0, scores = {}, care = {}, ci = 0, plowStart = nil, si = 0 }
     for i = 1, count do s.data.care[i] = care[i] end
     Jobs.notify(player, ("Nueva temporada: toca sembrar %s %s."):format(crop.icon, crop.name:lower()), "info", 6000)
     driveNext(player, s, "plow")
@@ -85,7 +105,7 @@ end
 
 Jobs.register("farmer", {
     perks = {
-        "Cada temporada cambia el cultivo y lo que hay que cuidar.",
+        "Cada temporada cambia el cultivo y a veces hay plaga, sequía o malas hierbas.",
         "Arar rápido y sembrar con precisión sube la calidad de la cosecha.",
     },
 
@@ -104,14 +124,13 @@ Jobs.register("farmer", {
             local took = getTickCount() - d.plowStart
             d.scores[#d.scores + 1] = math.max(0.3, math.min(1, 1 - (took - expected) / expected))
             Jobs.xp(player, 8)
-            local p = F.SOW_SPOT
-            Jobs.hud(player, "Bájate del tractor y siembra a mano", d.crop.icon .. " " .. d.crop.name)
-            Jobs.waypoint(player, { kind = "sow", x = p[1], y = p[2], z = p[3], r = 3, mode = "foot", act = "press",
-                text = "Pulsa E para sembrar", label = "Sembrar", marker = "cylinder" })
+            d.sowPoints, d.si, d.sowStart = sowPoints(), 0, getTickCount()
+            Jobs.notify(player, "Bájate del tractor y siembra el surco a pie.", "info")
+            nextSow(player, s)
 
         elseif wp.kind == "sow" then
             Jobs.anim(player, "BOMBER", "BOM_Plant_Loop", true)
-            Jobs.game(player, "sow", { crop = d.crop.icon, rows = 3, seeds = 6, speed = 1 + Jobs.level(player) * 0.08 }, 6000)
+            Jobs.action(player, "_hold", { text = ("Sembrando %s"):format(d.crop.name:lower()), ms = 1800 }, "sow")
 
         elseif wp.kind == "care" then
             Jobs.anim(player, "BOMBER", "BOM_Plant_Loop", true)
@@ -141,18 +160,22 @@ Jobs.register("farmer", {
     onGame = function(player, s, name, r, ctx)
         local d = s.data
         Jobs.anim(player, false)
+        if name == "_hold" and ctx == "sow" then
+            if r.cancel or r.fail then return nextSow(player, s, true) end
+            if d.si < #d.sowPoints then return nextSow(player, s) end
+            local took = getTickCount() - d.sowStart
+            d.scores[#d.scores + 1] = math.max(0.4, math.min(1, 1.3 - took / (#d.sowPoints * 9000)))
+            Jobs.xp(player, 8)
+            Jobs.notify(player, "Surco sembrado. Ahora a esperar que crezca...", "success")
+            return setTimer(function()
+                if Jobs.shift(player) == s then nextCare(player, s) end
+            end, 4000, 1)
+        end
         local score = 0
         if not r.cancel and not r.fail then score = math.max(0, math.min(1, tonumber(r.score) or 0)) end
         d.scores[#d.scores + 1] = score
         Jobs.xp(player, 5 + math.floor(score * 6))
-        if name == "sow" then
-            Jobs.notify(player, ("Siembra al %d%%. Ahora a esperar que crezca..."):format(math.floor(score * 100)), score >= 0.6 and "success" or "warning")
-            setTimer(function()
-                if Jobs.shift(player) == s then nextCare(player, s) end
-            end, 3000, 1)
-        else
-            Jobs.notify(player, ("Cuidado del cultivo: %d%%"):format(math.floor(score * 100)), score >= 0.6 and "success" or "warning")
-            nextCare(player, s)
-        end
+        Jobs.notify(player, ("Cuidado del cultivo: %d%%"):format(math.floor(score * 100)), score >= 0.6 and "success" or "warning")
+        nextCare(player, s)
     end,
 })

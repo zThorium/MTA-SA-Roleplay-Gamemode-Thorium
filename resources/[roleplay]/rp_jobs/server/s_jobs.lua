@@ -273,6 +273,18 @@ function Jobs.game(player, name, params, minMs, ctx)
     triggerClientEvent(player, "rp:jobs:game", resourceRoot, name, params, token)
 end
 
+-- Acción en el mundo sin CEF (barra en pantalla y animación). kind:
+--   "_hold" mantener E params.ms; "_tap" pulsar E params.taps veces; "_bite" picada de pesca.
+-- El resultado llega a module.onGame(player, s, kind, result, ctx) como un minijuego más.
+function Jobs.action(player, kind, params, ctx)
+    params = params or {}
+    local minMs = 0
+    if kind == "_hold" then minMs = math.floor((params.ms or 3000) * 0.85)
+    elseif kind == "_tap" then minMs = (params.taps or 6) * 220
+    elseif kind == "_bite" then minMs = math.floor((params.waitMin or 2500) * 0.9) end
+    Jobs.game(player, kind, params, minMs, ctx)
+end
+
 ----------------------------------------------------------------
 -- Vehículo del trabajo
 ----------------------------------------------------------------

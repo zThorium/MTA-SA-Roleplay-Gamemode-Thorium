@@ -2,13 +2,15 @@
     rp_jobs / jobs/s_hunter.lua  -  Cazador
 
     1. Ve a una zona de caza (quad incluido, se puede dejar aparcado).
-    2. Sigue el rastro: en cada huella, minijuego "tracks" (elige la huella fresca entre tres).
-       Fallar alarga el rastro; tardar más de HUNTER.TRACK_COLD_MS entre huellas lo enfría y se pierde.
+    2. Sigue el rastro a pie y examina cada huella (mantener E). En un punto del rastro hay
+       una bifurcación: minijuego "tracks" (elegir la huella fresca); fallar alarga el rastro.
+       Tardar más de HUNTER.TRACK_COLD_MS entre huellas lo enfría y se pierde.
     3. Al final del rastro, minijuego "scope": mira telescópica con viento y distancia.
        Disparo vital = pieza perfecta; al cuerpo = peor calidad; fallo = el animal huye
        (y si es un jabalí o un oso, carga contra ti).
-    4. Minijuego "skin": preparar la pieza siguiendo la línea. Da carne, piel y a veces trofeo
-       al inventario; se venden en la peletería (precios dinámicos).
+    4. Preparar la pieza en el mundo (mantener E). Con un ciervo u oso abatido de un disparo
+       limpio sale el minijuego "skin" para sacar la piel entera y el trofeo. Carne, pieles y
+       trofeos van al inventario y se venden en la peletería (precios dinámicos).
 ]]
 
 local H = HUNTER
@@ -31,6 +33,7 @@ local function newTrail(player, s, fromX, fromY, steps, reason)
         d.trail[i] = { x, y, zone[3] }
     end
     d.animal = Jobs.pickWeighted(H.ANIMALS, Jobs.level(player, "hunter"))
+    d.fork = steps >= 3 and math.random(2, steps - 1) or nil   -- huella donde el rastro se bifurca
     if reason then Jobs.notify(player, reason, "info", 6000) end
 end
 
@@ -79,7 +82,13 @@ Jobs.register("hunter", {
             nextTrack(player, s)
         elseif wp.kind == "track" then
             Jobs.anim(player, "BOMBER", "BOM_Plant_Loop", true)
-            Jobs.game(player, "tracks", { animal = d.animal.id, difficulty = Jobs.level(player) >= 3 and 0.6 or 0.4 }, 1500)
+            if d.ti == d.fork then
+                d.fork = nil
+                Jobs.notify(player, "El rastro se separa en varias huellas. ¿Cuál es la fresca?", "info")
+                Jobs.game(player, "tracks", { animal = d.animal.id, difficulty = Jobs.level(player) >= 3 and 0.6 or 0.4 }, 1500)
+            else
+                Jobs.action(player, "_hold", { text = "Examinando la huella", ms = 1500 }, "track")
+            end
         elseif wp.kind == "animal" then
             Jobs.hold(player, 357, { 0, 0, 0, 0, 0, 0 })
             Jobs.anim(player, "RIFLE", "RIFLE_crouchload", false)
@@ -88,13 +97,29 @@ Jobs.register("hunter", {
                 wind = d.wind, distance = math.random(70, 190) }, 2500)
         elseif wp.kind == "carcass" then
             Jobs.anim(player, "BOMBER", "BOM_Plant_Loop", true)
-            Jobs.game(player, "skin", { animal = d.animal.id, points = 7 }, 4000)
+            if d.shot == "vital" and (d.animal.trophy or d.animal.id == "bear") then
+                Jobs.game(player, "skin", { animal = d.animal.id, points = 7 }, 4000)
+            else
+                Jobs.action(player, "_hold", { text = ("Preparando el %s"):format(d.animal.name:lower()), ms = 4500 }, "skin")
+            end
         end
     end,
 
     onGame = function(player, s, name, r, ctx)
         local d = s.data
         Jobs.anim(player, false)
+        if name == "_hold" and ctx == "track" then
+            if r.cancel or r.fail then d.ti = d.ti - 1 end
+            return nextTrack(player, s)
+        end
+        if name == "_hold" and ctx == "skin" then
+            if r.cancel or r.fail then
+                local p = d.trail[#d.trail]
+                return Jobs.waypoint(player, { kind = "carcass", x = p[1], y = p[2], z = p[3], r = 4, mode = "foot", act = "press",
+                    flat = true, blip = false, marker = "corona", text = "Pulsa E para preparar la pieza", label = "Pieza" })
+            end
+            name, r = "skin", { accuracy = 0.7 }
+        end
         if name == "tracks" then
             if r.cancel then return nextTrack(player, s) end
             if r.correct and not r.fail then

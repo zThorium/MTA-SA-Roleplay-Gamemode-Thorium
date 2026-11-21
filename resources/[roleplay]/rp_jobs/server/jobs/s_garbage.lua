@@ -2,10 +2,11 @@
     rp_jobs / jobs/s_garbage.lua  -  Recolector de basura
 
     Ruta de GARBAGE.STOPS_PER_ROUTE paradas al azar (ordenadas por cercanía).
-    En cada parada: bajas del camión, llevas las bolsas una a una a la parte de atrás
-    y, al cargar la última, se abre el minijuego del compactador (vista del interior del
-    camión): arrastrar bolsas al compactador, reciclables a su contenedor, no tocar las
-    jeringas y quedarte con lo de valor. El servidor decide antes qué hallazgos hay.
+    En cada parada: bajas del camión y llevas las bolsas una a una (en la mano) a la parte
+    de atrás. Cada GARBAGE.COMPACT_EVERY paradas el camión se llena y se abre el minijuego
+    del compactador (vista del interior del camión): arrastrar bolsas al compactador,
+    reciclables a su contenedor, no tocar las jeringas y quedarte con lo de valor. El
+    servidor decide antes qué hallazgos hay. El compactador bien ordenado da un extra.
     Al volver a la planta con la ruta completa se cobra el bono y empieza otra ruta.
 ]]
 
@@ -111,15 +112,23 @@ Jobs.register("garbage", {
             Jobs.sound(player, "trash")
             d.loaded = d.loaded + 1
             if d.loaded < d.bags then return askBag(player, s) end
-            -- Todas cargadas: compactador
+            -- Parada cargada: se paga y se sigue. Cada G.COMPACT_EVERY paradas (o en la última)
+            -- el camión se llena y hay que ordenar el compactador por dentro.
+            Jobs.pay(player, G.PAY_PER_STOP, ("Parada %d"):format(d.idx))
+            Jobs.xp(player, 8)
+            Jobs.props(player, {})
+            d.pending = (d.pending or 0) + 1
+            d.pendingBags = (d.pendingBags or 0) + d.bags
+            if d.pending < G.COMPACT_EVERY and d.idx < #d.stops then return nextStop(player, s) end
             d.finds = rollFinds(Jobs.level(player, "garbage"))
             local params = {
-                bags = d.bags + math.random(1, 3),                 -- también hay basura suelta de antes
+                bags = math.min(9, d.pendingBags),
                 recyclables = math.random(2, 5),
                 hazards = math.random(0, 2) + (d.idx >= 4 and 1 or 0),
                 finds = d.finds, time = 30,
             }
             d.gameParams = params
+            Jobs.notify(player, "El camión está lleno: ordena el compactador antes de seguir.", "info")
             Jobs.hud(player, "Ordena la basura dentro del camión", "")
             Jobs.game(player, "compactor", params, 5000)
 
@@ -166,10 +175,10 @@ Jobs.register("garbage", {
             end
         end
         d.finds = nil
-        Jobs.pay(player, G.PAY_PER_STOP + (G.PAY_PER_STOP_MAX - G.PAY_PER_STOP) * score,
-            ("Parada %d (%d%%)"):format(d.idx, math.floor(score * 100)))
-        Jobs.xp(player, 10 + math.floor(score * 8))
-        Jobs.props(player, {})
+        Jobs.pay(player, (G.PAY_PER_STOP_MAX - G.PAY_PER_STOP) * score * (d.pending or 1),
+            ("Compactador bien ordenado (%d%%)"):format(math.floor(score * 100)))
+        Jobs.xp(player, 6 + math.floor(score * 8))
+        d.pending, d.pendingBags = 0, 0
         nextStop(player, s)
     end,
 

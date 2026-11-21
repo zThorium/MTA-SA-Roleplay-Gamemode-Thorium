@@ -87,14 +87,96 @@ local function cancelGame()
     end
 end
 
+----------------------------------------------------------------
+-- Acciones en el mundo (sin CEF): nombres que empiezan por "_"
+--   _hold  mantener E hasta llenar la barra (ms)          -> { done = true }
+--   _tap   pulsar E `taps` veces (golpes de hacha, pico)  -> { done = true }
+--   _bite  esperar la picada y pulsar E a tiempo          -> { caught, reason }
+-- Alejarse del sitio, morir o pulsar Retroceso cancela.
+----------------------------------------------------------------
+local action = nil   -- { name, params, token, progress, x, y, z, started, lastTap, biteAt, state }
+
+local function finishAction(result)
+    if not action then return end
+    triggerServerEvent("rp:jobs:gameResult", resourceRoot, action.token, result)
+    action = nil
+end
+
+local function startAction(name, params, token)
+    local x, y, z = getElementPosition(localPlayer)
+    action = { name = name, params = params or {}, token = token, progress = 0, x = x, y = y, z = z,
+        started = getTickCount(), lastTap = 0 }
+    if name == "_bite" then
+        action.biteAt = getTickCount() + math.random(params.waitMin or 2500, params.waitMax or 6500)
+        action.fakes = {}
+        for i = 1, (params.fakes or 0) do
+            action.fakes[i] = action.started + math.random(800, math.max(900, action.biteAt - action.started - 400))
+        end
+    end
+end
+
+local function actionUse()
+    if not action then return false end
+    local now = getTickCount()
+    if action.name == "_tap" then
+        if now - action.lastTap < 260 then return true end
+        action.lastTap = now
+        action.progress = action.progress + 1 / math.max(1, action.params.taps or 6)
+        playSoundFrontEnd(41)
+        if action.progress >= 0.999 then finishAction({ done = true }) end
+    elseif action.name == "_bite" then
+        if now < action.biteAt then finishAction({ caught = false, reason = "early" })
+        else finishAction({ caught = true }) end
+    end
+    return true
+end
+
+local function drawAction()
+    local now = getTickCount()
+    local px, py = getElementPosition(localPlayer)
+    if (px - action.x) ^ 2 + (py - action.y) ^ 2 > 3.5 * 3.5 or getKeyState("backspace") then
+        return finishAction({ cancel = true })
+    end
+    local p = action.params
+    local text, frac, color = p.text or "", action.progress, tocolor(245, 165, 36)
+    if action.name == "_hold" then
+        if getKeyState("e") and not isBlocked() then
+            action.progress = math.min(1, action.progress + (getTickCount() - (action.lastFrame or now)) / math.max(300, p.ms or 3000))
+        end
+        action.lastFrame = now
+        frac = action.progress
+        text = (p.text or "Trabajando") .. "  ·  mantén E"
+        if frac >= 1 then return finishAction({ done = true }) end
+    elseif action.name == "_tap" then
+        text = (p.text or "Trabajando") .. "  ·  pulsa E"
+    elseif action.name == "_bite" then
+        if now >= action.biteAt + (p.window or 900) then return finishAction({ caught = false, reason = "late" }) end
+        local fake = false
+        for _, t in ipairs(action.fakes) do if now >= t and now < t + 250 then fake = true end end
+        if now >= action.biteAt then
+            text, color, frac = "¡PICA!  Pulsa E", tocolor(76, 211, 138), 1 - (now - action.biteAt) / (p.window or 900)
+        else
+            text, frac = fake and "...¿algo se mueve?" or "Esperando la picada...", 0
+            color = fake and tocolor(255, 200, 80) or tocolor(154, 163, 178)
+        end
+    end
+    local w, h = 360 * sc, 46 * sc
+    local x, y = (screenW - w) / 2, screenH * 0.70
+    dxDrawRectangle(x, y, w, h, tocolor(12, 14, 20, 215))
+    dxDrawText(text, x, y + 4 * sc, x + w, y + 28 * sc, tocolor(242, 244, 248), 1.1 * sc, "default-bold", "center", "center")
+    dxDrawRectangle(x + 12 * sc, y + h - 13 * sc, w - 24 * sc, 6 * sc, tocolor(255, 255, 255, 35))
+    dxDrawRectangle(x + 12 * sc, y + h - 13 * sc, (w - 24 * sc) * math.max(0, math.min(1, frac)), 6 * sc, color)
+end
+
 addEventHandler("rp:jobs:game", resourceRoot, function(name, params, token)
+    if type(name) == "string" and name:sub(1, 1) == "_" then return startAction(name, params, token) end
     gameToken = token
     openUI("game")
     callJS(("RP.game(%s, %s[0])"):format(toJSON(name), toJSON(params or {}, true)))
 end)
 
 addEventHandler("rp:jobs:closeGame", resourceRoot, function()
-    gameToken = nil
+    gameToken, action = nil, nil
     if uiMode == "game" then closeUI() end
 end)
 
@@ -370,6 +452,7 @@ end)
 ----------------------------------------------------------------
 local function onUse()
     if isElement(browserGui) or isBlocked() then return end
+    if actionUse() then return end
     if wp and wp.act == "press" and inRange() then return sendReach() end
     if nearPoint then
         if nearPoint.kind == "hq" then triggerServerEvent("rp:jobs:openHQ", resourceRoot, nearPoint.id)
@@ -413,6 +496,7 @@ end
 addEventHandler("onClientRender", root, function()
     if hud and not isElement(browserGui) then drawHud() end
     if isElement(browserGui) or getElementData(localPlayer, "rp:downed") then return end
+    if action then return drawAction() end
     -- marcador unido al vehículo (atrás del camión)
     if wp and wp.attach == "vehicle" and isElement(wpMarker) then
         local x, y, z = wpPosition()
@@ -442,6 +526,7 @@ end)
 
 local function onDown()
     if uiMode == "game" then cancelGame() end
+    if action then finishAction({ cancel = true }) end
     closeUI()
 end
 addEventHandler("onClientPlayerWasted", localPlayer, onDown)

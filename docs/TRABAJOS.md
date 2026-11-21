@@ -1,9 +1,11 @@
 # Trabajos (`rp_jobs`)
 
-Seis trabajos civiles pensados para que no sea "repetir lo mismo para ganar dinero": cada
-turno mezcla conducir o caminar por el mapa con **minijuegos en CEF** y eventos al azar,
-el jugador sube de nivel en cada trabajo y lo que produce se vende en **mercados con
-precios que cambian**.
+Seis trabajos civiles. El trabajo se hace **en el mundo**: conducir el vehículo, caminar
+a los puntos, cargar bolsas en la mano, talar, picar o pescar con animación y una barra en
+pantalla (mantener o pulsar E). Los **minijuegos en CEF** aparecen solo en momentos
+puntuales para romper la rutina (el camión se llena, un árbol complicado, una veta rica,
+un pez grande, una bifurcación del rastro...). El jugador sube de nivel en cada trabajo y
+lo que produce se vende en **mercados con precios que cambian**.
 
 ## Cómo se juega
 
@@ -21,14 +23,14 @@ precios que cambian**.
 
 ## Los trabajos
 
-| Trabajo | Bucle | Minijuegos | Paga |
+| Trabajo | En el mundo | Minijuego puntual | Paga |
 |---|---|---|---|
-| 🗑️ **Recolector de basura** | Ruta de 5 paradas al azar en Los Santos con el camión. En cada una cargas 2-4 bolsas (se llevan en la mano hasta la parte de atrás del camión). Al volver a la planta, bono y nueva ruta. | **Compactador** (vista del interior del camión, estilo Chinatown Wars): arrastrar bolsas al compactador, reciclables al contenedor, no tocar jeringas y llevarte al bolsillo lo que brilla bajo las bolsas (anillos, relojes, vinilos, fajos de billetes...). | $60-120 por parada + $150 por ruta. Hallazgos al inventario (o dinero). |
-| 🌾 **Granjero** | Temporada con un cultivo al azar: arar con el tractor, sembrar a mano, 1-2 cuidados al azar, cosechar con la cosechadora y llevar al silo. | **Siembra** (timing), **Plaga** (aplastar bichos), **Riego** (manguera sin encharcar), **Malas hierbas** (arrancar sin tocar el cultivo). | $250-500 por cosecha según la calidad media. |
-| 🪓 **Leñador** | 4 árboles marcados en Shady Creeks, cargar los troncos en el camión (se ven en la caja) y llevarlos al aserradero. | **Talar**: elegir hacia dónde cae (evitando camino, cabaña, cables...) y hachazos en la zona verde. **Aserradero**: seguir la línea de corte. | $45-90 por tronco según caída y corte. |
-| 🦌 **Cazador** | Zona de caza con quad. Rastro de 4-6 huellas que se enfría si tardas; al final, el animal. | **Huellas** (elegir la fresca; fallar alarga el rastro), **Mira** (balanceo, respiración con Shift, viento y caída), **Despiece** (trazar la línea). | Carne, pieles y cornamentas al inventario; se venden en la peletería. Jabalí y oso cargan si fallas. |
-| 🎣 **Pescador** | Muelle a pie o barco (nivel 2). Cada punto se agota tras unas capturas. | **Pesca**: lanzamiento con fuerza justa, picada (no picar a los amagos) y recoger manteniendo el pez en la zona verde sin romper el sedal. | Sardina, lubina, atún, pez espada (nivel 3), bota vieja, botella con mensaje, perla. Se venden en la lonja o la compraventa. |
-| ⛏️ **Minero** | 5 vetas por tanda en la cantera Hunter; luego salen otras. | **Veta** (grietas que brillan; golpes en roca sana cansan), **Dinamita** (nivel 2: retirarte en el momento justo), **Derrumbe** (teclas a tiempo o daño). | Carbón, hierro, cobre, plata (nv 2), oro (nv 3) y gemas. Se venden en la fundición o la compraventa. |
+| 🗑️ **Recolector de basura** | Ruta de 5 paradas al azar en Los Santos con el camión. En cada una bajas y llevas 2-4 bolsas en la mano a la parte de atrás. Al volver a la planta, bono y nueva ruta. | **Compactador** cada 2 paradas (el camión se llena), estilo Chinatown Wars: bolsas al compactador, reciclables al contenedor, no tocar jeringas y quedarte lo que brilla bajo las bolsas (anillos, relojes, vinilos, fajos). | $60 por parada + hasta $60 más por parada según el compactador + $150 por ruta. |
+| 🌾 **Granjero** | Arar con el tractor, sembrar a pie el surco (mantener E en cada punto), cosechar con la cosechadora y llevar al silo. | Solo si la temporada trae un problema (60%): **plaga**, **sequía** o **malas hierbas**. | $250-500 por cosecha según la calidad. |
+| 🪓 **Leñador** | Ir al bosque en camión, talar con motosierra (pulsar E), ver caer el árbol, cargar el tronco (se ve en la caja) y llevar la carga al aserradero. | **Talar** en los árboles complicados (30%): elegir hacia dónde cae evitando camino, cabaña o cables. **Aserradero** al entregar la carga. | $45-90 por tronco. |
+| 🦌 **Cazador** | Ir en quad a la zona, seguir el rastro a pie examinando huellas (mantener E), preparar la pieza. | **Huellas** en la bifurcación del rastro, **mira** al disparar (viento, respiración, caída) y **despiece** con ciervo u oso abatido de un tiro limpio. | Carne, pieles y cornamentas para vender en la peletería. Jabalí y oso cargan si fallas. |
+| 🎣 **Pescador** | Ir al punto (muelle a pie o barco desde nivel 2), lanzar y esperar la picada en el mundo: pulsar E cuando pica, sin picar a los amagos. Los puntos se agotan. | **Recoger** solo con los peces grandes (lubina, atún, pez espada): mantener el pez en la zona verde sin romper el sedal. | Pescado y rarezas para la lonja o la compraventa. |
+| ⛏️ **Minero** | Ir a cada veta de la cantera y picar (pulsar E). | **Veta rica** (plata, oro o 25% de las demás): grietas que brillan y dinamita opcional. **Derrumbe** a veces: teclas a tiempo o daño. | Mineral y gemas para la fundición o la compraventa. |
 
 **Niveles**: XP por cada tarea (`LEVEL_XP = 0, 120, 320, 650, 1100`). Cada nivel paga un
 8% más y desbloquea cosas (barco, jabalí y oso, plata y oro, dinamita, más hallazgos en
@@ -91,7 +93,8 @@ puesto solo se pida allí.
    - `Jobs.waypoint(player, { kind, x, y, z, r, mode = "drive"|"foot"|"any", act = "enter"|"press", text, label })`
    - `Jobs.game(player, "nombre", params, msMinimo)` y el resultado llega a `onGame(player, s, nombre, resultado)`
    - `Jobs.pay`, `Jobs.xp`, `Jobs.give`, `Jobs.hud`, `Jobs.props`, `Jobs.propFx`, `Jobs.hold`, `Jobs.anim`, `Jobs.spawnVehicle`
-3. Si tiene minijuego nuevo, `html/games/<archivo>.js` con `JG.register("nombre", { title, help, start(stage, params, api) })`
+3. Para acciones en el mundo usa `Jobs.action(player, "_hold"|"_tap"|"_bite", params, ctx)`
+   (barra en pantalla, sin CEF); su resultado llega también a `onGame`. Si tiene minijuego nuevo, `html/games/<archivo>.js` con `JG.register("nombre", { title, help, start(stage, params, api) })`
    y una demo en `window.JG_DEMOS` (se prueba abriendo `html/index.html?demo=nombre` en un navegador).
 4. Los objetos nuevos, en `rp_inventory/shared/s_items.lua`; si se venden, en un `MARKETS`.
 5. Archivos nuevos en `meta.xml`.
