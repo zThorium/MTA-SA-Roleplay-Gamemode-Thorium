@@ -7,10 +7,15 @@ local function db()
     return exports.rp_database:getConnection()
 end
 
--- Cuerpo, ropa y cabeza. La cabeza la dibuja rp_heads en cada cliente a partir de "rp:head".
+-- Cuerpo, complexion, ropa y cabeza. La cabeza la dibuja rp_heads en cada cliente a partir
+-- de "rp:head"; la altura y el tono de piel, client/c_body.lua a partir de "rp:body".
 function applyPlayerLook(player, row)
     local head = applyCharacterLook(player, row)
     setElementData(player, "rp:head", head or false)
+    setElementData(player, "rp:body", {
+        height = tonumber(row.height) or BODY.HEIGHT_BASE,
+        tone = head and tonumber(row.skin_tone) or 0,
+    })
 end
 
 function spawnCharacter(player, row)
@@ -99,6 +104,8 @@ function getCharacterLook(player)
     if not row then return false end
     return {
         gender = tonumber(row.gender), skin = tonumber(row.skin), race = tonumber(row.race), head = tonumber(row.head),
+        height = tonumber(row.height), body_fat = tonumber(row.body_fat), body_muscle = tonumber(row.body_muscle),
+        skin_tone = tonumber(row.skin_tone),
         clothes_torso = tonumber(row.clothes_torso), clothes_legs = tonumber(row.clothes_legs), clothes_shoes = tonumber(row.clothes_shoes),
     }
 end

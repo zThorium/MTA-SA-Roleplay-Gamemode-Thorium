@@ -9,7 +9,7 @@
 | `rp_login` | Login/registro CEF, contraseñas bcrypt. Evento de servidor `rp:onAccountLogin`. Exports `isPlayerLoggedIn`, `getPlayerAccountId`, `getPlayerAccountName`, `getPlayerAdminLevel`. |
 | `bone_attach` | Bone Attach 1.2.0 de CrystalMV (solo fuentes .lua). |
 | `rp_heads` | 78 cabezas personalizadas (modelos de Countryside-RP, de Aleks) en IDs nuevos con `engineRequestModel`; oculta la sangre del cuello. `/ajustecabeza` para calibrar. |
-| `rp_characters` | Selección y creación de personajes (3 slots, CEF con vista previa). Hombres = cuerpo de CJ + cabeza + ropa; mujeres = skin. Eventos `rp:onCharacterSpawn` / `rp:onCharacterLogout`. Exports `getPlayerCharacterId`, `getPlayerCharacterName`, `saveCharacter`. |
+| `rp_characters` | Selección y creación de personajes (3 slots, CEF con vista previa). Hombres = cuerpo de CJ + cabeza + ropa + complexión (grasa/músculo) y color de piel; mujeres = skin. Altura para ambos (shader `fx/body.fx`, `/ajustepiel` para calibrar el tono). Eventos `rp:onCharacterSpawn` / `rp:onCharacterLogout`. Exports `getPlayerCharacterId`, `getPlayerCharacterName`, `saveCharacter`. |
 | `rp_needs` | Hambre, sed y energía por personaje. `/dormir` solo en interiores. Exports `addNeed`, `getNeed`, `getNeeds`. |
 | `rp_inventory` | Inventario por personaje (`character_items`), tecla I. Catálogo en `shared/s_items.lua`. Exports `giveItem`, `takeItem`, `hasItem`, `canCarry`... |
 | `rp_shops` | Tiendas con NPC (`shops`/`shop_items`), E para comprar. Admin: `/crearshop <nombre>`, `/borrarshop <id>`. |

@@ -43,7 +43,8 @@ function sendCharacterList(player)
         if not isElement(player) then return end
         triggerClientEvent(player, "rp:chars:show", resourceRoot, rows, CHARS.MAX_SLOTS)
     end, db(), [[
-        SELECT id, name, gender, age, skin, race, head, clothes_torso, clothes_legs, clothes_shoes, money, origin,
+        SELECT id, name, gender, age, height, skin, race, head, clothes_torso, clothes_legs, clothes_shoes,
+               body_fat, body_muscle, skin_tone, money, origin,
                DATE_FORMAT(last_played, '%d/%m/%Y') AS last_played
         FROM characters WHERE account_id = ? ORDER BY id LIMIT ?
     ]], accountId, CHARS.MAX_SLOTS)
@@ -70,8 +71,15 @@ local function validNamePart(s)
         and s:match("^%u%l+$") ~= nil
 end
 
+-- Longitud en caracteres (UTF-8): "año" son 3, no 4 bytes
+local function textLength(s)
+    return utf8.len(s) or #s
+end
+
 local function validText(s, minLen, maxLen, allowNewlines)
-    if type(s) ~= "string" or #s < minLen or #s > maxLen then return false end
+    if type(s) ~= "string" then return false end
+    local len = textLength(s)
+    if len < minLen or len > maxLen then return false end
     local check = allowNewlines and s:gsub("[\r\n\t]", "") or s
     return not check:find("%c")
 end
@@ -90,21 +98,23 @@ local function validateCharacter(d)
     if not inRange(d.age, CHARS.AGE_MIN, CHARS.AGE_MAX) then
         return nil, ("La edad debe estar entre %d y %d anos."):format(CHARS.AGE_MIN, CHARS.AGE_MAX)
     end
-    if not inRange(d.weight, CHARS.WEIGHT_MIN, CHARS.WEIGHT_MAX) then
-        return nil, ("El peso debe estar entre %d y %d kg."):format(CHARS.WEIGHT_MIN, CHARS.WEIGHT_MAX)
-    end
-    if not inRange(d.height, CHARS.HEIGHT_MIN, CHARS.HEIGHT_MAX) then
-        return nil, ("La altura debe estar entre %d y %d cm."):format(CHARS.HEIGHT_MIN, CHARS.HEIGHT_MAX)
+    if not inRange(d.height, BODY.HEIGHT_MIN, BODY.HEIGHT_MAX) then
+        return nil, ("La altura debe estar entre %d y %d cm."):format(BODY.HEIGHT_MIN, BODY.HEIGHT_MAX)
     end
     if not validText(d.origin, CHARS.ORIGIN_MIN, CHARS.ORIGIN_MAX, false) then
         return nil, "Indica un lugar de origen valido."
     end
+    if type(d.story) ~= "string" or textLength(d.story) < CHARS.STORY_MIN then
+        return nil, ("La historia debe tener al menos %d caracteres (llevas %d)."):format(
+            CHARS.STORY_MIN, type(d.story) == "string" and textLength(d.story) or 0)
+    end
     if not validText(d.story, CHARS.STORY_MIN, CHARS.STORY_MAX, true) then
-        return nil, ("La historia debe tener entre %d y %d caracteres."):format(CHARS.STORY_MIN, CHARS.STORY_MAX)
+        return nil, ("La historia no puede pasar de %d caracteres ni llevar caracteres de control."):format(CHARS.STORY_MAX)
     end
     local c = {
-        name = first .. "_" .. last, gender = gender, age = d.age, weight = d.weight,
+        name = first .. "_" .. last, gender = gender, age = d.age,
         height = d.height, origin = d.origin, story = d.story,
+        body_fat = 0, body_muscle = 0, skin_tone = 0,
     }
 
     if gender == 0 then
@@ -112,6 +122,12 @@ local function validateCharacter(d)
         if not inRange(d.race, 1, 4) then return nil, "Selecciona una raza." end
         if not exports.rp_heads:isValidHead(d.head, d.race) then return nil, "Cabeza no valida para esa raza." end
         c.skin, c.race, c.head = CUSTOM_SKIN, d.race, d.head
+        -- Complexion y tono: solo tienen efecto sobre el cuerpo de CJ
+        if not inRange(d.fat, 0, BODY.FAT_MAX) or not inRange(d.muscle, 0, BODY.MUSCLE_MAX) then
+            return nil, "Complexion no valida."
+        end
+        if not isValidSkinTone(d.tone) then return nil, "Tono de piel no valido." end
+        c.body_fat, c.body_muscle, c.skin_tone = d.fat, d.muscle, d.tone
         for _, slot in ipairs(CLOTHES_SLOTS) do
             local index = d[slot.key]
             if not isValidClothes(slot.type, index) then return nil, "Prenda de ropa no valida." end
@@ -122,6 +138,7 @@ local function validateCharacter(d)
         c.skin = d.skin
     end
 
+    c.weight = estimateWeight(c.height, c.body_fat, c.body_muscle)
     return c
 end
 
@@ -151,11 +168,13 @@ addEventHandler("rp:chars:create", resourceRoot, function(data)
         if c.head then
             sql = [[
                 INSERT INTO characters (account_id, name, gender, age, weight, height, origin, story, skin,
-                                        race, head, clothes_torso, clothes_legs, clothes_shoes, money)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        race, head, clothes_torso, clothes_legs, clothes_shoes,
+                                        body_fat, body_muscle, skin_tone, money)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ]]
             params = { accountId, c.name, c.gender, c.age, c.weight, c.height, c.origin, c.story, c.skin,
-                c.race, c.head, c.clothes_torso, c.clothes_legs, c.clothes_shoes, CHARS.START_MONEY }
+                c.race, c.head, c.clothes_torso, c.clothes_legs, c.clothes_shoes,
+                c.body_fat, c.body_muscle, c.skin_tone, CHARS.START_MONEY }
         else
             sql = [[
                 INSERT INTO characters (account_id, name, gender, age, weight, height, origin, story, skin, money)
@@ -252,6 +271,7 @@ local function closeCharacter(player)
         active[player] = nil
         if isElement(player) then
             setElementData(player, "rp:head", false)
+            setElementData(player, "rp:body", false)
             setElementData(player, "rp:characterId", false)
         end
     end

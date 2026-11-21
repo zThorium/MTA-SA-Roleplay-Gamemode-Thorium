@@ -2,7 +2,9 @@
     rp_characters / s_appearance.lua  (compartido cliente/servidor)
 
     Personajes masculinos: cuerpo de CJ (skin 0) sin cabeza + cabeza de rp_heads
-    + ropa nativa de CJ (getClothesByTypeIndex). Personajes femeninos: skin.
+    + ropa nativa de CJ (getClothesByTypeIndex) + complexion (s_body.lua).
+    Personajes femeninos: skin. La altura y el tono de piel los dibuja
+    client/c_body.lua (no dependen de esta funcion).
 ]]
 
 CUSTOM_SKIN = 0
@@ -37,6 +39,8 @@ function applyCharacterLook(ped, look)
     local head = tonumber(look.head)
     if head then
         if getElementModel(ped) ~= CUSTOM_SKIN then setElementModel(ped, CUSTOM_SKIN) end
+        -- Complexion antes de la ropa: al cambiar la ropa GTA reconstruye el cuerpo con estos stats
+        applyBodyStats(ped, look.body_fat or look.fat, look.body_muscle or look.muscle)
         for _, slot in ipairs(CLOTHES_SLOTS) do
             removePedClothes(ped, slot.type)
             local index = tonumber(look[slot.column] or look[slot.key])
