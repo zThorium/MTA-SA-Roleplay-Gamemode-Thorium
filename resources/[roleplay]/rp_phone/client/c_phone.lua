@@ -15,8 +15,9 @@ addEvent("rp:phone:notes", true)
 addEvent("rp:phone:contacts", true)
 addEvent("rp:social:feed", true)
 addEvent("rp:bank:data", true)
+addEvent("rp:tinder:profile", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "feed", "capture", "post", "like", "openApp" }) do
+    "bankOpen", "bankAction", "feed", "capture", "post", "like", "openApp", "tinderOpen", "tinderSave" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -71,6 +72,8 @@ addEventHandler("rp:phone:notes", resourceRoot, function(rows) callJS(("RP.setNo
 addEventHandler("rp:phone:contacts", resourceRoot, function(rows) callJS(("RP.setContacts(%s)"):format(json(rows or {}))) end)
 addEventHandler("rp:social:feed", resourceRoot, function(rows) callJS(("RP.setFeed(%s)"):format(json(rows or {}))) end)
 
+addEventHandler("rp:tinder:profile", resourceRoot, function(profile) callJS(("RP.tinder.setProfile(%s)"):format(json(profile or {}))) end)
+
 addEventHandler("rp:bank:data", root, function(view, data)
     if view == "phone" then callJS(("RP.setBank(%s)"):format(json(data or {}))) end
 end)
@@ -124,6 +127,13 @@ addEventHandler("rp:phone:ui:bankAction", root, function(action, amount, target)
     if not amount then return end
     if action == "deposit" then triggerServerEvent("rp:bank:deposit", resourceRoot, amount, "phone")
     elseif action == "transfer" then triggerServerEvent("rp:bank:transfer", resourceRoot, tostring(target or ""), amount, "phone") end
+end)
+
+-- Tinder
+addEventHandler("rp:phone:ui:tinderOpen", root, function() triggerServerEvent("rp:tinder:profile:get", resourceRoot) end)
+addEventHandler("rp:phone:ui:tinderSave", root, function(bio, interested, active, photo)
+    triggerLatentServerEvent("rp:tinder:profile:save", 200000, false, resourceRoot,
+        tostring(bio or ""), tostring(interested or "a"), active == true, type(photo) == "string" and photo or nil)
 end)
 
 addEventHandler("rp:phone:ui:feed", root, function() triggerServerEvent("rp:social:feed", resourceRoot) end)

@@ -9,9 +9,12 @@
     <include resource="rp_bank" />
 
     <script src="server/s_phone.lua" type="server" />
+    <script src="server/s_tinder.lua" type="server" />
     <script src="client/c_phone.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />
+    <file src="html/tinder.css" />
+    <file src="html/tinder.js" />
 </meta>
