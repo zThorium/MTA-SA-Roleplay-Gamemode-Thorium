@@ -1,0 +1,35 @@
+<meta>
+    <info author="Thorium" name="RP Agency" description="Agencia de empleo y registro civil: turnos, DNI y alta en trabajos" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_ids" />
+    <include resource="rp_inventory" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_agency.lua" type="server" />
+    <script src="server/s_dni.lua" type="server" />
+    <script src="client/c_ui.lua" type="client" cache="false" />
+    <script src="client/c_agency.lua" type="client" cache="false" />
+    <script src="client/c_service.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="sounds/call.wav" />
+    <file src="sounds/warn.wav" />
+    <file src="sounds/ticket.wav" />
+    <file src="sounds/typing.wav" />
+    <file src="sounds/printer.wav" />
+    <file src="sounds/stamp.wav" />
+    <file src="sounds/shutter.wav" />
+    <file src="sounds/paper.wav" />
+
+    <export function="hasPlayerDNI" type="server" />
+    <export function="getPlayerDNI" type="server" />
+    <export function="getAgencyJobs" type="server" />
+    <export function="getAgencyQueueInfo" type="server" />
+</meta>

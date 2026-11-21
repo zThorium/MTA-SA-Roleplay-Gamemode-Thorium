@@ -417,4 +417,18 @@ SCHEMA = {
     ALTER TABLE characters
         ADD COLUMN IF NOT EXISTS downed_ms INT UNSIGNED NOT NULL DEFAULT 0 AFTER payday_minutes
     ]],
+    -- rp_agency: DNI de cada personaje (el item "id_card" es solo el papel; si se pierde se reimprime)
+    [[
+    CREATE TABLE IF NOT EXISTS identity_cards (
+        character_id INT UNSIGNED      NOT NULL,
+        number       VARCHAR(12)       NOT NULL,
+        signature    TEXT              NULL,
+        copies       SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+        issued_at    DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        UNIQUE KEY uq_identity_cards_number (number),
+        CONSTRAINT fk_identity_cards_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
