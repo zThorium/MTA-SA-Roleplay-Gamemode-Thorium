@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>Telefono</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="social.css">
 </head>
 <body>
     <div class="phone" id="phone">
@@ -24,7 +25,7 @@
                     <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span>Notas</button>
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
-                    <button type="button" class="app" data-open="social"><span class="icon social">📷</span>Fotogram</button>
+                    <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span>Fotogram</button>
                     <button type="button" class="app" data-app="vroom"><span class="icon vroom">🚗</span>Vroom</button>
                     <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
                 </div>
@@ -32,7 +33,7 @@
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span></button>
                     <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span></button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span></button>
-                    <button type="button" class="app" data-open="social"><span class="icon social">📷</span></button>
+                    <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span></button>
                 </div>
             </section>
 
@@ -88,18 +89,113 @@
                 </div>
             </section>
 
-            <!-- Fotogram -->
-            <section class="view" id="view-social">
-                <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text">Fotogram</h1><button type="button" class="action" id="social-camera">📷</button></header>
-                <div class="feed" id="feed"><p class="empty">Cargando...</p></div>
-            </section>
-            <section class="view" id="view-social-new">
-                <header><button type="button" class="back" data-to="social">‹ Cancelar</button><h1>Nueva foto</h1><button type="button" class="action" id="social-share">Publicar</button></header>
-                <div class="editor">
-                    <img id="photo-preview" alt="">
-                    <button type="button" class="secondary" id="social-retake">Repetir foto</button>
-                    <textarea id="social-caption" maxlength="280" placeholder="Escribe un pie de foto..."></textarea>
+            <!-- Fotogram (html/social.js) -->
+            <section class="view fg" id="view-social">
+                <header class="fg-head">
+                    <button type="button" class="fg-back" id="fg-back">‹ Inicio</button>
+                    <h1 id="fg-title" class="logo-text">Fotogram</h1>
+                    <button type="button" class="action fg-action" id="fg-action"></button>
+                </header>
+                <div class="fg-body">
+                    <!-- Inicio -->
+                    <div class="fg-screen" data-screen="feed">
+                        <div class="fg-segment">
+                            <button type="button" data-feed="following" class="active">Siguiendo</button>
+                            <button type="button" data-feed="all">Para ti</button>
+                        </div>
+                        <div class="fg-scroll" id="fg-feed-scroll">
+                            <div id="fg-feed"></div>
+                            <button type="button" class="fg-more" id="fg-feed-more" hidden>Cargar mas</button>
+                        </div>
+                    </div>
+                    <!-- Buscar / Explorar -->
+                    <div class="fg-screen" data-screen="search">
+                        <div class="fg-searchbar"><input id="fg-search-input" type="text" maxlength="32" placeholder="🔍  Buscar personas"></div>
+                        <div class="fg-scroll">
+                            <ul class="fg-users" id="fg-search-results"></ul>
+                            <div id="fg-explore-wrap">
+                                <h2 class="fg-subtitle">Explorar</h2>
+                                <div class="fg-grid" id="fg-explore"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Notificaciones -->
+                    <div class="fg-screen" data-screen="notifs">
+                        <div class="fg-scroll"><ul class="fg-notifs" id="fg-notifs"></ul></div>
+                    </div>
+                    <!-- Perfil -->
+                    <div class="fg-screen" data-screen="profile">
+                        <div class="fg-scroll" id="fg-profile"></div>
+                    </div>
+                    <!-- Una publicacion -->
+                    <div class="fg-screen" data-screen="post">
+                        <div class="fg-scroll" id="fg-post"></div>
+                    </div>
+                    <!-- Comentarios -->
+                    <div class="fg-screen" data-screen="comments">
+                        <div class="fg-scroll" id="fg-comments-scroll">
+                            <button type="button" class="fg-more" id="fg-comments-more" hidden>Ver comentarios anteriores</button>
+                            <ul class="fg-comments" id="fg-comments"></ul>
+                        </div>
+                        <div class="fg-composer">
+                            <span class="fg-avatar sm" id="fg-composer-avatar"></span>
+                            <input id="fg-comment-input" type="text" maxlength="200" placeholder="Agrega un comentario...">
+                            <button type="button" id="fg-comment-send">Publicar</button>
+                        </div>
+                    </div>
+                    <!-- Seguidores / seguidos -->
+                    <div class="fg-screen" data-screen="follows">
+                        <div class="fg-scroll"><ul class="fg-users" id="fg-follows"></ul></div>
+                    </div>
+                    <!-- Editar perfil -->
+                    <div class="fg-screen" data-screen="edit">
+                        <div class="fg-scroll editor">
+                            <div class="fg-edit-avatar" id="fg-edit-avatar"></div>
+                            <p class="note">Para cambiar la foto de perfil abre una de tus fotos y elige "Usar como foto de perfil".</p>
+                            <button type="button" class="secondary" id="fg-avatar-remove">Quitar foto de perfil</button>
+                            <label class="fg-label">Nombre de usuario</label>
+                            <input id="fg-edit-username" type="text" maxlength="24" placeholder="usuario">
+                            <label class="fg-label">Presentacion</label>
+                            <textarea id="fg-edit-bio" maxlength="150" placeholder="Cuenta algo sobre ti"></textarea>
+                        </div>
+                    </div>
+                    <!-- Editor de la foto (filtros y ajustes) -->
+                    <div class="fg-screen fg-dark" data-screen="editor">
+                        <div class="fg-canvas-wrap"><canvas id="fg-canvas" width="576" height="720"></canvas></div>
+                        <div class="fg-editor-panel">
+                            <div class="fg-tool" data-tool="filters">
+                                <div class="fg-filters" id="fg-filters"></div>
+                                <div class="fg-slider"><span>Intensidad</span><input id="fg-intensity" type="range" min="0" max="100" value="100"></div>
+                            </div>
+                            <div class="fg-tool" data-tool="adjust" hidden>
+                                <div class="fg-adjust" id="fg-adjust"></div>
+                            </div>
+                            <div class="fg-tooltabs">
+                                <button type="button" data-tooltab="filters" class="active">Filtros</button>
+                                <button type="button" data-tooltab="adjust">Editar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Publicar -->
+                    <div class="fg-screen" data-screen="publish">
+                        <div class="fg-scroll editor">
+                            <div class="fg-publish-row">
+                                <img id="fg-publish-preview" alt="">
+                                <textarea id="fg-caption" maxlength="280" placeholder="Escribe un pie de foto... (@usuario para mencionar)"></textarea>
+                            </div>
+                            <p class="note" id="fg-publish-filter"></p>
+                            <button type="button" class="primary" id="fg-share">Compartir</button>
+                            <button type="button" class="secondary" id="fg-retake">Volver a la camara</button>
+                        </div>
+                    </div>
                 </div>
+                <nav class="fg-tabs">
+                    <button type="button" data-tab="feed" class="active" title="Inicio">⌂</button>
+                    <button type="button" data-tab="search" title="Buscar">⌕</button>
+                    <button type="button" data-tab="camera" class="fg-tab-new" title="Nueva foto">＋</button>
+                    <button type="button" data-tab="notifs" title="Notificaciones">♡<i class="fg-badge" id="fg-badge" hidden></i></button>
+                    <button type="button" data-tab="profile" title="Perfil"><span class="fg-avatar xs" id="fg-tab-avatar"></span></button>
+                </nav>
             </section>
 
             <!-- Ajustes -->
@@ -118,6 +214,32 @@
             <button type="button" class="home-bar" id="home-bar" aria-label="Inicio"></button>
         </div>
     </div>
+    <!-- Camara de Fotogram: HUD a pantalla completa (el telefono se oculta) -->
+    <div class="camera-hud" id="camera-hud" hidden>
+        <div class="cam-frame" id="cam-frame">
+            <div class="cam-grid" id="cam-grid" hidden><i></i><i></i><i></i><i></i></div>
+            <div class="cam-count" id="cam-count" hidden></div>
+            <div class="cam-flash" id="cam-flash"></div>
+            <div class="cam-top">
+                <button type="button" class="cam-btn" id="cam-close" title="Volver (Esc)">✕</button>
+                <span class="cam-mode" id="cam-mode">Selfie</span>
+                <span class="cam-top-right">
+                    <button type="button" class="cam-btn" id="cam-timer" title="Temporizador (T)">⏱<small id="cam-timer-label"></small></button>
+                    <button type="button" class="cam-btn" id="cam-grid-btn" title="Cuadricula (G)">#</button>
+                </span>
+            </div>
+            <div class="cam-zoom"><span>＋</span><input type="range" id="cam-zoom" min="0" max="100" value="30"><span>－</span></div>
+            <div class="cam-bottom">
+                <div class="cam-poses" id="cam-poses"></div>
+                <div class="cam-controls">
+                    <span class="cam-hint">A/D girar · W/S altura · Rueda zoom · Q/E pose</span>
+                    <button type="button" class="cam-shutter" id="cam-shutter" title="Disparar (Espacio)"></button>
+                    <button type="button" class="cam-btn cam-flip" id="cam-flip" title="Cambiar camara (F)">⟲</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="app.js"></script>
+    <script src="social.js"></script>
 </body>
 </html>

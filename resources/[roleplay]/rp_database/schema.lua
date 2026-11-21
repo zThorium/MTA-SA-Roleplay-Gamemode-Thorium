@@ -547,4 +547,73 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_phone (Fotogram): filtro aplicado a la foto (solo informativo, la imagen ya llega editada)
+    [[
+    ALTER TABLE social_posts
+        ADD COLUMN IF NOT EXISTS filter VARCHAR(16) NOT NULL DEFAULT '' AFTER caption
+    ]],
+    -- rp_phone (Fotogram): publicaciones de un personaje en orden (perfil y feed de seguidos)
+    [[
+    ALTER TABLE social_posts
+        ADD INDEX IF NOT EXISTS idx_posts_character_id (character_id, id)
+    ]],
+    -- rp_phone (Fotogram): perfil publico de cada personaje (usuario @, biografia y foto de perfil)
+    [[
+    CREATE TABLE IF NOT EXISTS social_profiles (
+        character_id   INT UNSIGNED NOT NULL,
+        username       VARCHAR(24)  NOT NULL,
+        bio            VARCHAR(150) NOT NULL DEFAULT '',
+        avatar_post_id INT UNSIGNED NULL,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        UNIQUE KEY uq_social_profiles_username (username),
+        CONSTRAINT fk_social_profiles_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_social_profiles_avatar FOREIGN KEY (avatar_post_id) REFERENCES social_posts (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Fotogram): quien sigue a quien
+    [[
+    CREATE TABLE IF NOT EXISTS social_follows (
+        follower_id INT UNSIGNED NOT NULL,
+        followed_id INT UNSIGNED NOT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (follower_id, followed_id),
+        KEY idx_social_follows_followed (followed_id),
+        CONSTRAINT fk_social_follows_follower FOREIGN KEY (follower_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_social_follows_followed FOREIGN KEY (followed_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Fotogram): comentarios de las fotos
+    [[
+    CREATE TABLE IF NOT EXISTS social_comments (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        post_id      INT UNSIGNED NOT NULL,
+        character_id INT UNSIGNED NOT NULL,
+        body         VARCHAR(200) NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_social_comments_post (post_id, id),
+        CONSTRAINT fk_social_comments_post FOREIGN KEY (post_id) REFERENCES social_posts (id) ON DELETE CASCADE,
+        CONSTRAINT fk_social_comments_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Fotogram): notificaciones (like, comment, follow, mention). character_id = quien la recibe
+    [[
+    CREATE TABLE IF NOT EXISTS social_notifications (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        actor_id     INT UNSIGNED NOT NULL,
+        type         VARCHAR(12)  NOT NULL,
+        post_id      INT UNSIGNED NULL,
+        text         VARCHAR(100) NOT NULL DEFAULT '',
+        is_read      TINYINT(1)   NOT NULL DEFAULT 0,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_social_notifications_character (character_id, id),
+        KEY idx_social_notifications_created (created_at),
+        CONSTRAINT fk_social_notifications_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_social_notifications_actor FOREIGN KEY (actor_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_social_notifications_post FOREIGN KEY (post_id) REFERENCES social_posts (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

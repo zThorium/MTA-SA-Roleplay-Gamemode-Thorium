@@ -31,6 +31,7 @@ local function drawBar(x, y, w, h, ratio, r, g, b, alpha)
 end
 
 addEventHandler("onClientRender", root, function()
+    if getElementData(localPlayer, "rp:hudHidden") then return end   -- p. ej. camara de Fotogram (rp_phone)
     local cx, cy, cz = getCameraMatrix()
     local myDim, myInt = getElementDimension(localPlayer), getElementInterior(localPlayer)
 

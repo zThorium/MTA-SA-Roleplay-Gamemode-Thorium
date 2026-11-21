@@ -7,16 +7,13 @@
 local screenW, screenH = guiGetScreenSize()
 local browserGui, browser, ready = nil, nil, false
 local pendingJS = {}
-local screenSource = nil
-local capturing = false
 
 addEvent("rp:phone:show", true)
 addEvent("rp:phone:notes", true)
 addEvent("rp:phone:contacts", true)
-addEvent("rp:social:feed", true)
 addEvent("rp:bank:data", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "feed", "capture", "post", "like", "openApp" }) do
+    "bankOpen", "bankAction", "openApp" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -42,6 +39,7 @@ local function close()
     browserGui, browser, ready, pendingJS = nil, nil, false, {}
     showCursor(false)
     guiSetInputEnabled(false)
+    triggerEvent("rp:phone:onClose", localPlayer)   -- Fotogram: cierra la camara si estaba abierta
 end
 
 local function open()
@@ -69,7 +67,6 @@ end)
 
 addEventHandler("rp:phone:notes", resourceRoot, function(rows) callJS(("RP.setNotes(%s)"):format(json(rows or {}))) end)
 addEventHandler("rp:phone:contacts", resourceRoot, function(rows) callJS(("RP.setContacts(%s)"):format(json(rows or {}))) end)
-addEventHandler("rp:social:feed", resourceRoot, function(rows) callJS(("RP.setFeed(%s)"):format(json(rows or {}))) end)
 
 addEventHandler("rp:bank:data", root, function(view, data)
     if view == "phone" then callJS(("RP.setBank(%s)"):format(json(data or {}))) end
@@ -126,45 +123,15 @@ addEventHandler("rp:phone:ui:bankAction", root, function(action, amount, target)
     elseif action == "transfer" then triggerServerEvent("rp:bank:transfer", resourceRoot, tostring(target or ""), amount, "phone") end
 end)
 
-addEventHandler("rp:phone:ui:feed", root, function() triggerServerEvent("rp:social:feed", resourceRoot) end)
-addEventHandler("rp:phone:ui:like", root, function(id) triggerServerEvent("rp:social:like", resourceRoot, tonumber(id)) end)
-addEventHandler("rp:phone:ui:post", root, function(caption, image)
-    if type(image) ~= "string" then return end
-    triggerLatentServerEvent("rp:social:post", 200000, false, resourceRoot, tostring(caption or ""), image)
-end)
-
 ----------------------------------------------------------------
--- Camara: oculta el telefono y el HUD, captura la pantalla y la devuelve
+-- Para los otros scripts del telefono (c_social.lua, c_camera.lua)
 ----------------------------------------------------------------
-local function doCapture()
-    removeEventHandler("onClientRender", root, doCapture)
-    if not screenSource then screenSource = dxCreateScreenSource(640, 360) end
-    dxUpdateScreenSource(screenSource, true)
-    local pixels = dxGetTexturePixels(screenSource)
-    local jpeg = pixels and dxConvertPixels(pixels, "jpeg", 70)
-
-    setElementData(localPlayer, "rp:hudHidden", false, false)
-    if isElement(browserGui) then guiSetVisible(browserGui, true) end
-    showCursor(true)
-    capturing = false
-
-    if jpeg then
-        playSoundFrontEnd(41)
-        callJS(("RP.setPhoto(%s)"):format(jsString(encodeString("base64", jpeg))))
-    else
-        exports.rp_notify:notify("No se pudo tomar la foto.", "error")
-    end
-end
-
-addEventHandler("rp:phone:ui:capture", root, function()
-    if capturing or not isOpen() then return end
-    capturing = true
-    guiSetVisible(browserGui, false)
-    showCursor(false)
-    setElementData(localPlayer, "rp:hudHidden", true, false)
-    -- Deja pasar un instante para que la escena se vea sin interfaz
-    setTimer(function() addEventHandler("onClientRender", root, doCapture, true, "low-1000") end, 400, 1)
-end)
+addEvent("rp:phone:onClose", false)
+Phone = {
+    callJS = callJS, json = json, jsString = jsString, isOpen = isOpen, close = close,
+    getGui = function() return browserGui end,
+    getBrowser = function() return browser end,
+}
 
 ----------------------------------------------------------------
 addEventHandler("onClientResourceStart", resourceRoot, function()
