@@ -5,6 +5,7 @@
     <title>Telefono</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="social.css">
+    <link rel="stylesheet" href="tinder.css">
 </head>
 <body>
     <div class="phone" id="phone">
@@ -27,6 +28,7 @@
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
                     <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span>Fotogram</button>
+                    <button type="button" class="app" data-open="tinder"><span class="icon tinder">🔥</span>Tinder</button>
                     <button type="button" class="app" data-app="vroom"><span class="icon vroom">🚗</span>Vroom</button>
                     <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
                 </div>
@@ -232,6 +234,24 @@
                 </nav>
             </section>
 
+            <!-- Tinder (parte 1: perfil) -->
+            <section class="view" id="view-tinder">
+                <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text tinder-logo">tinder</h1><button type="button" class="action" id="tinder-save">Guardar</button></header>
+                <div class="editor">
+                    <div class="tinder-photo" id="tinder-photo"><span>Sin foto</span></div>
+                    <button type="button" class="secondary" id="tinder-camera">📷 Tomar foto de perfil</button>
+                    <p class="note" id="tinder-data"></p>
+                    <textarea id="tinder-bio" maxlength="200" placeholder="Cuentale algo a la gente (max. 200)..."></textarea>
+                    <h2 class="section-title">Me interesan</h2>
+                    <div class="segmented" id="tinder-interest">
+                        <button type="button" data-interest="m">Hombres</button>
+                        <button type="button" data-interest="f">Mujeres</button>
+                        <button type="button" data-interest="a" class="active">Todos</button>
+                    </div>
+                    <label class="tinder-active"><input type="checkbox" id="tinder-active" checked> Mostrar mi perfil a otras personas</label>
+                </div>
+            </section>
+
             <!-- Ajustes -->
             <section class="view" id="view-settings">
                 <header><button type="button" class="back">‹ Inicio</button><h1>Ajustes</h1><span></span></header>
@@ -275,5 +295,6 @@
     </div>
     <script src="app.js"></script>
     <script src="social.js"></script>
+    <script src="tinder.js"></script>
 </body>
 </html>

@@ -32,6 +32,7 @@
         document.querySelector(".screen").classList.toggle("dark-status", name === "home" || name === "call");
         if (name === "bank") send("rp:phone:ui:bankOpen");
         if (window.Fotogram) Fotogram.onShow(name);
+        if (name === "tinder") send("rp:phone:ui:tinderOpen");
         if (name === "contact-add") send("rp:phone:ui:nearby");
     }
 
@@ -244,6 +245,7 @@
 
     // ---------------------------------------------------------------- API para Lua
     window.RP = {
+        show: show,
         boot: function (info) {
             $("settings-owner").textContent = info.owner || "-";
             $("settings-number").textContent = String(info.number || "-").replace(/^(\d{3})(\d{4})$/, "$1-$2");

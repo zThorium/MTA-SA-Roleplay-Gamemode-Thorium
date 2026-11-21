@@ -616,4 +616,17 @@ SCHEMA = {
         CONSTRAINT fk_social_notifications_post FOREIGN KEY (post_id) REFERENCES social_posts (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_phone (Tinder, parte 1): perfil de citas del personaje. Edad y genero salen de characters
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_profiles (
+        character_id INT UNSIGNED NOT NULL,
+        bio          VARCHAR(200) NOT NULL DEFAULT '',
+        interested   CHAR(1)      NOT NULL DEFAULT 'a',
+        photo        MEDIUMTEXT   NULL,
+        active       TINYINT(1)   NOT NULL DEFAULT 1,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_tinder_profiles_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

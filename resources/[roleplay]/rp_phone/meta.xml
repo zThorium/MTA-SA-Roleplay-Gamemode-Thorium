@@ -14,6 +14,7 @@
     <script src="server/s_phone.lua" type="server" />
     <script src="server/s_social.lua" type="server" />
     <script src="server/s_camera.lua" type="server" />
+    <script src="server/s_tinder.lua" type="server" />
     <script src="client/c_phone.lua" type="client" cache="false" />
     <script src="client/c_social.lua" type="client" cache="false" />
     <script src="client/c_camera.lua" type="client" cache="false" />
@@ -28,4 +29,6 @@
     <export function="socialAction" type="server" />
     <export function="socialResetCooldowns" type="server" />
     <export function="getCameraConfigErrors" type="server" />
+    <file src="html/tinder.css" />
+    <file src="html/tinder.js" />
 </meta>
