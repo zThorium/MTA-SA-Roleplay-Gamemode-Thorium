@@ -72,7 +72,7 @@ AGENCY = {
           description = "Recorre la ruta con el camion, vacia los contenedores y separa la basura. A veces aparecen cosas de valor.",
           pay = "$20 por contenedor + hallazgos", howTo = "El deposito esta en Willowfield, al sureste de la ciudad.",
           location = { x = 2190.0, y = -1975.0, z = 13.55 } },
-        { id = "lumberjack", name = "Lenador", icon = "🪓",
+        { id = "lumber", name = "Lenador", icon = "🪓",
           description = "Tala arboles en los bosques de Flint County, corta los troncos y cargalos en el camion del aserradero.",
           pay = "$40 por tronco", howTo = "Ve hacia Angel Pine por la carretera de la costa; el aserradero esta a la entrada.",
           location = { x = -1980.0, y = -2430.0, z = 30.6 } },
