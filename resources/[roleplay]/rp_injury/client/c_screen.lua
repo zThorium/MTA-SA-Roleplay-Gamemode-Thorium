@@ -19,7 +19,8 @@
 
 InjuryScreen = {}
 
-local cfg = INJURY.SCREEN
+-- INJURY (shared/s_config.lua) puede no estar definido aun cuando este script cliente se carga: se lee al usarlo
+local cfg = setmetatable({}, { __index = function(_, k) return INJURY.SCREEN[k] end })
 local sw, sh = guiGetScreenSize()
 local aspect = sw / sh
 

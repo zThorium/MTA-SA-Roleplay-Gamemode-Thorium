@@ -82,3 +82,11 @@ end
 function isReady()
     return ready and isElement(connection)
 end
+
+-- EXPORT: copia de las sentencias de schema.lua (la usa rp_test para comprobar que
+-- existen todas las tablas y columnas). Solo texto, sin credenciales.
+function getSchema()
+    local copy = {}
+    for i, statement in ipairs(SCHEMA) do copy[i] = statement end
+    return copy
+end

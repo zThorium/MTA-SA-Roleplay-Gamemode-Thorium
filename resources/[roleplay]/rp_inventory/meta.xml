@@ -25,6 +25,7 @@
     <export function="getItemDefinition" type="server" />
     <export function="getItemDefinition" type="client" />
     <export function="getItemList" type="server" />
+    <export function="setItemLabel" type="server" />
     <export function="isInventoryOpen" type="client" />
     <export function="closeInventory" type="client" />
 </meta>

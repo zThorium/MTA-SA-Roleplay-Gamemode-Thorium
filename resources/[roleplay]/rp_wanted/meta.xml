@@ -1,0 +1,43 @@
+<meta>
+    <!--
+        Nivel de busqueda al estilo de GTA San Andreas (puntos de caos por delito,
+        6 estrellas, decaimiento sin policia cerca, arresto, Pay 'n' Spray) y
+        policia IA que persigue con sirena: patrullas, helicoptero, controles de
+        carretera, SWAT, FBI y ejercito. Ver docs/BUSQUEDA_POLICIAL.md.
+    -->
+    <info author="Thorium" name="RP Wanted" description="Estrellas de busqueda y persecucion policial IA" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_ids" />
+    <include resource="rp_characters" />
+    <include resource="rp_factions" />
+    <include resource="rp_citizens" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_wanted.lua" type="server" />
+    <script src="server/s_units.lua" type="server" />
+    <script src="server/s_jail.lua" type="server" />
+    <script src="client/c_roads.lua" type="client" cache="false" />
+    <script src="client/c_crimes.lua" type="client" cache="false" />
+    <script src="client/c_police.lua" type="client" cache="false" />
+    <script src="client/c_jail.lua" type="client" cache="false" />
+
+    <export function="getWantedLevel" type="server" />
+    <export function="getWantedChaos" type="server" />
+    <export function="setWantedLevel" type="server" />
+    <export function="clearWanted" type="server" />
+    <export function="reportCrime" type="server" />
+    <export function="isWantedPolice" type="server" />
+    <export function="isPlayerJailed" type="server" />
+    <export function="jailPlayer" type="server" />
+    <!-- rp_robbery: cuenta regresiva y condiciones negociadas -->
+    <export function="holdPursuit" type="server" />
+    <export function="isPursuitHeld" type="server" />
+    <export function="setPursuitTerms" type="server" />
+    <export function="getPursuitTerms" type="server" />
+    <!-- rp_citizens entrega sus patrullas cuando el jugador esta buscado -->
+    <export function="adoptLocalCop" type="client" />
+</meta>

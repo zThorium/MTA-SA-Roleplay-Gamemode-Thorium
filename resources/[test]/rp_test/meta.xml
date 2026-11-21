@@ -1,0 +1,17 @@
+<meta>
+    <info author="Thorium" name="RP Test" description="Pruebas de humo del lado servidor (BD, cuentas, personajes, inventario, banco). Imprime PASS/FAIL en la consola." version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" />
+
+    <!-- No va en mtaserver.conf: se arranca a mano (start rp_test) o con scripts/test.sh -->
+    <include resource="rp_database" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="rp_bank" />
+    <include resource="rp_wanted" />
+    <include resource="rp_robbery" />
+
+    <script src="server/s_runner.lua" type="server" />
+    <script src="server/s_tests.lua" type="server" />
+    <script src="server/s_tests_robbery.lua" type="server" />
+</meta>

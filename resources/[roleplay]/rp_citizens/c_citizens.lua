@@ -20,7 +20,9 @@
 ----------------------------------------------------------------
 local CFG = {
     MAX_PEDS = 14, MAX_PEDS_NIGHT = 7,
-    MAX_CARS = 7,  MAX_CARS_NIGHT = 4,
+    MAX_CARS = 16, MAX_CARS_NIGHT = 9,
+    MAX_CARS_WANTED = 6,  -- autos extra durante una persecucion (mas trafico que esquivar)
+    CAR_SPAWN_AHEAD = 0.7, -- yendo rapido, proporcion de autos que aparecen por delante
     PED_SPAWN_MIN = 40, PED_SPAWN_MAX = 80, PED_DESPAWN = 105,
     CAR_SPAWN_MIN = 70, CAR_SPAWN_MAX = 130, CAR_DESPAWN = 170,
     PED_TICK = 300,      -- ms entre decisiones de peatones
@@ -89,8 +91,45 @@ local function pickPedSkin(x, y, z)
     return pick(pop.peds)
 end
 
+-- Motos (como en popcycle de GTA SA, una parte del trafico va en moto)
+local BIKES = {
+    default = { 461, 462, 463, 468, 521, 581, 586 },
+    ghetto = { 462, 463, 468, 586 },
+    rich = { 461, 521, 522, 581 },
+    industrial = { 462, 463, 468, 586 },
+}
+local BIKE_CHANCE = 0.15
+
+-- Patrullas de la policia en el trafico (sin persecucion: patrullan con las
+-- luces apagadas). Modelo y agente segun la ciudad; tambien motos de policia.
+local POLICE_CHANCE = 0.08       -- proporcion de autos de policia en el trafico
+local POLICE_CHANCE_WANTED = 0.4 -- con el jugador buscado
+local POLICE_BIKE_CHANCE = 0.35  -- de esas patrullas, cuantas son motos (HPV1000)
+local POLICE_BY_CITY = {
+    ["Los Santos"] = { 596, 280 }, ["San Fierro"] = { 597, 281 }, ["Las Venturas"] = { 598, 282 },
+}
+local POLICE_RURAL = { 599, 283 }
+local POLICE_BIKE = { 523, 284 }
+
 local function pickCarModel(x, y, z)
+    if math.random() < BIKE_CHANCE then
+        local zone = getZoneName(x, y, z, false)
+        return pick(BIKES[ZONE_PROFILE[zone] or "default"])
+    end
     return pick(population(x, y, z).cars)
+end
+
+-- Devuelve modelo y skin de una patrulla, o nil si este auto no es de policia
+local function playerWanted()
+    return (tonumber(getElementData(localPlayer, "rp:wanted")) or 0) > 0
+end
+
+local function pickPolice(x, y, z)
+    -- Con estrellas aparecen muchas mas patrullas (GTA genera policia al estar buscado)
+    if math.random() >= (playerWanted() and POLICE_CHANCE_WANTED or POLICE_CHANCE) then return nil end
+    if math.random() < POLICE_BIKE_CHANCE then return POLICE_BIKE[1], POLICE_BIKE[2] end
+    local p = POLICE_BY_CITY[getZoneName(x, y, z, true)] or POLICE_RURAL
+    return p[1], p[2]
 end
 
 local function pickDriverSkin(x, y, z)
@@ -727,9 +766,36 @@ local function nearestLane(x, y, fx, fy)
     return best, bestTarget
 end
 
+-- Yendo rapido en un vehiculo: los autos aparecen por delante (en la direccion
+-- de marcha), donde el jugador se los va a cruzar. Lejos (> 110 m) se aceptan
+-- aunque se vean: a esa distancia no se nota que aparecen.
+local function aheadSpawnNode(px, py)
+    local v = getPedOccupiedVehicle(localPlayer)
+    if not v then return end
+    local vx, vy = getElementVelocity(v)
+    local len = math.sqrt(vx * vx + vy * vy)
+    if len * 180 < 40 or math.random() > CFG.CAR_SPAWN_AHEAD then return end
+    local base = math.atan2(vy, vx)
+    for _ = 1, 6 do
+        local a = base + (math.random() - 0.5) * 1.6
+        local d = 110 + math.random() * 50
+        local tx, ty = px + math.cos(a) * d, py + math.sin(a) * d
+        local cell = vehGrid[math.floor(tx / CELL) * 1000 + math.floor(ty / CELL)]
+        if cell then
+            local i = cell[math.random(#cell)]
+            local x, y, z = nodePos(VEH_NODES, i)
+            local dd = getDistanceBetweenPoints2D(px, py, x, y)
+            if dd >= 105 and dd <= CFG.CAR_DESPAWN - 10 then return i, x, y, z end
+        end
+    end
+end
+
 local function spawnCar(px, py)
-    local node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, CFG.CAR_SPAWN_MIN, CFG.CAR_SPAWN_MAX)
-    if not node or visibleFromCamera(x, y, z) then return end
+    local node, x, y, z = aheadSpawnNode(px, py)
+    if not node then
+        node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, CFG.CAR_SPAWN_MIN, CFG.CAR_SPAWN_MAX)
+        if not node or visibleFromCamera(x, y, z) then return end
+    end
     local target
     for _, n in ipairs(VEH_LINKS[node] or {}) do
         if canDrive(node, n) then target = n break end
@@ -737,16 +803,22 @@ local function spawnCar(px, py)
     if not target then return end
     local sx, sy, sz, dx, dy = laneStart(node, target)
 
-    local vehicle = createVehicle(pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
+    local policeModel, policeSkin = pickPolice(sx, sy, sz)
+    local vehicle = createVehicle(policeModel or pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
     if not vehicle then return end
-    local driver = createPed(pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
+    local driver = createPed(policeSkin or pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
     if not driver then destroyElement(vehicle) return end
     warpPedIntoVehicle(driver, vehicle)
     setVehicleEngineState(vehicle, true)
     if isNight() then setVehicleOverrideLights(vehicle, 2) end
+    if policeModel then
+        -- rp_wanted los reconoce como policia (delitos contra ellos, exceso de velocidad)
+        setElementData(vehicle, "rp:copCar", true, false)
+        setElementData(driver, "rp:cop", true, false)
+    end
 
     cars[vehicle] = {
-        driver = driver, prev = node, node = target, wp = {},
+        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil,
         state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
     }
     carCount = carCount + 1
@@ -827,8 +899,21 @@ end
 
 -- Atascado o volcado (como GTA SA): el conductor se baja y huye; el auto queda
 -- como obstaculo y se elimina cuando ya no se ve.
+-- Patrulla del trafico: pasa a rp_wanted (persigue al jugador buscado). Devuelve true si la tomo.
+local function handOverPolice(vehicle, s)
+    if not s.police or not playerWanted() or not isElement(s.driver) or isPedDead(s.driver) then return false end
+    local ok, adopted = pcall(function() return exports.rp_wanted:adoptLocalCop(vehicle, s.driver) end)
+    if not ok or not adopted then return false end
+    releaseLocks(vehicle)
+    if s.lod == "dummy" then makeReal(vehicle, s) end
+    cars[vehicle] = nil
+    carCount = carCount - 1
+    return true
+end
+
 function abandonCar(vehicle, s)
     if s.state == "ABANDONED" then return end
+    if handOverPolice(vehicle, s) then return end
     releaseLocks(vehicle)
     s.state = "ABANDONED"
     local driver = s.driver
@@ -1357,7 +1442,11 @@ local function spawnTick()
     -- Spawn hasta el limite (uno por tick para repartir el coste)
     local night = isNight()
     if pedCount < (night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) then spawnPed(px, py) end
-    if carCount < (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) then spawnCar(px, py) end
+    local maxCars = (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
+    -- hasta 2 por tick cuando faltan muchos (yendo rapido se despawnean seguido)
+    for _ = 1, (maxCars - carCount > 4) and 2 or 1 do
+        if carCount < maxCars then spawnCar(px, py) end
+    end
 end
 
 local function pedTick()
@@ -1381,9 +1470,19 @@ local function carTick()
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     for v, s in pairs(cars) do
-        if isElement(v) and s.state ~= "ABANDONED" then
+        -- Patrulla del trafico (aunque el agente se haya caido de la moto) cerca de un
+        -- jugador buscado: se suma a la persecucion de rp_wanted y deja de ser trafico
+        local handed = false
+        if s.police and isElement(v) then
+            local x, y, z = getElementPosition(v)
+            handed = getDistanceBetweenPoints3D(px, py, pz, x, y, z) < 150 and handOverPolice(v, s)
+        end
+        if handed then
+            -- nada
+        elseif isElement(v) and s.state ~= "ABANDONED" then
             local x, y, z = getElementPosition(v)
             local d = getDistanceBetweenPoints3D(px, py, pz, x, y, z)
+            do
             -- cambio de LOD: fisica completa cerca; dummy lejos y fuera de camara
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)
@@ -1394,6 +1493,7 @@ local function carTick()
                 dummyDecide(v, s)
             elseif isElementStreamedIn(v) then
                 updateCar(v, s, now)
+            end
             end
         elseif isElement(v) and s.lod == "dummy" then
             makeReal(v, s)   -- un auto abandonado vuelve a tener fisica

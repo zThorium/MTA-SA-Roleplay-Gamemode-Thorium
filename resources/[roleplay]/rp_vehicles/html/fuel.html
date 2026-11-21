@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Bencinera</title>
+    <link rel="stylesheet" href="fuel.css">
+</head>
+<body>
+    <!-- Dialogo con el bombero: cuantos litros -->
+    <section id="dialog" class="dialog hidden">
+        <header>
+            <div class="avatar">⛽</div>
+            <div>
+                <div class="who">Bombero · <span id="d-station">Bencinera</span></div>
+                <div class="speech">"¡Buenas! ¿Cuánto le echamos?"</div>
+            </div>
+        </header>
+        <div class="tank">
+            <div class="tank-bar"><div id="d-now"></div><div id="d-add"></div></div>
+            <div class="tank-labels"><span id="d-current">0 L</span><span id="d-vehicle"></span><span id="d-cap">0 L</span></div>
+        </div>
+        <div class="presets" id="d-presets"></div>
+        <div class="slider"><input type="range" id="d-range" min="1" max="10" step="1" value="10"><span id="d-liters">10 L</span></div>
+        <div class="summary">
+            <div><span id="d-calc">10 L × $4</span><strong id="d-total">$40</strong></div>
+            <small id="d-pay">Pagas al final con tarjeta o en efectivo.</small>
+        </div>
+        <footer>
+            <button type="button" class="btn" id="d-cancel">No, gracias <kbd>Esc</kbd></button>
+            <button type="button" class="btn go" id="d-ok">Cargar <kbd>Enter</kbd></button>
+        </footer>
+    </section>
+
+    <!-- Pago con datafono -->
+    <section id="pay" class="pay hidden">
+        <div class="wallet">
+            <h2>Tu billetera</h2>
+            <p class="hint" id="p-hint">Arrastra tu tarjeta a la ranura del datafono y deslízala hacia la derecha.</p>
+            <div id="p-cards" class="cards"></div>
+            <button type="button" class="btn cash" id="p-cash">Pagar en efectivo</button>
+        </div>
+        <div class="pos" id="pos">
+            <div class="printer"><div class="paper" id="p-paper"></div></div>
+            <div class="groove" id="p-groove"><span>⟶ DESLICE</span></div>
+            <div class="brand">THORIUM<b>PAY</b></div>
+            <div class="screen">
+                <div class="line small" id="p-station">BENCINERA</div>
+                <div class="line big" id="p-amount">$0</div>
+                <div class="line" id="p-status">DESLICE LA TARJETA</div>
+                <div class="line pin" id="p-pin"></div>
+            </div>
+            <div class="keys" id="p-keys"></div>
+        </div>
+    </section>
+
+    <script src="fuel.js"></script>
+</body>
+</html>
