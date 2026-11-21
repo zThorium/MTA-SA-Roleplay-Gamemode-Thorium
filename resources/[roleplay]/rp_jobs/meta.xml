@@ -1,0 +1,50 @@
+<meta>
+    <info author="Thorium" name="RP Jobs" description="Trabajos civiles dinamicos con minijuegos CEF: basurero, granjero, lenador, cazador, pescador y minero" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_ids" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="bone_attach" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_jobs.lua" type="server" />
+    <script src="server/s_market.lua" type="server" />
+    <script src="server/jobs/s_garbage.lua" type="server" />
+    <script src="server/jobs/s_farmer.lua" type="server" />
+    <script src="server/jobs/s_lumber.lua" type="server" />
+    <script src="server/jobs/s_hunter.lua" type="server" />
+    <script src="server/jobs/s_fisher.lua" type="server" />
+    <script src="server/jobs/s_miner.lua" type="server" />
+    <script src="client/c_jobs.lua" type="client" cache="false" />
+    <script src="client/c_cinematic.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/games.css" />
+    <file src="html/app.js" />
+    <file src="html/games/garbage.js" />
+    <file src="html/games/farm.js" />
+    <file src="html/games/lumber.js" />
+    <file src="html/games/hunt.js" />
+    <file src="html/games/fish.js" />
+    <file src="html/games/mine.js" />
+
+    <!-- API para la agencia de trabajos y otros recursos (docs/TRABAJOS.md) -->
+    <export function="getJobList" type="server" />
+    <export function="getJobInfo" type="server" />
+    <export function="getPlayerJob" type="server" />
+    <export function="setPlayerJob" type="server" />
+    <export function="quitPlayerJob" type="server" />
+    <export function="isPlayerOnShift" type="server" />
+    <export function="getPlayerJobLevel" type="server" />
+    <export function="getPlayerJobStats" type="server" />
+    <export function="showJobLocation" type="server" />
+    <export function="getMarketPrice" type="server" />
+    <export function="playJobCinematic" type="client" />
+    <export function="stopJobCinematic" type="client" />
+    <export function="isJobCinematicPlaying" type="client" />
+</meta>
