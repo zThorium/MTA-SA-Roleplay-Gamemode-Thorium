@@ -651,4 +651,27 @@ SCHEMA = {
             REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_jobs: trabajo actual de cada personaje (lo asigna la agencia o la sede del trabajo)
+    [[
+    CREATE TABLE IF NOT EXISTS character_jobs (
+        character_id INT UNSIGNED NOT NULL,
+        job_id       VARCHAR(24)  NOT NULL,
+        hired_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_character_jobs_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_jobs: experiencia y estadisticas por personaje y trabajo (se conservan al cambiar de trabajo)
+    [[
+    CREATE TABLE IF NOT EXISTS job_stats (
+        character_id INT UNSIGNED NOT NULL,
+        job_id       VARCHAR(24)  NOT NULL,
+        xp           INT UNSIGNED NOT NULL DEFAULT 0,
+        tasks        INT UNSIGNED NOT NULL DEFAULT 0,
+        earned       INT UNSIGNED NOT NULL DEFAULT 0,
+        best_shift   INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id, job_id),
+        CONSTRAINT fk_job_stats_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

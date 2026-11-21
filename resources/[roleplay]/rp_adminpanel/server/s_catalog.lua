@@ -34,6 +34,8 @@ ADMIN_CATALOG = {
         items = {
             { cmd = "/dardinero", args = "<id o nombre> <cantidad>", desc = "Ingresa dinero en la cuenta bancaria del personaje (cantidad negativa para restar).", res = "rp_bank" },
             { cmd = "/darfondos", args = "<idFaccion> <cantidad>", desc = "Suma o resta fondos de la caja de una faccion (negativa para quitar).", res = "rp_factions" },
+            { cmd = "/setjob", args = "<id o nombre> <trabajo|ninguno>", desc = "Asigna un trabajo civil (garbage, farmer, lumber, hunter, fisher, miner) o lo quita, sin espera entre cambios.", res = "rp_jobs" },
+            { cmd = "/darxptrabajo", args = "<id o nombre> <xp>", desc = "Suma experiencia al jugador en su trabajo actual (sube de nivel y de pago).", res = "rp_jobs" },
             { cmd = "/crearatm", args = "", desc = "Coloca un cajero automatico 1 m delante de ti, en tu interior y dimension.", res = "rp_bank" },
             { cmd = "/borraratm", args = "<id>", desc = "Elimina un cajero automatico.", res = "rp_bank" },
         },
