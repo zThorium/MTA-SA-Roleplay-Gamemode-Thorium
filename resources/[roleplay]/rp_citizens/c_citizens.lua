@@ -275,12 +275,60 @@ local function spawnPed(px, py)
     setWalking(ped, true, false)
 end
 
-local function startFlee(ped, from, duration)
+local pedSnap = {}   -- posiciones de los peatones (una lectura por tick)
+
+-- "from" es el elemento que asusta o una posicion { x, y } (explosion). El miedo se contagia:
+-- los peatones a menos de 14 m huyen tambien (hops = saltos de contagio que quedan).
+local function startFlee(ped, from, duration, hops)
     local s = peds[ped]
     if not s or s.state == "DEAD" then return end
     setPedAnimation(ped)
-    s.state, s.threat, s.until_ = "FLEE", from, getTickCount() + (duration or math.random(8000, 12000))
+    s.state, s.until_ = "FLEE", getTickCount() + (duration or math.random(8000, 12000))
+    if type(from) == "table" then s.threat, s.threatPos = nil, from else s.threat, s.threatPos = from, nil end
     setWalking(ped, true, true)
+    hops = hops == nil and 1 or hops
+    if hops > 0 then
+        local x, y = getElementPosition(ped)
+        for other, os in pairs(peds) do
+            if other ~= ped and os.state ~= "DEAD" and os.state ~= "FLEE" and os.state ~= "FIGHT" and isElement(other) then
+                local ox, oy = getElementPosition(other)
+                if (ox - x) ^ 2 + (oy - y) ^ 2 < 196 and math.random() < 0.7 then
+                    startFlee(other, from, math.random(4000, 7000), hops - 1)
+                end
+            end
+        end
+    end
+end
+
+-- Hay un auto en movimiento que viene hacia el peaton? Devuelve el rumbo para apartarse y su distancia
+local function carDanger(x, y)
+    for _, o in ipairs(carSnap) do
+        local v = o[1]
+        local dx, dy = x - o[2], y - o[3]
+        local d2 = dx * dx + dy * dy
+        if d2 < 100 and isElement(v) then
+            local vx, vy = getElementVelocity(v)
+            local sp = math.sqrt(vx * vx + vy * vy) * 180
+            if sp > 12 then
+                local ux, uy = vx / math.sqrt(vx * vx + vy * vy), vy / math.sqrt(vx * vx + vy * vy)
+                local along = dx * ux + dy * uy            -- el peaton esta delante del auto
+                local side = dx * uy - dy * ux             -- + = a la derecha del auto
+                if along > 0 and math.abs(side) < 2.8 then
+                    -- se aparta de lado, hacia donde ya esta
+                    local away = heading(side >= 0 and uy or -uy, side >= 0 and -ux or ux)
+                    return away, math.sqrt(d2), sp, v
+                end
+            end
+        end
+    end
+end
+
+local function idleChance()
+    local h = getTime()
+    if h >= 22 or h < 6 then return 0.03 end
+    if h >= 12 and h < 15 then return 0.12 end
+    if h >= 17 and h < 20 then return 0.09 end
+    return 0.06
 end
 
 local function startFight(ped, target)
@@ -294,7 +342,7 @@ local function resumeWalk(ped, s)
     local x, y = getElementPosition(ped)
     local n = nearestNode(PED_NODES, pedGrid, x, y)
     if not n then return removePed(ped) end
-    s.state, s.node, s.prev, s.threat = "WALK", n, nil, nil
+    s.state, s.node, s.prev, s.threat, s.threatPos = "WALK", n, nil, nil, nil
     setPedControlState(ped, "fire", false)
     setWalking(ped, true, false)
 end
@@ -310,7 +358,7 @@ local function updatePed(ped, s, now, px, py, pz)
         local tx, ty = nodePos(PED_NODES, s.node)
         if getDistanceBetweenPoints2D(x, y, tx, ty) < 1.6 then
             -- Llego al nodo: a veces se queda un rato
-            if math.random() < 0.06 then
+            if math.random() < idleChance() then
                 s.state, s.until_ = "IDLE", now + math.random(4000, 9000)
                 setWalking(ped, false)
                 local a = IDLE_ANIMS[math.random(#IDLE_ANIMS)]
@@ -327,8 +375,29 @@ local function updatePed(ped, s, now, px, py, pz)
         if distP < 1.8 and math.abs(angleDiff(heading(dpx, dpy), rot)) < 40 then
             rot = rot + 50
         end
+        -- Evita a otros peatones que tiene justo delante (se aparta hacia el lado contrario)
+        local rr = math.rad(rot)
+        local fx, fy = -math.sin(rr), math.cos(rr)
+        for i = 1, #pedSnap do
+            local o = pedSnap[i]
+            if o[1] ~= ped then
+                local dx, dy = o[2] - x, o[3] - y
+                local along = dx * fx + dy * fy
+                if along > 0 and along < 1.6 then
+                    local lat = dx * fy - dy * fx   -- + = el otro esta a mi derecha
+                    if math.abs(lat) < 0.9 then rot = rot + (lat > 0 and 40 or -40) break end
+                end
+            end
+        end
+        -- Un auto viene hacia el: se aparta y acelera el paso; si esta muy cerca, huye
+        local away, cdist, csp, cveh = carDanger(x, y)
+        local hurry = false
+        if away then
+            rot, hurry = away, true
+            if cdist < 3.5 and csp > 25 then startFlee(ped, cveh, 3500, 0) return end
+        end
         setElementRotation(ped, 0, 0, rot, "default", true)
-        setWalking(ped, true, false)
+        setWalking(ped, true, hurry)
 
     elseif s.state == "IDLE" then
         if now > s.until_ then
@@ -338,9 +407,19 @@ local function updatePed(ped, s, now, px, py, pz)
         end
 
     elseif s.state == "FLEE" then
-        if now > s.until_ or not isElement(s.threat) then return resumeWalk(ped, s) end
-        local hx, hy = getElementPosition(s.threat)
-        setElementRotation(ped, 0, 0, heading(x - hx, y - hy) + math.random(-20, 20), "default", true)
+        if now > s.until_ or (not s.threatPos and not isElement(s.threat)) then return resumeWalk(ped, s) end
+        local hx, hy
+        if s.threatPos then hx, hy = s.threatPos[1], s.threatPos[2] else hx, hy = getElementPosition(s.threat) end
+        local rot = heading(x - hx, y - hy) + math.random(-20, 20)
+        -- no corre contra una pared: si el camino esta cerrado, rodea hacia un lado
+        for _, turn in ipairs({ 0, 70, -70 }) do
+            local rr = math.rad(rot + turn)
+            if isLineOfSightClear(x, y, z + 0.3, x - math.sin(rr) * 3, y + math.cos(rr) * 3, z + 0.3, true, false, false, false, false, false, false) then
+                rot = rot + turn
+                break
+            end
+        end
+        setElementRotation(ped, 0, 0, rot, "default", true)
         setWalking(ped, true, true)
 
     elseif s.state == "FIGHT" then
@@ -396,6 +475,16 @@ addEventHandler("onClientPlayerWeaponFire", localPlayer, function(weapon)
     for v, s in pairs(cars) do
         local vx, vy, vz = getElementPosition(v)
         if getDistanceBetweenPoints3D(x, y, z, vx, vy, vz) < 40 then s.state, s.until_ = "FLEE", getTickCount() + 10000 end
+    end
+end)
+
+-- Explosiones (de cualquiera): los peatones a menos de 45 m huyen de ese punto
+addEventHandler("onClientExplosion", root, function(x, y)
+    for ped, s in pairs(peds) do
+        if s.state ~= "DEAD" and s.state ~= "FIGHT" and isElement(ped) then
+            local px, py = getElementPosition(ped)
+            if (px - x) ^ 2 + (py - y) ^ 2 < 2025 then startFlee(ped, { x, y }, math.random(9000, 13000), 0) end
+        end
     end
 end)
 
@@ -646,9 +735,10 @@ function computeTurnPoints(A, B, C)
     -- Si el tramo termina en un semaforo, E es la linea de detencion (campo 6 = eje)
     local axis = nil
     if getLight(A, B) > 0 then axis = math.abs(d1x) > math.abs(d1y) and "ew" or "ns" end
-    pts[1] = { ex, ey, bz, 0, junction, axis }
+    local man = junction and { d1x, d1y, d2x, d2y, turn } or nil   -- maniobra (para la prioridad en cruces)
+    pts[1] = { ex, ey, bz, 0, junction, axis, man }
     if turn < 10 then
-        pts[2] = { xx, xy, bz, 0, junction }
+        pts[2] = { xx, xy, bz, 0, junction, nil, man }
     else
         local qx, qy = intersect(ex, ey, d1x, d1y, xx, xy, -d2x, -d2y)
         if not qx then qx, qy = bx + (d1y * off1 + d2y * off2) / 2, by - (d1x * off1 + d2x * off2) / 2 end
@@ -656,7 +746,7 @@ function computeTurnPoints(A, B, C)
         for i = 1, steps do
             local t = i / steps
             local u = 1 - t
-            pts[#pts + 1] = { u * u * ex + 2 * u * t * qx + t * t * xx, u * u * ey + 2 * u * t * qy + t * t * xy, bz, turn, junction }
+            pts[#pts + 1] = { u * u * ex + 2 * u * t * qx + t * t * xx, u * u * ey + 2 * u * t * qy + t * t * xy, bz, turn, junction, nil, man }
         end
     end
     return pts, turn
@@ -708,22 +798,45 @@ end
 ----------------------------------------------------------------
 -- Reserva de cruces (solo local): pasa un auto a la vez por orden de llegada
 ----------------------------------------------------------------
-local junctionLock = {}    -- [nodo] = { vehicle, tick }
+-- Prioridad real: pueden estar varios a la vez si sus trayectorias no se cruzan
+-- (misma direccion de entrada; dos autos de frente que van recto o giran a la derecha).
+-- Un giro a la izquierda cede ante el que viene de frente; los cruces perpendiculares
+-- se turnan por orden de llegada.
+local junctionLock = {}    -- [nodo] = { [vehiculo] = { man = maniobra, t = tick } }
 local LOCK_TIMEOUT = 7000
 
-local function tryLock(node, vehicle, now)
-    local l = junctionLock[node]
-    if l and l[1] ~= vehicle and isElement(l[1]) and cars[l[1]] and now - l[2] < LOCK_TIMEOUT then
-        return false
+-- man = { d1x, d1y, d2x, d2y, turn }: direccion de entrada y de salida del cruce
+local function maneuversConflict(a, b)
+    if not a or not b then return true end
+    local e = a[1] * b[1] + a[2] * b[2]
+    if e > 0.8 then return false end                 -- misma direccion: hacen cola, no se cruzan
+    if e < -0.8 then                                  -- de frente: solo choca un giro a la izquierda
+        local la = a[1] * a[4] - a[2] * a[3] > 0.35
+        local lb = b[1] * b[4] - b[2] * b[3] > 0.35
+        return la or lb
     end
-    junctionLock[node] = { vehicle, l and l[1] == vehicle and l[2] or now }
+    return true                                       -- perpendiculares u otros: se turnan
+end
+
+local function tryLock(node, vehicle, now, man)
+    local holders = junctionLock[node]
+    if not holders then holders = {} junctionLock[node] = holders end
+    for v, h in pairs(holders) do
+        if v ~= vehicle then
+            if not isElement(v) or not cars[v] or now - h.t > LOCK_TIMEOUT then
+                holders[v] = nil
+            elseif maneuversConflict(man, h.man) then
+                return false
+            end
+        end
+    end
+    local mine = holders[vehicle]
+    if mine then mine.man = man else holders[vehicle] = { man = man, t = now } end
     return true
 end
 
 local function releaseLocks(vehicle)
-    for node, l in pairs(junctionLock) do
-        if l[1] == vehicle then junctionLock[node] = nil end
-    end
+    for _, holders in pairs(junctionLock) do holders[vehicle] = nil end
 end
 
 ----------------------------------------------------------------
@@ -1345,8 +1458,8 @@ local function updateCar(vehicle, s, now)
         s.lastPassed = passed
         -- libera el cruce cuando ya no quedan puntos de el
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
-            local l = junctionLock[passed[5]]
-            if l and l[1] == vehicle then junctionLock[passed[5]] = nil end
+            local hs = junctionLock[passed[5]]
+            if hs then hs[vehicle] = nil end
         end
     end
     local tx, ty = wp[1][1], wp[1][2]
@@ -1362,7 +1475,7 @@ local function updateCar(vehicle, s, now)
     -- Lo que viene: mayor giro, cruce y semaforo en los proximos metros
     local upcoming, dist, lx, ly = 0, 0, x, y
     local curveLimit = 999
-    local junctionAhead, junctionDist, lightAxis, lightDist = nil, 0, nil, 0
+    local junctionAhead, junctionDist, lightAxis, lightDist, junctionMan = nil, 0, nil, 0, nil
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
@@ -1370,7 +1483,7 @@ local function updateCar(vehicle, s, now)
         if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
-        if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist = wp[i][5], dist end
+        if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist, junctionMan = wp[i][5], dist, wp[i][7] end
         if wp[i][6] and not lightAxis then lightAxis, lightDist = wp[i][6], dist end
     end
 
@@ -1461,7 +1574,7 @@ local function updateCar(vehicle, s, now)
     -- Cruce: pide paso; si otro auto lo tiene, espera antes de entrar
     local yielding = false
     if not waiting and junctionAhead and junctionDist < 14 then
-        if not tryLock(junctionAhead, vehicle, now) then
+        if not tryLock(junctionAhead, vehicle, now, junctionMan) then
             yielding = true
             target = junctionDist > 7 and 8 or 0
         end
@@ -1756,6 +1869,13 @@ local function pedTick()
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     local aimTarget = getPedTarget(localPlayer)
+    pedSnap = {}
+    for p in pairs(peds) do
+        if isElement(p) then
+            local sx, sy = getElementPosition(p)
+            pedSnap[#pedSnap + 1] = { p, sx, sy }
+        end
+    end
     for ped, s in pairs(peds) do
         if isElement(ped) and s.state ~= "DEAD" then
             -- Le apuntan con un arma de fuego: huye

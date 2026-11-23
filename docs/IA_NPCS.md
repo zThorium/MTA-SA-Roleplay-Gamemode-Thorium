@@ -1,7 +1,8 @@
 > **Estado (2026-11-23):** la Fase 1 (sensores en abanico, personalidad de conductor, velocidad por curva con
 > distancia de frenado, ceder ante sirenas, seguimiento de trayectoria en curvas cerradas, reenganche y
 > resolución de atascos/solapes, deshacer Ctrl+Z y respaldo en el editor `/nodos`) ya está en `rp_citizens`.
-> Pendiente: Fase 2 en adelante (prioridad en cruces, cambio de carril, peatones, rutinas, tráfico compartido).
+> Fase 2 (parcial): prioridad en cruces por conflicto de trayectorias, peatones que se apartan de peatones y autos, contagio de miedo y huida de explosiones.
+> Pendiente: cambio de carril y adelantamientos, rutinas con horarios y roles, memoria, tráfico compartido.
 
 # IA de NPCs y tráfico: análisis y plan de mejora
 
