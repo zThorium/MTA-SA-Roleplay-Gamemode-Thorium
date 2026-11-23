@@ -50,7 +50,7 @@ end
 local function clearVisual(player)
     local obj = visuals[player]
     if isElement(obj) then
-        exports.pAttach:detach(obj)
+        exports.bone_attach:detachElementFromBone(obj)
         destroyElement(obj)
     end
     visuals[player] = nil
@@ -64,7 +64,7 @@ local function makeVisual(player, cfg)
     setElementDimension(obj, getElementDimension(player))
     setElementInterior(obj, getElementInterior(player))
     local o = BACKPACK_OFFSET
-    exports.pAttach:attach(obj, player, BACKPACK_BONE, o[1], o[2], o[3], o[4], o[5], o[6])
+    exports.bone_attach:attachElementToBone(obj, player, BACKPACK_BONE, o[1], o[2], o[3], o[4], o[5], o[6])
     visuals[player] = obj
 end
 
@@ -80,8 +80,8 @@ addCommandHandler("mochilaoffset", function(player, _, ...)
     BACKPACK_OFFSET = v
     for other, obj in pairs(visuals) do
         if isElement(other) and isElement(obj) then
-            exports.pAttach:detach(obj)
-            exports.pAttach:attach(obj, other, BACKPACK_BONE, v[1], v[2], v[3], v[4], v[5], v[6])
+            exports.bone_attach:detachElementFromBone(obj)
+            exports.bone_attach:attachElementToBone(obj, other, BACKPACK_BONE, v[1], v[2], v[3], v[4], v[5], v[6])
         end
     end
     notify(player, "Offset de mochila actualizado.", "success")

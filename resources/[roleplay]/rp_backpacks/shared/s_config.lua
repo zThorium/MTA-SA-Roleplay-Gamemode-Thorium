@@ -15,5 +15,5 @@ BACKPACKS = {
     bp_expedition = { capacity = 45, weight = 2.5, model = 3026, scale = 1.5 },
 }
 
-BACKPACK_BONE = 3                                -- columna (pAttach)
+BACKPACK_BONE = 3                                -- columna (bone_attach)
 BACKPACK_OFFSET = { 0, -0.17, 0.02, 90, 0, 0 }   -- x, y, z, rx, ry, rz relativos al hueso (el modelo 3026 nace tumbado: rx 90 lo levanta)
