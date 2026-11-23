@@ -1447,7 +1447,13 @@ local function makeReal(vehicle, s)
     -- lo apoya sobre el suelo real antes de activar la fisica (nunca dentro del asfalto)
     local x, y, z = getElementPosition(vehicle)
     local gz = groundAt(x, y, z)
-    if gz then setElementPosition(vehicle, x, y, gz + vehicleBaseZ(vehicle) + 0.15) end
+    local baseZ = vehicleBaseZ(vehicle)
+    -- el suelo medido solo vale si concuerda (+-1.5 m) con la altura que ya traia el dummy (la del carril)
+    if gz and math.abs(gz - (z - baseZ)) < 1.5 then
+        setElementPosition(vehicle, x, y, gz + baseZ + 0.15)
+    else
+        setElementPosition(vehicle, x, y, z + 0.15)
+    end
     -- sin alabeo heredado del dummy: solo el rumbo y una pendiente suave
     local rx, _, rz = getElementRotation(vehicle)
     if rx > 180 then rx = rx - 360 end
@@ -2875,6 +2881,7 @@ end
 
 local function moveDummies(dt)
     dt = math.min(dt, 100) / 1000
+    local now0 = getTickCount()
     for vehicle, s in pairs(cars) do
         if s.lod == "dummy" and isElement(vehicle) and s.wp and #s.wp > 0 then
             -- acelera / frena con suavidad
@@ -2917,9 +2924,20 @@ local function moveDummies(dt)
                     if gf and gb then s.lastPitch = math.max(-15, math.min(15, math.deg(math.atan2(gf - gb, 4)))) end
                 end
             end
-            if s.lastGround and math.abs(s.lastGround - (z - s.baseZ)) < 4 then
-                z = s.lastGround + s.baseZ
-                pitch = s.lastPitch or 0
+            -- Altura: el suelo medido por el rayo solo se acepta si coincide (+-1.5 m) con la altura del carril, que es
+            -- la de los nodos de GTA (siempre sobre la calzada). Si no coincide, el rayo cayo sobre otra cosa (el
+            -- borde de un seto o muro junto al carril, un puente, un arbol) y el auto quedaba levitando sobre ella;
+            -- se queda con la altura del carril y registra el sitio para revisarlo (rp_citizens telemetria "altura").
+            if s.lastGround then
+                local laneZ = z - s.baseZ
+                if math.abs(s.lastGround - laneZ) < 1.5 then
+                    z = s.lastGround + s.baseZ
+                    pitch = s.lastPitch or 0
+                elseif TEL.send and (s.altLogs or 0) < 2 and now0 - (s.altLogAt or 0) > 30000 then
+                    s.altLogs, s.altLogAt = (s.altLogs or 0) + 1, now0
+                    telSend({ k = "altura", x = math.floor(x * 10 + 0.5) / 10, y = math.floor(y * 10 + 0.5) / 10, ground = math.floor(s.lastGround * 10 + 0.5) / 10,
+                        lane = math.floor(laneZ * 10 + 0.5) / 10, model = getElementModel(vehicle), lod = "dummy" })
+                end
             end
             if s.baseZ == 0.95 and isElementStreamedIn(vehicle) then s.baseZ = vehicleBaseZ(vehicle) end
             setElementPosition(vehicle, x, y, z)
