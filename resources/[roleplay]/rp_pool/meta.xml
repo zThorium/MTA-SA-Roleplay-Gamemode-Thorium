@@ -7,7 +7,9 @@
     <include resource="rp_login" />
     <include resource="rp_characters" />
 
-    <script src="shared/s_config.lua" type="shared" />
+    <!-- La misma config se carga en servidor y cliente (por separado: 'shared' no llegaba al cliente) -->
+    <script src="shared/s_config.lua" type="server" />
+    <script src="shared/s_config.lua" type="client" cache="false" />
     <script src="server/s_physics.lua" type="server" />
     <script src="server/s_rules.lua" type="server" />
     <script src="server/s_pool.lua" type="server" />

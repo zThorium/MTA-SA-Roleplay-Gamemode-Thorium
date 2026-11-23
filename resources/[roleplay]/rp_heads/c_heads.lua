@@ -300,7 +300,7 @@ addEventHandler("onClientRender", root, function()
     local obj = attached[localPlayer]
     if not isElement(obj) then return end
     local weapon = getPedWeapon(localPlayer)
-    local aiming = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN"
+    local aiming = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN" or getElementData(localPlayer, "rp:hideBody") == true
     setElementAlpha(obj, aiming and 0 or 255)
 end)
 
