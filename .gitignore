@@ -42,3 +42,6 @@ docker/logs/
 # Telemetria de conduccion y salidas de tools/trafico (se generan en local)
 **/rp_citizens/telemetry/
 tools/trafico/out/
+
+# Contexto local de Claude (no se sube)
+CLAUDE.md
