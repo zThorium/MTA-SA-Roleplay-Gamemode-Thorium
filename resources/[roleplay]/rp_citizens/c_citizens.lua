@@ -1813,6 +1813,78 @@ end
 -- Las etapas se pasan los datos en la tabla "f" (s.f, reutilizada cada tick). Devuelven false si el auto
 -- fue retirado o abandonado y el tick debe terminar.
 ----------------------------------------------------------------
+----------------------------------------------------------------
+-- TELEMETRIA DE FALLOS (/trafico_tel): cada auto guarda las ultimas ~2 s de decisiones (25 muestras, una por
+-- tick de IA). Cuando falla (se sale de la linea poco despues de una curva, choca con algo fijo) o cuando lo
+-- pides con "/trafico_tel dump" (auto de la poblacion mas cercano), escribe UNA linea en clientscript.log:
+--   [rp_citizens][TEL] motivo ... | muestras: ms-antes km/h volante dev dif objetivo modo curva giro
+-- Con eso se ve si fallo por velocidad de entrada, volante saturado, geometria de la curva o un obstaculo.
+----------------------------------------------------------------
+local TEL = { on = true, dumps = 0, MAX = 80, N = 25 }
+
+local function telRecord(s, now, speed, diff, target, inCurve, wpTurn)
+    local t = s.tel
+    if not t then t = { n = 0, i = 0 } s.tel = t end
+    t.i = t.i % TEL.N + 1
+    t.n = math.min(t.n + 1, TEL.N)
+    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0 }
+end
+
+local function telDump(vehicle, s, why, now, force)
+    if not TEL.on and not force then return end
+    if not force and (TEL.dumps >= TEL.MAX or now - (s.telLast or -1e9) < 15000) then return end
+    local t = s.tel
+    if not t or t.n == 0 then return end
+    s.telLast = now
+    TEL.dumps = TEL.dumps + 1
+    local out = {}
+    for k = t.n, 1, -1 do
+        local idx = (t.i - (k - 1) - 1) % TEL.N + 1
+        local e = t[idx]
+        if e then
+            out[#out + 1] = ("-%d %.0f %.2f %.1f %.0f %.0f %s %d %.0f"):format(now - e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9])
+        end
+    end
+    local x, y, _, rz = 0, 0, 0, 0
+    if isElement(vehicle) then
+        x, y = getElementPosition(vehicle)
+        local _, _, r = getElementRotation(vehicle)
+        rz = r
+    end
+    local wp = s.wp or {}
+    local pts = {}
+    for k = 1, math.min(#wp, 4) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
+    local lp = s.lastPassed
+    outputDebugString(("[rp_citizens][TEL] %s modelo %d%s nodos %s->%s pos (%.0f,%.0f) rumbo %.0f lenF %.2f man %s lp %s wp %s | muestras(ms km/h volante dev dif obj modo curva giro): %s")
+        :format(why, isElement(vehicle) and getElementModel(vehicle) or 0, s.bike and " (moto)" or "", tostring(s.prev), tostring(s.node), x, y, rz, s.lenF or 1,
+            s.man and s.man.kind or "-", lp and ("(%.0f,%.0f,g%.0f)"):format(lp[1], lp[2], lp[4]) or "nil", table.concat(pts, " "), table.concat(out, " | ")), 3)
+end
+
+addCommandHandler("trafico_tel", function(_, arg)
+    if arg == "dump" then
+        -- el auto de la poblacion mas cercano (a menos de 60 m)
+        local px, py = getElementPosition(localPlayer)
+        local best, bs, bd = nil, nil, 3600
+        for v, st in pairs(cars) do
+            if isElement(v) then
+                local x, y = getElementPosition(v)
+                local d = (x - px) ^ 2 + (y - py) ^ 2
+                if d < bd then best, bs, bd = v, st, d end
+            end
+        end
+        if best then
+            telDump(best, bs, "manual", getTickCount(), true)
+            outputChatBox("[Trafico] Telemetria del auto mas cercano escrita en clientscript.log ([rp_citizens][TEL]).", 120, 200, 255)
+        else
+            outputChatBox("[Trafico] No hay autos de la poblacion a menos de 60 m.", 255, 140, 90)
+        end
+    else
+        TEL.on = not TEL.on
+        outputChatBox(("[Trafico] Telemetria de fallos: %s (%d registros). Usa /trafico_tel dump para el auto mas cercano.")
+            :format(TEL.on and "ACTIVADA" or "apagada", TEL.dumps), 120, 200, 255)
+    end
+end)
+
 local function senseSelf(vehicle, f)
     local speed = speedOf(vehicle)
     local x, y = getElementPosition(vehicle)
@@ -1843,6 +1915,7 @@ local function stageGuards(vehicle, s, f, now)
             s.wallHitAt = nil
         elseif speed < 12 and now > s.recoverUntil then
             s.wallHitAt = nil
+            telDump(vehicle, s, "choque_fijo", now)
             if startReverse(vehicle, s, now, 1000, s.steerOut or 0, m) then
                 s.needReattach = true
                 s.stuckSince = 0
@@ -2443,6 +2516,13 @@ local function stageDecide(vehicle, s, f, now)
         end
     else
         s.stuckSince = 0
+    end
+
+    -- Telemetria: guarda la muestra y, si se salio de la linea poco despues de una curva, vuelca el historial
+    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4])
+    if inCurve then s.telCurveAt = now end
+    if s.devNow > 5 and s.telCurveAt and now - s.telCurveAt < 3000 then
+        telDump(vehicle, s, "fuera_de_linea_en_curva", now)
     end
     return true
 end
