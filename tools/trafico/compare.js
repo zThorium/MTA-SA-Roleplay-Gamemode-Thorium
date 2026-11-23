@@ -7,7 +7,7 @@ const path = require('path');
 const { loadNetwork } = require('./lib/network');
 const { planChain } = require('./lib/geometry');
 const { buildChain } = require('./lib/chains');
-const { simulate } = require('./lib/sim');
+const { simulate, distToPolyline } = require('./lib/sim');
 
 const args = process.argv.slice(2);
 const i = args.indexOf('--file');
@@ -30,14 +30,18 @@ for (const t of tests) {
   const chain = buildChain(net, t.A, t.B, t.C);
   const { wp } = planChain(net, chain);
   const sim = simulate(wp);
+  // desviacion REAL: distancia de la trayectoria del juego a la ruta que planea el port JS
+  // (independiente del "dev" que calcula el controlador dentro del juego)
+  let devTrue = 0;
+  for (const p of (t.traj || [])) devTrue = Math.max(devTrue, distToPolyline(wp, p[0], p[1]));
   const simOk = sim.ok, gameOk = !!t.ok;
   if (simOk === gameOk) { agree++; gameOk ? both.ok++ : both.fail++; }
   else if (gameOk) gameOkSimFail.push(t); else gameFailSimOk.push(t);
-  rows.push({ m: `${t.A}>${t.B}>${t.C}`, game: gameOk ? 'OK' : t.why, sim: simOk ? 'OK' : sim.reason || 'desvio', devGame: t.maxDev, devSim: +sim.maxDev.toFixed(1), vB: t.vB });
+  rows.push({ m: `${t.A}>${t.B}>${t.C}`, game: gameOk ? 'OK' : t.why, sim: simOk ? 'OK' : sim.reason || 'desvio', devGame: t.maxDev, devTrue: +devTrue.toFixed(1), devSim: +sim.maxDev.toFixed(1), vB: t.vB });
 }
 console.log(`Pruebas: ${tests.length}. Coinciden simulador y juego: ${agree} (${(100 * agree / tests.length).toFixed(0)} %).`);
 console.log(`  ambos OK: ${both.ok}, ambos fallan: ${both.fail}`);
 console.log(`  el juego FALLA y el simulador no lo ve: ${gameFailSimOk.length}  (el simulador es demasiado optimista: falta fisica/obstaculos/semaforos)`);
 console.log(`  el juego OK y el simulador falla: ${gameOkSimFail.length}  (el simulador es demasiado estricto o las ayudas del juego compensan)`);
-console.log('\nmaniobra        juego            simulador   desvio juego / sim   vel en B');
-for (const r of rows) console.log(r.m.padEnd(16) + String(r.game).padEnd(17) + String(r.sim).padEnd(12) + `${r.devGame} / ${r.devSim} m`.padEnd(21) + r.vB);
+console.log('\nmaniobra        juego            simulador   desvio: controlador / real vs ruta / simulador   vel en B');
+for (const r of rows) console.log(r.m.padEnd(16) + String(r.game).padEnd(17) + String(r.sim).padEnd(12) + `${r.devGame} / ${r.devTrue} / ${r.devSim} m`.padEnd(30) + r.vB);

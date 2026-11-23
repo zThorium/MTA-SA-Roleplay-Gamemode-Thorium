@@ -1973,12 +1973,12 @@ local function telSend(tbl)
     if ok and json and #json < 15000 then triggerServerEvent("rp:citizens:tel", resourceRoot, json) end
 end
 
-local function telRecord(s, now, speed, diff, target, inCurve, wpTurn, rz, x, y)
+local function telRecord(s, now, speed, diff, target, inCurve, wpTurn, rz, x, y, rb, az)
     local t = s.tel
     if not t then t = { n = 0, i = 0 } s.tel = t end
     t.i = t.i % TEL.N + 1
     t.n = math.min(t.n + 1, TEL.N)
-    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0, rz or 0, x or 0, y or 0 }
+    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0, rz or 0, x or 0, y or 0, rb or 0, az or 0 }
 end
 
 local function telDump(vehicle, s, why, now, force)
@@ -2013,8 +2013,9 @@ local function telDump(vehicle, s, why, now, force)
             local e = t[(t.i - (k - 1) - 1) % TEL.N + 1]
             if e then
                 samples[#samples + 1] = { now - e[1], math.floor(e[2] + 0.5), math.floor(e[3] * 100 + 0.5) / 100, math.floor(e[4] * 10 + 0.5) / 10,
-                    math.floor(e[5] + 0.5), math.floor(e[6] + 0.5), e[7], e[8], math.floor(e[9] + 0.5), math.floor(e[10] + 0.5),
-                    math.floor((e[11] or 0) * 10 + 0.5) / 10, math.floor((e[12] or 0) * 10 + 0.5) / 10 }
+                    math.floor(e[5] + 0.5), math.floor(e[6] + 0.5), e[7], e[8], math.floor(e[9] + 0.5), math.floor(e[10] * 10 + 0.5) / 10,
+                    math.floor((e[11] or 0) * 10 + 0.5) / 10, math.floor((e[12] or 0) * 10 + 0.5) / 10,
+                    math.floor((e[13] or 0) * 100 + 0.5) / 100, math.floor((e[14] or 0) * 10000 + 0.5) / 10000 }
             end
         end
         telSend({ k = "tel", why = why, model = isElement(vehicle) and getElementModel(vehicle) or 0, bike = s.bike and 1 or 0, prev = s.prev, node = s.node,
@@ -2702,7 +2703,11 @@ local function stageDecide(vehicle, s, f, now)
     end
 
     -- Telemetria: guarda la muestra y, si se salio de la linea poco despues de una curva, vuelca el historial
-    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4], rz, x, y)
+    -- rb = lo que el juego dice que tiene el volante (lectura del control analogico; + izquierda) y az = velocidad angular
+    -- en z del auto: si el volante pedido es 1.0 pero rb o az no se mueven, la orden no llega a las ruedas
+    local rb = (getPedAnalogControlState(driver, "vehicle_left") or 0) - (getPedAnalogControlState(driver, "vehicle_right") or 0)
+    local _, _, azv = getElementAngularVelocity(vehicle)
+    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4], rz, x, y, rb, azv)
     if inCurve then s.telCurveAt = now end
     if s.devNow > 5 and s.telCurveAt and now - s.telCurveAt < 3000 then
         telDump(vehicle, s, "fuera_de_linea_en_curva", now)
@@ -3281,6 +3286,8 @@ local function testNext()
     local A, B, C, model = item[1], item[2], item[3], item[4] or 405
     local chain = testChain(A, B)
     local node, target = chain[1], chain[2]
+    local forceExit = { [B] = C }
+    for k = 2, #chain - 1 do forceExit[chain[k]] = chain[k + 1] end   -- sigue la cadena entera hasta B
     local sx, sy, sz, dx, dy = laneStart(node, target)
     local vehicle = createVehicle(model, sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
     local driver = vehicle and createPed(29, sx, sy, sz + 2)
@@ -3296,7 +3303,7 @@ local function testNext()
     setVehicleEngineState(vehicle, true)
     cars[vehicle] = {
         driver = driver, prev = node, node = target, wp = {}, police = false, style = { speed = 1, gap = 1 }, lenF = vehicleLenFactor(vehicle),
-        state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0, test = true, forceExit = { [B] = C }, lod = "real",
+        state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0, test = true, forceExit = forceExit, lod = "real",
     }
     carCount = carCount + 1
     local s = cars[vehicle]
@@ -3325,7 +3332,8 @@ local function testTick()
     if dB < 10 and (not cur.vB or dB < (cur.dBmin or 99)) then cur.vB, cur.dBmin = speed, dB end
     if now - cur.lastSample >= 200 and #cur.traj < 160 then
         cur.lastSample = now
-        cur.traj[#cur.traj + 1] = { math.floor(x * 10 + 0.5) / 10, math.floor(y * 10 + 0.5) / 10, math.floor(speed + 0.5) }
+        cur.traj[#cur.traj + 1] = { math.floor(x * 10 + 0.5) / 10, math.floor(y * 10 + 0.5) / 10, math.floor(speed + 0.5), math.floor((s.devNow or 0) * 10 + 0.5) / 10,
+            math.floor((s.steerOut or 0) * 100 + 0.5) / 100 }
     end
     if s.state == "ABANDONED" then return testFinish({ ok = false, why = "abandonado" }) end
     if getDistanceBetweenPoints2D(x, y, cx, cy) < 8 and cur.vB then
