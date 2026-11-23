@@ -31,6 +31,7 @@ monster trucks no se pueden mejorar.
 - Suspensión: el auto baja por nivel (`suspensionLowerLimit`).
 - Al ver Motor o Turbo en el taller se abre el capó.
 - Turbo o motor Stage 3: llamaradas por el escape al soltar el acelerador. Motor o turbo gastado (70%+): humo.
+- Sonidos (`sounds/tune_*.wav`): silbido del turbo mientras aceleras (sube con la velocidad y el nivel), soplido (BOV) al soltar el acelerador con turbo cargado, estallido en cada llamarada y ruido de matraca al instalar una pieza o hacer mantenimiento (también al comprar tuning visual).
 
 ## Balance
 Todo está en `PERF` (`shared/s_config.lua`): bonos y precios por nivel, topes por clase, ritmos de desgaste.
