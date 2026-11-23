@@ -966,9 +966,9 @@ local STEP = 6   -- metros entre puntos en los tramos rectos (seguimiento precis
 -- de 90 grados. Cada nodo genera su propia maniobra con un radio diminuto (limitado por el largo del enlace)
 -- y la ruta resultante es una esquina viva: ningun auto puede tomarla (radio minimo ~4.5 m), se pasa de
 -- largo y se sale. Esta pasada detecta esas esquinas en la ruta ya generada (giro >= 55 grados en 6 m de
--- camino) y las reemplaza por un arco de radio 5.8 m tangente a la entrada y a la salida.
+-- camino) y las reemplaza por un arco de radio ~5.7 m tangente a la entrada y a la salida.
 ----------------------------------------------------------------
-local FILLET_R, FILLET_MIN_TURN = 5.8, 55
+local FILLET_R, FILLET_MIN_TURN = 8, 55
 
 local function wdist(a, b) return math.sqrt((a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2) end
 
@@ -1021,7 +1021,10 @@ local function filletCorners(wp, from)
                 if j2 and k2 and turnAt(wp, k, j2, k2) >= FILLET_MIN_TURN then i2, kk2, k = k, k2, k + 1 else break end
             end
             local ok = false
-            -- anclas: A (antes de la esquina) con su direccion de entrada, B (despues) con la de salida
+            -- anclas: A (antes de la esquina, ~9 m de camino) con su direccion de entrada, B (despues, ~9 m)
+            -- con la de salida. Mas lejos = arco mas amplio (radio >= 4.5 m que puede girar un auto).
+            jj1 = pathBackIdx(wp, i1, 9, lo) or jj1
+            kk2 = pathFwdIdx(wp, i2, 9) or kk2
             local ax, ay = wp[jj1][1], wp[jj1][2]
             local bx, by = wp[kk2][1], wp[kk2][2]
             local d1x, d1y
@@ -1125,7 +1128,9 @@ local function planSegment(s)
     end
     local oldN = #wp
     for _, p in ipairs(pts) do wp[#wp + 1] = p end
-    filletCorners(wp, math.max(1, oldN - 3))
+    -- (mira ~18 m hacia atras de lo nuevo, porque la esquina puede empezar en puntos ya generados, pero nunca
+    -- toca los 2 primeros puntos de la ruta: son los que el auto esta por alcanzar)
+    filletCorners(wp, math.max(3, oldN > 1 and (pathBackIdx(wp, oldN, 18, 1) or 1) or 1))
     s.prev, s.node = B, C
     return true
 end
@@ -2630,7 +2635,11 @@ local function stageDecide(vehicle, s, f, now)
     else
         s.slowSince = nil
     end
-    local stopped = waiting or yielding or obstacle ~= nil or s.state == "RED" or s.state == "FOLLOW"
+    -- Esperar un semaforo en rojo solo cuenta como parada legitima si el auto YA quiere estar quieto
+    -- (target <= 5, junto a la linea). Con target > 5 y el auto sin moverse (preso contra un bordillo o un
+    -- poste a 13 m de la linea) es un atasco real: antes quedaba excluido para siempre.
+    s.redHold = (mode == "RED" and target <= 5)
+    local stopped = (waiting and target <= 5) or yielding or obstacle ~= nil or s.redHold or s.state == "FOLLOW"
     if speed < 2 and not stopped and target > 5 then
         if s.stuckSince == 0 then s.stuckSince = now end
         if now - s.stuckSince > 3000 then
@@ -3058,7 +3067,7 @@ local function carWatchdog(v, s, now)
     end
     if now - s.wdAt >= 5000 then
         local moved = getDistanceBetweenPoints2D(x, y, s.wdX, s.wdY)
-        local legit = s.state == "RED"            -- esperando un semaforo no es atasco
+        local legit = s.state == "RED" and s.redHold   -- esperando un semaforo (ya junto a la linea) no es atasco
         if moved < 1.5 and not legit then s.idleMs = s.idleMs + (now - s.wdAt) else s.idleMs = 0 end
         s.pathLen = s.pathLen + moved
         s.wdX, s.wdY, s.wdAt = x, y, now
