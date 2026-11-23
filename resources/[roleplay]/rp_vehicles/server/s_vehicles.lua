@@ -117,6 +117,7 @@ local function spawnRow(row)
     setElementData(v, "rp:vehicleId", id)
     setElementData(v, "rp:indicator", false)
     if applyTuning then applyTuning(v, row.tuning) end
+    if initPerf then initPerf(v, row.perf, row.odometer) end
     if initFuel then initFuel(v, tonumber(row.fuel)) end
     updateFrozen(v)
     labelKey(v)
@@ -130,10 +131,11 @@ function saveVehicle(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local tuning = captureTuning and toJSON(captureTuning(vehicle), true) or nil
     dbExec(db(), [[UPDATE vehicles SET x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, interior = ?, dimension = ?, health = ?,
-        locked = ?, handbrake = ?, clamped = ?, tuning = ?, fuel = ? WHERE id = ?]],
+        locked = ?, handbrake = ?, clamped = ?, tuning = ?, fuel = ?, perf = ?, odometer = COALESCE(?, odometer) WHERE id = ?]],
         x, y, z, rx, ry, rz, getElementInterior(vehicle), getElementDimension(vehicle), getElementHealth(vehicle),
         data.locked and 1 or 0, data.handbrake and 1 or 0, data.clamped and 1 or 0, tuning,
-        getVehicleFuel and getVehicleFuel(vehicle) or nil, data.id)
+        getVehicleFuel and getVehicleFuel(vehicle) or nil,
+        capturePerf and capturePerf(vehicle) or nil, getVehicleOdometer and getVehicleOdometer(vehicle) or nil, data.id)
 end
 
 local function loadVehicles()

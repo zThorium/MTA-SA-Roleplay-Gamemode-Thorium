@@ -106,7 +106,7 @@ setTimer(function()
                 local dist = last and getDistanceBetweenPoints3D(x, y, z, last[1], last[2], last[3]) or 0
                 if dist > 400 then dist = 0 end   -- teletransporte
                 local before = fuel[v]
-                fuel[v] = math.max(0, before - dist / 1000 * FUEL.PER_KM - idle)
+                fuel[v] = math.max(0, before - dist / 1000 * FUEL.PER_KM * (getPerfFuelFactor and getPerfFuelFactor(v) or 1) - idle)
                 local cap = getFuelCapacity(getElementModel(v))
                 if fuel[v] <= 0 then
                     runOut(v)
