@@ -142,8 +142,10 @@
         $("back").classList.toggle("hidden", !T.cat);
         if (!T.cat) {
             $("crumb").textContent = "Categorias";
-            html += '<button type="button" class="item repair" id="repair">Reparar vehiculo<small>Estado ' + d.health + '%</small>' +
-                '<span class="price">' + money(d.repair) + "</span></button>";
+            var repaired = !!d.repaired;
+            html += '<button type="button" class="item repair" id="repair"' + (repaired ? " disabled" : "") + ">" +
+                (repaired ? "Vehiculo reparado" : "Reparar vehiculo") + "<small>Estado " + d.health + "%</small>" +
+                '<span class="price">' + (repaired ? "—" : money(d.repair)) + "</span></button>";
             categories().forEach(function (c) {
                 html += '<button type="button" class="item" data-cat="' + c.id + '">' + esc(c.name) +
                     (isChanged(c) ? '<span class="dot">●</span>' : "") + '<span class="price">&rsaquo;</span></button>';
