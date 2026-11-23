@@ -12,9 +12,9 @@
         register: document.getElementById("form-register")
     };
 
-    function send(eventName, a, b) {
+    function send(eventName, a, b, c) {
         if (window.mta && typeof mta.triggerEvent === "function") {
-            mta.triggerEvent(eventName, a, b);
+            mta.triggerEvent(eventName, a, b, c);
         } else {
             // Fuera del juego (vista previa en un navegador normal)
             console.log("[mta]", eventName, a);
@@ -58,7 +58,7 @@
         }
         setMessage("login", "");
         setBusy("login", true);
-        send("rp:ui:login", user, pass);
+        send("rp:ui:login", user, pass, this.remember.checked);
     });
 
     forms.register.addEventListener("submit", function (e) {
@@ -81,6 +81,13 @@
 
     // API llamada desde Lua
     window.RP = {
+        // Credenciales guardadas: rellena el formulario de login
+        setSaved: function (user, pass) {
+            forms.login.username.value = user;
+            forms.login.password.value = pass;
+            forms.login.remember.checked = true;
+            forms.login.querySelector("button[type=submit]").focus();
+        },
         onResult: function (ok, message, form) {
             form = forms[form] ? form : "login";
             setBusy(form, false);
