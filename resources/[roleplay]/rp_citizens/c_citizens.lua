@@ -1008,7 +1008,13 @@ function nearOtherCar(vehicle, radius, withPlayer)
     return false
 end
 
+function clearSignal(vehicle, s)
+    if s.signalApplied then setElementData(vehicle, "rp:indicator", false, false) end
+    s.signal, s.signalApplied, s.signalClearAt = nil, nil, nil
+end
+
 function makeDummy(vehicle, s, speedMs)
+    clearSignal(vehicle, s)
     s.ghost = nil
     s.lod = "dummy"
     s.dSpeed = speedMs or 0
@@ -1101,6 +1107,7 @@ function abandonCar(vehicle, s)
     if handOverPolice(vehicle, s) then return end
     releaseLocks(vehicle)
     s.state = "ABANDONED"
+    clearSignal(vehicle, s)
     local driver = s.driver
     s.driver = nil
     if isElement(driver) then
@@ -1521,15 +1528,34 @@ local function updateCar(vehicle, s, now)
     local upcoming, dist, lx, ly = 0, 0, x, y
     local curveLimit = 999
     local junctionAhead, junctionDist, lightAxis, lightDist, junctionMan = nil, 0, nil, 0, nil
+    local wantSignal, signalLead = nil, math.max(18, math.min(40, speed * 0.55))
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
         if dist > 60 then break end
         if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
+        -- Intermitente: giro de cruce de >= 30 grados dentro de ~2 s de camino (entre 18 y 40 m)
+        if not wantSignal and wp[i][7] and wp[i][4] >= 30 and dist <= signalLead then
+            local mv = wp[i][7]
+            wantSignal = (mv[1] * mv[4] - mv[2] * mv[3]) > 0 and "left" or "right"   -- + = giro a la izquierda
+        end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
         if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist, junctionMan = wp[i][5], dist, wp[i][7] end
         if wp[i][6] and not lightAxis then lightAxis, lightDist = wp[i][6], dist end
+    end
+
+    -- Intermitentes (recurso rp_vehicles: dato local "rp:indicator" = "left" | "right"):
+    -- se encienden antes de girar y se apagan al terminar la curva
+    if wantSignal then
+        s.signal, s.signalClearAt = wantSignal, nil
+    elseif s.signal and not inCurve then
+        s.signalClearAt = s.signalClearAt or (now + 700)
+        if now > s.signalClearAt then s.signal, s.signalClearAt = nil, nil end
+    end
+    if s.signal ~= s.signalApplied then
+        s.signalApplied = s.signal
+        setElementData(vehicle, "rp:indicator", s.signal or false, false)
     end
 
     -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
