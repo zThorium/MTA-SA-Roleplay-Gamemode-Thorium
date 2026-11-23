@@ -952,4 +952,20 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_backpacks: mochila equipada por personaje y su contenido (se pierde al tirarla)
+    [[
+    CREATE TABLE IF NOT EXISTS character_backpack (
+        character_id INT UNSIGNED NOT NULL,
+        backpack_id  VARCHAR(32)  NOT NULL,
+        PRIMARY KEY (character_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS backpack_items (
+        character_id INT UNSIGNED NOT NULL,
+        item_id      VARCHAR(32)  NOT NULL,
+        amount       INT UNSIGNED NOT NULL,
+        PRIMARY KEY (character_id, item_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
