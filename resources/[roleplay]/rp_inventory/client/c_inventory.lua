@@ -23,8 +23,9 @@ addEvent("rp:inv:ui:drop", false)
 
 local function render()
     if not (isElement(browser) and ready and lastData) then return end
-    executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s)"):format(
-        toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight)))
+    executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s, %s[0])"):format(
+        toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight),
+        toJSON({ lastData.bp or false }, true)))
 end
 
 local function isOpen()
@@ -75,9 +76,26 @@ local function open()
     if not lastData then triggerServerEvent("rp:inv:request", resourceRoot) end
 end
 
-addEventHandler("rp:inv:update", resourceRoot, function(items, weight, maxWeight)
-    lastData = { items = items or {}, weight = weight or 0, maxWeight = maxWeight or 0 }
+addEventHandler("rp:inv:update", resourceRoot, function(items, weight, maxWeight, bp)
+    -- bp = datos de la mochila equipada (nombre, capacidad, uso, slots) o false; sus items llevan bp = true
+    lastData = { items = items or {}, weight = weight or 0, maxWeight = maxWeight or 0, bp = bp or false }
     render()
+end)
+
+-- Mochila (rp_backpacks): guardar / sacar items y tirarla
+addEvent("rp:inv:ui:toBackpack", false)
+addEvent("rp:inv:ui:fromBackpack", false)
+addEvent("rp:inv:ui:dropBackpack", false)
+addEventHandler("rp:inv:ui:toBackpack", root, function(itemId, amount)
+    amount = tonumber(amount)
+    if type(itemId) == "string" and amount then triggerServerEvent("rp:inv:toBackpack", resourceRoot, itemId, amount) end
+end)
+addEventHandler("rp:inv:ui:fromBackpack", root, function(itemId, amount)
+    amount = tonumber(amount)
+    if type(itemId) == "string" and amount then triggerServerEvent("rp:inv:fromBackpack", resourceRoot, itemId, amount) end
+end)
+addEventHandler("rp:inv:ui:dropBackpack", root, function()
+    triggerServerEvent("rp:inv:dropBackpack", resourceRoot)
 end)
 
 addEventHandler("rp:inv:ui:close", root, close)

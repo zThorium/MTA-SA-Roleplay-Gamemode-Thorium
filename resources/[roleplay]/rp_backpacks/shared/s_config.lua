@@ -15,7 +15,7 @@
 ]]
 BACKPACKS = {
     bp_small = {
-        capacity = 5, weight = 0.4, model = 3026,
+        capacity = 5, weight = 0.4, model = 3026, slots = 6,
         look = {
             size = { 0.60, 0.90, 0.80 },
             shader = { body = { 0.17, 0.70, 0.64 }, accent = { 1.00, 0.82, 0.25 }, dark = { 0.05, 0.25, 0.23 },
@@ -23,7 +23,7 @@ BACKPACKS = {
         },
     },
     bp_school = {
-        capacity = 10, weight = 0.6, model = 3026,
+        capacity = 10, weight = 0.6, model = 3026, slots = 12,
         look = {
             size = { 0.80, 1.00, 0.95 },
             shader = { body = { 0.17, 0.27, 0.62 }, accent = { 0.89, 0.27, 0.30 }, dark = { 0.06, 0.09, 0.25 },
@@ -31,7 +31,7 @@ BACKPACKS = {
         },
     },
     bp_hiking = {
-        capacity = 20, weight = 1.2, model = 3026,
+        capacity = 20, weight = 1.2, model = 3026, slots = 18,
         look = {
             size = { 1.00, 1.25, 1.10 },
             shader = { body = { 0.91, 0.47, 0.18 }, accent = { 0.17, 0.36, 0.22 }, dark = { 0.35, 0.16, 0.06 },
@@ -39,7 +39,7 @@ BACKPACKS = {
         },
     },
     bp_tactical = {
-        capacity = 30, weight = 1.8, model = 3026,
+        capacity = 30, weight = 1.8, model = 3026, slots = 24,
         look = {
             size = { 0.95, 1.25, 1.20 },
             shader = { body = { 0.29, 0.34, 0.21 }, accent = { 0.58, 0.52, 0.36 }, dark = { 0.10, 0.13, 0.08 },
@@ -47,7 +47,7 @@ BACKPACKS = {
         },
     },
     bp_expedition = {
-        capacity = 45, weight = 2.5, model = 3026,
+        capacity = 45, weight = 2.5, model = 3026, slots = 36,
         look = {
             size = { 1.15, 1.30, 1.30 },
             shader = { body = { 0.19, 0.21, 0.26 }, accent = { 0.96, 0.72, 0.10 }, dark = { 0.06, 0.07, 0.09 },

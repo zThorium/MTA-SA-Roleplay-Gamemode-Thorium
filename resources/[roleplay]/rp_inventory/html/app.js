@@ -39,8 +39,11 @@
         return node;
     }
 
+    // Un mismo item puede estar en el inventario y en la mochila: la clave de seleccion incluye el origen
+    function keyOf(item) { return (item.bp ? "bp:" : "") + item.id; }
+
     function selectedItem() {
-        return state.items.filter(function (it) { return it.id === state.selected; })[0];
+        return state.items.filter(function (it) { return keyOf(it) === state.selected; })[0];
     }
 
     // Cantidad elegida en el panel de detalles (1 por defecto)
@@ -50,33 +53,58 @@
         return Math.max(1, Math.min(item.amount, n || 1));
     }
 
+    function slotFor(item) {
+        var cls = "slot" + (item.bp ? " bp" : "") + (keyOf(item) === state.selected ? " selected" : "");
+        var slot = el("div", cls);
+        slot.appendChild(iconNode(item, "icon"));
+        slot.appendChild(el("span", "name", item.name));
+        slot.appendChild(el("span", "amount", "x" + item.amount));
+        slot.appendChild(el("span", "kg", (item.weight * item.amount).toFixed(2) + " kg"));
+        slot.title = item.name + (item.bp ? " (en la mochila)" : "");
+        slot.addEventListener("mousedown", function (e) {
+            if (e.button !== 0) return;
+            state.selected = keyOf(item);
+            drag = { item: item, startX: e.clientX, startY: e.clientY, active: false };
+            renderGrid();
+            renderDetails();
+        });
+        return slot;
+    }
+
+    // Inventario base y, debajo, los slots que anade la mochila equipada (otro color)
     function renderGrid() {
         var grid = $("grid");
         grid.innerHTML = "";
-        var total = Math.max(MIN_SLOTS, Math.ceil(state.items.length / 6) * 6);
+        var base = state.items.filter(function (it) { return !it.bp; });
+        var packed = state.items.filter(function (it) { return it.bp; });
 
+        var total = Math.max(MIN_SLOTS, Math.ceil(base.length / 6) * 6);
         for (var i = 0; i < total; i++) {
-            var item = state.items[i];
-            if (!item) {
-                grid.appendChild(el("div", "slot empty"));
-                continue;
-            }
-            var slot = el("div", "slot" + (item.id === state.selected ? " selected" : ""));
-            slot.appendChild(iconNode(item, "icon"));
-            slot.appendChild(el("span", "name", item.name));
-            slot.appendChild(el("span", "amount", "x" + item.amount));
-            slot.appendChild(el("span", "kg", (item.weight * item.amount).toFixed(2) + " kg"));
-            slot.title = item.name;
-            slot.addEventListener("mousedown", (function (it) {
-                return function (e) {
-                    if (e.button !== 0) return;
-                    state.selected = it.id;
-                    drag = { item: it, startX: e.clientX, startY: e.clientY, active: false };
-                    renderGrid();
-                    renderDetails();
-                };
-            })(item));
-            grid.appendChild(slot);
+            grid.appendChild(base[i] ? slotFor(base[i]) : el("div", "slot empty"));
+        }
+        if (!state.bp) return;
+
+        var head = el("div", "bp-head");
+        head.appendChild(iconNode(state.bp, "bp-icon"));
+        var info = el("div", "bp-info");
+        info.appendChild(el("strong", null, state.bp.name));
+        info.appendChild(el("span", null, state.bp.used.toFixed(1) + " / " + state.bp.capacity + " kg en la mochila"));
+        var bar = el("div", "bp-bar");
+        var fill = el("div", "bp-fill");
+        fill.style.width = Math.min(100, state.bp.capacity > 0 ? state.bp.used / state.bp.capacity * 100 : 0) + "%";
+        bar.appendChild(fill);
+        info.appendChild(bar);
+        head.appendChild(info);
+        var dropPack = el("button", null, "Tirar mochila");
+        dropPack.type = "button";
+        dropPack.title = "La tira al suelo con todo lo que lleva dentro";
+        dropPack.addEventListener("click", function () { send("rp:inv:ui:dropBackpack"); });
+        head.appendChild(dropPack);
+        grid.appendChild(head);
+
+        var bpTotal = Math.max(state.bp.slots || 0, Math.ceil(packed.length / 6) * 6);
+        for (var j = 0; j < bpTotal; j++) {
+            grid.appendChild(packed[j] ? slotFor(packed[j]) : el("div", "slot bp empty"));
         }
     }
 
@@ -114,6 +142,18 @@
             use.type = "button";
             use.addEventListener("click", function () { send("rp:inv:ui:use", item.id); });
             actions.appendChild(use);
+        }
+        // Mochila equipada: mover entre inventario y mochila (las mochilas no se guardan en mochilas)
+        if (item.bp) {
+            var out = el("button", "bp-move", "Sacar de la mochila");
+            out.type = "button";
+            out.addEventListener("click", function () { send("rp:inv:ui:fromBackpack", item.id, chosenAmount(item)); });
+            actions.appendChild(out);
+        } else if (state.bp && !/^bp_/.test(item.id)) {
+            var into = el("button", "bp-move", "Guardar en la mochila");
+            into.type = "button";
+            into.addEventListener("click", function () { send("rp:inv:ui:toBackpack", item.id, chosenAmount(item)); });
+            actions.appendChild(into);
         }
         var drop = el("button", "danger", "Tirar al suelo");
         drop.type = "button";
@@ -224,10 +264,11 @@
     });
 
     window.RP = {
-        render: function (items, weight, maxWeight) {
+        render: function (items, weight, maxWeight, bp) {
             state.items = Array.isArray(items) ? items : [];
-            if (!state.items.some(function (it) { return it.id === state.selected; })) {
-                state.selected = state.items.length ? state.items[0].id : null;
+            state.bp = bp && bp.name ? bp : null;
+            if (!state.items.some(function (it) { return keyOf(it) === state.selected; })) {
+                state.selected = state.items.length ? keyOf(state.items[0]) : null;
             }
             // No reconstruir mientras se arrastra (el item seguiria "agarrado" a un nodo muerto)
             renderGrid();
