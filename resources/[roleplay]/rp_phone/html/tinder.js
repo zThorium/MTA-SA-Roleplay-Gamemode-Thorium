@@ -1,7 +1,9 @@
 /*
- * rp_phone / tinder.js  (parte 1: perfil)
+ * rp_phone / tinder.js  (parte 1: perfil, parte 2: swipe)
  * Lua -> RP.tinder.setProfile(perfil)
  * JS  -> mta.triggerEvent("rp:phone:ui:tinderOpen" | "rp:phone:ui:tinderSave", ...)
+ * Swipe: Lua -> RP.tinder.setCard(carta|{empty:true}|null) / RP.tinder.matched({name})
+ *        JS  -> rp:phone:ui:tinderDeck(excluir[]) / rp:phone:ui:tinderSwipe(id, like)
  * La foto se toma con la camara del telefono (rp:phone:ui:capture); RP.setPhoto se
  * intercepta mientras se espera la foto de perfil.
  */
@@ -64,5 +66,85 @@
             setInterest(p.interested || "a");
             if (!st.photo) renderPhoto(p.photo);
         }
+    };
+
+    // ---------------------------------------------------------------- Swipe
+    var deck = { queue: [], seen: [], loading: false, empty: false, matchOpen: false };
+
+    function requestCard() {
+        if (deck.loading || deck.empty || deck.queue.length >= 2) return;
+        deck.loading = true;
+        send("rp:phone:ui:tinderDeck", deck.queue.map(function (c) { return c.id; }).concat(deck.seen.slice(-3)));
+        setTimeout(function () { deck.loading = false; }, 4000);   // por si la respuesta se pierde
+    }
+
+    function renderCard() {
+        var box = $("tinder-card"), msg = $("tinder-msg");
+        box.innerHTML = "";
+        var c = deck.queue[0];
+        $("tinder-like").disabled = $("tinder-nope").disabled = !c;
+        if (!c) {
+            msg.textContent = deck.empty ? "No hay mas personas por ahora. Vuelve mas tarde." : "Buscando personas...";
+            msg.hidden = false;
+            return;
+        }
+        msg.hidden = true;
+        var img = document.createElement("img");
+        img.src = "data:image/jpeg;base64," + c.photo;
+        box.appendChild(img);
+        var info = document.createElement("div");
+        info.className = "tinder-info";
+        var h = document.createElement("strong");
+        h.textContent = c.name + (c.age ? ", " + c.age : "");
+        var p = document.createElement("span");
+        p.textContent = c.bio || "";
+        info.appendChild(h); info.appendChild(p);
+        box.appendChild(info);
+        box.className = "tinder-card";
+    }
+
+    function swipe(like) {
+        var c = deck.queue.shift();
+        if (!c || deck.matchOpen) return;
+        deck.seen.push(c.id);
+        send("rp:phone:ui:tinderSwipe", c.id, like);
+        var box = $("tinder-card");
+        box.classList.add(like ? "out-right" : "out-left");
+        setTimeout(function () { renderCard(); requestCard(); }, 160);
+    }
+
+    $("tinder-like").addEventListener("click", function () { swipe(true); });
+    $("tinder-nope").addEventListener("click", function () { swipe(false); });
+    $("tinder-discover").addEventListener("click", function () {
+        deck.queue = []; deck.empty = false; deck.loading = false;
+        window.RP.show("tinder-swipe");
+        renderCard();
+        requestCard();
+    });
+    $("tinder-match-close").addEventListener("click", function () {
+        deck.matchOpen = false;
+        $("tinder-match").hidden = true;
+    });
+
+    window.RP.tinder.setCard = function (c) {
+        deck.loading = false;
+        if (c && c.empty) { deck.empty = true; }
+        else if (c && c.id && c.photo) {
+            if (!deck.queue.some(function (q) { return q.id === c.id; })) deck.queue.push(c);
+        }
+        if (!deck.queue.length || deck.queue.length === 1) renderCardIfIdle();
+        requestCard();
+    };
+
+    function renderCardIfIdle() {
+        var box = $("tinder-card");
+        // Solo repinta si no hay tarjeta visible (primera carga o se acabo la cola)
+        if (!box.firstChild || !deck.queue.length) renderCard();
+    }
+
+    window.RP.tinder.matched = function (m) {
+        deck.matchOpen = true;
+        $("tinder-match-text").textContent = "Tu y " + (m && m.name ? m.name : "esa persona") + " se gustaron mutuamente.";
+        $("tinder-match").hidden = false;
     };
 })();
