@@ -6,7 +6,7 @@
 
 NPCREL = {
     KEY            = "h",        -- tecla para hablar con alguien cercano
-    TALK_DISTANCE  = 2.8,        -- metros al peaton para poder hablar
+    TALK_DISTANCE  = 3.5,        -- metros al peaton para poder hablar
     ACTION_COOLDOWN = 2500,      -- ms entre acciones
     SESSION_ACTIONS = 14,        -- acciones por conversacion antes de que tenga que irse
     SESSION_PAUSE   = 20 * 60000,-- ms que no quiere hablar tras agotar la conversacion

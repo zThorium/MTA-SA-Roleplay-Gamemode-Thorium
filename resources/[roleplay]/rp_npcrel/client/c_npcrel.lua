@@ -742,6 +742,30 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     end)
 end)
 
+-- /npcdebug: que ve el sistema en los peatones cercanos (para diagnosticar "no sale [H] Hablar")
+addCommandHandler("npcdebug", function()
+    local px, py, pz = getElementPosition(localPlayer)
+    local list = getElementsByType("ped", root, true)
+    outputChatBox(("[npcrel] peds cargados: %d | objetivo: %s | ui: %s | en vehiculo: %s"):format(
+        #list, tostring(target), tostring(ui ~= nil), tostring(isPedInVehicle(localPlayer))), 255, 200, 120)
+    local near = {}
+    for _, ped in ipairs(list) do
+        if ped ~= localPlayer then
+            local x, y, z = getElementPosition(ped)
+            near[#near + 1] = { ped = ped, d = getDistanceBetweenPoints3D(px, py, pz, x, y, z) }
+        end
+    end
+    table.sort(near, function(a, b) return a.d < b.d end)
+    for i = 1, math.min(6, #near) do
+        local ped = near[i].ped
+        outputChatBox(("  %.1f m | skin %d | citizen=%s | genero=%s | talkable=%s | vehiculo=%s | muerto=%s"):format(
+            near[i].d, getElementModel(ped), tostring(getElementData(ped, "rp:citizen")),
+            tostring(NPCREL_SKIN_GENDER and NPCREL_SKIN_GENDER[getElementModel(ped)]), tostring(talkable(ped)),
+            tostring(isPedInVehicle(ped)), tostring(isPedDead(ped))), 255, 255, 255)
+    end
+    if #near == 0 then outputChatBox("  No hay peds cargados cerca: rp_citizens no esta generando peatones (revisa /traficostats).", 255, 120, 120) end
+end)
+
 local function destroyAll()
     for ped in pairs(visitors) do if isElement(ped) then destroyElement(ped) end end
     for ped in pairs(leavers) do if isElement(ped) then destroyElement(ped) end end
