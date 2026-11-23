@@ -33,12 +33,18 @@ addEvent("rp:tune:ui:buy", false)
 addEvent("rp:tune:ui:exit", false)
 addEvent("rp:tune:ui:camera", false)
 addEvent("rp:tune:ui:repair", false)
+addEvent("rp:tune:ui:perf", false)
+addEvent("rp:tune:ui:maint", false)
 
 -- Vistas por categoria. yaw: 0 = delante del auto, 90 = lado derecho, 180 = detras.
 -- pitch: altura en grados. dist: multiplicador de la distancia base. focus: componente a mirar.
 local VIEWS = {
     colors   = { yaw = 35,  pitch = 14, dist = 1.0 },
     lights   = { yaw = 8,   pitch = 6,  dist = 0.8 },
+    perf        = { yaw = 35,  pitch = 14, dist = 1.0 },
+    perf_engine = { yaw = 12,  pitch = 48, dist = 0.8 },   -- capo abierto
+    perf_wheel  = { yaw = 60,  pitch = 4,  dist = 0.55, focus = "wheel_rf_dummy" },
+    perf_side   = { yaw = 90,  pitch = 3,  dist = 0.9 },
     paintjob = { yaw = 90,  pitch = 10, dist = 1.0 },
     [0]  = { yaw = 15,  pitch = 38, dist = 0.8 },   -- capo
     [1]  = { yaw = 25,  pitch = 38, dist = 0.8 },   -- toma de aire
@@ -125,8 +131,17 @@ local function setView(name)
     cam.tYaw, cam.tPitch, cam.tDist, cam.focus = v.yaw, v.pitch, v.dist, v.focus
 end
 
+-- Capo abierto al ver el motor / turbo (se ve el cambio de motor)
+local hoodOpen = false
+local function setHood(open)
+    if not isElement(vehicle) or open == hoodOpen then return end
+    hoodOpen = open
+    setVehicleDoorOpenRatio(vehicle, 0, open and 1 or 0, 600)
+end
+
 addEventHandler("rp:tune:ui:camera", root, function(category)
     if not active then return end
+    setHood(category == "perf_engine")
     local slot = type(category) == "string" and category:match("^slot(%d+)$")
     setView(slot and tonumber(slot) or category)
 end)
@@ -303,6 +318,7 @@ end
 exitTuning = function(bought, silent)
     if not active or leaving then return end
     leaving = true
+    setHood(false)
     if not bought and state and isElement(vehicle) then applyLocal(vehicle, state) end
     if not silent then triggerServerEvent("rp:tune:close", resourceRoot) end
     showPanel(false)
@@ -328,6 +344,12 @@ end
 
 addEventHandler("rp:tune:ui:exit", root, function() exitTuning(false) end)
 addEventHandler("rp:tune:ui:repair", root, function() if active then triggerServerEvent("rp:tune:repair", resourceRoot) end end)
+addEventHandler("rp:tune:ui:perf", root, function(part, level)
+    if active and type(part) == "string" then triggerServerEvent("rp:tune:perf", resourceRoot, part, tonumber(level)) end
+end)
+addEventHandler("rp:tune:ui:maint", root, function(part)
+    if active and type(part) == "string" then triggerServerEvent("rp:tune:maint", resourceRoot, part) end
+end)
 
 addEventHandler("rp:tune:show", resourceRoot, function(v, data)
     if active then

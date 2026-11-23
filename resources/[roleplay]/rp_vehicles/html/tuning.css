@@ -59,3 +59,31 @@ footer { padding: 12px 14px 14px; border-top: 1px solid var(--border); }
 .item.repair { border-color: rgba(76, 211, 138, 0.4); margin-bottom: 10px; }
 .item.repair:disabled { opacity: 0.45; cursor: default; }
 .item.repair small { color: var(--muted); font-size: 12px; margin-left: 6px; }
+
+/* Rendimiento */
+.info { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 6px 6px 10px; font-size: 12px; color: var(--muted); }
+.info strong { color: var(--text); }
+.stats { padding: 0 6px 10px; }
+.stat { display: grid; grid-template-columns: 112px 1fr 52px 14px; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 12px; }
+.stat .name { color: var(--muted); }
+.stat .val { text-align: right; }
+.stat .diff { font-size: 10px; }
+.bar { position: relative; height: 7px; border-radius: 4px; background: var(--row-hover); overflow: hidden; }
+.bar b, .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.bar i { background: var(--accent); }
+.bar.cost i { background: #7a8696; }
+.bar b.good { background: #4cd38a; }
+.bar b.bad { background: #e5584f; }
+.diff.good { color: #4cd38a; }
+.diff.bad { color: #e5584f; }
+.sub { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+.wearbox { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.wearbox em { font-style: normal; min-width: 30px; text-align: right; }
+.wearbox + .price { margin-left: 8px; }
+.wear { width: 70px; height: 6px; border-radius: 3px; background: var(--row-hover); overflow: hidden; }
+.wear i { display: block; height: 100%; background: #4cd38a; }
+.wear.warn i { background: var(--accent); }
+.wear.dead i { background: #e5584f; }
+.wearline { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 6px 10px; font-size: 12px; color: var(--muted); }
+.wearline .wear { flex: 1; }
+.item.locked { opacity: 0.45; cursor: default; }

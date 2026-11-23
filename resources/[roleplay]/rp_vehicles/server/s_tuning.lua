@@ -225,6 +225,11 @@ local function close(player)
     if isElement(v) then updateFrozen(v) end
 end
 
+-- Para s_perf.lua: vehiculo que el jugador esta tuneando y taller donde esta
+function getTuningVehicle(player) return tuning[player] end
+function getVehicleTuningShop(vehicle) return (shopOf(vehicle)) end
+function isVehicleInTuningShop(vehicle) return shopOf(vehicle) ~= nil end
+
 -- Reparacion: base + segun el dano del motor (vida de 1000 a 0)
 function repairPrice(v)
     local health = getElementHealth(v)
@@ -241,6 +246,7 @@ function sendTuning(player, v, shop)
         prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
         money = getPlayerMoney(player), health = math.floor(getElementHealth(v) / 10), repair = repairPrice(v),
         repaired = getElementHealth(v) >= 999,
+        perf = getPerfPanel and getPerfPanel(v) or nil,
     })
 end
 

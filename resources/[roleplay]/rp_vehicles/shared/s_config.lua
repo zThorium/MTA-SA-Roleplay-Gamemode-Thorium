@@ -158,3 +158,161 @@ function usesFuel(model)
     local vtype = getVehicleType(model)
     return vtype ~= nil and vtype ~= false and not FUEL.NO_FUEL_TYPES[vtype]
 end
+
+----------------------------------------------------------------
+-- Rendimiento del tuning (server/s_perf.lua, panel "Rendimiento" del taller)
+-- Cada pieza tiene niveles; cada nivel suma bonos y costos a las stats del
+-- vehiculo. Los valores son fracciones (0.08 = +8%) sobre el handling de fabrica.
+--   accel, speed, brake, grip, steer = beneficios (tienen tope por clase)
+--   mass, fuel = costos (mas peso, mas consumo); mass negativo = aligerar
+-- El desgaste (0-100%) reduce los beneficios de la pieza; al 100% la pieza
+-- empeora el vehiculo por debajo de fabrica (ver perfWearScale).
+----------------------------------------------------------------
+PERF = {
+    TICK = 3000,                -- ms entre calculos de desgaste
+    MAX_VELOCITY = 300,         -- tope absoluto de maxVelocity (km/h)
+    MAX_STEER = 45,             -- tope absoluto de steeringLock (grados)
+    LOWER_PER_LEVEL = 0.012,    -- cada nivel de suspension baja el auto (suspensionLowerLimit)
+    WORN_PENALTY = 0.25,        -- al 100% de desgaste la pieza resta este % de su bono
+    WARN_AT = 70,               -- % de desgaste al que se avisa al conductor
+    BRAKE_USE = 0.012,          -- % extra de desgaste de frenos por muestra frenando fuerte
+    BRAKE_MIN_SPEED = 25,       -- km/h minimos para contar un frenazo
+    SLIP_USE = 0.01,            -- % extra de desgaste de neumaticos por muestra derrapando
+    SLIP_SPEED = 0.16,          -- velocidad (unidades de GTA) minima para medir derrape
+    SLIP_ANGLE = 18,            -- grados entre la direccion y el movimiento que cuentan como derrape
+    IMPACT_MIN = 40,            -- dano de un choque a partir del cual desgasta la suspension
+    IMPACT_WEAR = 0.02,         -- % de desgaste de suspension por punto de dano
+    TURBO_ENGINE_WEAR = 0.25,   -- el turbo gasta el motor: +25% de desgaste por nivel de turbo
+    MAINT_FACTOR = 0.4,         -- mantenimiento = precio de la pieza * desgaste * factor
+    MAINT_MIN = 50,
+
+    STAT_ORDER = { "accel", "speed", "brake", "grip", "steer", "mass", "fuel" },
+    STAT_NAMES = {
+        accel = "Aceleracion", speed = "Velocidad maxima", brake = "Frenos", grip = "Agarre",
+        steer = "Direccion", mass = "Peso", fuel = "Consumo",
+    },
+    COST_STATS = { mass = true, fuel = true },
+    COST_DISPLAY_CAP = 0.30,    -- escala de la barra de los costos (solo visual)
+
+    -- Clases: tope de cada beneficio (suma de todas las piezas) y multiplicador de precio
+    CLASSES = {
+        moto  = { name = "Moto",            price = 0.6, cap = { accel = 0.35, speed = 0.20, brake = 0.35, grip = 0.25, steer = 0.20 } },
+        basic = { name = "Compacto / sedan", price = 1.0, cap = { accel = 0.30, speed = 0.15, brake = 0.35, grip = 0.20, steer = 0.15 } },
+        suv   = { name = "SUV / todoterreno", price = 1.1, cap = { accel = 0.25, speed = 0.12, brake = 0.30, grip = 0.20, steer = 0.12 } },
+        sport = { name = "Deportivo",       price = 1.2, cap = { accel = 0.38, speed = 0.22, brake = 0.50, grip = 0.30, steer = 0.20 } },
+        super = { name = "Superdeportivo",  price = 1.5, cap = { accel = 0.42, speed = 0.25, brake = 0.55, grip = 0.35, steer = 0.22 } },
+        heavy = { name = "Pesado",          price = 1.3, cap = { accel = 0.20, speed = 0.10, brake = 0.30, grip = 0.15, steer = 0.08 } },
+    },
+    -- Clase por tipo de vehiculo (getVehicleType). Lo que no esta aqui no se puede mejorar
+    -- (bicicletas, botes, aviones, helicopteros, trenes, remolques, monster trucks).
+    CLASS_BY_TYPE = { Automobile = "basic", Bike = "moto", Quad = "moto" },
+    -- Clase por modelo (gana a CLASS_BY_TYPE)
+    CLASS_BY_MODEL = {},
+    NO_TUNE_MODELS = { [444] = true, [556] = true, [557] = true },  -- monster trucks
+
+    -- Piezas. wear: km = % de desgaste por km, speed = cuanto pesa ir rapido,
+    -- level = desgaste extra por nivel, use = desgaste extra por uso ("brake" / "slip").
+    PARTS = {
+        { id = "engine", name = "Motor", desc = "Cambia el motor: mas aceleracion y velocidad punta, pero pesa mas y gasta mas bencina. El turbo lo desgasta mas rapido.",
+          wear = { km = 0.12, speed = 0.9, level = 0.35 },
+          levels = {
+              { name = "Stage 1 (admision y ECU)", price = 3500,  stats = { accel = 0.08, speed = 0.04, mass = 0.01, fuel = 0.05 } },
+              { name = "Stage 2 (motor reforzado)", price = 7500,  stats = { accel = 0.16, speed = 0.08, mass = 0.02, fuel = 0.10 } },
+              { name = "Stage 3 (cambio de motor)", price = 16000, stats = { accel = 0.26, speed = 0.13, mass = 0.03, fuel = 0.18 } },
+          } },
+        { id = "turbo", name = "Turbo", desc = "Mucha aceleracion extra a cambio de consumo. Cada nivel acelera el desgaste del motor.",
+          wear = { km = 0.18, speed = 1.1, level = 0.35 },
+          levels = {
+              { name = "Turbo pequeno",  price = 4000,  stats = { accel = 0.10, speed = 0.03, fuel = 0.06 } },
+              { name = "Turbo doble",    price = 9000,  stats = { accel = 0.18, speed = 0.06, fuel = 0.12 } },
+              { name = "Turbo de competicion", price = 18000, stats = { accel = 0.28, speed = 0.09, fuel = 0.20 } },
+          } },
+        { id = "brakes", name = "Frenos", desc = "Mejor frenada. Las pastillas se gastan con cada frenazo fuerte.",
+          wear = { km = 0.15, speed = 0.5, level = 0.30, use = "brake" },
+          levels = {
+              { name = "Frenos deportivos", price = 1800, stats = { brake = 0.15, mass = 0.005 } },
+              { name = "Frenos de alto rendimiento", price = 3800, stats = { brake = 0.30, mass = 0.008 } },
+              { name = "Frenos de carbono-ceramica", price = 8000, stats = { brake = 0.50 } },
+          } },
+        { id = "suspension", name = "Suspension", desc = "Mas agarre y direccion, y el auto baja visiblemente. Los choques fuertes la desgastan.",
+          wear = { km = 0.08, speed = 0.4, level = 0.30 },
+          levels = {
+              { name = "Suspension deportiva", price = 2200, stats = { grip = 0.06, steer = 0.04 } },
+              { name = "Suspension Pro", price = 4800, stats = { grip = 0.12, steer = 0.08 } },
+              { name = "Suspension de competicion", price = 10000, stats = { grip = 0.18, steer = 0.12, mass = 0.01 } },
+          } },
+        { id = "tires", name = "Neumaticos", desc = "Agarre y direccion. Los derrapes y el freno de mano los desgastan.",
+          wear = { km = 0.22, speed = 0.6, level = 0.40, use = "slip" },
+          levels = {
+              { name = "Neumaticos deportivos", price = 1500, stats = { grip = 0.08 } },
+              { name = "Semi-slick", price = 3200, stats = { grip = 0.16, steer = 0.04, fuel = 0.02 } },
+              { name = "Slick de competicion", price = 7000, stats = { grip = 0.26, steer = 0.06, fuel = 0.04 } },
+          } },
+        { id = "weight", name = "Aligeramiento", desc = "Quita peso: acelera mejor pero pierde estabilidad. No se desgasta.",
+          levels = {
+              { name = "Interior aligerado", price = 2500, stats = { mass = -0.05, accel = 0.03, grip = -0.01 } },
+              { name = "Carroceria de fibra", price = 5500, stats = { mass = -0.10, accel = 0.06, grip = -0.02 } },
+              { name = "Chasis de competicion", price = 11000, stats = { mass = -0.15, accel = 0.09, grip = -0.04 } },
+          } },
+    },
+}
+
+PERF_PART = {}
+for _, part in ipairs(PERF.PARTS) do PERF_PART[part.id] = part end
+
+for _, m in ipairs({ 411, 541, 451, 506, 415, 429, 494, 502, 503 }) do PERF.CLASS_BY_MODEL[m] = "super" end
+for _, m in ipairs({ 402, 475, 477, 480, 496, 518, 533, 536, 555, 558, 559, 560, 562, 565, 567, 575, 576, 587, 589, 602, 603, 535, 534 }) do PERF.CLASS_BY_MODEL[m] = "sport" end
+for _, m in ipairs({ 400, 424, 470, 489, 495, 505, 579, 500, 568, 573 }) do PERF.CLASS_BY_MODEL[m] = "suv" end
+for _, m in ipairs({ 403, 514, 515, 431, 437, 408, 455, 456, 414, 498, 499, 609, 578, 524, 532, 406, 407, 544, 601, 427, 428, 433 }) do PERF.CLASS_BY_MODEL[m] = "heavy" end
+
+-- Clase de rendimiento de un modelo (nil = no se puede mejorar)
+function getPerfClass(model)
+    if PERF.NO_TUNE_MODELS[model] then return nil end
+    if PERF.CLASS_BY_MODEL[model] then return PERF.CLASS_BY_MODEL[model] end
+    local vtype = getVehicleType(model)
+    return vtype and PERF.CLASS_BY_TYPE[vtype] or nil
+end
+
+-- Escala del beneficio de una pieza segun su desgaste: 1 (nueva) -> -WORN_PENALTY (100%)
+function perfWearScale(wear)
+    wear = math.max(0, math.min(100, tonumber(wear) or 0))
+    return 1 - (1 + PERF.WORN_PENALTY) * wear / 100
+end
+
+-- Suma las stats de las piezas instaladas. parts = { engine = 2, ... }, wear = { engine = 14.5, ... }
+-- Solo los beneficios positivos se gastan con el desgaste; los costos (peso, consumo) no.
+function computePerfStats(parts, wear)
+    local s = {}
+    for _, stat in ipairs(PERF.STAT_ORDER) do s[stat] = 0 end
+    for _, def in ipairs(PERF.PARTS) do
+        local level = def.levels[tonumber(parts and parts[def.id]) or 0]
+        if level then
+            local scale = perfWearScale(wear and wear[def.id])
+            for stat, v in pairs(level.stats) do
+                if v > 0 and not PERF.COST_STATS[stat] then s[stat] = s[stat] + v * scale else s[stat] = s[stat] + v end
+            end
+        end
+    end
+    return s
+end
+
+-- true si ninguna stat supera el tope de la clase (se calcula con piezas nuevas, sin desgaste)
+function perfWithinCap(classId, stats)
+    local class = PERF.CLASSES[classId]
+    if not class then return false end
+    for stat, cap in pairs(class.cap) do
+        if (stats[stat] or 0) > cap + 0.00001 then return false, stat end
+    end
+    return true
+end
+
+function perfLevelPrice(classId, level)
+    return math.floor(level.price * PERF.CLASSES[classId].price)
+end
+
+function perfMaintenancePrice(classId, partId, level, wear)
+    local def = PERF_PART[partId]
+    if not def or not def.wear or level <= 0 or (wear or 0) < 0.5 then return 0 end
+    local price = perfLevelPrice(classId, def.levels[level])
+    return math.max(PERF.MAINT_MIN, math.ceil(price * wear / 100 * PERF.MAINT_FACTOR))
+end

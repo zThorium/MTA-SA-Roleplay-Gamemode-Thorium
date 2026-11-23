@@ -896,4 +896,10 @@ SCHEMA = {
         KEY idx_music_search_cache_expiry (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- Rendimiento del tuning: piezas y desgaste (JSON) y kilometraje del vehiculo
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS perf     TEXT  NULL,
+        ADD COLUMN IF NOT EXISTS odometer FLOAT NOT NULL DEFAULT 0
+    ]],
 }
