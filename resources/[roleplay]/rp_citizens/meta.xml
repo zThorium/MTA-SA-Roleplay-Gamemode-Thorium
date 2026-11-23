@@ -18,6 +18,10 @@
     <script src="c_editor.lua" type="client" />
     <!-- Pasajeros y conductor ven el mismo trafico -->
     <script src="c_sync.lua" type="client" />
+    <!-- Escenas ambientales y poblacion por hora/clima (las gobierna rp_events) -->
+    <script src="c_scenes.lua" type="client" />
+    <!-- Vida de barrio: bandas, vecinos y grupos fijos en cada rincon -->
+    <script src="c_hangouts.lua" type="client" />
 
     <!-- Bocina de los autos de la poblacion (sonido generado para el proyecto) -->
     <file src="sounds/horn.wav" />
