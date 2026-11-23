@@ -53,7 +53,7 @@ EVENTS = {
 
 -- Mercadillo: ajustes de los puestos (calibrables en juego con /mercadoajuste <dz> <rotacion>)
 MARKET = {
-    CART_DZ = 0.35,       -- m que se sube el puesto (el origen del modelo 1340 queda enterrado)
+    CART_DZ = 1.0,        -- m que se sube el puesto (el origen del modelo 1340 queda enterrado); calibrado en juego
     CART_ROT = 0,         -- grados extra para que el frente del puesto mire a la calle (0, 90, 180, 270)
     STALL_GAP = 3.8,      -- m entre puestos a lo largo de la acera
     -- Productos por tipo de puesto (item del inventario = precio), algo mas baratos que el 24/7
