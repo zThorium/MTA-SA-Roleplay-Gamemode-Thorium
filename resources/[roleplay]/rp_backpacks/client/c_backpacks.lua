@@ -30,6 +30,8 @@ local function open()
     if isElement(gui) then return close() end
     if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) or getElementData(localPlayer, "rp:downed") then return end
     if isCursorShowing() or isConsoleActive() or isChatBoxInputActive() or isMainMenuActive() then return end
+    -- sin mochila no se abre el panel; el servidor avisa con una notificacion
+    if not getElementData(localPlayer, "rp:backpack") then return triggerServerEvent("rp:bp:request", resourceRoot) end
     data = nil
     gui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
     browser = guiGetBrowser(gui)

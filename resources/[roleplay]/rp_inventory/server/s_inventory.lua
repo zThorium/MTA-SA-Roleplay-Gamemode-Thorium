@@ -54,7 +54,7 @@ local function serialize(player)
             if def then
                 local note = getItemPrivateNote(itemId, inv.characterId)
                 list[#list + 1] = {
-                    id = itemId, name = def.name, icon = def.icon,
+                    id = itemId, name = def.name, icon = def.icon, iconImg = def.iconImg,
                     description = note and ((def.description or "") .. " " .. note) or def.description,
                     amount = amount, weight = def.weight, usable = def.use ~= nil,
                 }
@@ -329,7 +329,7 @@ function spawnGroundItem(itemId, amount, x, y, z, dimension, interior)
     setElementCollisionsEnabled(object, false)
     setElementDimension(object, dimension or 0)
     setElementInterior(object, interior or 0)
-    setElementData(object, "rp:ground", { name = def.name, icon = def.icon, amount = amount })
+    setElementData(object, "rp:ground", { id = itemId, name = def.name, icon = def.icon, amount = amount })
     ground[object] = { itemId = itemId, amount = amount }
     setTimer(function()
         if isElement(object) then ground[object] = nil; destroyElement(object) end

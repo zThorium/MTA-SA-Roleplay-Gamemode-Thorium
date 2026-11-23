@@ -11,6 +11,10 @@
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_backpacks.lua" type="server" />
     <script src="client/c_backpacks.lua" type="client" cache="false" />
+    <script src="client/c_visual.lua" type="client" cache="false" />
+
+    <file src="fx/backpack.fx" />
+    <file src="fx/mta-helper.fx" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />

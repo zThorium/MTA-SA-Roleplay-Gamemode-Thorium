@@ -12,7 +12,6 @@
 ]]
 
 local state = {}      -- [player] = { cid, id, items = { [itemId] = amount }, loading }
-local visuals = {}    -- [player] = objeto en la espalda
 local cooldown = {}
 
 addEvent("rp:onCharacterSpawn", false)
@@ -47,56 +46,28 @@ end
 ----------------------------------------------------------------
 -- Visual en la espalda y peso publicado
 ----------------------------------------------------------------
-local function clearVisual(player)
-    local obj = visuals[player]
-    if isElement(obj) then
-        exports.bone_attach:detachElementFromBone(obj)
-        destroyElement(obj)
-    end
-    visuals[player] = nil
+-- El objeto se crea en cada cliente (client/c_visual.lua); el servidor solo publica que mochila lleva cada uno.
+local function setVisual(player, id)
+    if isElement(player) then setElementData(player, "rp:backpack", id or nil, true) end
 end
 
-local function makeVisual(player, cfg)
-    clearVisual(player)
-    local obj = createObject(cfg.model, 0, 0, 0)
-    setObjectScale(obj, cfg.scale)
-    setElementCollisionsEnabled(obj, false)
-    setElementDimension(obj, getElementDimension(player))
-    setElementInterior(obj, getElementInterior(player))
-    local o = BACKPACK_OFFSET
-    exports.bone_attach:attachElementToBone(obj, player, BACKPACK_BONE, o[1], o[2], o[3], o[4], o[5], o[6])
-    visuals[player] = obj
-end
-
--- Admin: /mochilaoffset x y z rx ry rz  ajusta en vivo como se ve la mochila (vale hasta reiniciar el recurso;
--- luego copia los valores a BACKPACK_OFFSET en shared/s_config.lua).
+-- Admin: /mochilaoffset x y z rx ry rz  ajusta en vivo como se ve la mochila en todos los clientes
+-- (vale hasta reiniciar el recurso; luego copia los valores a BACKPACK_OFFSET en shared/s_config.lua).
 addCommandHandler("mochilaoffset", function(player, _, ...)
     if (exports.rp_login:getPlayerAdminLevel(player) or 0) < 1 then return end
+    local args = { ... }
     local v = {}
-    for i, a in ipairs({ ... }) do v[i] = tonumber(a) end
-    if #v ~= 6 or #{ ... } ~= 6 then
+    for i, a in ipairs(args) do v[i] = tonumber(a) end
+    if #args ~= 6 then
         return notify(player, "Uso: /mochilaoffset x y z rx ry rz (actual: " .. table.concat(BACKPACK_OFFSET, " ") .. ")", "info")
     end
+    for i = 1, 6 do
+        if not v[i] then return notify(player, "Todos los valores deben ser numeros.", "error") end
+    end
     BACKPACK_OFFSET = v
-    for other, obj in pairs(visuals) do
-        if isElement(other) and isElement(obj) then
-            exports.bone_attach:detachElementFromBone(obj)
-            exports.bone_attach:attachElementToBone(obj, other, BACKPACK_BONE, v[1], v[2], v[3], v[4], v[5], v[6])
-        end
-    end
-    notify(player, "Offset de mochila actualizado.", "success")
+    triggerClientEvent(root, "rp:bp:offset", resourceRoot, v)
+    notify(player, "Offset de mochila actualizado: " .. table.concat(v, " "), "success")
 end)
-
--- El objeto no cambia de dimension/interior solo
-setTimer(function()
-    for player, obj in pairs(visuals) do
-        if isElement(player) and isElement(obj) then
-            local d, i = getElementDimension(player), getElementInterior(player)
-            if getElementDimension(obj) ~= d then setElementDimension(obj, d) end
-            if getElementInterior(obj) ~= i then setElementInterior(obj, i) end
-        end
-    end
-end, 1000, 0)
 
 local function payload(player)
     local s = state[player]
@@ -105,17 +76,17 @@ local function payload(player)
     local items, inv = {}, {}
     for itemId, amount in pairs(s.items) do
         local d = def(itemId)
-        if d then items[#items + 1] = { id = itemId, name = d.name, icon = d.icon, amount = amount, weight = d.weight } end
+        if d then items[#items + 1] = { id = itemId, name = d.name, icon = d.icon, iconImg = d.iconImg, amount = amount, weight = d.weight } end
     end
     for itemId, amount in pairs(exports.rp_inventory:getInventory(player) or {}) do
         local d = def(itemId)
-        if d and not BACKPACKS[itemId] then inv[#inv + 1] = { id = itemId, name = d.name, icon = d.icon, amount = amount, weight = d.weight } end
+        if d and not BACKPACKS[itemId] then inv[#inv + 1] = { id = itemId, name = d.name, icon = d.icon, iconImg = d.iconImg, amount = amount, weight = d.weight } end
     end
     local byName = function(a, b) return a.name < b.name end
     table.sort(items, byName)
     table.sort(inv, byName)
     local bpDef = def(s.id)
-    return { name = bpDef and bpDef.name or "Mochila", capacity = cfg.capacity, used = contentsWeight(s), items = items, inv = inv }
+    return { name = bpDef and bpDef.name or "Mochila", icon = bpDef and bpDef.icon, iconImg = bpDef and bpDef.iconImg, capacity = cfg.capacity, used = contentsWeight(s), items = items, inv = inv }
 end
 
 local function sync(player)
@@ -142,7 +113,7 @@ end
 -- Carga / descarga
 ----------------------------------------------------------------
 local function unload(player)
-    clearVisual(player)
+    setVisual(player, nil)
     state[player], cooldown[player] = nil, nil
     if isElement(player) then setElementData(player, "rp:packWeight", nil) end
 end
@@ -166,7 +137,7 @@ local function load(player, cid)
                 if def(r.item_id) and tonumber(r.amount) > 0 then s.items[r.item_id] = tonumber(r.amount) end
             end
             s.loading = nil
-            makeVisual(player, BACKPACKS[s.id])
+            setVisual(player, s.id)
             sync(player)
         end, db(), "SELECT item_id, amount FROM backpack_items WHERE character_id = ?", cid)
     end, db(), "SELECT backpack_id FROM character_backpack WHERE character_id = ?", cid)
@@ -180,7 +151,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
     end
 end)
 addEventHandler("onResourceStop", resourceRoot, function()
-    for player in pairs(visuals) do clearVisual(player) end
+    for player in pairs(state) do setVisual(player, nil) end
 end)
 
 ----------------------------------------------------------------
@@ -202,7 +173,7 @@ addEventHandler("rp:onItemUse", root, function(itemId)
     state[player] = { cid = cid, id = itemId, items = {} }
     dbExec(db(), "REPLACE INTO character_backpack (character_id, backpack_id) VALUES (?, ?)", cid, itemId)
     dbExec(db(), "DELETE FROM backpack_items WHERE character_id = ?", cid)
-    makeVisual(player, cfg)
+    setVisual(player, itemId)
     sync(player)
     notify(player, "Te pones la mochila. Abre su contenido con O o /mochila.", "success")
 end)
@@ -229,7 +200,7 @@ local function dropBackpack(player)
 
     dbExec(db(), "DELETE FROM character_backpack WHERE character_id = ?", s.cid)
     dbExec(db(), "DELETE FROM backpack_items WHERE character_id = ?", s.cid)
-    clearVisual(player)
+    setVisual(player, nil)
     state[player] = nil
     setElementData(player, "rp:packWeight", nil)
     triggerClientEvent(player, "rp:bp:update", resourceRoot, false)

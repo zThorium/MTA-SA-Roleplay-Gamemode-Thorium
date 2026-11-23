@@ -5,6 +5,21 @@
     }
     function $(id) { return document.getElementById(id); }
 
+    // Icono vectorial (iconImg) o emoji
+    function iconNode(item, className) {
+        var node = document.createElement("span");
+        node.className = className;
+        if (item.iconImg) {
+            var img = document.createElement("img");
+            img.src = item.iconImg;
+            img.draggable = false;
+            node.appendChild(img);
+        } else {
+            node.textContent = item.icon || "";
+        }
+        return node;
+    }
+
     function fill(listId, items, action, shift) {
         var list = $(listId);
         list.innerHTML = "";
@@ -18,7 +33,8 @@
         items.forEach(function (item) {
             var row = document.createElement("div");
             row.className = "row";
-            [["span", "", item.icon || ""], ["span", "name", item.name], ["span", "qty", "x" + item.amount],
+            row.appendChild(iconNode(item, "ico"));
+            [["span", "name", item.name], ["span", "qty", "x" + item.amount],
              ["span", "kg", (item.weight * item.amount).toFixed(2) + " kg"]].forEach(function (c) {
                 var el = document.createElement(c[0]);
                 el.className = c[1];
@@ -33,6 +49,9 @@
     window.RP = {
         render: function (d) {
             $("title").textContent = d.name;
+            var head = $("bp-icon");
+            head.innerHTML = "";
+            head.appendChild(iconNode(d, "ico big"));
             $("weight-label").textContent = d.used.toFixed(1) + " / " + d.capacity + " kg";
             $("weight-bar").style.width = Math.min(100, d.capacity > 0 ? (d.used / d.capacity) * 100 : 0) + "%";
             fill("bp-list", d.items, "rp:bp:ui:take");

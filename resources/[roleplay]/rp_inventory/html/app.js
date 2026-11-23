@@ -25,6 +25,20 @@
         return node;
     }
 
+    // Icono del item: imagen vectorial si tiene (iconImg) o el emoji de siempre
+    function iconNode(item, className) {
+        var node = el("span", className);
+        if (item.iconImg) {
+            var img = document.createElement("img");
+            img.src = item.iconImg;
+            img.draggable = false;
+            node.appendChild(img);
+        } else {
+            node.textContent = item.icon || "📦";
+        }
+        return node;
+    }
+
     function selectedItem() {
         return state.items.filter(function (it) { return it.id === state.selected; })[0];
     }
@@ -48,7 +62,7 @@
                 continue;
             }
             var slot = el("div", "slot" + (item.id === state.selected ? " selected" : ""));
-            slot.appendChild(el("span", "icon", item.icon || "📦"));
+            slot.appendChild(iconNode(item, "icon"));
             slot.appendChild(el("span", "name", item.name));
             slot.appendChild(el("span", "amount", "x" + item.amount));
             slot.appendChild(el("span", "kg", (item.weight * item.amount).toFixed(2) + " kg"));
@@ -75,7 +89,9 @@
             return;
         }
 
-        box.appendChild(el("div", "big-icon", item.icon || "📦"));
+        var big = iconNode(item, "big-icon");
+        big.style.display = "block";
+        box.appendChild(big);
         box.appendChild(el("h2", null, item.name));
         box.appendChild(el("p", null, item.description || ""));
         box.appendChild(el("div", "meta", "Cantidad " + item.amount + " · " + (item.weight * item.amount).toFixed(2) + " kg"));
@@ -165,7 +181,8 @@
             drag.active = true;
             document.body.classList.add("dragging");
             var ghost = $("ghost");
-            ghost.textContent = drag.item.icon || "📦";
+            ghost.textContent = drag.item.iconImg ? "" : (drag.item.icon || "📦");
+            if (drag.item.iconImg) ghost.appendChild(iconNode(drag.item, "ghost-icon"));
             ghost.appendChild(el("small", null, "x" + chosenAmount(drag.item)));
             ghost.style.display = "block";
         }
