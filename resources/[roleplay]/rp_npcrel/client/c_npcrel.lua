@@ -375,7 +375,7 @@ end
 local function scanTarget()
     target = nil
     if ui or isPedInVehicle(localPlayer) or isPedDead(localPlayer) or getElementData(localPlayer, "rp:downed") then return end
-    if getPedWeapon(localPlayer) >= 22 and getControlState("aim_weapon") then return end
+    if getPedWeapon(localPlayer) >= 22 and getPedControlState(localPlayer, "aim_weapon") then return end
     local px, py, pz = getElementPosition(localPlayer)
     local best, bestD = nil, NPCREL.TALK_DISTANCE
     for _, ped in ipairs(getElementsByType("ped", root, true)) do
@@ -559,8 +559,14 @@ end
 -- Dibujo
 ----------------------------------------------------------------
 local KIND_COLOR = { friend = { 90, 170, 255 }, romance = { 255, 90, 140 }, special = { 255, 190, 80 } }
+-- Se llena al primer uso: los scripts de cliente con cache="false" pueden ejecutarse antes que los compartidos
 local KIND_OF = {}
-for _, a in ipairs(NPCREL_ACTIONS) do KIND_OF[a.id] = a.kind end
+local function kindOf(id)
+    if next(KIND_OF) == nil then
+        for _, a in ipairs(NPCREL_ACTIONS) do KIND_OF[a.id] = a.kind end
+    end
+    return KIND_OF[id]
+end
 
 local function bar(x, y, w, h, value, shown, r, g, b, label)
     dxDrawText(label, x, y - 17 * S, x + w, y, tocolor(230, 230, 235, 255), 0.85 * S, "default-bold")
@@ -618,7 +624,7 @@ local function drawMenu(alpha)
     for i, a in ipairs(d.actions) do
         local ang = -math.pi / 2 + (i - 1) * 2 * math.pi / n
         local bx, by = cx + math.cos(ang) * rx - bw / 2, cy + math.sin(ang) * ry - bh / 2
-        local kc = KIND_COLOR[KIND_OF[a.id]] or KIND_COLOR.friend
+        local kc = KIND_COLOR[kindOf(a.id)] or KIND_COLOR.friend
         local over = mx >= bx and mx <= bx + bw and my >= by and my <= by + bh
         local usable = a.enabled and not ui.busy and not ui.ending
         if over and a.enabled then ui.hover = a.id end
