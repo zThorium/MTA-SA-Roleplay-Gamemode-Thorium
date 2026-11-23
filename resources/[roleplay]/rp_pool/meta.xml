@@ -1,0 +1,26 @@
+<meta>
+    <info author="Thorium" name="RP Pool" description="Pool 8-ball multijugador con apuestas y ranking global, como el de GTA San Andreas" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_physics.lua" type="server" />
+    <script src="server/s_rules.lua" type="server" />
+    <script src="server/s_pool.lua" type="server" />
+    <script src="server/s_selftest.lua" type="server" />
+    <script src="client/c_pool.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="sounds/ball.wav" />
+    <file src="sounds/cushion.wav" />
+    <file src="sounds/pocket.wav" />
+
+    <export function="getPlayerPoolTable" type="server" />
+    <export function="runSelfTest" type="server" />
+</meta>
