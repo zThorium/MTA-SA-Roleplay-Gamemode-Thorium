@@ -24,6 +24,16 @@ addEvent("rp:onDrugUsed", false)   -- lo escucha rp_dealers; se registra aqui pa
 addEvent("rp:inv:drop", true)
 addEvent("rp:onItemUse", false)   -- source = jugador, (itemId)
 
+local methTimers = {}   -- [player] = timer que apaga el efecto de la metanfetamina
+
+local function clearMeth(player)
+    if isTimer(methTimers[player]) then killTimer(methTimers[player]) end
+    methTimers[player] = nil
+    if isElement(player) then setElementData(player, "rp:meth", false) end
+end
+addEventHandler("rp:onCharacterLogout", root, function() clearMeth(source) end)
+addEventHandler("onPlayerQuit", root, function() clearMeth(source) end)
+
 local function db()
     return exports.rp_database:getConnection()
 end
@@ -231,6 +241,11 @@ addEventHandler("rp:inv:use", resourceRoot, function(itemId)
     if def.consumable then takeItem(player, itemId, 1) end
     if effect.health then setElementHealth(player, math.min(100, getElementHealth(player) + effect.health)) end
     if effect.armor then setPedArmor(player, effect.armor) end
+    if effect.meth then
+        if isTimer(methTimers[player]) then killTimer(methTimers[player]) end   -- volver a consumir reinicia el minuto
+        setElementData(player, "rp:meth", true)
+        methTimers[player] = setTimer(clearMeth, effect.meth * 1000, 1, player)
+    end
     for _, need in ipairs({ "hunger", "thirst", "energy" }) do
         if effect[need] then exports.rp_needs:addNeed(player, need, effect[need]) end
     end

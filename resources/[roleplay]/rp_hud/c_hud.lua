@@ -267,7 +267,8 @@ local function updateStamina()
     local dt = math.min((now - staminaTick) / 1000, 0.5)
     staminaTick = now
     local st = needValues.stamina
-    if not isPedInVehicle(localPlayer) and getPedMoveState(localPlayer) == "sprint" then
+    local meth = getElementData(localPlayer, "rp:meth") == true
+    if not meth and not isPedInVehicle(localPlayer) and getPedMoveState(localPlayer) == "sprint" then
         st = st - STAMINA_DRAIN * dt
     else
         st = st + STAMINA_REGEN * dt
@@ -277,7 +278,7 @@ local function updateStamina()
     if st <= 0 and not staminaLocked then
         staminaLocked = true
         toggleControl("sprint", false)
-    elseif staminaLocked and st >= STAMINA_RESUME and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
+    elseif staminaLocked and (st >= STAMINA_RESUME or meth) and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
         staminaLocked = false
         toggleControl("sprint", true)
     end
@@ -365,7 +366,9 @@ local function drawNeeds(x, bottom)
         local cy = top + D / 2
         local r, g, b = need.r, need.g, need.b
         local low = real < 20
-        if low then r, g, b = BAR.urgent[1], BAR.urgent[2], BAR.urgent[3]
+        if need.key == "stamina" and getElementData(localPlayer, "rp:meth") == true then
+            r, g, b, low = 255, 196, 40, false   -- dorado: la droga evita que se gaste
+        elseif low then r, g, b = BAR.urgent[1], BAR.urgent[2], BAR.urgent[3]
         elseif real < 35 then r, g, b = BAR.normal[1], BAR.normal[2], BAR.normal[3] end
         local pulse = low and (math.sin(t / 170) * 0.5 + 0.5) or 0
 
