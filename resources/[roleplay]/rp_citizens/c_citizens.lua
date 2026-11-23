@@ -258,8 +258,7 @@ local function setWalking(ped, walk, sprint)
 end
 
 local function removePed(ped)
-    peds[ped] = nil
-    pedCount = pedCount - 1
+    if peds[ped] then peds[ped] = nil pedCount = pedCount - 1 end
     if isElement(ped) then destroyElement(ped) end
 end
 
@@ -270,6 +269,7 @@ local function spawnPed(px, py)
     local tx, ty = nodePos(PED_NODES, target)
     local ped = createPed(pickPedSkin(x, y, z), x, y, z + 1, heading(tx - x, ty - y))
     if not ped then return end
+    setElementData(ped, "rp:citizen", true, false)
     peds[ped] = { state = "WALK", node = target, prev = node, brave = math.random() < CFG.BRAVE_CHANCE, until_ = 0 }
     pedCount = pedCount + 1
     setWalking(ped, true, false)
@@ -550,8 +550,7 @@ end)
 ----------------------------------------------------------------
 local function removeCar(vehicle)
     local s = cars[vehicle]
-    cars[vehicle] = nil
-    carCount = carCount - 1
+    if s then cars[vehicle] = nil carCount = carCount - 1 end
     if s and isElement(s.driver) then destroyElement(s.driver) end
     if isElement(vehicle) then destroyElement(vehicle) end
 end
@@ -1131,6 +1130,8 @@ local function spawnCar(px, py)
     if not vehicle then return end
     local driver = createPed(policeSkin or pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
     if not driver then destroyElement(vehicle) return end
+    setElementData(vehicle, "rp:citizen", true, false)
+    setElementData(driver, "rp:citizen", true, false)
     warpPedIntoVehicle(driver, vehicle)
     setVehicleEngineState(vehicle, true)
     if isNight() then setVehicleOverrideLights(vehicle, 2) end
@@ -2169,12 +2170,235 @@ local function clearAll()
     peds, cars, pedCount, carCount = {}, {}, 0, 0
 end
 
+----------------------------------------------------------------
+-- Salud del sistema: errores, atascos y estadisticas
+--   1) guarded(): cada entidad se actualiza dentro de pcall; un error Lua no rompe al resto. Al pasar
+--      ERR_LIMIT errores esa entidad se elimina.
+--   2) Interruptor de seguridad: demasiados errores por minuto apagan la poblacion un rato.
+--   3) Vigilante (carWatchdog / pedWatchdog): atascos, agua, fuera del mapa, vueltas en circulos.
+--      Se elimina fuera de vista; si se ve y esta cerca, se desvanece en ~1 s.
+--   4) Huerfanos: autos y peatones propios que ya no estan en las tablas se destruyen.
+--   5) Estadisticas por causa y nodos problematicos (/traficostats) y reduccion de poblacion con FPS bajos.
+----------------------------------------------------------------
+local HEALTH = {
+    ERR_LIMIT = 3,                                  -- errores de una entidad antes de eliminarla
+    BREAKER_ERRORS = 30, BREAKER_WINDOW = 60000, BREAKER_PAUSE = 60000,
+    CAR_IDLE_VISIBLE = 60000, CAR_IDLE_HIDDEN = 25000,   -- ms sin avanzar antes de eliminar un auto
+    PED_IDLE_VISIBLE = 45000, PED_IDLE_HIDDEN = 20000,
+    FADE_MS = 1200,
+    LOG_EVERY = 5000,                               -- un aviso de error cada 5 s como maximo
+}
+local stats = { despawn = {}, errors = {}, since = getTickCount() }
+local problemNodes = {}      -- [nodo] = veces que un auto fue eliminado por problemas cerca de el
+local errorTimes, breakerUntil, lastErrLog = {}, 0, 0
+local fpsMs, popScale = 16, 1   -- tiempo medio de fotograma y factor de poblacion
+
+local function noteDespawn(reason, node)
+    stats.despawn[reason] = (stats.despawn[reason] or 0) + 1
+    if node then problemNodes[node] = (problemNodes[node] or 0) + 1 end
+end
+
+-- Ejecuta fn(...) protegida. Devuelve true si no hubo error. "s" lleva el contador de errores de la entidad.
+local function guarded(label, s, fn, ...)
+    local ok, err = pcall(fn, ...)
+    if ok then return true end
+    local now = getTickCount()
+    stats.errors[label] = (stats.errors[label] or 0) + 1
+    if s then s.errCount = (s.errCount or 0) + 1 end
+    errorTimes[#errorTimes + 1] = now
+    if now - lastErrLog > HEALTH.LOG_EVERY then
+        lastErrLog = now
+        outputDebugString(("[rp_citizens] error en %s: %s"):format(label, tostring(err)), 1)
+    end
+    return false
+end
+
+local function breakerActive() return getTickCount() < breakerUntil end
+
+-- Revisa el interruptor (una vez por segundo desde spawnTick)
+local function checkBreaker(now)
+    local keep = {}
+    for _, t in ipairs(errorTimes) do
+        if now - t < HEALTH.BREAKER_WINDOW then keep[#keep + 1] = t end
+    end
+    errorTimes = keep
+    if #errorTimes >= HEALTH.BREAKER_ERRORS and now >= breakerUntil then
+        breakerUntil = now + HEALTH.BREAKER_PAUSE
+        errorTimes = {}
+        stats.despawn["interruptor"] = (stats.despawn["interruptor"] or 0) + 1
+        clearAll()
+        outputDebugString("[rp_citizens] demasiados errores: poblacion apagada 60 s (revisa el log del cliente)", 1)
+        outputChatBox("[Trafico] Demasiados errores en la IA de trafico y peatones: se apaga 60 s y se reinicia sola. Avisa a un admin.", 255, 120, 80)
+    end
+end
+
+-- Elimina un auto por "reason". Si se ve y esta cerca de la camara se desvanece en ~1 s.
+local function despawnCar(vehicle, s, reason, soft)
+    if not isElement(vehicle) then return removeCar(vehicle) end
+    noteDespawn(reason, s.node or s.prev)
+    if soft and isElementOnScreen(vehicle) then
+        local x, y = getElementPosition(vehicle)
+        local px, py = getElementPosition(localPlayer)
+        if getDistanceBetweenPoints2D(px, py, x, y) < 90 then
+            if not s.fadeStart then
+                s.fadeStart = getTickCount()
+                setElementCollisionsEnabled(vehicle, false)
+                if s.driver and isElement(s.driver) then
+                    setPedControlState(s.driver, "accelerate", false)
+                    setPedControlState(s.driver, "handbrake", true)
+                end
+            end
+            return
+        end
+    end
+    removeCar(vehicle)
+end
+
+-- Desvanecimiento de un auto marcado para eliminar (true si ya se elimino)
+local function fadeStep(vehicle, s)
+    local k = (getTickCount() - s.fadeStart) / HEALTH.FADE_MS
+    if k >= 1 then
+        removeCar(vehicle)
+        return true
+    end
+    local a = math.floor(255 * (1 - k))
+    setElementAlpha(vehicle, a)
+    if s.driver and isElement(s.driver) then setElementAlpha(s.driver, a) end
+    return false
+end
+
+-- Vigilante de un auto con fisica o lejano
+local function carWatchdog(v, s, now)
+    local x, y, z = getElementPosition(v)
+    if z < -30 or z > 500 then return despawnCar(v, s, "fuera_del_mapa") end
+    if isElementInWater(v) then
+        s.waterSince = s.waterSince or now
+        if now - s.waterSince > 2500 then return despawnCar(v, s, "agua", true) end
+    else
+        s.waterSince = nil
+    end
+    -- cada 5 s: avance y recorrido
+    if not s.wdAt then
+        s.wdX, s.wdY, s.wdAt, s.idleMs, s.pathLen = x, y, now, 0, 0
+        s.anchorX, s.anchorY, s.anchorAt = x, y, now
+        return
+    end
+    if now - s.wdAt >= 5000 then
+        local moved = getDistanceBetweenPoints2D(x, y, s.wdX, s.wdY)
+        local legit = s.state == "RED"            -- esperando un semaforo no es atasco
+        if moved < 1.5 and not legit then s.idleMs = s.idleMs + (now - s.wdAt) else s.idleMs = 0 end
+        s.pathLen = s.pathLen + moved
+        s.wdX, s.wdY, s.wdAt = x, y, now
+        -- vueltas en circulos: un minuto recorriendo mucho sin alejarse de un mismo punto
+        if now - s.anchorAt >= 60000 then
+            local net = getDistanceBetweenPoints2D(x, y, s.anchorX, s.anchorY)
+            if net < 30 and s.pathLen > 120 then return despawnCar(v, s, "vueltas", true) end
+            s.anchorX, s.anchorY, s.anchorAt, s.pathLen = x, y, now, 0
+        end
+    end
+    local queued = s.state == "FOLLOW" or s.state == "YIELD"   -- en cola: se tolera el doble
+    local limit = isElementOnScreen(v) and HEALTH.CAR_IDLE_VISIBLE or HEALTH.CAR_IDLE_HIDDEN
+    if queued then limit = limit * 2 end
+    if s.idleMs > limit then return despawnCar(v, s, "atascado", true) end
+end
+
+-- Vigilante de un peaton que camina o huye
+local function pedWatchdog(ped, s, now)
+    local x, y, z = getElementPosition(ped)
+    if z < -30 or z > 500 then
+        noteDespawn("ped_fuera_del_mapa")
+        return removePed(ped)
+    end
+    if isElementInWater(ped) then
+        s.waterSince = s.waterSince or now
+        if now - s.waterSince > 2500 then
+            noteDespawn("ped_agua")
+            return removePed(ped)
+        end
+    else
+        s.waterSince = nil
+    end
+    if s.state ~= "WALK" and s.state ~= "FLEE" then
+        s.wdAt = nil
+        return
+    end
+    if not s.wdAt then
+        s.wdX, s.wdY, s.wdAt, s.idleMs = x, y, now, 0
+        return
+    end
+    if now - s.wdAt >= 5000 then
+        if getDistanceBetweenPoints2D(x, y, s.wdX, s.wdY) < 1.5 then s.idleMs = s.idleMs + (now - s.wdAt) else s.idleMs = 0 end
+        s.wdX, s.wdY, s.wdAt = x, y, now
+    end
+    local limit = isElementOnScreen(ped) and HEALTH.PED_IDLE_VISIBLE or HEALTH.PED_IDLE_HIDDEN
+    if s.idleMs > limit then
+        noteDespawn("ped_atascado")
+        return removePed(ped)
+    end
+end
+
+-- Autos y peatones creados por este recurso que ya no estan en las tablas (se marcan con rp:citizen)
+local function sweepOrphans()
+    for _, v in ipairs(getElementsByType("vehicle", resourceRoot)) do
+        if not cars[v] and getElementData(v, "rp:citizen") and not getElementData(v, "rp:copCar")
+            and getVehicleController(v) ~= localPlayer then
+            stats.despawn["huerfano"] = (stats.despawn["huerfano"] or 0) + 1
+            destroyElement(v)
+        end
+    end
+    for _, p in ipairs(getElementsByType("ped", resourceRoot)) do
+        if not peds[p] and getElementData(p, "rp:citizen") and not getElementData(p, "rp:cop") then
+            local veh = getPedOccupiedVehicle(p)
+            if not (veh and cars[veh]) then
+                stats.despawn["huerfano"] = (stats.despawn["huerfano"] or 0) + 1
+                destroyElement(p)
+            end
+        end
+    end
+end
+
+-- /traficostats: estado de la poblacion, causas de eliminacion, errores y nodos problematicos
+addCommandHandler("traficostats", function()
+    local now = getTickCount()
+    outputChatBox(("[Trafico] Autos %d  Peatones %d  Poblacion x%.1f  Fotograma %.0f ms  Interruptor: %s"):format(
+        carCount, pedCount, popScale, fpsMs, breakerActive() and "APAGADO" or "ok"), 120, 200, 255)
+    local parts = {}
+    for k, n in pairs(stats.despawn) do parts[#parts + 1] = k .. "=" .. n end
+    table.sort(parts)
+    outputChatBox("[Trafico] Eliminados (" .. math.floor((now - stats.since) / 60000) .. " min): "
+        .. (#parts > 0 and table.concat(parts, ", ") or "ninguno"), 120, 200, 255)
+    local errs = {}
+    for k, n in pairs(stats.errors) do errs[#errs + 1] = k .. "=" .. n end
+    if #errs > 0 then outputChatBox("[Trafico] Errores Lua: " .. table.concat(errs, ", "), 255, 140, 90) end
+    local list = {}
+    for node, n in pairs(problemNodes) do list[#list + 1] = { node, n } end
+    table.sort(list, function(a, b) return a[2] > b[2] end)
+    for i = 1, math.min(5, #list) do
+        local x, y = nodePos(VEH_NODES, list[i][1])
+        outputChatBox(("[Trafico] Nodo problematico #%d: %d veces cerca de (%.0f, %.0f) -> revisalo con /nodos"):format(
+            list[i][1], list[i][2], x, y), 255, 200, 90)
+    end
+end)
+
 local function spawnTick()
     if not enabled or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
         if pedCount > 0 or carCount > 0 then clearAll() end
         return
     end
     local px, py, pz = getElementPosition(localPlayer)
+
+    -- Salud: interruptor de seguridad, limpieza de huerfanos y poblacion segun los FPS
+    local nowH = getTickCount()
+    checkBreaker(nowH)
+    if breakerActive() then
+        if pedCount > 0 or carCount > 0 then clearAll() end
+        return
+    end
+    if nowH - (stats.lastSweep or 0) > 20000 then
+        stats.lastSweep = nowH
+        guarded("huerfanos", nil, sweepOrphans)
+    end
+    if fpsMs > 40 then popScale = 0.6 elseif fpsMs < 30 then popScale = 1 end   -- < 25 FPS: menos poblacion
 
     -- Despawn de lo lejano (y de lo que no se ve)
     for ped in pairs(peds) do
@@ -2203,11 +2427,11 @@ local function spawnTick()
     -- rp_events (c_scenes.lua): hora punta, lluvia y escenas activas ajustan los cupos
     local pedMul, carMul = 1, 1
     if eventPopScale then pedMul, carMul = eventPopScale() end
-    local maxPeds = math.floor((night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) * pedMul + 0.5)
+    local maxPeds = math.floor((night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) * pedMul * popScale + 0.5)
     local scenePeds = sceneExtraPeds and sceneExtraPeds() or 0
     -- siempre quedan al menos 4 peatones caminando aunque haya muchos grupos quietos
     if pedCount + math.min(scenePeds, math.max(0, maxPeds - 4)) < maxPeds then spawnPed(px, py) end
-    local maxCars = math.floor((night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) * carMul + 0.5) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
+    local maxCars = math.floor((night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) * carMul * popScale + 0.5) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
     -- hasta 2 por tick cuando faltan muchos (yendo rapido se despawnean seguido)
     for _ = 1, (maxCars - carCount > 4) and 2 or 1 do
         if carCount < maxCars then spawnCar(px, py) end
@@ -2215,7 +2439,7 @@ local function spawnTick()
 end
 
 local function pedTick()
-    if pedCount == 0 then return end
+    if pedCount == 0 or breakerActive() then return end
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     local aimTarget = getPedTarget(localPlayer)
@@ -2232,13 +2456,20 @@ local function pedTick()
             if aimTarget == ped and getPedWeapon(localPlayer) >= 22 and s.state ~= "FLEE" and s.state ~= "FIGHT" then
                 startFlee(ped, localPlayer)
             end
-            if isElementStreamedIn(ped) then updatePed(ped, s, now, px, py, pz) end
+            if isElementStreamedIn(ped) then
+                if not guarded("peaton", s, updatePed, ped, s, now, px, py, pz) and (s.errCount or 0) >= HEALTH.ERR_LIMIT then
+                    noteDespawn("ped_error")
+                    removePed(ped)
+                elseif peds[ped] then
+                    guarded("peaton", s, pedWatchdog, ped, s, now)
+                end
+            end
         end
     end
 end
 
 local function carTick()
-    if carCount == 0 then return end
+    if carCount == 0 or breakerActive() then return end
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     refreshSnapshots(now)
@@ -2283,10 +2514,20 @@ local function carTick()
                     s.overlapSince = nil
                 end
             end
-            if s.lod == "dummy" then
-                dummyDecide(v, s)
-            elseif isElementStreamedIn(v) then
-                updateCar(v, s, now)
+            if s.fadeStart then
+                fadeStep(v, s)   -- marcado para eliminar: se desvanece y se borra
+            else
+                local ok
+                if s.lod == "dummy" then
+                    ok = guarded("auto_lejano", s, dummyDecide, v, s)
+                elseif isElementStreamedIn(v) then
+                    ok = guarded("auto", s, updateCar, v, s, now)
+                end
+                if ok == false and (s.errCount or 0) >= HEALTH.ERR_LIMIT then
+                    despawnCar(v, s, "error")
+                elseif cars[v] then
+                    guarded("auto_vigilante", s, carWatchdog, v, s, now)
+                end
             end
             end
         elseif isElement(v) and s.lod == "dummy" then
@@ -2304,7 +2545,11 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     setTimer(pedTick, CFG.PED_TICK, 0)
     setTimer(carTick, CFG.CAR_TICK, 0)
     -- solo mueve dummies (pocos calculos por auto); sin dummies no hace nada
-    addEventHandler("onClientPreRender", root, moveDummies)
+    addEventHandler("onClientPreRender", root, function(dt)
+        fpsMs = fpsMs * 0.97 + math.min(dt or 16, 200) * 0.03   -- tiempo medio de fotograma
+        if breakerActive() then return end
+        guarded("auto_lejano_mov", nil, moveDummies, dt)
+    end)
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, clearAll)

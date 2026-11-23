@@ -150,3 +150,23 @@ Condición barata: en el tick, buscar vehículos con sirena activa (`getVehicleS
 ## 8. Qué necesito de Fabián
 
 Elegir por dónde empezar. Mi recomendación es la **Fase 1** (sensores + velocidad + sirenas + optimización), porque es la mejora más visible con el menor riesgo, y después decidir si merece la pena la Fase 3 (núcleo compartido) antes de añadir comportamientos nuevos.
+
+---
+
+## Salud del sistema y comandos (rp_citizens)
+
+Comandos (cliente): `/poblacion` (activa o desactiva), `/poblacioninfo` (conteos), `/traficostats` (estado, causas de
+eliminación, errores Lua y los 5 nodos con más problemas), `/nodos` (editor de rutas, solo admins; **Ctrl+Z** deshace).
+
+Mecanismos de `c_citizens.lua`:
+
+| Mecanismo | Qué hace |
+|---|---|
+| `guarded()` | Cada auto y peatón se actualiza dentro de `pcall`. Tres errores Lua en la misma entidad la eliminan sin afectar al resto. |
+| Interruptor | 30 errores en 60 s apagan toda la población 60 s (y avisa en el chat y en el log); luego se reinicia sola. |
+| Vigilante de autos | Elimina por: fuera del mapa, en el agua > 2,5 s, sin avanzar (25 s oculto / 60 s visible, doble en cola, el semáforo en rojo no cuenta) y vueltas en círculos (60 s sin alejarse de un punto). Si se ve a < 90 m se desvanece en ~1,2 s. |
+| Vigilante de peatones | Elimina por: agua, fuera del mapa y sin avanzar caminando o huyendo (20 s oculto / 45 s visible). |
+| Huérfanos | Cada 20 s destruye autos y peatones propios (marcados `rp:citizen`) que ya no están en las tablas. |
+| Red principal | Solo se usan los tramos desde los que se puede volver a la red grande; el resto (callejones, sentidos únicos que mueren) se evita. |
+| Degradación | Con tiempo de fotograma medio > 40 ms (< 25 FPS) la población baja a 0,6×; vuelve a 1× con < 30 ms. |
+| Estadísticas | Cuenta cada causa de eliminación y los nodos cercanos a autos eliminados por problemas (`/traficostats`), para detectar nodos malos y editarlos. |
