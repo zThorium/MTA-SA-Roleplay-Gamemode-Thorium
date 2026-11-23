@@ -17,7 +17,7 @@ BACKPACKS = {
     bp_small = {
         capacity = 5, weight = 0.4, model = 3026,
         look = {
-            size = { 0.70, 0.90, 0.80 },
+            size = { 0.60, 0.90, 0.80 },
             shader = { body = { 0.17, 0.70, 0.64 }, accent = { 1.00, 0.82, 0.25 }, dark = { 0.05, 0.25, 0.23 },
                        pattern = { 1.0, 0.0, 0.0, 0.0 }, tile = 48, bandV = 0.80, bandW = 0.10, sheen = 0.9, reflect = 0.0, seed = 0 },
         },
@@ -25,7 +25,7 @@ BACKPACKS = {
     bp_school = {
         capacity = 10, weight = 0.6, model = 3026,
         look = {
-            size = { 0.90, 1.00, 0.95 },
+            size = { 0.80, 1.00, 0.95 },
             shader = { body = { 0.17, 0.27, 0.62 }, accent = { 0.89, 0.27, 0.30 }, dark = { 0.06, 0.09, 0.25 },
                        pattern = { 0.4, 0.9, 0.0, 0.0 }, tile = 40, bandV = 0.25, bandW = 0.12, sheen = 0.6, reflect = 0.6, seed = 0 },
         },
@@ -33,7 +33,7 @@ BACKPACKS = {
     bp_hiking = {
         capacity = 20, weight = 1.2, model = 3026,
         look = {
-            size = { 1.25, 1.25, 1.10 },
+            size = { 1.00, 1.25, 1.10 },
             shader = { body = { 0.91, 0.47, 0.18 }, accent = { 0.17, 0.36, 0.22 }, dark = { 0.35, 0.16, 0.06 },
                        pattern = { 0.0, 1.0, 0.0, 0.3 }, tile = 36, bandV = 0.22, bandW = 0.22, sheen = 0.3, reflect = 0.0, seed = 0 },
         },
@@ -41,7 +41,7 @@ BACKPACKS = {
     bp_tactical = {
         capacity = 30, weight = 1.8, model = 3026,
         look = {
-            size = { 1.10, 1.25, 1.20 },
+            size = { 0.95, 1.25, 1.20 },
             shader = { body = { 0.29, 0.34, 0.21 }, accent = { 0.58, 0.52, 0.36 }, dark = { 0.10, 0.13, 0.08 },
                        pattern = { 0.5, 0.0, 1.0, 0.0 }, tile = 44, bandV = 0.0, bandW = 0.0, sheen = 0.0, reflect = 0.0, seed = 1.7 },
         },
@@ -49,7 +49,7 @@ BACKPACKS = {
     bp_expedition = {
         capacity = 45, weight = 2.5, model = 3026,
         look = {
-            size = { 1.55, 1.30, 1.35 },
+            size = { 1.15, 1.30, 1.30 },
             shader = { body = { 0.19, 0.21, 0.26 }, accent = { 0.96, 0.72, 0.10 }, dark = { 0.06, 0.07, 0.09 },
                        pattern = { 0.0, 0.2, 0.0, 1.0 }, tile = 30, bandV = 0.50, bandW = 0.05, sheen = 0.2, reflect = 1.0, seed = 0 },
         },
@@ -62,4 +62,4 @@ BACKPACK_MODEL_HEIGHT = 0.474   -- alto del modelo sin escalar (X)
 -- la base se calcula como z - 0.474 * alto, asi todas las mochilas llegan a la misma altura de hombros.
 -- y es donde queda la cara que toca la espalda (la caja crece hacia atras desde ahi).
 -- Ajustable en vivo con /mochilaoffset (admin).
-BACKPACK_OFFSET = { 0, -0.14, 0.34, 0, -90, 0 }
+BACKPACK_OFFSET = { 0, -0.14, 0.25, 0, -90, 0 }
