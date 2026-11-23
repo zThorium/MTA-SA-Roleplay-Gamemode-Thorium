@@ -1616,9 +1616,26 @@ end
 
 -- Seguimiento de trayectoria: devuelve el error de rumbo (grados, + = girar a la izquierda)
 -- respecto de la ruta unos metros por delante, corregido por la distancia lateral (tipo Stanley).
+-- Rastro de los ultimos puntos que el auto dejo atras (hasta 6, en orden). Los puntos se descartan cuando
+-- quedan a menos de la distancia de mirada DELANTE del auto (hasta ~10 m a 40 km/h), asi que "el ultimo
+-- punto pasado" puede estar bastante por delante de el. Medir la desviacion o el rumbo contra una recta que
+-- empieza en ese punto daba 8-10 m de desviacion falsa en pleno carril (frenaba y reenganchaba sin motivo).
+-- Con el rastro, la poligonal sigue pasando por el auto.
+local function pushPassed(s, p)
+    s.lastPassed = p
+    local t = s.trail
+    if not t then t = {} s.trail = t end
+    t[#t + 1] = p
+    if #t > 6 then table.remove(t, 1) end
+end
+
 function pathTrack(s, wp, x, y, speed, rz)
     local pts = {}
-    if s.lastPassed then pts[1] = s.lastPassed end
+    if s.trail and s.lastPassed then
+        for _, tp in ipairs(s.trail) do pts[#pts + 1] = tp end
+    elseif s.lastPassed then
+        pts[1] = s.lastPassed
+    end
     for i = 1, math.min(#wp, 12) do pts[#pts + 1] = wp[i] end
     if #pts < 2 then return nil end
     -- tramo mas cercano
@@ -1822,12 +1839,12 @@ end
 ----------------------------------------------------------------
 local TEL = { on = true, dumps = 0, MAX = 80, N = 25 }
 
-local function telRecord(s, now, speed, diff, target, inCurve, wpTurn)
+local function telRecord(s, now, speed, diff, target, inCurve, wpTurn, rz)
     local t = s.tel
     if not t then t = { n = 0, i = 0 } s.tel = t end
     t.i = t.i % TEL.N + 1
     t.n = math.min(t.n + 1, TEL.N)
-    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0 }
+    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0, rz or 0 }
 end
 
 local function telDump(vehicle, s, why, now, force)
@@ -1842,7 +1859,7 @@ local function telDump(vehicle, s, why, now, force)
         local idx = (t.i - (k - 1) - 1) % TEL.N + 1
         local e = t[idx]
         if e then
-            out[#out + 1] = ("-%d %.0f %.2f %.1f %.0f %.0f %s %d %.0f"):format(now - e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9])
+            out[#out + 1] = ("-%d %.0f %.2f %.1f %.0f %.0f %s %d %.0f r%.0f"):format(now - e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9], e[10])
         end
     end
     local x, y, _, rz = 0, 0, 0, 0
@@ -1855,7 +1872,7 @@ local function telDump(vehicle, s, why, now, force)
     local pts = {}
     for k = 1, math.min(#wp, 4) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
     local lp = s.lastPassed
-    outputDebugString(("[rp_citizens][TEL] %s modelo %d%s nodos %s->%s pos (%.0f,%.0f) rumbo %.0f lenF %.2f man %s lp %s wp %s | muestras(ms km/h volante dev dif obj modo curva giro): %s")
+    outputDebugString(("[rp_citizens][TEL] %s modelo %d%s nodos %s->%s pos (%.0f,%.0f) rumbo %.0f lenF %.2f man %s lp %s wp %s | muestras(ms km/h volante dev dif obj modo curva giro rumbo): %s")
         :format(why, isElement(vehicle) and getElementModel(vehicle) or 0, s.bike and " (moto)" or "", tostring(s.prev), tostring(s.node), x, y, rz, s.lenF or 1,
             s.man and s.man.kind or "-", lp and ("(%.0f,%.0f,g%.0f)"):format(lp[1], lp[2], lp[4]) or "nil", table.concat(pts, " "), table.concat(out, " | ")), 3)
 end
@@ -2006,20 +2023,29 @@ local function stageRoute(vehicle, s, f, now)
     -- Distancia al camino: minimo sobre la poligonal (ultimo punto pasado, si esta cerca) + proximos puntos
     local lp = s.lastPassed
     if lp and getDistanceBetweenPoints2D(x, y, lp[1], lp[2]) > 60 then lp = nil end
+    if not lp then s.trail = nil end
+    -- desviacion = distancia del auto a la poligonal (rastro de puntos pasados + proximos 4 puntos);
+    -- ver pushPassed: el rastro evita medir contra un ultimo punto que esta por delante del auto
     local dev = math.huge
-    local px0, py0 = nil, nil
-    if lp then px0, py0 = lp[1], lp[2] end
-    for k = 1, math.min(#wp, 4) do
-        local qx, qy = wp[k][1], wp[k][2]
-        if px0 then
-            local sx, sy = qx - px0, qy - py0
+    local chain = {}
+    if lp and s.trail then
+        for _, tp in ipairs(s.trail) do chain[#chain + 1] = tp end
+    elseif lp then
+        chain[1] = lp
+    end
+    for k = 1, math.min(#wp, 4) do chain[#chain + 1] = wp[k] end
+    local cpx, cpy = nil, nil
+    for k = 1, #chain do
+        local qx, qy = chain[k][1], chain[k][2]
+        if cpx then
+            local sx, sy = qx - cpx, qy - cpy
             local len2 = sx * sx + sy * sy
-            local t = len2 > 0.01 and math.max(0, math.min(1, ((x - px0) * sx + (y - py0) * sy) / len2)) or 0
-            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, px0 + sx * t, py0 + sy * t))
+            local t = len2 > 0.01 and math.max(0, math.min(1, ((x - cpx) * sx + (y - cpy) * sy) / len2)) or 0
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, cpx + sx * t, cpy + sy * t))
         else
             dev = math.min(dev, getDistanceBetweenPoints2D(x, y, qx, qy))
         end
-        px0, py0 = qx, qy
+        cpx, cpy = qx, qy
     end
     if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
     if dev > 25 and not isElementOnScreen(vehicle) then
@@ -2095,7 +2121,7 @@ local function stageRoute(vehicle, s, f, now)
         or ((wp[1][1] - x) * fwx + (wp[1][2] - y) * fwy < 0 and (wp[2][1] - x) * fwx + (wp[2][2] - y) * fwy > -2
             and getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) < 12)) do
         local passed = table.remove(wp, 1)
-        s.lastPassed = passed
+        pushPassed(s, passed)
         -- libera el cruce cuando ya no quedan puntos de el
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
             local hs = junctionLock[passed[5]]
@@ -2115,7 +2141,7 @@ local function stageRoute(vehicle, s, f, now)
         local behindHead = ahead < 0 and math.abs(angleDiff(heading(a[1] - x, a[2] - y), rz)) > 100
         if not ((passedAlong and ahead < 2) or behindHead) then break end
         local passed = table.remove(wp, 1)
-        s.lastPassed = passed
+        pushPassed(s, passed)
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
             local hs = junctionLock[passed[5]]
             if hs then hs[vehicle] = nil end
@@ -2519,7 +2545,7 @@ local function stageDecide(vehicle, s, f, now)
     end
 
     -- Telemetria: guarda la muestra y, si se salio de la linea poco despues de una curva, vuelca el historial
-    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4])
+    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4], rz)
     if inCurve then s.telCurveAt = now end
     if s.devNow > 5 and s.telCurveAt and now - s.telCurveAt < 3000 then
         telDump(vehicle, s, "fuera_de_linea_en_curva", now)
