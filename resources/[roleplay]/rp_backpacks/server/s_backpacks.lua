@@ -8,6 +8,7 @@
     Comandos:
         /mochila          abre o cierra el contenido de la mochila (tecla O)
         /tirarmochila     tira la mochila al suelo con todo lo que lleva dentro
+        /mochilaoffset    (admin) x y z rx ry rz: ajusta en vivo la posicion de la mochila en la espalda
 ]]
 
 local state = {}      -- [player] = { cid, id, items = { [itemId] = amount }, loading }
@@ -66,6 +67,25 @@ local function makeVisual(player, cfg)
     exports.bone_attach:attachElementToBone(obj, player, BACKPACK_BONE, o[1], o[2], o[3], o[4], o[5], o[6])
     visuals[player] = obj
 end
+
+-- Admin: /mochilaoffset x y z rx ry rz  ajusta en vivo como se ve la mochila (vale hasta reiniciar el recurso;
+-- luego copia los valores a BACKPACK_OFFSET en shared/s_config.lua).
+addCommandHandler("mochilaoffset", function(player, _, ...)
+    if (exports.rp_login:getPlayerAdminLevel(player) or 0) < 1 then return end
+    local v = {}
+    for i, a in ipairs({ ... }) do v[i] = tonumber(a) end
+    if #v ~= 6 or #{ ... } ~= 6 then
+        return notify(player, "Uso: /mochilaoffset x y z rx ry rz (actual: " .. table.concat(BACKPACK_OFFSET, " ") .. ")", "info")
+    end
+    BACKPACK_OFFSET = v
+    for other, obj in pairs(visuals) do
+        if isElement(other) and isElement(obj) then
+            exports.bone_attach:detachElementFromBone(obj)
+            exports.bone_attach:attachElementToBone(obj, other, BACKPACK_BONE, v[1], v[2], v[3], v[4], v[5], v[6])
+        end
+    end
+    notify(player, "Offset de mochila actualizado.", "success")
+end)
 
 -- El objeto no cambia de dimension/interior solo
 setTimer(function()
