@@ -13,8 +13,11 @@ local attached = {}   -- [ped] = objeto cabeza
 
 -- Correccion global de altura (eje del cuello). Los ajustes de Countryside se
 -- hicieron con su bone_attach compilado; con las fuentes .lua la cabeza quedaba
--- unos 0.3 por encima del cuello. Se puede afinar en juego con /ajustecabeza.
-local HEAD_Z_FIX = -0.32
+-- por encima del cuello. Con -0.32 se pasaba al reves: la cabeza se hundia entre
+-- los hombros y el personaje parecia no tener cuello (sobre todo en el creador
+-- de personajes). -0.20 deja un cuello visible. Se puede afinar en juego con
+-- /ajustecabeza y fijar aqui el valor resultante.
+local HEAD_Z_FIX = -0.20
 
 ----------------------------------------------------------------
 -- Sangre del cuello: GTA dibuja un chorro de sangre en los peds sin cabeza.

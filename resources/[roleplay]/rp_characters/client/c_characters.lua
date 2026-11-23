@@ -55,7 +55,8 @@ local function setPreviewCamera()
     if cameraMode == "face" then
         setCameraMatrix(s.x, s.y + 1.25, s.z + 0.72, s.x + 0.32, s.y, s.z + 0.62, 0, 45)
     else
-        setCameraMatrix(s.x, s.y + 3.4, s.z + 0.45, s.x + 1.0, s.y, s.z + 0.15, 0, 60)
+        -- FOV 50 desde mas lejos: con 60 la perspectiva ensanchaba hombros y torso
+        setCameraMatrix(s.x, s.y + 4.2, s.z + 0.45, s.x + 1.0, s.y, s.z + 0.15, 0, 50)
     end
 end
 
