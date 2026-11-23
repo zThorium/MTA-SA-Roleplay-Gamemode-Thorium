@@ -261,6 +261,8 @@ local needShown = { hunger = 100, thirst = 100, energy = 100, stamina = 100 }   
 local STAMINA_DRAIN, STAMINA_REGEN, STAMINA_RESUME = 8, 5, 20   -- puntos/segundo, puntos/segundo, %
 local staminaTick = getTickCount()
 local staminaLocked = false
+local STAMINA_JUMP_COST = 8   -- puntos por salto
+local wasJumping = false
 
 local function updateStamina()
     local now = getTickCount()
@@ -268,9 +270,15 @@ local function updateStamina()
     staminaTick = now
     local st = needValues.stamina
     local meth = getElementData(localPlayer, "rp:meth") == true
-    if not meth and not isPedInVehicle(localPlayer) and getPedMoveState(localPlayer) == "sprint" then
+    local state = getPedMoveState(localPlayer)
+    local jumping = state == "jump"
+    if jumping and not wasJumping and not meth then
+        st = st - STAMINA_JUMP_COST   -- saltar gasta estamina (una vez por salto)
+    end
+    wasJumping = jumping
+    if not meth and not isPedInVehicle(localPlayer) and state == "sprint" then
         st = st - STAMINA_DRAIN * dt
-    else
+    elseif not jumping then
         st = st + STAMINA_REGEN * dt
     end
     st = math.max(0, math.min(100, st))
