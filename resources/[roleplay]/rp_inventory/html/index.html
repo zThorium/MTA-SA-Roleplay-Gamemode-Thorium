@@ -6,14 +6,14 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main class="window">
+    <main class="window" id="window">
         <header>
-            <div>
+            <div class="title">
                 <h1>Inventario</h1>
-                <p class="hint">Pulsa <kbd>I</kbd> o <kbd>Esc</kbd> para cerrar</p>
+                <p class="hint"><kbd>I</kbd> / <kbd>Esc</kbd> cerrar · arrastra un objeto <b>fuera</b> de la ventana para dejarlo en el suelo</p>
             </div>
             <div class="weight">
-                <span id="weight-label">0 / 15 kg</span>
+                <div class="weight-top"><span>Peso</span><span id="weight-label">0 / 15 kg</span></div>
                 <div class="bar"><div id="weight-bar"></div></div>
             </div>
             <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
@@ -21,13 +21,18 @@
 
         <div class="content">
             <section class="grid" id="grid"></section>
-
-            <aside class="details" id="details">
-                <p class="empty-details">Selecciona un objeto para ver sus detalles.</p>
-            </aside>
+            <aside class="details" id="details"></aside>
         </div>
     </main>
 
+    <!-- Fuera de la ventana: sigue visible mientras arrastras (la ventana se vuelve translucida) -->
+    <aside class="nearby" id="nearby">
+        <h3>Cerca de ti</h3>
+        <div id="nearby-list"></div>
+        <p class="nearby-hint">Arrastra un objeto sobre una persona o pulsa <b>Dar</b>.</p>
+    </aside>
+
+    <div class="ghost" id="ghost"></div>
     <script src="app.js"></script>
 </body>
 </html>
