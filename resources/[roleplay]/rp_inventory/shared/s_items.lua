@@ -173,6 +173,22 @@ ITEMS = {
         description = "Licencia de conducir clase B. Usala para verla; /mostrarlicencia [id] para ensenarla.",
         use = { event = "driver_license" },
     },
+    -- Drogas (rp_dealers): solo se compran a los traficantes; de momento sin efecto al usarlas
+    weed = {
+        name = "Marihuana", icon = "🌿", weight = 0.05, stack = 30, consumable = true,
+        description = "Bolsita de marihuana. Ilegal.",
+        use = { message = "Te fumas un porro." },
+    },
+    cocaine = {
+        name = "Cocaina", icon = "❄️", weight = 0.05, stack = 30, consumable = true,
+        description = "Bolsita de cocaina. Ilegal.",
+        use = { message = "Esnifas una linea de cocaina." },
+    },
+    lsd = {
+        name = "LSD", icon = "🌀", weight = 0.01, stack = 30, consumable = true,
+        description = "Carton de LSD. Ilegal.",
+        use = { message = "Te pones el carton de LSD bajo la lengua." },
+    },
 }
 
 --[[

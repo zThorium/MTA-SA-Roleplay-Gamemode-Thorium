@@ -51,6 +51,7 @@ de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` 
 Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados dinámicos; API para la agencia en `docs/TRABAJOS.md`).
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
+Drogas: `rp_dealers` (traficantes skin 28/29/30; comprar con un policia mirando da estrella).
 Trámites: `rp_agency` (agencia de empleo: turnos, DNI `id_card` y alta en trabajos).
 Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: lista de comandos de admin; añade ahí cada comando de admin nuevo).
 
