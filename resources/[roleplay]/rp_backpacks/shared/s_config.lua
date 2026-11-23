@@ -62,4 +62,4 @@ BACKPACK_MODEL_HEIGHT = 0.474   -- alto del modelo sin escalar (X)
 -- la base se calcula como z - 0.474 * alto, asi todas las mochilas llegan a la misma altura de hombros.
 -- y es donde queda la cara que toca la espalda (la caja crece hacia atras desde ahi).
 -- Ajustable en vivo con /mochilaoffset (admin).
-BACKPACK_OFFSET = { 0, -0.14, 0.25, 0, -90, 0 }
+BACKPACK_OFFSET = { 0, -0.1, 0.32, 0, -90, 0 }   -- ajustado en juego con /mochilaoffset
