@@ -132,6 +132,13 @@ local function pickPolice(x, y, z)
     return p[1], p[2]
 end
 
+-- Personalidad del conductor: prudente, normal o agresivo (velocidad y distancia)
+local function newDriverStyle()
+    local r = math.random()
+    local base = r < 0.2 and { speed = 0.8, gap = 1.4 } or r > 0.85 and { speed = 1.2, gap = 0.75 } or { speed = 1.0, gap = 1.0 }
+    return { speed = base.speed * (0.95 + math.random() * 0.1), gap = base.gap }
+end
+
 local function pickDriverSkin(x, y, z)
     local pop = population(x, y, z)
     return pick(pop.peds)
@@ -733,7 +740,15 @@ end
 -- Tramo de carril para volver a la ruta: debe ir en el MISMO sentido que el auto
 -- y su nodo destino debe estar POR DELANTE (nunca un punto que obligue a volver
 -- atras). Puntua por la distancia lateral del auto al tramo.
+local nearestLaneAligned
 local function nearestLane(x, y, fx, fy)
+    -- primero un carril casi paralelo; si no hay, uno en un angulo mayor (hasta ~75 grados)
+    local n, t = nearestLaneAligned(x, y, fx, fy, 0.6)
+    if n then return n, t end
+    return nearestLaneAligned(x, y, fx, fy, 0.25)
+end
+
+function nearestLaneAligned(x, y, fx, fy, minAlign)
     local best, bestTarget, bestScore = nil, nil, math.huge
     local cx, cy = math.floor(x / 100), math.floor(y / 100)
     for ox = -1, 1 do
@@ -749,7 +764,7 @@ local function nearestLane(x, y, fx, fy)
                                 local dx, dy, len = dir(nx, ny, mx, my)
                                 local aligned = dx * fx + dy * fy
                                 local ahead = (mx - x) * fx + (my - y) * fy
-                                if aligned > 0.6 and ahead > 4 then
+                                if aligned > minAlign and ahead > 4 then
                                     -- distancia del auto a la recta del tramo (lateral) y si queda dentro del tramo
                                     local t = ((x - nx) * dx + (y - ny) * dy)
                                     local px, py = nx + dx * math.max(0, math.min(len, t)), ny + dy * math.max(0, math.min(len, t))
@@ -790,6 +805,31 @@ local function aheadSpawnNode(px, py)
     end
 end
 
+-- 1 para un auto normal (~4.6 m); 0.6-0.9 para vehiculos largos (menor radio de giro disponible)
+function vehicleLenFactor(vehicle)
+    local _, y1, _, _, y2 = getElementBoundingBox(vehicle)
+    local len = y1 and (y2 - y1) or 4.6
+    if len < 4.6 then return 1 end
+    return math.max(0.6, 4.6 / len)
+end
+
+-- Hay algun vehiculo (de cualquier tipo) a menos de "radius" metros de (x, y)?
+function spotOccupied(x, y, radius)
+    local r2 = radius * radius
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
+        local vx, vy = getElementPosition(v)
+        if (vx - x) ^ 2 + (vy - y) ^ 2 < r2 then return true end
+    end
+    -- los autos lejanos (dummies) pueden no estar cargados: tambien la poblacion propia
+    for v in pairs(cars) do
+        if isElement(v) then
+            local vx, vy = getElementPosition(v)
+            if (vx - x) ^ 2 + (vy - y) ^ 2 < r2 then return true end
+        end
+    end
+    return false
+end
+
 local function spawnCar(px, py)
     local node, x, y, z = aheadSpawnNode(px, py)
     if not node then
@@ -802,6 +842,8 @@ local function spawnCar(px, py)
     end
     if not target then return end
     local sx, sy, sz, dx, dy = laneStart(node, target)
+    -- no aparece encima de otro auto (poblacion, jugador, o cualquier vehiculo cargado)
+    if spotOccupied(sx, sy, 9) then return end
 
     local policeModel, policeSkin = pickPolice(sx, sy, sz)
     local vehicle = createVehicle(policeModel or pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
@@ -818,7 +860,7 @@ local function spawnCar(px, py)
     end
 
     cars[vehicle] = {
-        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil,
+        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil, style = newDriverStyle(), lenF = vehicleLenFactor(vehicle),
         state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
     }
     carCount = carCount + 1
@@ -833,7 +875,28 @@ end
 ----------------------------------------------------------------
 local REAL_DIST, DUMMY_DIST = 55, 80
 
+-- Modo fantasma: sin colision con otros autos unos segundos (para deshacer solapes y atascos).
+-- Se vuelve solido cuando ya no hay ningun auto cerca (ver carTick).
+function ghostCar(vehicle, s, ms)
+    s.ghost, s.ghostUntil = true, getTickCount() + ms
+    setElementCollisionsEnabled(vehicle, false)
+end
+
+-- Hay otro auto de la poblacion (o el del jugador si withPlayer) a menos de "radius" m?
+function nearOtherCar(vehicle, radius, withPlayer)
+    local x, y = getElementPosition(vehicle)
+    local r2 = radius * radius
+    for _, o in ipairs(carSnap) do
+        if o[1] ~= vehicle and (o[2] - x) ^ 2 + (o[3] - y) ^ 2 < r2 then return true end
+    end
+    if withPlayer and playerSnap[2] and playerSnap[1] ~= vehicle and (playerSnap[2] - x) ^ 2 + (playerSnap[3] - y) ^ 2 < r2 then
+        return true
+    end
+    return false
+end
+
 function makeDummy(vehicle, s, speedMs)
+    s.ghost = nil
     s.lod = "dummy"
     s.dSpeed = speedMs or 0
     s.dTarget = s.dSpeed
@@ -888,7 +951,16 @@ local function reattach(vehicle, s, teleport)
         if isElementOnScreen(vehicle) then return end
         return removeCar(vehicle)
     end
-    s.prev, s.node, s.wp, s.route = n, target, {}, nil
+    s.prev, s.node, s.wp, s.route, s.lastPassed = n, target, {}, nil, nil
+    if not teleport then
+        -- primer punto: la proyeccion del auto sobre su carril, unos metros por delante
+        -- (si no, el primer punto podria quedar detras y el auto daria la vuelta)
+        local sx, sy, sz, dx, dy = laneStart(n, target)
+        local nx2, ny2 = nodePos(VEH_NODES, target)
+        local len = math.max(1, getDistanceBetweenPoints2D(sx, sy, nx2, ny2))
+        local t = math.max(0, math.min(len - 8, (x - sx) * dx + (y - sy) * dy + 8))
+        s.wp[1] = { sx + dx * t, sy + dy * t, sz, 0, nil }
+    end
     if teleport then
         local sx, sy, sz, dx, dy = laneStart(n, target)
         setElementPosition(vehicle, sx, sy, sz + 1.2)
@@ -984,6 +1056,100 @@ local function speedOf(el)
 end
 
 ----------------------------------------------------------------
+-- Seguimiento de trayectoria: devuelve el error de rumbo (grados, + = girar a la izquierda)
+-- respecto de la ruta unos metros por delante, corregido por la distancia lateral (tipo Stanley).
+function pathTrack(s, wp, x, y, speed, rz)
+    local pts = {}
+    if s.lastPassed then pts[1] = s.lastPassed end
+    for i = 1, math.min(#wp, 12) do pts[#pts + 1] = wp[i] end
+    if #pts < 2 then return nil end
+    -- tramo mas cercano
+    local bi, bt, bd = 1, 0, math.huge
+    for i = 1, #pts - 1 do
+        local ax, ay = pts[i][1], pts[i][2]
+        local sx, sy = pts[i + 1][1] - ax, pts[i + 1][2] - ay
+        local l2 = sx * sx + sy * sy
+        local t = l2 > 0.01 and math.max(0, math.min(1, ((x - ax) * sx + (y - ay) * sy) / l2)) or 0
+        local d = (x - (ax + sx * t)) ^ 2 + (y - (ay + sy * t)) ^ 2
+        if d < bd then bi, bt, bd = i, t, d end
+    end
+    -- error lateral con signo respecto del tramo mas cercano (+ = el auto esta a la izquierda)
+    local ax, ay = pts[bi][1], pts[bi][2]
+    local ux, uy = dir(ax, ay, pts[bi + 1][1], pts[bi + 1][2])
+    local e = (x - ax) * -uy + (y - ay) * ux
+    -- avanza por la ruta una distancia de mirada para tomar el rumbo de ese tramo
+    local remain = 3 + speed * 0.1
+    local i, t = bi, bt
+    while i < #pts - 1 do
+        local seg = getDistanceBetweenPoints2D(pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2])
+        local left = seg * (1 - t)
+        if remain <= left then break end
+        remain = remain - left
+        i, t = i + 1, 0
+    end
+    local vx, vy = dir(pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2])
+    local pathHeading = heading(vx, vy)
+    local desired = pathHeading - math.deg(math.atan(1.5 * e / (speed / 3.6 + 2)))
+    return angleDiff(desired, rz)
+end
+
+-- Velocidad maxima (km/h) para entrar a una curva de "turn" grados que esta a "dist" m:
+-- la velocidad dentro de la curva (cuanto mas cerrada, menos) mas lo que se puede
+-- frenar en esa distancia (~4 m/s2), para que empiece a frenar con tiempo suficiente.
+-- Asi nunca llega a un giro cerrado demasiado rapido y se sale recto.
+function curveCap(turn, dist, lenF)
+    -- lenF < 1 en vehiculos largos (camiones, buses): giran mas abierto, entran mas despacio
+    local inside = math.max(turn >= 70 and 8 or 10, CFG.CAR_SPEED * (1 - turn / 115)) * (lenF or 1)
+    return math.sqrt(inside * inside + 100 * math.max(0, dist - 2))
+end
+
+-- Vehiculos con sirena (se refresca cada 500 ms) y posiciones de los autos
+-- (una sola lectura por tick en vez de N x N para los dummies)
+----------------------------------------------------------------
+local sirenList = {}
+carSnap, playerSnap = {}, { false }
+
+function refreshSnapshots(now)
+    carSnap = {}
+    for v in pairs(cars) do
+        if isElement(v) then
+            local x, y = getElementPosition(v)
+            carSnap[#carSnap + 1] = { v, x, y }
+        end
+    end
+    local pe = getPedOccupiedVehicle(localPlayer) or localPlayer
+    local x, y = getElementPosition(pe)
+    playerSnap = { pe, x, y }
+    if not getVehicleSirensOn or now - (sirenList.at or 0) < 500 then return end
+    local list = { at = now }
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
+        if not cars[v] and getVehicleSirensOn(v) and speedOf(v) > 3 then
+            local mm = getElementMatrix(v)
+            list[#list + 1] = { v, mm[4][1], mm[4][2], mm[2][1], mm[2][2] }
+        end
+    end
+    sirenList = list
+end
+
+-- Distancia a una sirena que viene por detras en nuestro mismo sentido (nil si no hay)
+function sirenBehind(vehicle, x, y, m)
+    local fx, fy = m[2][1], m[2][2]
+    local best
+    for i = 1, #sirenList do
+        local o = sirenList[i]
+        if o[1] ~= vehicle then
+            local dx, dy = o[2] - x, o[3] - y
+            local along = dx * fx + dy * fy
+            local lateral = math.abs(dx * fy - dy * fx)
+            if along < -3 and along > -70 and lateral < 8 and (o[4] * fx + o[5] * fy) > 0.3 then
+                if not best or -along < best then best = -along end
+            end
+        end
+    end
+    return best
+end
+
+----------------------------------------------------------------
 -- Bocina: control del NPC + sonido propio (el del NPC no siempre se oye)
 ----------------------------------------------------------------
 local function honk(vehicle, s, now)
@@ -1030,7 +1196,7 @@ local function tryDetour(vehicle, s, m)
         if flat and clearPath(x, y, z, p1x, p1y, z, vehicle) and clearPath(p1x, p1y, z, p2x, p2y, z, vehicle)
             and clearPath(p2x, p2y, z, p3x, p3y, z, vehicle) and clearPath(p3x, p3y, z, rx, ry, rz, vehicle) then
             -- reemplaza el tramo bloqueado por el desvio (giro 25 = va despacio)
-            for _ = 1, rejoin - 1 do table.remove(wp, 1) end
+            for _ = 1, rejoin - 1 do table.remove(wp, 1) end s.lastPassed = nil
             table.insert(wp, 1, { p3x, p3y, z, 25 })
             table.insert(wp, 1, { p2x, p2y, z, 25 })
             table.insert(wp, 1, { p1x, p1y, z, 25 })
@@ -1057,6 +1223,13 @@ local function updateCar(vehicle, s, now)
 
     -- Volcado: el conductor huye y el auto queda abandonado
     if m[3][3] < 0.3 then return abandonCar(vehicle, s) end
+    -- Inclinado sobre dos ruedas (montado sobre otro auto) y casi parado: tambien se abandona
+    if m[3][3] < 0.6 and speed < 6 then
+        s.tiltSince = s.tiltSince or now
+        if now - s.tiltSince > 3000 then return abandonCar(vehicle, s) end
+    else
+        s.tiltSince = nil
+    end
 
     -- Marcha atras corta (como mucho ~1 s / 3-4 m) solo cuando esta atascado de verdad.
     -- No se reengancha al terminar: sigue con su ruta (solo se recalcula si se alejo de ella).
@@ -1082,21 +1255,94 @@ local function updateCar(vehicle, s, now)
     -- de su carril. Si queda sin camino o muy lejos de el, desaparece cuando no
     -- se ve (el spawn crea otro en una ruta valida).
     if #wp == 0 then
-        if not isElementOnScreen(vehicle) then removeCar(vehicle) end
+        -- sin ruta (callejon sin salida en los datos): se detiene, intenta reengancharse y si no, se retira
+        if not s.noRouteSince and (offLogCount or 0) < 60 then
+            offLogCount = (offLogCount or 0) + 1
+            local lk = {}
+            for _, n in ipairs(VEH_LINKS[s.node] or {}) do lk[#lk + 1] = ("%d(L%d)"):format(n, (getLaneInfo(s.node, n))) end
+            outputDebugString(("[rp_citizens] sin ruta: nodos %s->%s enlaces del nodo: %s"):format(tostring(s.prev), tostring(s.node), table.concat(lk, " ")), 1)
+        end
+        s.noRouteSince = s.noRouteSince or now
+        steerTo(driver, 0)
+        setPedal(driver, false, speed > 1)
+        if now - s.noRouteSince > 800 and now - (s.lastReattach or 0) > 2000 then
+            s.lastReattach = now
+            reattach(vehicle, s, false)
+            if not cars[vehicle] then return end
+        end
+        if now - s.noRouteSince > 6000 then
+            if isElementOnScreen(vehicle) then return abandonCar(vehicle, s) end
+            return removeCar(vehicle)
+        end
         return
     end
-    if getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) > 25 and not isElementOnScreen(vehicle) then
+    s.noRouteSince = nil
+    -- Fuera de su carril (esquive, choque, derrape): tras 1.5 s se reengancha al carril mas
+    -- cercano por delante; si sigue muy lejos de la ruta, se elimina aunque se vea (reaparece otro)
+    -- desviacion = distancia al tramo entre el ultimo punto pasado y el siguiente (no solo al siguiente:
+    -- en un cruce recto hay hasta ~24 m entre puntos y eso no es salirse de la ruta)
+    local dev = getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2])
+    local lp = s.lastPassed
+    if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
+    if lp then
+        local sx, sy = wp[1][1] - lp[1], wp[1][2] - lp[2]
+        local len2 = sx * sx + sy * sy
+        if len2 > 0.01 then
+            local t = math.max(0, math.min(1, ((x - lp[1]) * sx + (y - lp[2]) * sy) / len2))
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, lp[1] + sx * t, lp[2] + sy * t))
+        end
+    end
+    if dev > 25 and not isElementOnScreen(vehicle) then
         return removeCar(vehicle)
+    end
+    if dev > 18 and not (s.detourUntil and now < s.detourUntil) then
+        if not s.offSince and (offLogCount or 0) < 60 then
+            -- diagnostico: se sale de su ruta (ver clientscript.log, lineas "[rp_citizens] fuera de ruta")
+            offLogCount = (offLogCount or 0) + 1
+            local w1 = wp[1]
+            local dgn = angleDiff(heading(w1[1] - x, w1[2] - y), rz)
+            local pts = {}
+            for k = 1, math.min(#wp, 6) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
+            outputDebugString(("[rp_citizens] fuera de ruta: modelo %d nodos %s->%s pos (%.1f,%.1f) rumbo %.0f vel %.0f dev %.1f dif %.0f estado %s lenF %.2f wp: %s")
+                :format(getElementModel(vehicle), tostring(s.prev), tostring(s.node), x, y, rz, speed, dev, dgn, tostring(s.state), s.lenF or 1, table.concat(pts, " ")), 1)
+        end
+        s.offSince = s.offSince or now
+        if now - s.offSince > 1500 and now - (s.lastReattach or 0) > 3000 then
+            s.lastReattach = now
+            s.slowUntil = now + 5000   -- al reengancharse va despacio (nunca a tope por la acera)
+            reattach(vehicle, s, false)
+            if not cars[vehicle] then return end
+            wp = s.wp
+            if #wp == 0 then return end
+        end
+        if dev > 40 and now - s.offSince > 5000 then return removeCar(vehicle) end
+    else
+        s.offSince = nil
     end
 
     -- Pure pursuit: descarta los puntos ya alcanzados y apunta al primero por delante
-    local inCurve = wp[1][4] > 20
-    local lookahead = (inCurve and 3.5 or 6) + speed * (inCurve and 0.06 or 0.1)
+    -- Si hay un giro cerrado en los proximos 14 m de ruta, mira solo unos metros adelante:
+    -- con la mirada larga de las rectas el auto apunta "por la tangente" de la curva y se sale recto
+    local curveSoon, cd, clx, cly = false, 0, x, y
+    for i = 1, math.min(#wp, 8) do
+        cd = cd + getDistanceBetweenPoints2D(clx, cly, wp[i][1], wp[i][2])
+        clx, cly = wp[i][1], wp[i][2]
+        if cd > 14 then break end
+        if wp[i][4] > 40 then curveSoon = true break end
+    end
+    -- (tambien unos metros despues de salir de la curva: el seguimiento de trayectoria lo realinea con el
+    -- carril; si no, la velocidad de giro que traia lo saca hacia la acera)
+    local lpd = s.lastPassed
+    local justLeftCurve = lpd and lpd[4] > 20 and wp[1][4] <= 20 and getDistanceBetweenPoints2D(x, y, lpd[1], lpd[2]) < 12
+    local inCurve = curveSoon or wp[1][4] > 20 or justLeftCurve
+    local lookahead = curveSoon and (2.5 + speed * 0.05) or (inCurve and 3.5 or 6) + speed * (inCurve and 0.06 or 0.1)
     -- tambien descarta los que quedaron DETRAS del auto (nunca se da la vuelta por un punto pasado)
     local fwx, fwy = m[2][1], m[2][2]
     while #wp > 1 and (getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) < lookahead
-        or ((wp[1][1] - x) * fwx + (wp[1][2] - y) * fwy < 0 and (wp[2][1] - x) * fwx + (wp[2][2] - y) * fwy > -2)) do
+        or ((wp[1][1] - x) * fwx + (wp[1][2] - y) * fwy < 0 and (wp[2][1] - x) * fwx + (wp[2][2] - y) * fwy > -2
+            and getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) < 12)) do
         local passed = table.remove(wp, 1)
+        s.lastPassed = passed
         -- libera el cruce cuando ya no quedan puntos de el
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
             local l = junctionLock[passed[5]]
@@ -1105,13 +1351,23 @@ local function updateCar(vehicle, s, now)
     end
     local tx, ty = wp[1][1], wp[1][2]
     local diff = angleDiff(heading(tx - x, ty - y), rz)
+    -- En curvas: seguimiento de la trayectoria (rumbo de la ruta + correccion de la distancia lateral)
+    -- en vez de apuntar a un punto, que en un arco cerrado casi no se desvia del rumbo actual
+    local trackDiff = nil
+    if inCurve then
+        trackDiff = pathTrack(s, wp, x, y, speed, rz)
+        if trackDiff then diff = trackDiff end
+    end
 
     -- Lo que viene: mayor giro, cruce y semaforo en los proximos metros
     local upcoming, dist, lx, ly = 0, 0, x, y
+    local curveLimit = 999
     local junctionAhead, junctionDist, lightAxis, lightDist = nil, 0, nil, 0
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
+        if dist > 60 then break end
+        if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
         if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist = wp[i][5], dist end
@@ -1119,14 +1375,28 @@ local function updateCar(vehicle, s, now)
     end
 
     -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
-    local frontHit, obstacle, gap = ray(vehicle, m, 0, 8 + speed * 0.3, false)
+    local reach = 8 + speed * 0.3
+    local frontHit, obstacle, gap = ray(vehicle, m, 0, reach, false)
+    -- abanico: dos rayos de +-8 grados ven lo que queda medio carril al lado (motos, peatones)
+    for _, a in ipairs({ 8, -8 }) do
+        local h, e, g = ray(vehicle, m, a, reach * 0.8, false)
+        if h and e and (not frontHit or not obstacle or (g and gap and g < gap)) then
+            frontHit, obstacle, gap = h, e, g
+        end
+    end
+    -- en modo fantasma (sin colision, para salir de un atasco) no ve autos delante
+    if s.ghost then frontHit, obstacle, gap = false, nil, nil end
     local wallFront = ray(vehicle, m, 0, 3 + speed * 0.08, true)
     local leftHit = ray(vehicle, m, 25, 3.5 + speed * 0.06, true)
     local rightHit = ray(vehicle, m, -25, 3.5 + speed * 0.06, true)
 
-    local steer = diff / (inCurve and 18 or 25)
+    -- en curvas cerradas gira con mas decision (volante a tope antes)
+    local steer = diff / (inCurve and ((curveSoon or wp[1][4] > 60) and 12 or 18) or 25)
     if leftHit and not rightHit then steer = steer - 0.2 end
     if rightHit and not leftHit then steer = steer + 0.2 end
+    -- Sirena detras: se arrima un poco a la derecha (salvo en un cruce o con algo al lado)
+    local sirenDist = sirenBehind(vehicle, x, y, m)
+    if sirenDist and not junctionAhead and not rightHit then steer = steer - 0.12 end
     steerTo(driver, steer)
 
     -- Asistencia de direccion suave: ayuda al volante (sin imponer el giro) y
@@ -1140,10 +1410,24 @@ local function updateCar(vehicle, s, now)
         if math.abs(side) > 0.02 then
             setElementVelocity(vehicle, fx * along + rx * side * 0.8, fy * along + ry * side * 0.8, vz)
         end
-        local ax, ay, az = getElementAngularVelocity(vehicle)
-        -- velocidad angular de MTA en radianes por 1/50 s (0.015 ~ 43 grados/s)
-        local desired = math.max(-0.015, math.min(0.015, math.rad(diff) * 0.025)) * math.min(1, speed / 20)
-        setElementAngularVelocity(vehicle, ax, ay, az + (desired - az) * 0.35)
+        -- En una curva cerrada NO se limita el giro: esta asistencia fijaba la velocidad angular
+        -- al valor de un apuntado casi recto (la mirada corta sobre el arco apenas se desvia), y
+        -- el auto no podia girar lo que pide el radio del cruce y se salia recto.
+        if inCurve then
+            -- el giro necesario para recuperar el rumbo de la ruta en ~0.4 s, limitado a lo que
+            -- el vehiculo puede girar de verdad (radio minimo ~4.5 m)
+            if trackDiff then
+                local ax, ay, az = getElementAngularVelocity(vehicle)
+                local maxW = math.min(0.03, (speed / 3.6) / 4.5 / 50)
+                local want = math.max(-maxW, math.min(maxW, math.rad(trackDiff) / 0.4 / 50))
+                setElementAngularVelocity(vehicle, ax, ay, az + (want - az) * 0.6)
+            end
+        else
+            local ax, ay, az = getElementAngularVelocity(vehicle)
+            -- velocidad angular de MTA en radianes por 1/50 s (0.015 ~ 43 grados/s)
+            local desired = math.max(-0.015, math.min(0.015, math.rad(diff) * 0.025)) * math.min(1, speed / 20)
+            setElementAngularVelocity(vehicle, ax, ay, az + (desired - az) * 0.35)
+        end
     end
 
     if s.state == "FLEE" then
@@ -1154,8 +1438,11 @@ local function updateCar(vehicle, s, now)
     end
 
     -- Velocidad objetivo
-    local target = CFG.CAR_SPEED
-    if upcoming > 70 then target = 18 elseif upcoming > 40 then target = 26 elseif upcoming > 20 then target = 36 end
+    local target = CFG.CAR_SPEED * (s.style and s.style.speed or 1)
+    target = math.min(target, curveLimit)
+    -- fuera de su ruta o recien reenganchado: despacio hasta estar de nuevo en el carril
+    if s.offSince or (s.slowUntil and now < s.slowUntil) then target = math.min(target, 15) end
+    if sirenDist then target = math.min(target, sirenDist < 30 and 6 or 18) end
     if math.abs(diff) > 50 then target = math.min(target, 16) end
     if wallFront then target = math.min(target, 15) end
     if s.detourUntil and now < s.detourUntil then target = math.min(target, 18) end
@@ -1184,8 +1471,11 @@ local function updateCar(vehicle, s, now)
     local isPlayerThing = obstacle and (obstacle == localPlayer or obstacle == getPedOccupiedVehicle(localPlayer))
     if obstacle then
         local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedOf(obstacle) or 0
-        local safeGap = 4 + speed * 0.12
+        local safeGap = (4 + speed * 0.12) * (s.style and s.style.gap or 1)
         if gap and gap < safeGap then target = 0 else target = math.min(target, otherSpeed + 3) end
+        -- tiempo hasta el choque: si se cierra demasiado rapido, frena a fondo
+        local closing = (speed - otherSpeed) / 3.6
+        if gap and closing > 1 and gap / closing < 2.0 then target = 0 end
 
         if target <= 1 and speed < 3 then
             if s.blockedSince == 0 then s.blockedSince = now end
@@ -1221,6 +1511,17 @@ local function updateCar(vehicle, s, now)
 
     -- Atascado sin motivo (pared, otro auto cruzado): marcha atras y reenganche
     -- (en cola, semaforo o cruce NUNCA cuenta como atasco)
+    -- Parado demasiado tiempo (cruce bloqueado, dos autos de frente): pasa a modo fantasma
+    -- unos segundos para atravesar el atasco. Nunca con el jugador de por medio.
+    if speed < 2 and s.state ~= "RED" and not isPlayerThing and target < 5 then
+        s.slowSince = s.slowSince or now
+        if now - s.slowSince > 25000 then
+            s.slowSince = nil
+            ghostCar(vehicle, s, 7000)
+        end
+    else
+        s.slowSince = nil
+    end
     local stopped = waiting or yielding or obstacle ~= nil or s.state == "RED" or s.state == "FOLLOW"
     if speed < 2 and not stopped and target > 5 then
         if s.stuckSince == 0 then s.stuckSince = now end
@@ -1285,11 +1586,14 @@ local function dummyDecide(vehicle, s)
     if #wp == 0 then s.dTarget = 0 return end
 
     local x, y = getElementPosition(vehicle)
-    local target = CFG.CAR_SPEED
+    local target = CFG.CAR_SPEED * (s.style and s.style.speed or 1)
     local upcoming, dist, lx, ly = 0, 0, x, y
+    local curveLimit = 999
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
+        if dist > 60 then break end
+        if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
         if wp[i][6] then
@@ -1301,15 +1605,13 @@ local function dummyDecide(vehicle, s)
             break
         end
     end
-    if upcoming > 70 then target = math.min(target, 18) elseif upcoming > 40 then target = math.min(target, 26)
-    elseif upcoming > 20 then target = math.min(target, 36) end
+    target = math.min(target, curveLimit)
 
     -- auto delante (de la poblacion o del jugador) en el mismo sentido: mantiene distancia
     local m = getElementMatrix(vehicle)
     local fx, fy = m[2][1], m[2][2]
-    local function checkAhead(other)
-        if other == vehicle or not isElement(other) then return end
-        local ox, oy = getElementPosition(other)
+    local function checkAheadAt(other, ox, oy)
+        if other == vehicle or not ox then return end
         local dx, dy = ox - x, oy - y
         local along = dx * fx + dy * fy
         local lateral = math.abs(dx * fy - dy * fx)
@@ -1317,8 +1619,8 @@ local function dummyDecide(vehicle, s)
             target = along < 7 and 0 or math.min(target, (along - 7) * 3)
         end
     end
-    for other in pairs(cars) do checkAhead(other) end
-    checkAhead(getPedOccupiedVehicle(localPlayer) or localPlayer)
+    for _, o in ipairs(carSnap) do checkAheadAt(o[1], o[2], o[3]) end
+    checkAheadAt(playerSnap[1], playerSnap[2], playerSnap[3])
 
     if target > 0 and s.state == "RED" then s.state = "DRIVE" end
     s.dTarget = target / 3.6
@@ -1343,7 +1645,7 @@ local function moveDummies(dt)
                 if d <= step then
                     x, y, z = tx, ty, tz
                     step = step - d
-                    table.remove(wp, 1)
+                    table.remove(wp, 1) s.lastPassed = nil
                 else
                     local k = step / d
                     x, y, z = x + (tx - x) * k, y + (ty - y) * k, z + (tz - z) * math.min(1, k * 2)
@@ -1469,6 +1771,7 @@ local function carTick()
     if carCount == 0 then return end
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
+    refreshSnapshots(now)
     for v, s in pairs(cars) do
         -- Patrulla del trafico (aunque el agente se haya caido de la moto) cerca de un
         -- jugador buscado: se suma a la persecucion de rp_wanted y deja de ser trafico
@@ -1486,8 +1789,29 @@ local function carTick()
             -- cambio de LOD: fisica completa cerca; dummy lejos y fuera de camara
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)
+                -- los dummies no chocan entre si: al hacerse solido puede quedar encima de otro auto
+                if nearOtherCar(v, 3, true) then ghostCar(v, s, 4000) end
             elseif s.lod ~= "dummy" and d > DUMMY_DIST and not isElementOnScreen(v) then
                 makeDummy(v, s, speedOf(v) / 3.6)
+            end
+            if s.lod ~= "dummy" then
+                if s.ghost then
+                    -- vuelve a ser solido cuando no queda ningun auto encima
+                    if now > s.ghostUntil then
+                        if nearOtherCar(v, 4.2, true) then
+                            s.ghostUntil = now + 1000
+                        else
+                            s.ghost = nil
+                            setElementCollisionsEnabled(v, true)
+                        end
+                    end
+                elseif nearOtherCar(v, 2.4, false) then
+                    -- dos autos superpuestos mas de 2 s: uno pasa a fantasma
+                    s.overlapSince = s.overlapSince or now
+                    if now - s.overlapSince > 2000 then ghostCar(v, s, 5000) s.overlapSince = nil end
+                else
+                    s.overlapSince = nil
+                end
             end
             if s.lod == "dummy" then
                 dummyDecide(v, s)

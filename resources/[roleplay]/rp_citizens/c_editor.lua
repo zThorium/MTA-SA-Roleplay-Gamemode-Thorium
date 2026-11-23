@@ -19,6 +19,16 @@ local screenW, screenH = guiGetScreenSize()
 local NODES = { p = PED_NODES, v = VEH_NODES }
 local LINKS = { p = PED_LINKS, v = VEH_LINKS }
 
+-- Historial para deshacer (ver mas abajo)
+local BASECOUNT = { p = #PED_NODES / 3, v = #VEH_NODES / 3 }   -- nodos de la red original (los nuevos son mayores)
+local history, expectAdd, dragOrig = {}, nil, nil
+local HISTORY_MAX = 100
+
+local function pushHistory(entry)
+    history[#history + 1] = entry
+    if #history > HISTORY_MAX then table.remove(history, 1) end
+end
+
 ----------------------------------------------------------------
 -- Aplicar cambios al grafo
 ----------------------------------------------------------------
@@ -90,7 +100,13 @@ addEventHandler("rp:paths:apply", resourceRoot, function(ops)
     for _, o in ipairs(ops or {}) do
         local t = o.t
         if NODES[t] then
-            if o.op == "node" then setNode(t, o.i, o.x, o.y, o.z)
+            if o.op == "node" then
+                setNode(t, o.i, o.x, o.y, o.z)
+                -- nodo recien creado por este editor: se anota para poder deshacerlo
+                if expectAdd and expectAdd.t == t and o.i > BASECOUNT[t] and o.i > (expectAdd.minIdx or 0) then
+                    pushHistory({ k = "add", t = t, i = o.i, a = expectAdd.a, b = expectAdd.b, snap = expectAdd.snap, x = o.x, y = o.y, z = o.z })
+                    expectAdd = nil
+                end
             elseif o.op == "delete" then deleteNode(t, o.i)
             elseif o.op == "link" then
                 if o.removed then removeLink(t, o.a, o.b) else addLink(t, o.a, o.b) end
@@ -112,7 +128,34 @@ local editing = false
 local show = { p = true, v = true }
 local selected, second = nil, nil     -- { t, i }
 local dragging = false
-local VIEW = 90                       -- metros alrededor de la camara
+
+----------------------------------------------------------------
+-- Deshacer (Ctrl+Z): historial de las ultimas operaciones de esta sesion del editor
+----------------------------------------------------------------
+-- Carriles y desplazamiento de a->b y b->a (para recuperarlos al rehacer un enlace borrado)
+local function laneSnapshot(t, a, b)
+    if t ~= "v" or not hasLink(t, a, b) then return nil end
+    local l1, o1 = getLaneInfo(a, b)
+    local l2, o2 = getLaneInfo(b, a)
+    return { a = a, b = b, l1 = l1, o1 = o1, l2 = l2, o2 = o2 }
+end
+
+local function restoreLanes(t, snap)
+    if t ~= "v" or not snap then return end
+    for _, p in ipairs({ { snap.a, snap.b, snap.l1, snap.o1 }, { snap.b, snap.a, snap.l2, snap.o2 } }) do
+        local list = LINKS.v[p[1]]
+        for k = 1, #(list or {}) do
+            if list[k] == p[2] then
+                VEH_LANES[p[1]] = VEH_LANES[p[1]] or {}
+                VEH_OFFSET[p[1]] = VEH_OFFSET[p[1]] or {}
+                VEH_LANES[p[1]][k], VEH_OFFSET[p[1]][k] = p[3], p[4]
+            end
+        end
+    end
+    rebuildCitizenGrids()
+end
+
+local VIEW = 90                      -- metros alrededor de la camara
 local CELL = 50
 
 local function buildEditorGrid()
@@ -254,7 +297,7 @@ local function render()
     local lines = {
         "EDITOR DE RUTAS  (/nodos para salir)",
         "Clic: seleccionar y arrastrar   Shift+clic: 2o nodo",
-        "N: nuevo nodo   K: enlazar/desenlazar   Supr: borrar",
+        "N: nuevo nodo   K: enlazar/desenlazar   Supr: borrar   Ctrl+Z: deshacer",
         ("1: peatones [%s]   2: vehiculos [%s]   3: carriles [%s]"):format(show.p and "si" or "no", show.v and "si" or "no", showLanes and "si" or "no"),
         ("Naranja = centro (se edita)  Verde = carril  Morado = curvas  Amarillo = ruta de cada auto [4: %s]"):format(showPlans and "si" or "no"),
         selected and ("Seleccionado: %s #%d  (%d enlaces)"):format(selected.t == "v" and "vial" or "peatonal", selected.i, #(LINKS[selected.t][selected.i] or {})) or "Nada seleccionado",
@@ -298,6 +341,8 @@ local function onClick(button, state, absX, absY)
         if n then
             selected, second = { t = n.t, i = n.i }, nil
             dragging = true
+            local nd = NODES[n.t]
+            dragOrig = { t = n.t, i = n.i, x = nd[n.i * 3 - 2], y = nd[n.i * 3 - 1], z = nd[n.i * 3] }
         else
             selected, second, dragging = nil, nil, false
         end
@@ -307,6 +352,9 @@ local function onClick(button, state, absX, absY)
             local nodes = NODES[selected.t]
             local i = selected.i
             triggerServerEvent("rp:paths:move", resourceRoot, selected.t, i, nodes[i * 3 - 2], nodes[i * 3 - 1], nodes[i * 3])
+            if dragOrig and dragOrig.t == selected.t and dragOrig.i == i then
+                pushHistory({ k = "move", t = dragOrig.t, i = i, x = dragOrig.x, y = dragOrig.y, z = dragOrig.z })
+            end
             selected.moved = nil
         end
     end
@@ -332,10 +380,14 @@ local function keyNew()
         local mx = (nodes[a * 3 - 2] + nodes[b * 3 - 2]) / 2
         local my = (nodes[a * 3 - 1] + nodes[b * 3 - 1]) / 2
         local mz = (nodes[a * 3] + nodes[b * 3]) / 2
+        expectAdd = { t = t, a = a, b = b, snap = laneSnapshot(t, a, b), minIdx = BASECOUNT[t] }
         triggerServerEvent("rp:paths:add", resourceRoot, t, mx, my, mz, a, b)
     else
         local x, y, z = worldUnderCursor()
-        if x then triggerServerEvent("rp:paths:add", resourceRoot, t, x, y, z, a) end
+        if x then
+            expectAdd = { t = t, a = a, minIdx = BASECOUNT[t] }
+            triggerServerEvent("rp:paths:add", resourceRoot, t, x, y, z, a)
+        end
     end
 end
 
@@ -344,15 +396,54 @@ local function keyLink()
         return exports.rp_notify:notify("Selecciona dos nodos (clic y Shift+clic).", "warning")
     end
     local t = selected.t
-    triggerServerEvent("rp:paths:link", resourceRoot, t, selected.i, second.i, hasLink(t, selected.i, second.i))
+    local had = hasLink(t, selected.i, second.i)
+    pushHistory({ k = "link", t = t, a = selected.i, b = second.i, had = had, snap = laneSnapshot(t, selected.i, second.i) })
+    triggerServerEvent("rp:paths:link", resourceRoot, t, selected.i, second.i, had)
 end
 
 local function keyDelete()
     if not selected then return end
     local nodes = NODES[selected.t]
     local i = selected.i
+    -- se guardan los enlaces del nodo (con carriles) para poder recuperarlo con Ctrl+Z
+    local snaps = {}
+    for _, n in ipairs(LINKS[selected.t][i] or {}) do snaps[#snaps + 1] = { b = n, snap = laneSnapshot(selected.t, i, n) } end
+    pushHistory({ k = "delete", t = selected.t, i = i, x = nodes[i * 3 - 2], y = nodes[i * 3 - 1], z = nodes[i * 3], links = snaps })
     triggerServerEvent("rp:paths:delete", resourceRoot, selected.t, i, nodes[i * 3 - 2], nodes[i * 3 - 1], nodes[i * 3])
     selected, second = nil, nil
+end
+
+-- Ctrl+Z: deshace la ultima operacion del editor (mover, crear, enlazar/desenlazar, borrar)
+local function keyUndo()
+    if not (getKeyState("lctrl") or getKeyState("rctrl")) then return end
+    local e = table.remove(history)
+    if not e then return exports.rp_notify:notify("No hay nada que deshacer.", "info") end
+    local t = e.t
+    if e.k == "move" then
+        local nodes = NODES[t]
+        nodes[e.i * 3 - 2], nodes[e.i * 3 - 1], nodes[e.i * 3] = e.x, e.y, e.z
+        triggerServerEvent("rp:paths:move", resourceRoot, t, e.i, e.x, e.y, e.z)
+    elseif e.k == "add" then
+        local nodes = NODES[t]
+        triggerServerEvent("rp:paths:delete", resourceRoot, t, e.i, nodes[e.i * 3 - 2], nodes[e.i * 3 - 1], nodes[e.i * 3])
+        if e.b then
+            -- el nodo nuevo se habia insertado entre a y b: se recupera el enlace directo
+            triggerServerEvent("rp:paths:link", resourceRoot, t, e.a, e.b, false)
+            setTimer(restoreLanes, 500, 1, t, e.snap)
+        end
+        if selected and selected.t == t and selected.i == e.i then selected, second = nil, nil end
+    elseif e.k == "link" then
+        triggerServerEvent("rp:paths:link", resourceRoot, t, e.a, e.b, not e.had)
+        if e.had then setTimer(restoreLanes, 500, 1, t, e.snap) end
+    elseif e.k == "delete" then
+        -- el nodo vuelve a su sitio y sus enlaces (con los carriles que tenian)
+        triggerServerEvent("rp:paths:move", resourceRoot, t, e.i, e.x, e.y, e.z)
+        for _, l in ipairs(e.links or {}) do
+            triggerServerEvent("rp:paths:link", resourceRoot, t, e.i, l.b, false)
+            setTimer(restoreLanes, 600, 1, t, l.snap)
+        end
+    end
+    exports.rp_notify:notify("Deshecho. (" .. #history .. " operaciones mas en el historial)", "info")
 end
 
 local function toggleP() show.p = not show.p end
@@ -370,6 +461,7 @@ local function setEditing(state)
         bindKey("n", "down", keyNew)
         bindKey("k", "down", keyLink)
         bindKey("delete", "down", keyDelete)
+        bindKey("z", "down", keyUndo)
         bindKey("1", "down", toggleP)
         bindKey("2", "down", toggleV)
         bindKey("3", "down", toggleLanes)
@@ -383,6 +475,7 @@ local function setEditing(state)
         unbindKey("n", "down", keyNew)
         unbindKey("k", "down", keyLink)
         unbindKey("delete", "down", keyDelete)
+        unbindKey("z", "down", keyUndo)
         unbindKey("1", "down", toggleP)
         unbindKey("2", "down", toggleV)
         unbindKey("3", "down", toggleLanes)
