@@ -6,6 +6,7 @@
     <include resource="rp_notify" />
     <include resource="rp_characters" />
     <include resource="rp_needs" />
+    <include resource="bone_attach" />
 
     <script src="shared/s_items.lua" type="shared" />
     <script src="server/s_inventory.lua" type="server" />

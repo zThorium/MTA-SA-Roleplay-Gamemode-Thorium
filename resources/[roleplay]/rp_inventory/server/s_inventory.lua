@@ -204,6 +204,44 @@ addEventHandler("rp:inv:request", resourceRoot, function()
     if inventories[client] then sendInventory(client) end
 end)
 
+-- Animacion + objeto en la mano izquierda (hueso 11 de bone_attach): las animaciones de GTA comen/beben con esa mano.
+-- shortcut: modelos y offsets a ojo; ajustar en juego si el objeto se ve mal colocado.
+local PROP_MS = 3500
+local FOOD_ANIM  = { "FOOD", "EAT_Burger", 12 }        -- comer: mano derecha
+local DRINK_ANIM = { "VENDING", "VEND_Drink2_P", 11 }  -- beber: mano izquierda
+local consumeProps = {   -- [itemId] = { modelo, anim, x, y, z, rx, ry, rz }
+    water    = { 1484, DRINK_ANIM, 0.05, 0.02, 0.1, 0, 90, 0 },
+    coffee   = { 1546, DRINK_ANIM, 0.05, 0.02, 0.1, 0, 0, 0 },
+    sandwich = { 2880, FOOD_ANIM, 0.05, -0.03, 0.1, 0, -180, 0 },
+    burger   = { 2880, FOOD_ANIM, 0.06, -0.01, 0.1, 0, -180, 0 },
+}
+local propObjects, propTimers = {}, {}
+
+local function clearProp(player)
+    if isTimer(propTimers[player]) then killTimer(propTimers[player]) end
+    local obj = propObjects[player]
+    if isElement(obj) then
+        exports.bone_attach:detachElementFromBone(obj)
+        destroyElement(obj)
+    end
+    propObjects[player], propTimers[player] = nil, nil
+end
+addEventHandler("onPlayerQuit", root, function() clearProp(source) end)
+
+local function playConsumeProp(player, itemId)
+    local p = consumeProps[itemId]
+    if not p or isPedInVehicle(player) then return end
+    clearProp(player)
+    local obj = createObject(p[1], 0, 0, 0)
+    setElementCollisionsEnabled(obj, false)
+    setElementDimension(obj, getElementDimension(player))
+    setElementInterior(obj, getElementInterior(player))
+    exports.bone_attach:attachElementToBone(obj, player, p[2][3], p[3], p[4], p[5], p[6], p[7], p[8])
+    propObjects[player] = obj
+    setPedAnimation(player, p[2][1], p[2][2], PROP_MS, false, false, false, false, 250)
+    propTimers[player] = setTimer(clearProp, PROP_MS, 1, player)
+end
+
 addEventHandler("rp:inv:use", resourceRoot, function(itemId)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
@@ -249,6 +287,7 @@ addEventHandler("rp:inv:use", resourceRoot, function(itemId)
     for _, need in ipairs({ "hunger", "thirst", "energy" }) do
         if effect[need] then exports.rp_needs:addNeed(player, need, effect[need]) end
     end
+    playConsumeProp(player, itemId)
     notify(player, effect.message or ("Usas " .. def.name .. "."), "success")
     if effect.drug then triggerEvent("rp:onDrugUsed", player, effect.drug) end   -- rp_dealers aplica el efecto
 end)
