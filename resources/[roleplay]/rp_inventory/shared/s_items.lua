@@ -232,3 +232,38 @@ end
 function getItemList()
     return ITEMS
 end
+
+--[[
+    Modelo 3D (GTA SA) con el que se ve el item al tirarlo al suelo.
+    { modelo, escala }. IDs verificados en data/*.ide del juego.
+    Sin entrada = bolsa de dinero (1550). Al crear un item nuevo, anadele su modelo aqui.
+    shortcut: sin modelo exacto en vanilla (agua, botiquin, encendedor, pescado...) se usa el mas parecido.
+]]
+local BOTTLE, CUP, BURGER, WRAP = { 1484, 1.0 }, { 2647, 1.0 }, { 2880, 1.0 }, { 2821, 1.0 }
+local SACK, MEAT_A, MEAT_B, BOX = { 2060, 0.5 }, { 2803, 0.6 }, { 2805, 0.6 }, { 1558, 0.6 }
+local CARD = { 1581, 1.0 }
+
+local ITEM_MODELS = {
+    water = BOTTLE, message_bottle = BOTTLE,
+    coffee = CUP,
+    burger = BURGER,
+    sandwich = WRAP,
+    medkit = { 1240, 0.8 },
+    vest = { 1242, 0.8 },
+    cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
+    phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
+    id_card = CARD, driver_license = CARD,
+    old_watch = { 2710, 1.0 },
+    rare_vinyl = { 1210, 0.6 },
+    fish_sardine = BOX, fish_bass = BOX, fish_tuna = BOX, fish_swordfish = BOX, old_boot = BOX,
+    meat_game = MEAT_A,
+    hide_rabbit = MEAT_B, hide_deer = MEAT_B, hide_boar = MEAT_B, hide_bear = MEAT_B, antlers = MEAT_B,
+    ore_coal = SACK, ore_iron = SACK, ore_copper = SACK, ore_silver = SACK,
+}
+
+function getItemGroundModel(itemId)
+    local entry = ITEM_MODELS[itemId]
+    if not entry and type(itemId) == "string" and (itemId:find("^vkey:") or itemId:find("^bcard:")) then entry = CARD end
+    entry = entry or { 1550, 0.7 }
+    return entry[1], entry[2]
+end
