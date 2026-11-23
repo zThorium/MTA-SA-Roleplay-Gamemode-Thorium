@@ -12,8 +12,6 @@
     <script src="server/s_levels.lua" type="server" />
     <script src="client/c_levels.lua" type="client" cache="false" />
 
-    <file src="sounds/levelup.ogg" />
-
     <export function="giveXP" type="server" />
     <export function="getPlayerLevel" type="server" />
     <export function="getPlayerXP" type="server" />

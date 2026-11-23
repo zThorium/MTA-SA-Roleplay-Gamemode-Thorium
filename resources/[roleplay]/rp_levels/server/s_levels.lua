@@ -30,7 +30,6 @@ local function sync(player, gained, leveledUp)
     if not s then return end
     local level, cur, need = levelFromXP(s.xp)
     setElementData(player, "rp:level", level)
-    setElementData(player, "rp:levelFrac", need > 0 and cur / need or 1)   -- progreso del nivel (0-1) para el HUD
     triggerClientEvent(player, "rp:levels:update", resourceRoot, level, cur, need, gained or 0, leveledUp and true or false)
 end
 

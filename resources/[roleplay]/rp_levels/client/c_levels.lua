@@ -19,7 +19,7 @@ local T = {                     -- tiempos en ms
     SLIDE = 350, FILL = 900, FLASH = 450, REFILL = 700,
     HOLD = 2400, HOLD_QUEUED = 900, BANNER = 3600,
 }
-local SOUND_LEVELUP = "sounds/levelup.ogg"   -- Kenney Digital Audio (CC0); alternativa: sounds/levelup_alt.ogg (agregar a meta.xml)
+local SOUND_LEVELUP = 5         -- playSoundFrontEnd: ajustar a gusto probando en juego
 local SOUND_GAIN = nil          -- nil = sin sonido al ganar XP
 
 local COL = {
@@ -54,7 +54,7 @@ local function startNext()
         fromLevel = fromLevel, toLevel = ev.level, fromFrac = fromFrac, toFrac = toFrac,
         hold = (#queue > 0) and T.HOLD_QUEUED or T.HOLD,
     }
-    if anim.levelUp then local snd = playSound(SOUND_LEVELUP); if snd then setSoundVolume(snd, 0.8) end elseif SOUND_GAIN then playSoundFrontEnd(SOUND_GAIN) end
+    if anim.levelUp then playSoundFrontEnd(SOUND_LEVELUP) elseif SOUND_GAIN then playSoundFrontEnd(SOUND_GAIN) end
     known.level, known.frac = ev.level, toFrac
 end
 

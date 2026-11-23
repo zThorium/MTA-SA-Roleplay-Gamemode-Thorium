@@ -82,6 +82,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
 | `rp_jobs` | Trabajos civiles con minijuegos, niveles y mercados dinámicos |
+| `rp_events` | Mundo vivo: reloj y clima compartidos y director de eventos dinámicos (accidentes, emergencias, controles, obras, mercadillos, fiestas). Ver `docs/EVENTOS_DINAMICOS.md`. |
 | `rp_properties` · `rp_vehicles` · `rp_radio` | Casas, vehículos y radio con emisoras de internet |
 | `rp_robbery` | Robo de tiendas con miedo, cinemática, negociación y persecución |
 

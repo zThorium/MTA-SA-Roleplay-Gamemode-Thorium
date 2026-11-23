@@ -27,6 +27,7 @@ local cooldown = {}  -- [player] = tick
 
 addEvent("rp:shop:open", true)
 addEvent("rp:shop:buy", true)
+addEvent("rp:shop:onBought", false)   -- aviso a otros recursos (rp_dealers): source = jugador
 
 local function db()
     return exports.rp_database:getConnection()
@@ -207,6 +208,7 @@ addEventHandler("rp:shop:buy", resourceRoot, function(shopId, itemId, quantity)
 
     takePlayerMoney(player, total)
     exports.rp_characters:saveCharacter(player)   -- guarda el dinero al momento
+    triggerEvent("rp:shop:onBought", player, shopId, itemId, quantity)
     notify(player, ("Compraste %d x %s por $%d."):format(quantity, def.name, total), "success")
     triggerClientEvent(player, "rp:shop:money", resourceRoot, getPlayerMoney(player))
 end)
