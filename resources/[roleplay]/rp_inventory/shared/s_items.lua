@@ -72,6 +72,28 @@ ITEMS = {
         use = { event = "id_card" },
     },
 
+    -- rp_backpacks: al usarlas se equipan en la espalda (capacidad y peso en rp_backpacks/shared/s_config.lua)
+    bp_small = {
+        name = "Mochila pequena", icon = "🎒", weight = 0.4, stack = 1,
+        description = "Mochila compacta. Capacidad 5 kg.", use = { event = "backpack" },
+    },
+    bp_school = {
+        name = "Mochila escolar", icon = "🎒", weight = 0.6, stack = 1,
+        description = "Mochila de uso diario. Capacidad 10 kg.", use = { event = "backpack" },
+    },
+    bp_hiking = {
+        name = "Mochila de senderismo", icon = "🎒", weight = 1.2, stack = 1,
+        description = "Mochila grande para excursiones. Capacidad 20 kg.", use = { event = "backpack" },
+    },
+    bp_tactical = {
+        name = "Mochila tactica", icon = "🎒", weight = 1.8, stack = 1,
+        description = "Mochila reforzada de gran capacidad. Capacidad 30 kg.", use = { event = "backpack" },
+    },
+    bp_expedition = {
+        name = "Mochila de expedicion", icon = "🎒", weight = 2.5, stack = 1,
+        description = "La mochila mas grande. Capacidad 45 kg, pero te frena y te cansa mas.", use = { event = "backpack" },
+    },
+
     -- rp_jobs: productos y hallazgos de los trabajos (se venden en los puntos de venta de rp_jobs)
     fish_sardine = {
         name = "Sardina", icon = "🐟", weight = 0.2, stack = 30,
@@ -301,6 +323,8 @@ local ITEM_MODELS = {
     cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
     phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
     id_card = CARD, driver_license = CARD,
+    bp_small = { 3026, 0.75 }, bp_school = { 3026, 0.9 }, bp_hiking = { 3026, 1.15 },
+    bp_tactical = { 3026, 1.3 }, bp_expedition = { 3026, 1.5 },
     old_watch = { 2710, 1.0 },
     rare_vinyl = { 1210, 0.6 },
     fish_sardine = BOX, fish_bass = BOX, fish_tuna = BOX, fish_swordfish = BOX, old_boot = BOX,
