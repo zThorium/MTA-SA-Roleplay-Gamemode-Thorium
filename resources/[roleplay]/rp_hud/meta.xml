@@ -12,6 +12,11 @@
     <!-- Estrellas de busqueda (nivel en el elementData "rp:wanted" que pone rp_wanted) -->
     <script src="c_wanted.lua" type="client" />
     <file src="images/map.png" />
+    <file src="images/icons/heart.png" />
+    <file src="images/icons/shield.png" />
+    <file src="images/icons/food.png" />
+    <file src="images/icons/drop.png" />
+    <file src="images/icons/bolt.png" />
     <file src="images/blips/17.png" />
     <file src="images/blips/22.png" />
     <file src="images/blips/27.png" />

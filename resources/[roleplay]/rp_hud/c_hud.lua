@@ -3,11 +3,11 @@
     HUD propio que sustituye al de GTA:
       - Minimapa giratorio (abajo a la izquierda) con el mapa del radar de GTA SA
         extraido de la instalacion del jugador (images/map.png), blips y flecha.
-      - Barras de vida, chaleco, hambre, sed y energia (rp_needs).
+      - Panel de vida, chaleco y necesidades (hambre, sed, energia) con avisos y clima.
       - Hora del juego, dinero, zona y municion (arriba a la derecha).
       - Velocimetro y bencina (abajo a la derecha) cuando vas en un vehiculo
         (litros en el elementData "rp:fuel" / "rp:fuelMax" que pone rp_vehicles).
-    /hud oculta o muestra el HUD.
+    /hud (o F7) oculta o muestra el HUD; /hud necesidades|mapa|velocimetro lo configura.
 ]]
 
 local screenW, screenH = guiGetScreenSize()
@@ -47,6 +47,8 @@ for _, id in ipairs(BLIP_ICON_IDS) do
     if fileExists(path) then blipIcons[id] = dxCreateTexture(path, "argb", true, "clamp") end
 end
 local enabled = true
+local prefs = { needs = true, map = true, speedo = true }   -- /hud necesidades|mapa|velocimetro
+local PREFS_FILE = "@hud_prefs.xml"
 
 local COLORS = {
     panel = tocolor(12, 14, 20, 200),
@@ -57,13 +59,6 @@ local COLORS = {
     money = tocolor(76, 211, 138),
 }
 
-local BARS = {
-    { key = "health", label = "Vida",    r = 229, g = 72,  b = 77 },
-    { key = "armor",  label = "Chaleco", r = 200, g = 205, b = 215, optional = true },
-    { key = "hunger", label = "Hambre",  r = 245, g = 165, b = 36 },
-    { key = "thirst", label = "Sed",     r = 70,  g = 150, b = 255 },
-    { key = "energy", label = "Energia", r = 168, g = 120, b = 255 },
-}
 
 ----------------------------------------------------------------
 -- Componentes de GTA
@@ -197,36 +192,101 @@ local function drawMinimap(x, y)
 end
 
 ----------------------------------------------------------------
--- Barras
+-- Estado: vida / chaleco + necesidades compactas + avisos
+-- Las necesidades se leen solo cuando cambia el elementData "rp:needs"
+-- (cada minuto), no en cada frame; el resto se dibuja con rectangulos.
 ----------------------------------------------------------------
-local function drawBars(x, bottom)
-    local needs = getElementData(localPlayer, "rp:needs") or {}
-    local values = {
-        health = getElementHealth(localPlayer), armor = getPedArmor(localPlayer),
-        hunger = needs.hunger, thirst = needs.thirst, energy = needs.energy,
-    }
+local NEEDS = {
+    { key = "hunger", icon = "food",  r = 245, g = 165, b = 36 },
+    { key = "thirst", icon = "drop", r = 70,  g = 150, b = 255 },
+    { key = "energy", icon = "bolt", r = 168, g = 120, b = 255 },
+}
+local needValues = { hunger = 100, thirst = 100, energy = 100 }
+local needShown = { hunger = 100, thirst = 100, energy = 100 }   -- valor suavizado para animar
+local statusLines = {}
+local hasNeeds = false   -- false hasta recibir "rp:needs" (no mostrar 100 falsos)
+local worldLabel = nil
 
-    local rows = {}
-    for _, bar in ipairs(BARS) do
-        local v = values[bar.key]
-        if v and not (bar.optional and v <= 0) then rows[#rows + 1] = { bar = bar, value = v } end
+local function refreshNeeds()
+    local n = getElementData(localPlayer, "rp:needs")
+    local lines = {}
+    hasNeeds = type(n) == "table"
+    if type(n) == "table" then
+        for _, need in ipairs(NEEDS) do needValues[need.key] = tonumber(n[need.key]) or needValues[need.key] end
+        if (n.hunger or 100) <= 0 or (n.thirst or 100) <= 0 then
+            lines[#lines + 1] = { "Sin comida/bebida: pierdes vida", 229, 72, 77 }
+        end
+        if (n.energy or 100) <= 0 then lines[#lines + 1] = { "Agotado: no puedes correr (/dormir)", 168, 120, 255 } end
+    end
+    statusLines = lines
+end
+
+local function refreshWorld()
+    local w = getElementData(root, "rp:world")
+    worldLabel = type(w) == "table" and w.label or nil
+end
+
+local ICONS = {}
+for _, name in ipairs({ "heart", "shield", "food", "drop", "bolt" }) do
+    ICONS[name] = dxCreateTexture("images/icons/" .. name .. ".png", "argb", true, "clamp")
+end
+
+local function drawBars(x, bottom)
+    if not prefs.needs then return end
+    local now = getTickCount()
+    for k, v in pairs(needValues) do needShown[k] = needShown[k] + (v - needShown[k]) * 0.15 end
+
+    local armor = getPedArmor(localPlayer)
+    local rows = {
+        { icon = "heart", value = getElementHealth(localPlayer), r = 229, g = 72, b = 77, always = true },
+    }
+    if armor > 0 then rows[#rows + 1] = { icon = "shield", value = armor, r = 200, g = 205, b = 215, always = true, noAlert = true } end
+    for _, need in ipairs(hasNeeds and NEEDS or {}) do
+        rows[#rows + 1] = { icon = need.icon, value = needValues[need.key], shown = needShown[need.key], r = need.r, g = need.g, b = need.b }
     end
 
-    local rowH, w = 26 * s, 200 * s
-    local h = #rows * rowH + 14 * s
+    local w, pad, rowH = 210 * s, 9 * s, 31 * s
+    local iconS = 26 * s
+    local extraH = (#statusLines + (worldLabel and 1 or 0)) * 17 * s
+    local h = pad * 2 + #rows * rowH + extraH
     local y = bottom - h
     dxDrawRectangle(x, y, w, h, COLORS.panel)
+    dxDrawRectangle(x, y, 2, h, COLORS.accent)
 
     for i, row in ipairs(rows) do
-        local ry = y + 7 * s + (i - 1) * rowH
-        local bar, v = row.bar, math.max(0, math.min(100, row.value))
-        local low = v <= 20 and bar.key ~= "armor"
-        local pulse = low and (math.sin(getTickCount() / 150) * 0.3 + 0.7) or 1
-        dxDrawText(bar.label, x + 10 * s, ry, x + 70 * s, ry + rowH, COLORS.muted, 0.9 * s, "default", "left", "center")
-        local bx, by, bw, bh = x + 72 * s, ry + rowH / 2 - 4 * s, w - 112 * s, 8 * s
-        dxDrawRectangle(bx, by, bw, bh, tocolor(255, 255, 255, 25))
-        dxDrawRectangle(bx, by, bw * v / 100, bh, tocolor(bar.r, bar.g, bar.b, 255 * pulse))
-        dxDrawText(tostring(math.floor(v + 0.5)), bx + bw, ry, x + w - 8 * s, ry + rowH, COLORS.text, 0.9 * s, "default-bold", "right", "center")
+        local ry = y + pad + (i - 1) * rowH
+        local v = math.max(0, math.min(100, row.shown or row.value))
+        local real = row.value
+        local r, g, b, a = row.r, row.g, row.b, 255
+        if not row.noAlert then
+            local critical = real <= (row.always and 25 or 20)
+            local low = real <= (row.always and 40 or 35)
+            if critical then
+                r, g, b = 229, 72, 77
+                a = 150 + (math.sin(now / 170) * 0.5 + 0.5) * 105
+            elseif not row.always and not low then
+                a = 150      -- todo bien: se atenua
+            end
+        end
+        local col = tocolor(r, g, b, a)
+        local icon = ICONS[row.icon]
+        if icon then dxDrawImage(x + pad + 2, ry + (rowH - iconS) / 2, iconS, iconS, icon, 0, 0, 0, col) end
+        local bx = x + pad + iconS + 10 * s
+        local bw, bh = w - pad * 2 - iconS - 10 * s - 40 * s, 10 * s
+        local by = ry + rowH / 2 - bh / 2
+        dxDrawRectangle(bx, by, bw, bh, tocolor(255, 255, 255, 30))
+        dxDrawRectangle(bx, by, bw * v / 100, bh, col)
+        dxDrawText(tostring(math.floor(real + 0.5)), bx + bw, ry, x + w - pad, ry + rowH,
+            tocolor(255, 255, 255, a < 255 and math.max(a, 190) or 255), 1.1 * s, "default-bold", "right", "center")
+    end
+
+    local ly = y + pad + #rows * rowH
+    for _, line in ipairs(statusLines) do
+        dxDrawText(line[1], x + pad, ly, x + w - pad, ly + 17 * s, tocolor(line[2], line[3], line[4], 240), 0.85 * s, "default-bold", "left", "center", true)
+        ly = ly + 17 * s
+    end
+    if worldLabel then
+        dxDrawText("Clima: " .. worldLabel, x + pad, ly, x + w - pad, ly + 17 * s, COLORS.muted, 0.85 * s, "default", "left", "center", true)
     end
 end
 
@@ -341,10 +401,10 @@ end
 addEventHandler("onClientRender", root, function()
     if not isActive() then return end
     local mapX, mapY = MARGIN, screenH - MARGIN - MS
-    drawMinimap(mapX, mapY)
+    if prefs.map then drawMinimap(mapX, mapY) end
     drawBars(mapX + MS + 12 * s, screenH - MARGIN)
     drawTopRight()
-    drawSpeedometer()
+    if prefs.speedo then drawSpeedometer() end
 end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
@@ -353,6 +413,16 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     if not mapTexture or not renderTarget then
         outputDebugString("[rp_hud] No se pudo crear la textura del minimapa", 2)
     end
+    local f = xmlLoadFile(PREFS_FILE)
+    if f then
+        for k in pairs(prefs) do
+            local v = xmlNodeGetAttribute(f, k)
+            if v then prefs[k] = v == "1" end
+        end
+        xmlUnloadFile(f)
+    end
+    refreshNeeds()
+    refreshWorld()
     hideGtaHud()
 end)
 
@@ -365,13 +435,38 @@ end)
 addEventHandler("onClientPlayerSpawn", localPlayer, hideGtaHud)
 addEventHandler("onClientElementDataChange", localPlayer, function(key)
     if key == "rp:characterId" then hideGtaHud() end
+    if key == "rp:needs" then refreshNeeds() end
+end)
+addEventHandler("onClientElementDataChange", root, function(key)
+    if source == root and key == "rp:world" then refreshWorld() end
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()
     setPlayerHudComponentVisible("all", true)
 end)
 
-addCommandHandler("hud", function()
-    enabled = not enabled
-    exports.rp_notify:notify(enabled and "HUD visible." or "HUD oculto (/hud para mostrarlo).", "info")
+local function savePrefs()
+    local f = xmlCreateFile(PREFS_FILE, "hud")
+    if not f then return end
+    for k, v in pairs(prefs) do xmlNodeSetAttribute(f, k, v and "1" or "0") end
+    xmlSaveFile(f)
+    xmlUnloadFile(f)
+end
+
+-- /hud                 oculta o muestra todo (tecla F7)
+-- /hud necesidades     panel de vida y necesidades
+-- /hud mapa            minimapa
+-- /hud velocimetro     velocimetro (en vehiculo)
+local ALIASES = { necesidades = "needs", needs = "needs", mapa = "map", map = "map", velocimetro = "speedo", speedo = "speedo" }
+addCommandHandler("hud", function(_, what)
+    local key = what and ALIASES[what:lower()]
+    if not key then
+        enabled = not enabled
+        exports.rp_notify:notify(enabled and "HUD visible. Opciones: /hud necesidades | mapa | velocimetro" or "HUD oculto (/hud o F7 para mostrarlo).", "info")
+        return
+    end
+    prefs[key] = not prefs[key]
+    savePrefs()
+    exports.rp_notify:notify(("%s: %s"):format(what:lower(), prefs[key] and "visible" or "oculto"), "info")
 end)
+bindKey("F7", "down", function() executeCommandHandler("hud") end)
