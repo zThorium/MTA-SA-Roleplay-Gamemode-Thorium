@@ -406,6 +406,14 @@ local function updatePed(ped, s, now, px, py, pz)
             setWalking(ped, true, false)
         end
 
+    elseif s.state == "WATCH" then
+        -- curioso: se detiene a mirar un suceso (accidente, pelea...) y luego sigue
+        if now > s.until_ then
+            setPedAnimation(ped)
+            return resumeWalk(ped, s)
+        end
+        setElementRotation(ped, 0, 0, heading(s.lookX - x, s.lookY - y), "default", true)
+
     elseif s.state == "FLEE" then
         if now > s.until_ or (not s.threatPos and not isElement(s.threat)) then return resumeWalk(ped, s) end
         local hx, hy
@@ -644,6 +652,103 @@ local function pickDestination(x, y)
     end
 end
 
+----------------------------------------------------------------
+-- Red principal: los autos solo entran por tramos desde los que se puede volver a la red grande.
+-- Se calcula la mayor componente fuertemente conexa del grafo de ARISTAS dirigidas (un tramo a->b
+-- pasa a otro b->c si c no es a y el giro es < ~140 grados, igual que las salidas de un cruce). Quedan
+-- fuera los tramos de los que no hay salida sin vuelta en U (callejones, sentidos unicos que mueren,
+-- barrios mal enlazados): alli los autos entraban y se quedaban atascados.
+----------------------------------------------------------------
+mainEdge = {}      -- [a * 100000 + b] = true (tramo de la red principal)
+
+function computeMainEdges()
+    local ids, from, to, count = {}, {}, {}, 0
+    for a = 1, #VEH_NODES / 3 do
+        for _, b in ipairs(VEH_LINKS[a] or {}) do
+            if canDrive(a, b) then
+                count = count + 1
+                ids[a * 100000 + b], from[count], to[count] = count, a, b
+            end
+        end
+    end
+    local succ = {}
+    for i = 1, count do
+        local a, b = from[i], to[i]
+        local ax, ay = nodePos(VEH_NODES, a)
+        local bx, by = nodePos(VEH_NODES, b)
+        local d1x, d1y = dir(ax, ay, bx, by)
+        local s = {}
+        for _, c in ipairs(VEH_LINKS[b] or {}) do
+            local j = c ~= a and ids[b * 100000 + c]
+            if j then
+                local cx, cy = nodePos(VEH_NODES, c)
+                local d2x, d2y = dir(bx, by, cx, cy)
+                if d1x * d2x + d1y * d2y > -0.75 then s[#s + 1] = j end
+            end
+        end
+        succ[i] = s
+    end
+    -- Tarjan iterativo
+    local index, low, onStack, comp, compSize = {}, {}, {}, {}, {}
+    local stack, counter, ncomp = {}, 0, 0
+    for root = 1, count do
+        if not index[root] then
+            counter = counter + 1
+            index[root], low[root] = counter, counter
+            stack[#stack + 1], onStack[root] = root, true
+            local work = { { root, 1 } }
+            while #work > 0 do
+                local frame = work[#work]
+                local v, children = frame[1], succ[frame[1]]
+                local ci = frame[2]
+                if ci <= #children then
+                    frame[2] = ci + 1
+                    local w = children[ci]
+                    if not index[w] then
+                        counter = counter + 1
+                        index[w], low[w] = counter, counter
+                        stack[#stack + 1], onStack[w] = w, true
+                        work[#work + 1] = { w, 1 }
+                    elseif onStack[w] and index[w] < low[v] then
+                        low[v] = index[w]
+                    end
+                else
+                    if low[v] == index[v] then
+                        ncomp = ncomp + 1
+                        local size = 0
+                        while true do
+                            local w = stack[#stack]
+                            stack[#stack] = nil
+                            onStack[w] = false
+                            comp[w] = ncomp
+                            size = size + 1
+                            if w == v then break end
+                        end
+                        compSize[ncomp] = size
+                    end
+                    work[#work] = nil
+                    local parent = work[#work]
+                    if parent and low[v] < low[parent[1]] then low[parent[1]] = low[v] end
+                end
+            end
+        end
+    end
+    local best, bestSize = nil, 0
+    for c, size in pairs(compSize) do
+        if size > bestSize then best, bestSize = c, size end
+    end
+    local result = {}
+    for i = 1, count do
+        if comp[i] == best then result[from[i] * 100000 + to[i]] = true end
+    end
+    mainEdge = result
+    outputDebugString(("[rp_citizens] red vial principal: %d de %d tramos"):format(bestSize, count), 3)
+end
+
+local function isMainEdge(a, b)
+    return next(mainEdge) == nil or mainEdge[a * 100000 + b] == true
+end
+
 -- Eleccion en cada cruce, como GTA SA: al azar entre los enlaces permitidos
 -- (respeta sentidos unicos), con preferencia por seguir recto y sin giros en U.
 -- Peso: recto x4, giro suave x2, giro cerrado x1.
@@ -655,19 +760,25 @@ local function exitCandidates(node, prev)
     local d1x, d1y = dir(px, py, nx, ny)
     local options = {}
     -- solo enlaces viales reales que salen de este nodo, en un sentido permitido; primero sin giros mayores
-    -- de ~120 grados (casi vueltas en U) y solo si no queda ninguna salida se aceptan hasta ~140
-    for _, limit in ipairs({ -0.5, -0.75 }) do
-        for _, n in ipairs(VEH_LINKS[node] or {}) do
-            if n ~= prev and canDrive(node, n) then
-                local qx, qy = nodePos(VEH_NODES, n)
-                local d2x, d2y = dir(nx, ny, qx, qy)
-                local dot = d1x * d2x + d1y * d2y
-                if dot > limit then
-                    local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
-                    -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
-                    options[#options + 1] = { n, math.random() ^ (1 / w) }
+    -- de ~120 grados (casi vueltas en U) y solo si no queda ninguna salida se aceptan hasta ~140.
+    -- Si el auto va por la red principal, solo elige salidas que tambien sean de la red principal
+    -- (nunca entra a callejones ni barrios sin salida); si no hay ninguna, usa cualquiera.
+    local onMain = next(mainEdge) ~= nil and mainEdge[prev * 100000 + node] == true
+    for _, onlyMain in ipairs(onMain and { true, false } or { false }) do
+        for _, limit in ipairs({ -0.5, -0.75 }) do
+            for _, n in ipairs(VEH_LINKS[node] or {}) do
+                if n ~= prev and canDrive(node, n) and (not onlyMain or isMainEdge(node, n)) then
+                    local qx, qy = nodePos(VEH_NODES, n)
+                    local d2x, d2y = dir(nx, ny, qx, qy)
+                    local dot = d1x * d2x + d1y * d2y
+                    if dot > limit then
+                        local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
+                        -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
+                        options[#options + 1] = { n, math.random() ^ (1 / w) }
+                    end
                 end
             end
+            if #options > 0 then break end
         end
         if #options > 0 then break end
     end
@@ -879,7 +990,7 @@ function nearestLaneAligned(x, y, fx, fy, minAlign, maxLat)
                     local nx, ny = nodePos(VEH_NODES, n)
                     if getDistanceBetweenPoints2D(x, y, nx, ny) < 80 then
                         for _, m in ipairs(VEH_LINKS[n] or {}) do
-                            if canDrive(n, m) then
+                            if canDrive(n, m) and isMainEdge(n, m) then
                                 local mx, my = nodePos(VEH_NODES, m)
                                 local dx, dy, len = dir(nx, ny, mx, my)
                                 local aligned = dx * fx + dy * fy
@@ -959,7 +1070,7 @@ local function spawnCar(px, py)
     end
     local target
     for _, n in ipairs(VEH_LINKS[node] or {}) do
-        if canDrive(node, n) then target = n break end
+        if canDrive(node, n) and isMainEdge(node, n) then target = n break end
     end
     if not target then return end
     local sx, sy, sz, dx, dy = laneStart(node, target)
@@ -2040,8 +2151,14 @@ local function spawnTick()
 
     -- Spawn hasta el limite (uno por tick para repartir el coste)
     local night = isNight()
-    if pedCount < (night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) then spawnPed(px, py) end
-    local maxCars = (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
+    -- rp_events (c_scenes.lua): hora punta, lluvia y escenas activas ajustan los cupos
+    local pedMul, carMul = 1, 1
+    if eventPopScale then pedMul, carMul = eventPopScale() end
+    local maxPeds = math.floor((night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) * pedMul + 0.5)
+    local scenePeds = sceneExtraPeds and sceneExtraPeds() or 0
+    -- siempre quedan al menos 4 peatones caminando aunque haya muchos grupos quietos
+    if pedCount + math.min(scenePeds, math.max(0, maxPeds - 4)) < maxPeds then spawnPed(px, py) end
+    local maxCars = math.floor((night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) * carMul + 0.5) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
     -- hasta 2 por tick cuando faltan muchos (yendo rapido se despawnean seguido)
     for _ = 1, (maxCars - carCount > 4) and 2 or 1 do
         if carCount < maxCars then spawnCar(px, py) end
@@ -2132,6 +2249,7 @@ end
 addEventHandler("onClientResourceStart", resourceRoot, function()
     pedGrid = buildGrid(PED_NODES, PED_LINKS)
     vehGrid = buildGrid(VEH_NODES, VEH_LINKS)
+    computeMainEdges()
     setPedsLODDistance(60)
     setTimer(spawnTick, CFG.SPAWN_TICK, 0)
     setTimer(pedTick, CFG.PED_TICK, 0)
@@ -2146,6 +2264,7 @@ addEventHandler("onClientResourceStop", resourceRoot, clearAll)
 function rebuildCitizenGrids()
     pedGrid = buildGrid(PED_NODES, PED_LINKS)
     vehGrid = buildGrid(VEH_NODES, VEH_LINKS)
+    computeMainEdges()
 end
 
 function clearCitizens()
@@ -2174,4 +2293,119 @@ end)
 ----------------------------------------------------------------
 function getRoadGraph()
     return VEH_NODES, VEH_LINKS, VEH_LANES, VEH_OFFSET
+end
+
+----------------------------------------------------------------
+-- API para rp_events (escenas ambientales en c_scenes.lua y eventos
+-- compartidos). Todo barato: busquedas puntuales sobre las rejillas.
+----------------------------------------------------------------
+
+function citizensEnabled()
+    return enabled
+end
+
+function citizenCounts()
+    return pedCount, carCount
+end
+
+function citizenPickSkin(x, y, z)
+    return pickPedSkin(x, y, z)
+end
+
+function citizenPickCar(x, y, z)
+    return pickCarModel(x, y, z)
+end
+
+-- Punto de acera a [minD, maxD] del jugador. hidden = fuera de la camara.
+-- Devuelve x, y, z, rotacion (siguiendo el camino) o nil.
+function citizenWalkSpot(minD, maxD, hidden)
+    if not pedGrid then return end
+    local px, py = getElementPosition(localPlayer)
+    for _ = 1, 4 do
+        local node, x, y, z = randomNodeAround(PED_NODES, pedGrid, px, py, minD, maxD)
+        if node and not (hidden and visibleFromCamera(x, y, z)) then
+            local target = nextNode(PED_LINKS, node, nil)
+            local tx, ty = nodePos(PED_NODES, target)
+            return x, y, z, heading(tx - x, ty - y)
+        end
+    end
+end
+
+-- Punto de calzada (carril derecho) con la direccion de la via. Con minD <= 0 busca
+-- el nodo mas cercano al jugador (uso de admin). Devuelve x, y, z, rotacion o nil.
+function citizenRoadSpot(minD, maxD, hidden)
+    if not vehGrid then return end
+    local px, py = getElementPosition(localPlayer)
+    for _ = 1, 5 do
+        local node, x, y, z
+        if minD <= 0 then
+            node = nearestNode(VEH_NODES, vehGrid, px, py)
+            if node then x, y, z = nodePos(VEH_NODES, node) end
+            if not node or getDistanceBetweenPoints2D(px, py, x, y) > 60 then return end
+        else
+            node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, minD, maxD)
+        end
+        if node and not (hidden and visibleFromCamera(x, y, z)) then
+            local target
+            for _, n in ipairs(VEH_LINKS[node] or {}) do
+                if canDrive(node, n) and isMainEdge(node, n) then target = n break end
+            end
+            if target then
+                local sx, sy, sz, dx, dy = laneStart(node, target)
+                if not spotOccupied(sx, sy, 12) then return sx, sy, sz, heading(dx, dy) end
+            end
+        end
+        if minD <= 0 then return end
+    end
+end
+
+-- Los peatones a menos de "radius" de (x, y) se paran a mirar durante "ms" (max. 6 por llamada)
+function citizenWatch(x, y, radius, ms)
+    if pedCount == 0 then return 0 end
+    local now, r2, n = getTickCount(), radius * radius, 0
+    for ped, s in pairs(peds) do
+        if (s.state == "WALK" or s.state == "IDLE") and isElement(ped) and n < 6 then
+            local px, py = getElementPosition(ped)
+            if (px - x) ^ 2 + (py - y) ^ 2 < r2 and math.random() < 0.6 then
+                n = n + 1
+                setPedAnimation(ped)
+                setWalking(ped, false)
+                s.state, s.lookX, s.lookY = "WATCH", x, y
+                s.until_ = now + ms * (0.6 + math.random() * 0.8)
+                if math.random() < 0.3 then setPedAnimation(ped, "ped", "phone_talk", -1, true, false, false, false) end
+            end
+        end
+    end
+    return n
+end
+
+-- Barrio de un punto: perfil ("ghetto", "rich", "industrial", "default"), nombre de zona y
+-- skins de la banda local (o nil). Lo usa c_hangouts.lua.
+function citizenZoneInfo(x, y, z)
+    local zone = getZoneName(x, y, z, false)
+    return ZONE_PROFILE[zone] or "default", zone, GANGS[zone]
+end
+
+function citizenProfileSkin(profile)
+    return pick((POP[profile] or POP.default).peds)
+end
+
+-- Vector unitario que se aleja de la calzada mas cercana (hacia las casas), o nil
+function citizenAwayFromRoad(x, y)
+    if not vehGrid then return end
+    local n = nearestNode(VEH_NODES, vehGrid, x, y)
+    if not n then return end
+    local rx, ry = nodePos(VEH_NODES, n)
+    local dx, dy = x - rx, y - ry
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 1 or len > 40 then return end
+    return dx / len, dy / len
+end
+
+function citizenIsVisible(x, y, z)
+    return visibleFromCamera(x, y, z)
+end
+
+function citizenWantedLevel()
+    return playerWanted() and true or false
 end
