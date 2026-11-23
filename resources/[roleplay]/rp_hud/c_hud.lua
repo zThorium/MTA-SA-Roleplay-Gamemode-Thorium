@@ -251,9 +251,37 @@ local NEEDS = {
     { key = "hunger", icon = "food",  r = 245, g = 165, b = 36 },
     { key = "thirst", icon = "drop", r = 70,  g = 150, b = 255 },
     { key = "energy", icon = "bolt", r = 168, g = 120, b = 255 },
+    { key = "stamina", icon = "run", r = 63, g = 191, b = 106 },   -- solo cliente, no se guarda
 }
-local needValues = { hunger = 100, thirst = 100, energy = 100 }
-local needShown = { hunger = 100, thirst = 100, energy = 100 }   -- valor suavizado para animar
+local needValues = { hunger = 100, thirst = 100, energy = 100, stamina = 100 }
+local needShown = { hunger = 100, thirst = 100, energy = 100, stamina = 100 }   -- valor suavizado para animar
+
+-- Estamina: baja corriendo (sprint), sube trotando/caminando/quieto. Al agotarse
+-- se bloquea el sprint hasta recuperar STAMINA_RESUME.
+local STAMINA_DRAIN, STAMINA_REGEN, STAMINA_RESUME = 8, 5, 20   -- puntos/segundo, puntos/segundo, %
+local staminaTick = getTickCount()
+local staminaLocked = false
+
+local function updateStamina()
+    local now = getTickCount()
+    local dt = math.min((now - staminaTick) / 1000, 0.5)
+    staminaTick = now
+    local st = needValues.stamina
+    if not isPedInVehicle(localPlayer) and getPedMoveState(localPlayer) == "sprint" then
+        st = st - STAMINA_DRAIN * dt
+    else
+        st = st + STAMINA_REGEN * dt
+    end
+    st = math.max(0, math.min(100, st))
+    needValues.stamina = st
+    if st <= 0 and not staminaLocked then
+        staminaLocked = true
+        toggleControl("sprint", false)
+    elseif staminaLocked and st >= STAMINA_RESUME and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
+        staminaLocked = false
+        toggleControl("sprint", true)
+    end
+end
 local statusLines = {}
 local hasNeeds = false   -- false hasta recibir "rp:needs" (no mostrar 100 falsos)
 local worldLabel = nil
@@ -278,7 +306,7 @@ local function refreshWorld()
 end
 
 local ICONS = {}
-for _, name in ipairs({ "heart", "shield", "food", "drop", "bolt" }) do
+for _, name in ipairs({ "heart", "shield", "food", "drop", "bolt", "run" }) do
     ICONS[name] = dxCreateTexture("images/icons/" .. name .. ".png", "argb", true, "clamp")
 end
 
@@ -324,6 +352,7 @@ end
 -- Cada necesidad tiene su color (NEEDS); ambar < 35, rojo parpadeante < 20.
 local function drawNeeds(x, bottom)
     if not prefs.needs or not hasNeeds then return bottom end
+    updateStamina()
     for k, v in pairs(needValues) do needShown[k] = needShown[k] + (v - needShown[k]) * 0.12 end
     local D = math.floor(50 * s)          -- diametro de cada icono
     local gap = math.floor(10 * s)
