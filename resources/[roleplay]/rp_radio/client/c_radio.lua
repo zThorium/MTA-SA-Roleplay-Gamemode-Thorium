@@ -161,11 +161,12 @@ addEventHandler("rp:radio:open", resourceRoot, openPanel)
 
 addEventHandler("rp:radio:ui:select", root, function(id)
     if not canControl() then return end
-    if id == nil or id == false or id == 0 then
+    -- el CEF manda los argumentos como texto: "0" = apagar
+    id = tonumber(id)
+    if not id then return end
+    if id == 0 then
         triggerServerEvent("rp:radio:set", resourceRoot, false)
-    else
-        id = tonumber(id)
-        if not id or not RADIO_BY_ID[id] then return end
+    elseif RADIO_BY_ID[id] then
         triggerServerEvent("rp:radio:set", resourceRoot, id)
     end
 end)

@@ -24,7 +24,8 @@ local function canControl(player, vehicle)
 end
 
 local function applyStation(vehicle, id)
-    setElementData(vehicle, RADIO_DATA_KEY, id, true)
+    -- false (no nil) = apagada: asi el cambio se sincroniza siempre a los clientes
+    setElementData(vehicle, RADIO_DATA_KEY, id or false, true)
 end
 
 function getVehicleStation(vehicle)
