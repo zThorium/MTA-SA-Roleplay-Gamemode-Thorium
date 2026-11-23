@@ -366,6 +366,7 @@ addEventHandler("rp:tune:buy", resourceRoot, function(cart)
     exports.rp_characters:saveCharacter(player)
 
     notify(player, ("Tuning aplicado por $%d."):format(total), "success")
+    triggerClientEvent(player, "rp:tune:sound", resourceRoot, "install")
     -- Sigue en el taller con el estado nuevo
     sendTuning(player, v, shopOf(v) or { name = "Taller" })
 end)

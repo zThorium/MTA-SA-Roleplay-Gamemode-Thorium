@@ -1,12 +1,13 @@
 :root {
-    --bg: rgba(12, 14, 20, 0.94);
+    --bg: rgba(14, 16, 22, 0.96);
+    --panel: rgba(255, 255, 255, 0.035);
     --surface: rgba(255, 255, 255, 0.05);
     --surface-hover: rgba(255, 255, 255, 0.1);
-    --border: rgba(255, 255, 255, 0.12);
+    --border: rgba(255, 255, 255, 0.1);
     --text: #f2f4f8;
     --muted: #9aa3b2;
     --faint: #6f7888;
-    --accent: #f5a524;
+    --accent: #d9a441;
     --success: #4cd38a;
     --danger: #e5484d;
 }
@@ -19,61 +20,51 @@ html, body {
     overflow: hidden;
     font-family: "Segoe UI", Roboto, Arial, sans-serif;
     color: var(--text);
-    background: rgba(0, 0, 0, 0.35);
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.6));
     user-select: none;
+    transition: background 0.2s;
 }
+body.dragging { background: transparent; cursor: grabbing; }
 
 body { display: flex; align-items: center; justify-content: center; }
 
 .window {
-    width: 780px;
-    max-width: calc(100vw - 32px);
-    background: var(--bg);
+    width: 860px;
+    max-width: calc(100vw - 340px);
+    background: linear-gradient(180deg, rgba(24, 27, 36, 0.97), var(--bg));
     border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-    animation: enter 0.25s ease-out;
+    border-top: 3px solid var(--accent);
+    border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    animation: enter 0.2s ease-out;
+    transition: opacity 0.15s;
 }
+body.dragging .window { opacity: 0.12; pointer-events: none; }
 
-@keyframes enter { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-header {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border);
-}
+header { display: flex; align-items: center; gap: 24px; padding: 16px 22px; border-bottom: 1px solid var(--border); }
+h1 { font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); }
+.hint { font-size: 11px; color: var(--faint); margin-top: 3px; }
+.hint b { color: var(--muted); font-weight: 600; }
+kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; font-family: inherit; font-size: 10px; color: var(--muted); }
 
-h1 { font-size: 20px; }
-.hint { font-size: 12px; color: var(--faint); margin-top: 2px; }
-kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 11px; color: var(--muted); }
-
-.weight { margin-left: auto; width: 200px; font-size: 12px; color: var(--muted); text-align: right; }
-.bar { height: 6px; margin-top: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; }
+.weight { margin-left: auto; width: 220px; font-size: 11px; color: var(--muted); }
+.weight-top { display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px; }
+.bar { height: 5px; margin-top: 6px; background: var(--surface); border-radius: 2px; overflow: hidden; }
 #weight-bar { height: 100%; width: 0; background: var(--success); transition: width 0.3s, background 0.3s; }
 
-.close {
-    width: 34px;
-    height: 34px;
-    border: 0;
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--muted);
-    font-size: 22px;
-    line-height: 1;
-    cursor: pointer;
-}
+.close { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
 .close:hover { background: var(--surface-hover); color: var(--text); }
 
-.content { display: grid; grid-template-columns: 1fr 250px; min-height: 360px; }
+.content { display: grid; grid-template-columns: 1fr 260px; min-height: 400px; }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-auto-rows: 96px;
-    gap: 10px;
-    padding: 20px 24px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: 92px;
+    gap: 8px;
+    padding: 18px 22px;
     align-content: start;
 }
 
@@ -83,62 +74,65 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; fon
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 5px;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    border-radius: 4px;
+    background: var(--panel);
+    cursor: grab;
+    transition: background 0.12s, border-color 0.12s;
 }
 .slot:hover { background: var(--surface-hover); }
-.slot.selected { border-color: var(--accent); background: rgba(245, 165, 36, 0.1); }
-.slot.empty { cursor: default; opacity: 0.4; }
-.slot.empty:hover { background: var(--surface); }
+.slot.selected { border-color: var(--accent); background: rgba(217, 164, 65, 0.1); box-shadow: inset 0 0 0 1px rgba(217, 164, 65, 0.35); }
+.slot.empty { cursor: default; opacity: 0.35; }
+.slot.empty:hover { background: var(--panel); }
 
-.icon { font-size: 30px; line-height: 1; }
-.slot .name { max-width: 90%; font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.slot .amount {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-}
+.icon { font-size: 28px; line-height: 1; }
+.slot .name { max-width: 92%; font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot .amount { position: absolute; top: 4px; right: 6px; font-size: 11px; font-weight: 700; color: var(--text); }
+.slot .kg { position: absolute; bottom: 3px; left: 6px; font-size: 9px; color: var(--faint); }
 
-.details { padding: 20px; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
-.empty-details { font-size: 13px; color: var(--faint); margin-top: 40px; text-align: center; }
-.details .big-icon { font-size: 48px; text-align: center; }
-.details h2 { font-size: 17px; text-align: center; }
-.details p { font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center; }
-.details .meta { font-size: 12px; color: var(--faint); text-align: center; }
+.details { padding: 18px; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; background: var(--panel); }
+.empty-details { font-size: 12px; color: var(--faint); margin-top: 40px; text-align: center; }
+.details .big-icon { font-size: 44px; text-align: center; padding: 10px 0; border: 1px solid var(--border); border-radius: 4px; background: rgba(0, 0, 0, 0.25); }
+.details h2 { font-size: 15px; text-align: center; }
+.details p { font-size: 12px; color: var(--muted); line-height: 1.5; text-align: center; }
+.details .meta { font-size: 11px; color: var(--faint); text-align: center; text-transform: uppercase; letter-spacing: 1px; }
 
 .actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
-.drop-row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; }
+.qty-row { display: grid; grid-template-columns: 1fr 70px; align-items: center; gap: 8px; font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 1px; }
 
-input[type=number] {
-    padding: 9px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.35);
-    color: var(--text);
-    font: inherit;
-    font-size: 14px;
-    outline: none;
-    user-select: text;
-}
+input[type=number] { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; background: rgba(0, 0, 0, 0.35); color: var(--text); font: inherit; font-size: 13px; outline: none; user-select: text; }
 
-button.primary, button.danger {
-    padding: 10px 12px;
-    border: 0;
-    border-radius: 8px;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-}
+button.primary, button.danger { padding: 9px 12px; border: 0; border-radius: 4px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .primary { background: var(--accent); color: #1a1204; }
-.primary:hover { background: #ffb53d; }
+.primary:hover { background: #e8b556; }
 .danger { background: transparent; color: var(--danger); border: 1px solid rgba(229, 72, 77, 0.5) !important; }
 .danger:hover { background: rgba(229, 72, 77, 0.12); }
-button:disabled { opacity: 0.5; cursor: default; }
+
+/* Panel "Cerca de ti" */
+.nearby {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 240px;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 6px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.nearby h3 { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.nearby-hint, .nearby-empty { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 8px; }
+.nearby-empty { margin: 0; }
+.near-card { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); font-size: 12px; }
+.near-card .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.near-card .who small { color: var(--faint); }
+.near-card button { padding: 5px 10px; border: 1px solid rgba(217, 164, 65, 0.5); border-radius: 3px; background: transparent; color: var(--accent); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.near-card button:hover:not(:disabled) { background: rgba(217, 164, 65, 0.15); }
+.near-card button:disabled { opacity: 0.35; cursor: default; }
+body.dragging .near-card.hover { border-color: var(--success); background: rgba(76, 211, 138, 0.15); }
+
+.ghost { position: fixed; display: none; pointer-events: none; z-index: 10; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 6px; background: rgba(14, 16, 22, 0.9); font-size: 26px; transform: translate(-50%, -50%); }
+.ghost small { font-size: 12px; font-weight: 700; margin-left: 6px; color: var(--text); }

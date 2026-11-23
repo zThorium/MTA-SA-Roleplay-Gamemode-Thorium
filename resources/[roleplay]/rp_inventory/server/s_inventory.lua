@@ -236,17 +236,124 @@ addEventHandler("rp:inv:use", resourceRoot, function(itemId)
     notify(player, effect.message or ("Usas " .. def.name .. "."), "success")
 end)
 
-addEventHandler("rp:inv:drop", resourceRoot, function(itemId, amount)
-    if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
-    local player = client
-    if throttled(player) or type(itemId) ~= "string" then return end
-    amount = tonumber(amount) or 1
+----------------------------------------------------------------
+-- Items en el suelo (objetos visibles para todos) y entrega a jugadores
+-- shortcut: el suelo vive solo en memoria (se pierde al reiniciar el recurso), pasar a tabla SQL si hace falta persistir
+----------------------------------------------------------------
+local DROP_RANGE, GIVE_RANGE, PICK_RANGE = 4, 3, 3
+local GROUND_LIFETIME = 30 * 60 * 1000
+local ground = {}   -- [objeto] = { itemId, amount }
+
+local function setAme(player, text)
+    local res = getResourceFromName("rp_nametags")
+    if res and getResourceState(res) == "running" then exports.rp_nametags:setAme(player, text, 4500) end
+end
+
+local function distanceTo(player, x, y, z)
+    local px, py, pz = getElementPosition(player)
+    return getDistanceBetweenPoints3D(px, py, pz, x, y, z)
+end
+
+local function sameWorld(a, b)
+    return getElementDimension(a) == getElementDimension(b) and getElementInterior(a) == getElementInterior(b)
+end
+
+local function canAct(player)
+    return not getElementData(player, "rp:downed") and not isPedDead(player) and not isPedInVehicle(player)
+end
+
+local function dropAt(player, itemId, amount, x, y, z)
     local def = getItemDefinition(itemId)
     if not def then return end
-    local ok, reason = takeItem(player, itemId, amount)
-    if ok then
-        notify(player, ("Tiraste %d x %s."):format(amount, def.name), "info")
-    else
-        notify(player, reason, "error")
+    if def.document then return notify(player, "No puedes tirar documentos.", "warning") end
+    if not validAmount(amount) then return end
+    if distanceTo(player, x, y, z) > DROP_RANGE or math.abs(z - select(3, getElementPosition(player))) > 3 then
+        return notify(player, "Ese lugar queda demasiado lejos.", "warning")
     end
+    local ok, reason = takeItem(player, itemId, amount)
+    if not ok then return notify(player, reason, "error") end
+
+    local model, scale = getItemGroundModel(itemId)
+    local object = createObject(model, x, y, z + 0.1)
+    setObjectScale(object, scale)
+    setElementCollisionsEnabled(object, false)
+    setElementDimension(object, getElementDimension(player))
+    setElementInterior(object, getElementInterior(player))
+    setElementData(object, "rp:ground", { name = def.name, icon = def.icon, amount = amount })
+    ground[object] = { itemId = itemId, amount = amount }
+    setTimer(function()
+        if isElement(object) then ground[object] = nil; destroyElement(object) end
+    end, GROUND_LIFETIME, 1)
+
+    setPedAnimation(player, "BOMBER", "BOM_Plant", 1200, false, false, false, false, 250)
+    setAme(player, ("deja %s en el suelo"):format(def.name:lower()))
+    notify(player, ("Dejaste %d x %s en el suelo."):format(amount, def.name), "info")
+end
+
+-- Boton "Tirar" (sin arrastrar): lo deja delante del personaje
+addEventHandler("rp:inv:drop", resourceRoot, function(itemId, amount)
+    local player = client
+    if not canAct(player) or throttled(player) or type(itemId) ~= "string" then return end
+    local x, y, z = getElementPosition(player)
+    local _, _, rot = getElementRotation(player)
+    local rad = math.rad(rot)
+    dropAt(player, itemId, tonumber(amount) or 1, x + math.sin(rad) * 0.8, y + math.cos(rad) * 0.8, z - 0.9)
+end)
+
+addEvent("rp:inv:dropAt", true)
+addEventHandler("rp:inv:dropAt", resourceRoot, function(itemId, amount, x, y, z)
+    local player = client
+    if not canAct(player) or throttled(player) or type(itemId) ~= "string" then return end
+    if type(x) ~= "number" or type(y) ~= "number" or type(z) ~= "number" then return end
+    dropAt(player, itemId, tonumber(amount) or 1, x, y, z)
+end)
+
+addEvent("rp:inv:pickup", true)
+addEventHandler("rp:inv:pickup", resourceRoot, function(object)
+    local player = client
+    if not canAct(player) or throttled(player) then return end
+    local entry = isElement(object) and ground[object]
+    if not entry then return end
+    local x, y, z = getElementPosition(object)
+    if not sameWorld(player, object) or distanceTo(player, x, y, z) > PICK_RANGE then return end
+
+    local def = getItemDefinition(entry.itemId)
+    local ok, reason = canCarry(player, entry.itemId, entry.amount)
+    if not ok then return notify(player, reason, "error") end
+
+    ground[object] = nil
+    destroyElement(object)
+    giveItem(player, entry.itemId, entry.amount)
+    setPedAnimation(player, "CARRY", "liftup", 800, false, false, false, false, 250)
+    setAme(player, ("recoge %s del suelo"):format(def.name:lower()))
+    notify(player, ("Recogiste %d x %s."):format(entry.amount, def.name), "success")
+end)
+
+addEvent("rp:inv:give", true)
+addEventHandler("rp:inv:give", resourceRoot, function(itemId, amount, targetId)
+    local player = client
+    if not canAct(player) or throttled(player) or type(itemId) ~= "string" then return end
+    amount, targetId = tonumber(amount) or 1, tonumber(targetId)
+    local def = getItemDefinition(itemId)
+    if not def or not targetId or not validAmount(amount) then return end
+
+    local target
+    for _, p in ipairs(getElementsByType("player")) do
+        if p ~= player and getElementData(p, "id") == targetId and getElementData(p, "rp:characterId") then target = p end
+    end
+    local x, y, z = getElementPosition(player)
+    if not target or isPedDead(target) or not sameWorld(player, target) or distanceTo(target, x, y, z) > GIVE_RANGE then
+        return notify(player, "Esa persona no esta cerca de ti.", "warning")
+    end
+    if not hasItem(player, itemId, amount) then return notify(player, "No tienes suficientes.", "error") end
+    local ok, reason = canCarry(target, itemId, amount)
+    if not ok then return notify(player, "No puede cargar eso: " .. reason, "error") end
+
+    takeItem(player, itemId, amount)
+    if not giveItem(target, itemId, amount) then giveItem(player, itemId, amount) return end   -- reembolso
+    local giver, receiver = getPlayerName(player):gsub("_", " "), getPlayerName(target):gsub("_", " ")
+    setPedAnimation(player, "DEALER", "DEALER_DEAL", 1500, false, false, false, false, 250)
+    setAme(player, ("entrega %s a %s"):format(def.name:lower(), receiver))
+    notify(player, ("Entregaste %d x %s a %s."):format(amount, def.name, receiver), "success")
+    notify(target, ("%s te entrego %d x %s."):format(giver, amount, def.name), "success")
 end)
