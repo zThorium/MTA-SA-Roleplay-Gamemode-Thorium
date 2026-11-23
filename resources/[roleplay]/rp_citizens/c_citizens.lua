@@ -351,6 +351,23 @@ local IDLE_ANIMS = {
     { "ped", "IDLE_chat" }, { "COP_AMBIENT", "Coplook_loop" }, { "ped", "XPRESSscratch" }, { "GANGS", "smkcig_prtl" },
 }
 
+-- Camino libre delante del peaton: dos rayos (rodilla y pecho) contra edificios, postes, objetos y autos
+local function pedClear(x, y, z, rot, dist)
+    local r = math.rad(rot)
+    local ex, ey = x - math.sin(r) * dist, y + math.cos(r) * dist
+    return isLineOfSightClear(x, y, z - 0.5, ex, ey, z - 0.5, true, true, false, true, false, true, false)
+        and isLineOfSightClear(x, y, z + 0.4, ex, ey, z + 0.4, true, true, false, true, false, true, false)
+end
+
+-- Gira hacia el primer lado libre (45, 90, 135 grados; empieza por el lado preferido) o nil
+local function clearDirection(x, y, z, rot, side)
+    for _, delta in ipairs({ 45, 90, 135 }) do
+        for _, sg in ipairs({ side, -side }) do
+            if pedClear(x, y, z, rot + delta * sg, 1.6) then return rot + delta * sg, sg end
+        end
+    end
+end
+
 local function updatePed(ped, s, now, px, py, pz)
     local x, y, z = getElementPosition(ped)
 
@@ -395,6 +412,38 @@ local function updatePed(ped, s, now, px, py, pz)
         if away then
             rot, hurry = away, true
             if cdist < 3.5 and csp > 25 then startFlee(ped, cveh, 3500, 0) return end
+        end
+        -- Obstaculos (postes, bancos, muros, autos parados): si hay algo a ~1.6 m, rodea por el lado libre
+        if s.avoidUntil and now < s.avoidUntil then
+            rot = s.avoidRot
+        elseif not pedClear(x, y, z, rot, 1.6) then
+            local nr, sg = clearDirection(x, y, z, rot, s.avoidSide or (math.random() < 0.5 and 1 or -1))
+            if nr then
+                s.avoidRot, s.avoidSide, s.avoidUntil = nr, sg, now + 1000
+                rot = nr
+            end
+        end
+        -- Atascado (apenas avanza en ~2 s): 1) paso lateral  2) da la vuelta  3) se retira o elige otro camino
+        if s.lastWalk and now - s.lastWalk > 1000 then s.posAt = nil end   -- venia de otro estado (idle, huida)
+        s.lastWalk = now
+        if not s.posAt or now - s.posAt > 2000 then
+            if s.posX and getDistanceBetweenPoints2D(x, y, s.posX, s.posY) < 0.6 and not hurry then
+                if not s.stuckReset or now > s.stuckReset then s.stuckCount = 0 end
+                s.stuckCount, s.stuckReset = (s.stuckCount or 0) + 1, now + 20000
+                if s.stuckCount == 1 then
+                    local nr, sg = clearDirection(x, y, z, rot, math.random() < 0.5 and 1 or -1)
+                    s.avoidRot, s.avoidSide, s.avoidUntil = nr or (rot + 90), sg or 1, now + 1600
+                    rot = s.avoidRot
+                elseif s.stuckCount == 2 then
+                    if s.prev then s.node, s.prev = s.prev, s.node end   -- vuelve por donde vino
+                    s.avoidUntil = nil
+                else
+                    s.stuckCount = 0
+                    if not isElementOnScreen(ped) then return removePed(ped) end
+                    return resumeWalk(ped, s)
+                end
+            end
+            s.posX, s.posY, s.posAt = x, y, now
         end
         setElementRotation(ped, 0, 0, rot, "default", true)
         setWalking(ped, true, hurry)
