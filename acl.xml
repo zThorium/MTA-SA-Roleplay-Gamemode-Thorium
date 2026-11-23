@@ -41,6 +41,10 @@
       <acl name="RPResourceManager" />
       <object name="resource.rp_resmanager" />
    </group>
+   <group name="RPRemoteFetch">
+      <acl name="RPC" />
+      <object name="resource.rp_phone" />
+   </group>
    <group name="MapEditor">
       <acl name="Default" />
       <acl name="MapEditor" />

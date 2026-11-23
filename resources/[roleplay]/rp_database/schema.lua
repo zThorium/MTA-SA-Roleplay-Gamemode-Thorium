@@ -839,4 +839,61 @@ SCHEMA = {
             REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_phone: catálogo reproducible de música (propio, SoundCloud o cualquier proveedor externo directo)
+    [[
+    CREATE TABLE IF NOT EXISTS music_tracks (
+        id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        track_key      VARCHAR(96)  NOT NULL,
+        provider       VARCHAR(24)  NOT NULL DEFAULT 'local',
+        provider_id    VARCHAR(96)  NULL,
+        title          VARCHAR(160) NOT NULL,
+        artist         VARCHAR(160) NOT NULL,
+        artwork_url    VARCHAR(512) NULL,
+        stream_url     VARCHAR(512) NOT NULL,
+        duration_ms    INT UNSIGNED NOT NULL DEFAULT 0,
+        active         TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_music_tracks_key (track_key),
+        KEY idx_music_tracks_search (provider, active, title),
+        KEY idx_music_tracks_artist (artist)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: canciones favoritas por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS music_favorites (
+        character_id INT UNSIGNED NOT NULL,
+        track_key    VARCHAR(96)  NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, track_key),
+        KEY idx_music_favorites_character (character_id, created_at),
+        CONSTRAINT fk_music_favorites_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: historial reciente de reproducciones por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS music_history (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        track_key    VARCHAR(96)  NOT NULL,
+        played_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_music_history_character (character_id, played_at),
+        CONSTRAINT fk_music_history_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: cache persistente de búsquedas externas (no guarda archivos de audio)
+    [[
+    CREATE TABLE IF NOT EXISTS music_search_cache (
+        provider  VARCHAR(24)  NOT NULL,
+        query_key VARCHAR(96)  NOT NULL,
+        payload   MEDIUMTEXT   NOT NULL,
+        expires_at DATETIME    NOT NULL,
+        created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (provider, query_key),
+        KEY idx_music_search_cache_expiry (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

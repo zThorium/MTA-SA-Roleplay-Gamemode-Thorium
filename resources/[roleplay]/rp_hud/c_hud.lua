@@ -21,7 +21,24 @@ local MARGIN = math.floor(22 * s)
 local mapTexture, renderTarget
 
 -- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
-local BLIP_ICON_IDS = { 27, 41, 45, 51, 52, 55 }   -- 51 = bencinera
+-- 17 = tienda/robo, 22 = emergencias, 36 = autoescuela, 52 = tienda,
+-- 54 = arriendo de bicicletas, 56 = trabajos/agencia, 63 = policia.
+local BLIP_ICON_IDS = { 17, 22, 27, 36, 41, 45, 51, 52, 54, 55, 56, 63 }
+local KNOWN_BLIP_ICON_IDS = {
+    [0] = true,
+    [17] = true,
+    [22] = true,
+    [27] = true,
+    [36] = true,
+    [41] = true,
+    [45] = true,
+    [51] = true,
+    [52] = true,
+    [54] = true,
+    [55] = true,
+    [56] = true,
+    [63] = true,
+}
 local zoomUnits = 300
 local BLIP_MAX_DISTANCE = 900   -- metros: mas lejos no se muestran en el minimapa (si en F11)
 local blipIcons = {}
@@ -117,9 +134,12 @@ local function drawMinimap(x, y)
                 local bx, by = getElementPosition(blip)
                 local worldDist = getDistanceBetweenPoints2D(px, py, bx, by)
                 local iconId = getBlipIcon(blip)
-                -- Marcadores de navegacion (0 = punto, 41 = destino) siempre; lugares solo cerca
-                local always = iconId == 0 or iconId == 41
-                if always or worldDist <= math.min(getBlipVisibleDistance(blip) or 99999, BLIP_MAX_DISTANCE) then
+                -- Solo se muestran blips conocidos. Los puntos normales (0) esperan
+                -- a estar cerca; 41 pertenece a la navegacion activa y siempre es visible.
+                local known = KNOWN_BLIP_ICON_IDS[iconId]
+                local always = iconId == 41
+                local visibleDistance = math.min(getBlipVisibleDistance(blip) or 99999, BLIP_MAX_DISTANCE)
+                if known and (always or worldDist <= visibleDistance) then
                     local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
                     dx, dy = rotate(dx, dy, -heading)
                     local half = MS / 2 - 14 * s

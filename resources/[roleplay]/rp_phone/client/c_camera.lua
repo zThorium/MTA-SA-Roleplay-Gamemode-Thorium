@@ -100,14 +100,21 @@ end
 local armOverride = {}   -- copia editable con /selfieajuste
 for bone, v in pairs(SELFIE_ARM) do armOverride[bone] = { v[1], v[2], v[3] } end
 
+-- Desactivado: rotar los huesos del brazo con la cabeza custom (ped sin cabeza)
+-- duplicaba la cabeza sobre el brazo levantado. Poner en true para volver a probarlo.
+local APPLY_SELFIE_ARM = false
+
 addEventHandler("onClientPedsProcessed", root, function()
-    if not setElementBoneRotation then return end
     for _, player in ipairs(getElementsByType("player", root, true)) do
         if getElementData(player, "rp:phoneCam") == "selfie" and isElementOnScreen(player) and not isPedDead(player) then
-            for bone, v in pairs(armOverride) do
-                setElementBoneRotation(player, bone, v[1], v[2], v[3])
+            if getElementData(player, "rp:head") and setPedHeadless then setPedHeadless(player, true) end
+            if APPLY_SELFIE_ARM and setElementBoneRotation then
+                for bone, v in pairs(armOverride) do
+                    setElementBoneRotation(player, bone, v[1], v[2], v[3])
+                end
+                updateElementRpHAnim(player)
+                if getElementData(player, "rp:head") and setPedHeadless then setPedHeadless(player, true) end
             end
-            updateElementRpHAnim(player)
         end
     end
 end)

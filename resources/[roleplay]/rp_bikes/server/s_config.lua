@@ -20,8 +20,8 @@ BIKES = {
     COOLDOWN = 1500,                  -- ms entre intentos de arriendo por jugador
 
     MARKER = { r = 245, g = 165, b = 36, a = 140, size = 1.4 },
-    -- Blip del mapa. icon 0 = punto de color; cambia el numero para otro icono de MTA.
-    BLIP = { enabled = true, icon = 0, r = 245, g = 165, b = 36, size = 2, visibleDistance = 400 },
+    -- Blip del mapa. icon 54 = bicicleta descriptiva en el minimapa de rp_hud.
+    BLIP = { enabled = true, icon = 54, r = 76, g = 211, b = 138, size = 2, visibleDistance = 400 },
 
     -- Puntos de arriendo (Los Santos). x, y, z = suelo donde se pone el marcador (la bici aparece
     -- ahi mismo, un poco arriba), rot = hacia donde mira la bici, interior/dimension = 0 en el mundo abierto.

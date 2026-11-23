@@ -395,13 +395,13 @@ local function createStaticPoints()
         local m = createMarker(h.x, h.y, h.z - 1, "cylinder", 1.3, c[1], c[2], c[3], 110)
         setElementInterior(m, h.interior or 0)
         setElementDimension(m, h.dimension or 0)
-        local b = createBlip(h.x, h.y, h.z, 0, 2, c[1], c[2], c[3], 255, 0, 300)
+        local b = createBlip(h.x, h.y, h.z, 56, 2, c[1], c[2], c[3], 255, 0, 300)
         staticPoints[#staticPoints + 1] = { kind = "hq", id = job.id, x = h.x, y = h.y, z = h.z, marker = m, blip = b,
             name = job.icon .. " " .. job.name, job = job }
     end
     for _, mk in ipairs(MARKETS) do
         local m = createMarker(mk.x, mk.y, mk.z - 1, "cylinder", 1.3, 245, 165, 36, 110)
-        local b = createBlip(mk.x, mk.y, mk.z, 0, 2, 245, 165, 36, 255, 0, 300)
+        local b = createBlip(mk.x, mk.y, mk.z, 52, 2, 245, 165, 36, 255, 0, 300)
         staticPoints[#staticPoints + 1] = { kind = "market", id = mk.id, x = mk.x, y = mk.y, z = mk.z, marker = m, blip = b,
             name = mk.icon .. " " .. mk.name }
     end

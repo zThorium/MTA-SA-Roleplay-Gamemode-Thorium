@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="social.css">
     <link rel="stylesheet" href="tinder.css">
+    <link rel="stylesheet" href="music.css">
 </head>
 <body>
     <div class="phone" id="phone">
@@ -29,6 +30,7 @@
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
                     <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span>Fotogram</button>
                     <button type="button" class="app" data-open="tinder"><span class="icon tinder">🔥</span>Tinder</button>
+                    <button type="button" class="app" data-open="music"><span class="icon music">♫</span>Musica</button>
                     <button type="button" class="app" data-app="vroom"><span class="icon vroom">🚗</span>Vroom</button>
                     <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
                 </div>
@@ -252,6 +254,42 @@
                 </div>
             </section>
 
+            <!-- Musica -->
+            <section class="view music" id="view-music">
+                <header class="music-head">
+                    <button type="button" class="back">‹ Inicio</button>
+                    <h1>Musica</h1>
+                    <span></span>
+                </header>
+                <div class="music-search-row">
+                    <input id="music-search-input" type="text" maxlength="80" placeholder="Canciones o artistas">
+                    <button type="button" id="music-search-go" aria-label="Buscar">⌕</button>
+                </div>
+                <div class="music-tabs">
+                    <button type="button" data-music-tab="explore" class="active">Explorar</button>
+                    <button type="button" data-music-tab="library">Mi biblioteca</button>
+                    <button type="button" data-music-tab="history">Recientes</button>
+                </div>
+                <div class="music-scroll">
+                    <h2 class="music-section-title">Explorar</h2>
+                    <div class="music-results" id="music-results"></div>
+                </div>
+                <div class="music-player" id="music-player" hidden>
+                    <div class="music-cover" id="music-cover">♫</div>
+                    <div class="music-player-meta">
+                        <strong id="music-now-title">Sin reproduccion</strong>
+                        <span id="music-now-artist"></span>
+                    </div>
+                    <button type="button" class="music-stop" id="music-stop" aria-label="Detener">■</button>
+                    <button type="button" class="music-play" id="music-play" aria-label="Reproducir">▶</button>
+                </div>
+                <div class="music-modes" id="music-modes" hidden>
+                    <button type="button" id="music-speaker">Altavoz apagado</button>
+                    <label>Volumen <input id="music-volume" type="range" min="0" max="100" value="60"></label>
+                    <button type="button" id="music-vehicle" hidden>Radio del vehiculo</button>
+                </div>
+            </section>
+
             <!-- Ajustes -->
             <section class="view" id="view-settings">
                 <header><button type="button" class="back">‹ Inicio</button><h1>Ajustes</h1><span></span></header>
@@ -296,5 +334,6 @@
     <script src="app.js"></script>
     <script src="social.js"></script>
     <script src="tinder.js"></script>
+    <script src="music.js"></script>
 </body>
 </html>
