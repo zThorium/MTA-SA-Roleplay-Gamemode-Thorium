@@ -1133,9 +1133,13 @@ end
 ----------------------------------------------------------------
 -- Conduccion
 ----------------------------------------------------------------
-local function setPedal(driver, accel, brake)
+-- brake_reverse es freno si el auto avanza, pero MARCHA ATRAS si esta parado o rodando hacia atras:
+-- por eso nunca se usa como freno cuando el auto no avanza (ver "fwd" en updateCar). El freno de mano
+-- detiene un auto que rueda hacia atras sin querer.
+local function setPedal(driver, accel, brake, handbrake)
     setPedControlState(driver, "accelerate", accel)
     setPedControlState(driver, "brake_reverse", brake)
+    setPedControlState(driver, "handbrake", handbrake or false)
 end
 
 local function steerTo(driver, value)
@@ -1169,6 +1173,27 @@ local function speedOf(el)
 end
 
 ----------------------------------------------------------------
+-- Hay algo (auto, peaton, objeto o pared) justo detras del auto? Tres rayos: centro y esquinas.
+function rearBlocked(vehicle, m, reach)
+    local fx, fy = m[2][1], m[2][2]
+    local sx, sy, sz = m[4][1] - fx * 2.4, m[4][2] - fy * 2.4, m[4][3] + 0.3
+    for _, off in ipairs({ 0, 0.9, -0.9 }) do
+        local ox, oy = m[1][1] * off, m[1][2] * off
+        if processLineOfSight(sx + ox, sy + oy, sz, sx + ox - fx * reach, sy + oy - fy * reach, sz,
+            true, true, true, true, false, true, false, false, vehicle) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Empieza una marcha atras corta solo si detras esta libre
+function startReverse(vehicle, s, now, ms, steer, m)
+    if rearBlocked(vehicle, m, 3.5) then return false end
+    s.recoverUntil, s.recoverSteer, s.recoverPos = now + ms, steer, nil
+    return true
+end
+
 -- Seguimiento de trayectoria: devuelve el error de rumbo (grados, + = girar a la izquierda)
 -- respecto de la ruta unos metros por delante, corregido por la distancia lateral (tipo Stanley).
 function pathTrack(s, wp, x, y, speed, rz)
@@ -1300,7 +1325,7 @@ local function tryDetour(vehicle, s, m)
     if not rejoin then return false end
     local rx, ry, rz = wp[rejoin][1], wp[rejoin][2], wp[rejoin][3]
 
-    for _, side in ipairs({ 5, 7, -4.5 }) do
+    for _, side in ipairs({ 5, 7, -4.5, -7.5, 9 }) do
         local p1x, p1y = x + fx * 4 + lx * side * 0.6, y + fy * 4 + ly * side * 0.6
         local p2x, p2y = x + fx * 11 + lx * side, y + fy * 11 + ly * side
         local p3x, p3y = x + fx * 18 + lx * side * 0.7, y + fy * 18 + ly * side * 0.7
@@ -1333,6 +1358,9 @@ local function updateCar(vehicle, s, now)
     local x, y = getElementPosition(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local m = getElementMatrix(vehicle)
+    -- velocidad con signo: > 0 avanza, < 0 rueda hacia atras
+    local fvx, fvy = getElementVelocity(vehicle)
+    local fwd = (fvx * m[2][1] + fvy * m[2][2]) * 180
 
     -- Volcado: el conductor huye y el auto queda abandonado
     if m[3][3] < 0.3 then return abandonCar(vehicle, s) end
@@ -1351,9 +1379,18 @@ local function updateCar(vehicle, s, now)
         steerTo(driver, -(s.recoverSteer or 0))
         local vx, vy = getElementVelocity(vehicle)
         local backing = (vx * m[2][1] + vy * m[2][2]) * 180
-        setPedal(driver, false, backing > -12)       -- no supera ~12 km/h marcha atras
+        s.recoverPos = s.recoverPos or { x, y }
+        -- la marcha atras es corta (como mucho ~2.5 m) y se corta al instante si aparece algo detras
+        -- (auto, peaton, objeto o pared); despues se busca otra forma de pasar (desvio o nueva ruta)
+        if getDistanceBetweenPoints2D(x, y, s.recoverPos[1], s.recoverPos[2]) > 2.5
+            or rearBlocked(vehicle, m, 1.8 + math.max(0, -backing) * 0.06) then
+            s.recoverUntil, s.recoverPos, s.afterReverse = 0, nil, now
+            return setPedal(driver, backing < -1, false)
+        end
+        setPedal(driver, false, backing > -10)       -- no supera ~10 km/h marcha atras
         return
     end
+    s.recoverPos = nil
     if s.needReattach then reattach(vehicle, s, false) end
     s.needReattach = nil
 
@@ -1377,7 +1414,7 @@ local function updateCar(vehicle, s, now)
         end
         s.noRouteSince = s.noRouteSince or now
         steerTo(driver, 0)
-        setPedal(driver, false, speed > 1)
+        setPedal(driver, false, fwd > 1, fwd < -1)
         if now - s.noRouteSince > 800 and now - (s.lastReattach or 0) > 2000 then
             s.lastReattach = now
             reattach(vehicle, s, false)
@@ -1394,17 +1431,25 @@ local function updateCar(vehicle, s, now)
     -- cercano por delante; si sigue muy lejos de la ruta, se elimina aunque se vea (reaparece otro)
     -- desviacion = distancia al tramo entre el ultimo punto pasado y el siguiente (no solo al siguiente:
     -- en un cruce recto hay hasta ~24 m entre puntos y eso no es salirse de la ruta)
-    local dev = getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2])
+    -- Distancia al camino: minimo sobre la poligonal (ultimo punto pasado, si esta cerca) + proximos puntos
     local lp = s.lastPassed
-    if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
-    if lp then
-        local sx, sy = wp[1][1] - lp[1], wp[1][2] - lp[2]
-        local len2 = sx * sx + sy * sy
-        if len2 > 0.01 then
-            local t = math.max(0, math.min(1, ((x - lp[1]) * sx + (y - lp[2]) * sy) / len2))
-            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, lp[1] + sx * t, lp[2] + sy * t))
+    if lp and getDistanceBetweenPoints2D(x, y, lp[1], lp[2]) > 60 then lp = nil end
+    local dev = math.huge
+    local px0, py0 = nil, nil
+    if lp then px0, py0 = lp[1], lp[2] end
+    for k = 1, math.min(#wp, 4) do
+        local qx, qy = wp[k][1], wp[k][2]
+        if px0 then
+            local sx, sy = qx - px0, qy - py0
+            local len2 = sx * sx + sy * sy
+            local t = len2 > 0.01 and math.max(0, math.min(1, ((x - px0) * sx + (y - py0) * sy) / len2)) or 0
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, px0 + sx * t, py0 + sy * t))
+        else
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, qx, qy))
         end
+        px0, py0 = qx, qy
     end
+    if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
     if dev > 25 and not isElementOnScreen(vehicle) then
         return removeCar(vehicle)
     end
@@ -1416,8 +1461,8 @@ local function updateCar(vehicle, s, now)
             local dgn = angleDiff(heading(w1[1] - x, w1[2] - y), rz)
             local pts = {}
             for k = 1, math.min(#wp, 6) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
-            outputDebugString(("[rp_citizens] fuera de ruta: modelo %d nodos %s->%s pos (%.1f,%.1f) rumbo %.0f vel %.0f dev %.1f dif %.0f estado %s lenF %.2f wp: %s")
-                :format(getElementModel(vehicle), tostring(s.prev), tostring(s.node), x, y, rz, speed, dev, dgn, tostring(s.state), s.lenF or 1, table.concat(pts, " ")), 1)
+            outputDebugString(("[rp_citizens] fuera de ruta: modelo %d nodos %s->%s pos (%.1f,%.1f) rumbo %.0f vel %.0f dev %.1f dif %.0f estado %s lenF %.2f lp %s wp: %s")
+                :format(getElementModel(vehicle), tostring(s.prev), tostring(s.node), x, y, rz, speed, dev, dgn, tostring(s.state), s.lenF or 1, s.lastPassed and ("(%.0f,%.0f)"):format(s.lastPassed[1], s.lastPassed[2]) or "nil", table.concat(pts, " ")), 1)
         end
         s.offSince = s.offSince or now
         if now - s.offSince > 1500 and now - (s.lastReattach or 0) > 3000 then
@@ -1545,7 +1590,11 @@ local function updateCar(vehicle, s, now)
 
     if s.state == "FLEE" then
         setPedControlState(driver, "horn", false)
-        setPedal(driver, not obstacle or speed < 5, (obstacle ~= nil or wallFront) and speed > 20)
+        if fwd < -1.5 then
+            setPedal(driver, true, false)            -- rueda hacia atras: acelera hacia delante, nunca marcha atras
+        else
+            setPedal(driver, not obstacle or fwd < 5, (obstacle ~= nil or wallFront) and fwd > 20)
+        end
         if now > s.until_ then s.state = "DRIVE" end
         return
     end
@@ -1581,6 +1630,11 @@ local function updateCar(vehicle, s, now)
     end
 
     -- Distancia de seguimiento con lo que tenga delante
+    -- Rodeando un obstaculo (desvio activo): lo sigue viendo de frente mientras gira, pero no debe frenar por el
+    -- hasta que este realmente encima; si no, se queda parado "esperando" aunque su ruta nueva ya este libre
+    if obstacle and s.detourUntil and now < s.detourUntil and gap and gap > 2.2 + speed * 0.04 then
+        obstacle, frontHit = nil, false
+    end
     local isPlayerThing = obstacle and (obstacle == localPlayer or obstacle == getPedOccupiedVehicle(localPlayer))
     if obstacle then
         local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedOf(obstacle) or 0
@@ -1590,19 +1644,36 @@ local function updateCar(vehicle, s, now)
         local closing = (speed - otherSpeed) / 3.6
         if gap and closing > 1 and gap / closing < 2.0 then target = 0 end
 
+        -- Tras una marcha atras corta: intenta rodear el obstaculo en vez de repetir lo mismo
+        if s.afterReverse then
+            if now - s.afterReverse > 5000 then
+                s.afterReverse = nil
+            elseif speed < 3 and not waiting and not yielding and tryDetour(vehicle, s, m) then
+                s.detourUntil, s.blockedSince, s.afterReverse = now + 6000, 0, nil
+                setPedControlState(driver, "horn", false)
+            end
+        end
         if target <= 1 and speed < 3 then
             if s.blockedSince == 0 then s.blockedSince = now end
             local waited = now - s.blockedSince
             if isPlayerThing then
                 -- 1) bocina  2) busca un desvio  3) si no hay hueco, retrocede un poco y vuelve a intentar
                 if waited > 900 then honk(vehicle, s, now) end
+                -- bloqueado mucho tiempo sin poder rodear ni retroceder: si no se ve, desaparece;
+                -- si se ve, pasa unos segundos sin colision (nunca embiste al jugador)
+                if waited > 20000 then
+                    s.blockedSince = now
+                    if not isElementOnScreen(vehicle) then return removeCar(vehicle) end
+                    ghostCar(vehicle, s, 6000)
+                end
                 if waited > 2800 and not waiting then
                     if tryDetour(vehicle, s, m) then
                         s.detourUntil, s.blockedSince = now + 6000, 0
                         setPedControlState(driver, "horn", false)
                     elseif waited > 4500 then
                         -- sin hueco: retrocede un instante (~1 s) para abrir angulo y reintenta
-                        s.recoverUntil, s.recoverSteer, s.blockedSince = now + 900, 0, now - 2000
+                        -- (solo si no hay nada detras; si lo hay, espera)
+                        if startReverse(vehicle, s, now, 900, 0, m) then s.blockedSince = now - 2000 end
                     end
                 end
             elseif waited > 8000 and otherSpeed < 1 and not yielding and not waiting then
@@ -1620,7 +1691,13 @@ local function updateCar(vehicle, s, now)
         if not waiting then s.state = yielding and "YIELD" or (s.detourUntil and now < s.detourUntil and "DETOUR" or "DRIVE") end
     end
 
-    setPedal(driver, speed < target - 1, speed > target + 6 or (target == 0 and speed > 1))
+    if fwd < -1.5 then
+        -- rueda hacia atras sin que sea una maniobra de desatasco: lo frena (freno de mano) y,
+        -- si quiere avanzar, acelera hacia delante. NUNCA pisa marcha atras.
+        setPedal(driver, target > 5, false, target <= 5)
+    else
+        setPedal(driver, fwd < target - 1, fwd > target + 6 or (target == 0 and fwd > 1))
+    end
 
     -- Atascado sin motivo (pared, otro auto cruzado): marcha atras y reenganche
     -- (en cola, semaforo o cruce NUNCA cuenta como atasco)
@@ -1639,10 +1716,22 @@ local function updateCar(vehicle, s, now)
     if speed < 2 and not stopped and target > 5 then
         if s.stuckSince == 0 then s.stuckSince = now end
         if now - s.stuckSince > 3000 then
-            s.recoverUntil, s.recoverSteer, s.stuckSince = now + 1100, steer, 0
-            s.stuckCount = (s.stuckCount or 0) + 1
-            -- atascado de verdad: el conductor se baja y se va; el auto queda como obstaculo
-            if s.stuckCount > 3 then abandonCar(vehicle, s) end
+            s.stuckSince = 0
+            if startReverse(vehicle, s, now, 1100, steer, m) then
+                s.stuckCount = (s.stuckCount or 0) + 1
+                s.stuckBlockedSince = nil
+                -- de cada dos intentos, uno recalcula la ruta desde el carril mas cercano
+                if s.stuckCount % 2 == 0 then s.needReattach = true end
+                -- atascado de verdad: el conductor se baja y se va; el auto queda como obstaculo
+                if s.stuckCount > 5 then abandonCar(vehicle, s) end
+            else
+                -- algo detras: no retrocede; si dura, pasa unos segundos sin colision
+                s.stuckBlockedSince = s.stuckBlockedSince or now
+                if now - s.stuckBlockedSince > 8000 then
+                    s.stuckBlockedSince = nil
+                    ghostCar(vehicle, s, 5000)
+                end
+            end
         end
     else
         s.stuckSince = 0
@@ -1664,7 +1753,9 @@ addEventHandler("onClientVehicleCollision", root, function(hit, force)
             local ahead = (hx - x) * m[2][1] + (hy - y) * m[2][2] > 0
             if ahead then
                 s.blockedSince = now
-                setPedal(s.driver, false, true)
+                local cvx, cvy = getElementVelocity(source)
+                local cfwd = (cvx * m[2][1] + cvy * m[2][2]) * 180
+                setPedal(s.driver, false, cfwd > 1, cfwd < -1)   -- frena solo si avanza (parado, brake_reverse seria marcha atras)
             end
         end
     end
