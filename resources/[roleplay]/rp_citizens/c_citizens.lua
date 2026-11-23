@@ -219,6 +219,7 @@ end
 -- Utilidades
 ----------------------------------------------------------------
 local enabled = true
+local suspended = false   -- true mientras este de pasajero: ve el trafico del conductor (c_sync.lua)
 local peds, cars = {}, {}          -- [ped] = estado | [vehicle] = estado
 local pedCount, carCount = 0, 0
 
@@ -2381,7 +2382,7 @@ addCommandHandler("traficostats", function()
 end)
 
 local function spawnTick()
-    if not enabled or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
+    if not enabled or suspended or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
         if pedCount > 0 or carCount > 0 then clearAll() end
         return
     end
@@ -2595,7 +2596,7 @@ end
 ----------------------------------------------------------------
 
 function citizensEnabled()
-    return enabled
+    return enabled and not suspended
 end
 
 function citizenCounts()
@@ -2702,4 +2703,54 @@ end
 
 function citizenWantedLevel()
     return playerWanted() and true or false
+end
+
+----------------------------------------------------------------
+-- Sincronizacion entre jugadores del mismo auto (c_sync.lua)
+-- Conductor: envia los autos y peatones cercanos (getNearbyForSync).
+-- Pasajero: suspende su poblacion local y muestra la del conductor.
+----------------------------------------------------------------
+function setCitizensSuspended(state)
+    state = state and true or false
+    if suspended == state then return end
+    suspended = state
+    if suspended then clearAll() end
+end
+
+local nextSid = 0
+
+-- Lista plana de numeros: por entidad { tipo (1 auto, 2 peaton), id, modelo, x, y, z, rx, ry, rz, vx, vy, vz }
+function getNearbyForSync(px, py, radius, maxCars, maxPeds)
+    local r2 = radius * radius
+    local function nearest(tbl, limit, keep)
+        local found = {}
+        for el, s in pairs(tbl) do
+            if isElement(el) and keep(el, s) then
+                local x, y = getElementPosition(el)
+                local d2 = (x - px) ^ 2 + (y - py) ^ 2
+                if d2 < r2 then found[#found + 1] = { d2, el, s } end
+            end
+        end
+        table.sort(found, function(a, b) return a[1] < b[1] end)
+        for i = #found, limit + 1, -1 do found[i] = nil end
+        return found
+    end
+    local out = {}
+    local function emit(kind, el, s)
+        if not s.sid then
+            nextSid = nextSid + 1
+            s.sid = nextSid
+        end
+        local x, y, z = getElementPosition(el)
+        local rx, ry, rz = getElementRotation(el)
+        local vx, vy, vz = getElementVelocity(el)
+        local i = #out
+        out[i + 1], out[i + 2], out[i + 3] = kind, s.sid, getElementModel(el)
+        out[i + 4], out[i + 5], out[i + 6] = x, y, z
+        out[i + 7], out[i + 8], out[i + 9] = rx, ry, rz
+        out[i + 10], out[i + 11], out[i + 12] = vx, vy, vz
+    end
+    for _, f in ipairs(nearest(cars, maxCars, function() return true end)) do emit(1, f[2], f[3]) end
+    for _, f in ipairs(nearest(peds, maxPeds, function(p, s) return s.state ~= "DEAD" end)) do emit(2, f[2], f[3]) end
+    return out
 end

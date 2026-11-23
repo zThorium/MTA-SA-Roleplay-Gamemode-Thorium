@@ -170,3 +170,19 @@ Mecanismos de `c_citizens.lua`:
 | Red principal | Solo se usan los tramos desde los que se puede volver a la red grande; el resto (callejones, sentidos únicos que mueren) se evita. |
 | Degradación | Con tiempo de fotograma medio > 40 ms (< 25 FPS) la población baja a 0,6×; vuelve a 1× con < 30 ms. |
 | Estadísticas | Cuenta cada causa de eliminación y los nodos cercanos a autos eliminados por problemas (`/traficostats`), para detectar nodos malos y editarlos. |
+
+---
+
+## Trafico compartido entre ocupantes de un mismo vehiculo
+
+El tráfico es local a cada cliente. Para que conductor y pasajeros vean lo mismo sin tráfico de red por auto:
+
+- **Conductor** (`c_sync.lua`): con otros jugadores en su vehículo, envía 4 veces por segundo los autos y peatones
+  cercanos (75 m, hasta 12 y 10: posición, rotación, velocidad). Servidor (`s_sync.lua`): solo valida (es el
+  conductor, frecuencia >= 150 ms, solo números) y reenvía a los demás ocupantes.
+- **Pasajeros**: suspenden su población (`setCitizensSuspended`) y dibujan copias sin colisión ni IA, interpoladas.
+  Si el conductor no envía en 6 s, vuelven a su población local.
+- Coste estimado: ~5 KB/s hacia arriba (conductor) y ~5 KB/s por pasajero hacia abajo; sin coste por auto en el
+  servidor; el pasajero ahorra FPS (sin IA ni raycasts).
+
+Pendiente (fase 2): jugadores cercanos en vehículos distintos (líder de zona con la misma retransmisión).

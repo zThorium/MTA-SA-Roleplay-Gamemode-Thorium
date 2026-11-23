@@ -12,13 +12,26 @@
     <include resource="rp_notify" />
 
     <script src="s_paths.lua" type="server" />
+    <script src="s_sync.lua" type="server" />
     <script src="c_nodes_ls.lua" type="client" />
     <script src="c_citizens.lua" type="client" />
     <script src="c_editor.lua" type="client" />
+    <!-- Pasajeros y conductor ven el mismo trafico -->
+    <script src="c_sync.lua" type="client" />
+    <!-- Escenas ambientales y poblacion por hora/clima (las gobierna rp_events) -->
+    <script src="c_scenes.lua" type="client" />
+    <!-- Vida de barrio: bandas, vecinos y grupos fijos en cada rincon -->
+    <script src="c_hangouts.lua" type="client" />
 
     <!-- Bocina de los autos de la poblacion (sonido generado para el proyecto) -->
     <file src="sounds/horn.wav" />
 
     <!-- Red vial (con los cambios del editor) para otros recursos, p. ej. rp_rides -->
     <export function="getRoadGraph" type="client" />
+    <export function="citizenAwayFromRoad" type="client" />
+
+    <!-- API para rp_events: puntos de acera/calzada y peatones curiosos -->
+    <export function="citizenWalkSpot" type="client" />
+    <export function="citizenRoadSpot" type="client" />
+    <export function="citizenWatch" type="client" />
 </meta>
