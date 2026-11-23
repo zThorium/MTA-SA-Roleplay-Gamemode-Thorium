@@ -654,18 +654,22 @@ local function exitCandidates(node, prev)
     local nx, ny = nodePos(VEH_NODES, node)
     local d1x, d1y = dir(px, py, nx, ny)
     local options = {}
-    -- solo enlaces viales reales que salen de este nodo, en un sentido permitido
-    for _, n in ipairs(VEH_LINKS[node] or {}) do
-        if n ~= prev and canDrive(node, n) then
-            local qx, qy = nodePos(VEH_NODES, n)
-            local d2x, d2y = dir(nx, ny, qx, qy)
-            local dot = d1x * d2x + d1y * d2y
-            if dot > -0.75 then
-                local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
-                -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
-                options[#options + 1] = { n, math.random() ^ (1 / w) }
+    -- solo enlaces viales reales que salen de este nodo, en un sentido permitido; primero sin giros mayores
+    -- de ~120 grados (casi vueltas en U) y solo si no queda ninguna salida se aceptan hasta ~140
+    for _, limit in ipairs({ -0.5, -0.75 }) do
+        for _, n in ipairs(VEH_LINKS[node] or {}) do
+            if n ~= prev and canDrive(node, n) then
+                local qx, qy = nodePos(VEH_NODES, n)
+                local d2x, d2y = dir(nx, ny, qx, qy)
+                local dot = d1x * d2x + d1y * d2y
+                if dot > limit then
+                    local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
+                    -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
+                    options[#options + 1] = { n, math.random() ^ (1 / w) }
+                end
             end
         end
+        if #options > 0 then break end
     end
     table.sort(options, function(a, b) return a[2] > b[2] end)
     local list = {}
@@ -855,13 +859,16 @@ end
 -- atras). Puntua por la distancia lateral del auto al tramo.
 local nearestLaneAligned
 local function nearestLane(x, y, fx, fy)
-    -- primero un carril casi paralelo; si no hay, uno en un angulo mayor (hasta ~75 grados)
-    local n, t = nearestLaneAligned(x, y, fx, fy, 0.6)
-    if n then return n, t end
-    return nearestLaneAligned(x, y, fx, fy, 0.25)
+    -- Nunca salta a una via lejana: primero carriles a menos de 7 m (casi paralelos y luego hasta ~75
+    -- grados); solo si no hay ninguno, hasta 22 m.
+    for _, p in ipairs({ { 0.6, 7 }, { 0.25, 7 }, { 0.6, 22 }, { 0.25, 22 } }) do
+        local n, t = nearestLaneAligned(x, y, fx, fy, p[1], p[2])
+        if n then return n, t end
+    end
+    return nil
 end
 
-function nearestLaneAligned(x, y, fx, fy, minAlign)
+function nearestLaneAligned(x, y, fx, fy, minAlign, maxLat)
     local best, bestTarget, bestScore = nil, nil, math.huge
     local cx, cy = math.floor(x / 100), math.floor(y / 100)
     for ox = -1, 1 do
@@ -877,12 +884,13 @@ function nearestLaneAligned(x, y, fx, fy, minAlign)
                                 local dx, dy, len = dir(nx, ny, mx, my)
                                 local aligned = dx * fx + dy * fy
                                 local ahead = (mx - x) * fx + (my - y) * fy
-                                if aligned > minAlign and ahead > 4 then
+                                if aligned > minAlign and ahead > -3 then
                                     -- distancia del auto a la recta del tramo (lateral) y si queda dentro del tramo
                                     local t = ((x - nx) * dx + (y - ny) * dy)
                                     local px, py = nx + dx * math.max(0, math.min(len, t)), ny + dy * math.max(0, math.min(len, t))
-                                    local score = getDistanceBetweenPoints2D(x, y, px, py) + (1 - aligned) * 15
-                                    if score < bestScore then best, bestTarget, bestScore = n, m, score end
+                                    local lat = getDistanceBetweenPoints2D(x, y, px, py)
+                                    local score = lat + (1 - aligned) * 15
+                                    if lat <= maxLat and score < bestScore then best, bestTarget, bestScore = n, m, score end
                                 end
                             end
                         end
@@ -1515,7 +1523,13 @@ local function updateCar(vehicle, s, now)
             wp = s.wp
             if #wp == 0 then return end
         end
-        if dev > 40 and now - s.offSince > 5000 then return removeCar(vehicle) end
+        -- sigue lejos de cualquier carril tras varios intentos: lejos del jugador desaparece (sin que se note);
+        -- cerca, el conductor se baja (en vez de seguir corriendo por aceras o contra muros)
+        if dev > 25 and now - s.offSince > 6000 then
+            local ppx, ppy = getElementPosition(localPlayer)
+            if getDistanceBetweenPoints2D(ppx, ppy, x, y) > 50 or not isElementOnScreen(vehicle) then return removeCar(vehicle) end
+            return abandonCar(vehicle, s)
+        end
     else
         s.offSince = nil
     end
