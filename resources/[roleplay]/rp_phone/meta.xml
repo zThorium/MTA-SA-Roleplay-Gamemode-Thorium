@@ -21,10 +21,12 @@
     <script src="server/s_social.lua" type="server" />
     <script src="server/s_camera.lua" type="server" />
     <script src="server/s_tinder.lua" type="server" />
+    <script src="server/s_gallery.lua" type="server" />
     <script src="client/c_phone.lua" type="client" cache="false" />
     <script src="client/c_social.lua" type="client" cache="false" />
     <script src="client/c_music.lua" type="client" cache="false" />
     <script src="client/c_camera.lua" type="client" cache="false" />
+    <script src="client/c_gallery.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
@@ -36,9 +38,12 @@
     <export function="socialAction" type="server" />
     <export function="socialResetCooldowns" type="server" />
     <export function="getCameraConfigErrors" type="server" />
+    <file src="html/gallery.css" />
+    <file src="html/gallery.js" />
     <file src="html/tinder.css" />
     <file src="html/tinder.js" />
     <file src="html/music.css" />
     <file src="html/music.js" />
     <export function="getMusicConfigErrors" type="server" />
+    <export function="stopVehicleMusic" type="server" />
 </meta>

@@ -96,7 +96,7 @@
     document.getElementById("btn-refresh").addEventListener("click", function () { send("rp:resmgr:ui:refresh"); });
     document.getElementById("btn-close").addEventListener("click", function () { send("rp:resmgr:ui:close"); });
     document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" || e.key === "F10") { e.preventDefault(); send("rp:resmgr:ui:close"); }
+        if (e.key === "Escape" || e.key === "F9") { e.preventDefault(); send("rp:resmgr:ui:close"); }
     });
 
     window.RM = {

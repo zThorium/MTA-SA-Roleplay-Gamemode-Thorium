@@ -83,6 +83,7 @@ HELP.KEYS = {
     } },
     { group = "Staff", items = {
         { key = "F10", text = "Panel de administracion (solo administradores)" },
+        { key = "F9", text = "Gestor de recursos (solo super admin)" },
     } },
 }
 

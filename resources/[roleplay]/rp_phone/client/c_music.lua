@@ -61,10 +61,12 @@ local function setPaused(info, paused)
 end
 
 local function getTrack(trackKey)
-    local track = catalog[trackKey]
-    if track and streamUrls[trackKey] then
-        track.streamUrl = streamUrls[trackKey]
-    end
+    -- Sin URL resuelta todavia (llega por rp:music:playTrack): no reproducir, evita playSound("")
+    local url = streamUrls[trackKey]
+    if not url then return nil end
+    -- Los oyentes cercanos no tienen el catalogo (solo lo recibe quien abre el telefono): basta la URL
+    local track = catalog[trackKey] or { key = trackKey }
+    track.streamUrl = url
     return track
 end
 
@@ -85,8 +87,16 @@ local function startLocal(track, state)
 end
 
 local function reconcileLocal()
-    if not localState or not localState.trackKey then
+    -- Sonido de pasajero (radio del vehiculo): lo gestiona reconcileVehicleAudio, salvo que ya se bajo
+    if localSound and localSound.vehicle and getPedOccupiedVehicle(localPlayer) ~= localSound.vehicle then
         stopLocalSound()
+    end
+    -- Radio del vehiculo del dueño: al bajarse, el vehiculo suena en 3D, no hay que dejar el sonido privado (se oiria doble)
+    if localState and localState.origin == "vehicle" and localSound and not getPedOccupiedVehicle(localPlayer) then
+        stopLocalSound()
+    end
+    if not localState or not localState.trackKey then
+        if not (localSound and localSound.vehicle) then stopLocalSound() end
         return
     end
     if type(setSoundPaused) ~= "function" then
@@ -167,12 +177,18 @@ local function reconcilePlayerSpeakers()
     end
 end
 
+local vehicleWarned = {}
+
 local function reconcileVehicleAudio()
     local mine = getPedOccupiedVehicle(localPlayer)
     local seen = {}
     for _, vehicle in ipairs(getElementsByType("vehicle", root, true)) do
         local trackKey = getElementData(vehicle, "rp:musicTrackKey")
         local track = getTrack(trackKey)
+        if trackKey and not track and not vehicleWarned[vehicle] then
+            vehicleWarned[vehicle] = true
+            outputDebugString(("[rp_phone][music] vehiculo con musica key=%s pero sin URL en el cliente"):format(tostring(trackKey)), 2)
+        end
         if track and isElement(vehicle) then
             seen[vehicle] = true
             if mine == vehicle then
@@ -224,6 +240,10 @@ local function reconcileVehicleAudio()
     for vehicle in pairs(vehicleSounds) do
         if not seen[vehicle] or not isElement(vehicle) then stopVehicleSound(vehicle) end
     end
+    -- sonido interior del vehiculo cuyo dato de musica ya se borro (p. ej. la radio lo reemplazo)
+    if localSound and localSound.vehicle and not seen[localSound.vehicle] then
+        stopLocalSound()
+    end
 end
 
 local function reconcile()
@@ -249,7 +269,15 @@ end)
 
 addEventHandler("rp:music:state", resourceRoot, function(state)
     localState = type(state) == "table" and state or nil
-    callJS(("RP.music.setState(%s)"):format(localState and toJSON(localState, true) .. "[0]" or "null"))
+    -- state.vehicle es un element: toJSON no lo admite, y el CEF no lo necesita
+    local uiState
+    if localState then
+        uiState = {}
+        for k, v in pairs(localState) do
+            if type(v) ~= "userdata" then uiState[k] = v end
+        end
+    end
+    callJS(("RP.music.setState(%s)"):format(uiState and jsTable(uiState) or "null"))
     reconcile()
 end)
 
@@ -271,6 +299,17 @@ addEventHandler("rp:music:library", resourceRoot, function(favorites, history)
         :format(jsTable(favorites or {}), jsTable(history or {})))
 end)
 
+-- Los argumentos del CEF pueden llegar envueltos en tabla o como texto/numero
+local function unwrap(v)
+    if type(v) == "table" then v = v[1] or v[0] or v.value end
+    return v
+end
+
+local function toBool(v)
+    v = unwrap(v)
+    return v == true or v == 1 or v == "true" or v == "1"
+end
+
 addEvent("rp:phone:ui:musicSearch", false)
 addEvent("rp:phone:ui:musicPlay", false)
 addEvent("rp:phone:ui:musicStop", false)
@@ -291,25 +330,25 @@ addEventHandler("rp:phone:ui:musicSearch", root, function(query)
     triggerServerEvent("rp:music:search", resourceRoot, query)
 end)
 addEventHandler("rp:phone:ui:musicPlay", root, function(trackKey)
-    triggerServerEvent("rp:music:play", resourceRoot, tostring(trackKey or ""))
+    triggerServerEvent("rp:music:play", resourceRoot, tostring(unwrap(trackKey) or ""))
 end)
 addEventHandler("rp:phone:ui:musicStop", root, function()
     triggerServerEvent("rp:music:stop", resourceRoot)
 end)
 addEventHandler("rp:phone:ui:musicSpeaker", root, function(enabled)
-    triggerServerEvent("rp:music:speaker", resourceRoot, enabled == true)
+    triggerServerEvent("rp:music:speaker", resourceRoot, toBool(enabled))
 end)
 addEventHandler("rp:phone:ui:musicVolume", root, function(volume)
-    triggerServerEvent("rp:music:volume", resourceRoot, tonumber(volume))
+    triggerServerEvent("rp:music:volume", resourceRoot, tonumber(unwrap(volume)))
 end)
 addEventHandler("rp:phone:ui:musicVehicle", root, function(enabled)
-    triggerServerEvent("rp:music:vehicle", resourceRoot, enabled == true)
+    triggerServerEvent("rp:music:vehicle", resourceRoot, toBool(enabled))
 end)
 addEventHandler("rp:phone:ui:musicFavorite", root, function(trackKey)
-    triggerServerEvent("rp:music:favorite", resourceRoot, tostring(trackKey or ""))
+    triggerServerEvent("rp:music:favorite", resourceRoot, tostring(unwrap(trackKey) or ""))
 end)
 addEventHandler("rp:phone:ui:musicPause", root, function(paused)
-    triggerServerEvent("rp:music:pause", resourceRoot, paused)
+    triggerServerEvent("rp:music:pause", resourceRoot, toBool(paused))
 end)
 addEventHandler("rp:phone:ui:musicLibrary", root, function()
     triggerServerEvent("rp:music:library", resourceRoot)
@@ -323,6 +362,10 @@ addEventHandler("onClientElementDataChange", root, function(key)
 end)
 
 setTimer(reconcile, 750, 0)
+
+addEventHandler("onClientSoundFailed", root, function(reason)
+    outputDebugString(("[rp_phone][music] stream fallo: %s"):format(tostring(reason)), 2)
+end)
 
 addEventHandler("onClientSoundStopped", root, function(sound)
     for _, info in pairs(playerSounds) do

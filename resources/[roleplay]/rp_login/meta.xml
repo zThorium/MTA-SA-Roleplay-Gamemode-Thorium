@@ -19,4 +19,5 @@
     <export function="getPlayerAccountId" type="server" />
     <export function="getPlayerAccountName" type="server" />
     <export function="getPlayerAdminLevel" type="server" />
+    <export function="setSessionAdminLevel" type="server" />
 </meta>

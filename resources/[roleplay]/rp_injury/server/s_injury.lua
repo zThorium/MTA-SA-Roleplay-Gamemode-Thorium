@@ -279,6 +279,7 @@ addEventHandler("rp:injury:reanim", resourceRoot, function()
     local now = getTickCount()
     if lastAnim[player] and now - lastAnim[player] < 1500 then return end
     lastAnim[player] = now
+    if getElementData(player, "rp:loaded") and isPedInVehicle(player) then return end   -- sentado por un companero
     ejectFromVehicle(player)
     applyAnimation(player)
 end)

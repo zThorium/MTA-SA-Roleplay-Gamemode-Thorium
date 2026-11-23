@@ -911,4 +911,45 @@ SCHEMA = {
         CONSTRAINT fk_character_levels_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_phone: galeria del telefono (fotos tomadas con la camara, JPEG en base64) por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS phone_gallery (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        image        MEDIUMTEXT   NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_phone_gallery_character (character_id, id),
+        CONSTRAINT fk_phone_gallery_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_chat: historial de PMs (OOC) para que los admins revisen MG. Sin FK: se conserva aunque se borre el personaje
+    [[
+    CREATE TABLE IF NOT EXISTS chat_pm_log (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        sender_char INT UNSIGNED NOT NULL,
+        sender_name VARCHAR(64)  NOT NULL,
+        target_char INT UNSIGNED NOT NULL,
+        target_name VARCHAR(64)  NOT NULL,
+        message     VARCHAR(255) NOT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_chat_pm_sender (sender_name, id),
+        KEY idx_chat_pm_target (target_name, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_dealers: traficantes (peds con skin 28/29/30) que venden drogas
+    [[
+    CREATE TABLE IF NOT EXISTS dealers (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ped_skin  SMALLINT UNSIGNED NOT NULL,
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rotation  FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

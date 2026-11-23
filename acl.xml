@@ -25,6 +25,7 @@
       <object name="resource.webadmin" />
       <object name="resource.acpanel" />
       <object name="resource.rp_admin" />
+      <object name="resource.rp_adminpanel" />
    </group>
    <group name="Console">
       <acl name="Moderator" />

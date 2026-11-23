@@ -20,6 +20,7 @@ addEvent("rp:onCharacterSpawn", false)
 addEvent("rp:onCharacterLogout", false)
 addEvent("rp:inv:request", true)
 addEvent("rp:inv:use", true)
+addEvent("rp:onDrugUsed", false)   -- lo escucha rp_dealers; se registra aqui para que el trigger no falle sin ese recurso
 addEvent("rp:inv:drop", true)
 addEvent("rp:onItemUse", false)   -- source = jugador, (itemId)
 
@@ -234,6 +235,7 @@ addEventHandler("rp:inv:use", resourceRoot, function(itemId)
         if effect[need] then exports.rp_needs:addNeed(player, need, effect[need]) end
     end
     notify(player, effect.message or ("Usas " .. def.name .. "."), "success")
+    if effect.drug then triggerEvent("rp:onDrugUsed", player, effect.drug) end   -- rp_dealers aplica el efecto
 end)
 
 ----------------------------------------------------------------

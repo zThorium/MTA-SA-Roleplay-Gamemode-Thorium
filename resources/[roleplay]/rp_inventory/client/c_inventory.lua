@@ -130,7 +130,7 @@ addEventHandler("rp:inv:ui:dropAt", root, function(itemId, amount, sx, sy)
     if type(itemId) ~= "string" or not (amount and sx and sy) then return end
     local cx, cy, cz = getCameraMatrix()
     local fx, fy, fz = getWorldFromScreenPosition(sx, sy, 40)
-    local hit, hx, hy, hz = processLineOfSight(cx, cy, cz, fx, fy, fz, true, false, false, true, false, false, false, localPlayer)
+    local hit, hx, hy, hz = processLineOfSight(cx, cy, cz, fx, fy, fz, true, false, false, true, false, false, false, false, localPlayer)
     if not hit then   -- apuntaste al cielo: lo dejamos delante del personaje
         local px, py, pz = getElementPosition(localPlayer)
         local _, _, rot = getElementRotation(localPlayer)

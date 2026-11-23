@@ -66,7 +66,7 @@ local function updateCamera(dt)
 
     local element = getPedOccupiedVehicle(localPlayer) or localPlayer
     local _, _, rz = getElementRotation(element)
-    local rad = math.rad(rz)
+    local rad = math.rad(rz + cam.yaw)                -- cam.yaw: giro libre con clic derecho
     local fx, fy = -math.sin(rad), math.cos(rad)      -- hacia delante
     local rx, ry = math.cos(rad), math.sin(rad)       -- hacia la derecha
     local hx, hy, hz = getPedBonePosition(localPlayer, 8)
@@ -165,7 +165,7 @@ local function startCamera(mode)
     if not cam then
         cam = {
             keys = {}, dist = C.SELFIE_DIST.default, height = C.SELFIE_HEIGHT.default,
-            fov = C.REAR_FOV.default, pitch = 0,
+            fov = C.REAR_FOV.default, pitch = 0, yaw = 0,
         }
         addEventHandler("onClientPreRender", root, updateCamera)
         setElementData(localPlayer, "rp:hudHidden", true, false)
@@ -258,6 +258,13 @@ addEventHandler("rp:phone:ui:camera", root, function(action, a, b)
     elseif action == "flip" then startCamera(cam.mode == "selfie" and "rear" or "selfie")
     elseif action == "key" and KEYS[a] then cam.keys[a] = b == true
     elseif action == "release" then cam.keys = {}
+    elseif action == "look" then
+        -- Clic derecho + arrastrar: el visor sigue al raton (a = dx, b = dy en pixeles)
+        local dx, dy = clamp(tonumber(a) or 0, -300, 300), clamp(tonumber(b) or 0, -300, 300)
+        cam.yaw = (cam.yaw + dx * 0.3) % 360
+        if cam.mode == "selfie" then cam.height = clamp(cam.height + dy * 0.004, C.SELFIE_HEIGHT.min, C.SELFIE_HEIGHT.max)
+        else cam.pitch = clamp(cam.pitch + dy * 0.25, C.REAR_PITCH.min, C.REAR_PITCH.max) end
+    elseif action == "resetLook" then cam.yaw = 0
     elseif action == "zoom" then zoom(tonumber(a) or 0)
     elseif action == "zoomTo" then
         local t = clamp(tonumber(a) or 0, 0, 1)
