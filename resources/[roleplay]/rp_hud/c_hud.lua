@@ -283,6 +283,19 @@ local function updateStamina()
         toggleControl("sprint", true)
     end
 end
+
+-- Metanfetamina: correr mas rapido acelerando las animaciones de trote/sprint.
+local METH_SPEED = 1.5
+local RUN_ANIMS = { "run_player", "run_civi", "run_fat", "run_old", "run_gang1", "run_wuzi",
+                    "sprint_civi", "sprint_panic", "swat_run", "woman_run", "woman_runfast", "woman_runpanic" }
+local methSpeedOn = false
+addEventHandler("onClientPreRender", root, function()
+    local meth = getElementData(localPlayer, "rp:meth") == true
+    if not meth and not methSpeedOn then return end
+    methSpeedOn = meth
+    local speed = meth and METH_SPEED or 1
+    for i = 1, #RUN_ANIMS do setPedAnimationSpeed(localPlayer, RUN_ANIMS[i], speed) end
+end)
 local statusLines = {}
 local hasNeeds = false   -- false hasta recibir "rp:needs" (no mostrar 100 falsos)
 local worldLabel = nil
