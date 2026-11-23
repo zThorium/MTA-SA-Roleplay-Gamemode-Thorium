@@ -39,6 +39,10 @@
     <file src="sounds/pos_error.wav" />
     <file src="sounds/pos_swipe.wav" />
     <file src="sounds/pos_print.wav" />
+    <file src="sounds/tune_install.wav" />
+    <file src="sounds/tune_turbo.wav" />
+    <file src="sounds/tune_bov.wav" />
+    <file src="sounds/tune_backfire.wav" />
 
     <export function="createOwnedVehicle" type="server" />
     <export function="countOwnedVehicles" type="server" />
