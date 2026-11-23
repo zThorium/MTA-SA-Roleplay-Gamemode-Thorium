@@ -162,7 +162,8 @@ local function catalogFor(shopId)
     for itemId, price in pairs(shops[shopId].items) do
         local def = exports.rp_inventory:getItemDefinition(itemId)
         if def then
-            list[#list + 1] = { id = itemId, name = def.name, icon = def.icon, description = def.description, weight = def.weight, price = price }
+            local lot = def.lot or 1   -- def.lot: el precio es por lote (p. ej. municion x30)
+            list[#list + 1] = { id = itemId, name = lot > 1 and ("%s (x%d)"):format(def.name, lot) or def.name, icon = def.icon, description = def.description, weight = def.weight * lot, price = price }
         end
     end
     table.sort(list, function(a, b) return a.price < b.price end)
@@ -200,10 +201,11 @@ addEventHandler("rp:shop:buy", resourceRoot, function(shopId, itemId, quantity)
         return notify(player, ("No tienes suficiente dinero. Necesitas $%d."):format(total), "error")
     end
 
-    local canCarry, reason = exports.rp_inventory:canCarry(player, itemId, quantity)
+    local units = quantity * (def.lot or 1)
+    local canCarry, reason = exports.rp_inventory:canCarry(player, itemId, units)
     if not canCarry then return notify(player, reason, "error") end
 
-    local given = exports.rp_inventory:giveItem(player, itemId, quantity)
+    local given = exports.rp_inventory:giveItem(player, itemId, units)
     if not given then return notify(player, "No se pudo completar la compra.", "error") end
 
     takePlayerMoney(player, total)
@@ -286,6 +288,8 @@ function addTempShop(ped, name, catalog)
     nextTempId = nextTempId - 1
     local x, y, z = getElementPosition(ped)
     local col = createColSphere(x, y, z, INTERACT_RADIUS)
+    setElementInterior(col, getElementInterior(ped))
+    setElementDimension(col, getElementDimension(ped))
     setElementData(ped, "rp:shopId", id)      -- invulnerable en el cliente (c_shops.lua)
     setElementData(ped, "rp:shopName", name)
     shops[id] = { row = { id = id, name = name }, items = items, ped = ped, col = col, temp = true }
