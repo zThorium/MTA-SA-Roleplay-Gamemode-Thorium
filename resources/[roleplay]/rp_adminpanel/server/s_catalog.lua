@@ -15,7 +15,7 @@ ADMIN_CATALOG = {
         id = "herramientas", name = "Herramientas",
         items = {
             { cmd = "/adminpanel", args = "", alt = "/apanel, F10", desc = "Abre este panel con todos los comandos de administracion.", res = "rp_adminpanel" },
-            { cmd = "/freecam", args = "", desc = "Camara libre (WASD, Espacio/Ctrl suben y bajan, Shift rapido, Alt lento). El personaje queda congelado.", res = "rp_admin" },
+            { cmd = "/freecam", args = "", desc = "Camara libre, solo super admin (WASD, Espacio/Ctrl, Shift rapido, Alt lento, rueda = velocidad, F = teletransportar al punto de la camara). El personaje queda congelado.", res = "rp_admin" },
             { cmd = "/nodos", args = "", desc = "Editor de la red vial y peatonal de los ciudadanos IA (mover, crear y enlazar nodos).", res = "rp_citizens" },
         },
     },
@@ -28,6 +28,8 @@ ADMIN_CATALOG = {
             { cmd = "/borrarpost", args = "<id>", desc = "Borra una foto de Fotogram (con sus likes, comentarios y avisos). El id sale en la base de datos (social_posts).", res = "rp_phone" },
             { cmd = "/darlicencia", args = "<id o nombre>", desc = "Entrega o rehabilita la licencia de conducir sin hacer las pruebas.", res = "rp_driving" },
             { cmd = "/forzarpayday", args = "[id o nombre]", desc = "Paga el sueldo (payday) al instante a un jugador; sin argumento, a ti.", res = "rp_payday" },
+            { cmd = "/pmlog", args = "<id o nombre> [cantidad]", desc = "Historial de PMs (OOC) enviados o recibidos por un personaje, para revisar MG.", res = "rp_chat" },
+            { cmd = "/darxp", args = "<id o nombre> <cantidad>", desc = "Da XP (RP) a un jugador; si llega al siguiente nivel, sube con la animacion.", res = "rp_levels" },
         },
     },
     {
@@ -76,6 +78,15 @@ ADMIN_CATALOG = {
             { cmd = "/borrarautoescuela", args = "<id>", desc = "Elimina una autoescuela.", res = "rp_driving" },
             { cmd = "/arenaautoescuela", args = "<id>", desc = "Fija la pista de pruebas en tu posicion y rumbo (terreno plano, ~200 m libres hacia delante y 30 m a los lados).", res = "rp_driving" },
             { cmd = "/autoescuelas", args = "", desc = "Lista las autoescuelas con su instructor y su pista.", res = "rp_driving" },
+            { cmd = "/evento", args = "[id]", desc = "Crea un evento dinamico (accidente, emergencia medica, control policial, obras, auto en llamas, mercadillo, fiesta) junto a ti. Sin id lista los disponibles.", res = "rp_events" },
+            { cmd = "/eventos", args = "", desc = "Lista los eventos dinamicos activos con distancia, tiempo restante y barrio.", res = "rp_events" },
+            { cmd = "/eventoslista", args = "", desc = "Catalogo de eventos con peso, horario, cooldown y coste de presupuesto.", res = "rp_events" },
+            { cmd = "/terminarevento", args = "<n|todos>", desc = "Termina un evento activo (o todos) y limpia sus elementos.", res = "rp_events" },
+            { cmd = "/eventosintensidad", args = "[0-3]", desc = "Intensidad del mundo vivo: 0 apagado (sin eventos ni escenas), 1 tranquilo, 2 normal, 3 movido.", res = "rp_events" },
+            { cmd = "/eventosinfo", args = "", desc = "Presupuesto de drama, elementos en uso e intensidad del director de eventos.", res = "rp_events" },
+            { cmd = "/clima", args = "[nombre]", desc = "Cambia el clima compartido (sun, smog, cloudy, rain, storm, fog). Sin nombre muestra el actual.", res = "rp_events" },
+            { cmd = "/hora", args = "<0-23> [minutos]", desc = "Cambia la hora de juego (el reloj sigue avanzando desde ahi).", res = "rp_events" },
+            { cmd = "/mercadoajuste", args = "<dz> <rotacion>", desc = "Calibra los puestos del mercadillo: metros que se suben (por si quedan enterrados) y rotacion extra 0/90/180/270 para que miren a la calle. Luego crea otro con /evento market.", res = "rp_events" },
         },
     },
 }

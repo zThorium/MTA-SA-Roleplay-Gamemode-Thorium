@@ -11,6 +11,9 @@
     <script src="server/s_shops.lua" type="server" />
     <script src="client/c_shops.lua" type="client" cache="false" />
 
+    <export function="addTempShop" type="server" />
+    <export function="removeTempShop" type="server" />
+
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />

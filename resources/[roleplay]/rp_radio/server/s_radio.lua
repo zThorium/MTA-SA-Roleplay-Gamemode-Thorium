@@ -24,7 +24,10 @@ local function canControl(player, vehicle)
 end
 
 local function applyStation(vehicle, id)
-    setElementData(vehicle, RADIO_DATA_KEY, id, true)
+    -- false (no nil) = apagada: asi el cambio se sincroniza siempre a los clientes
+    setElementData(vehicle, RADIO_DATA_KEY, id or false, true)
+    -- una sola fuente por vehiculo: al encender la radio se apaga la musica del telefono (rp_phone)
+    if id then pcall(function() exports.rp_phone:stopVehicleMusic(vehicle) end) end
 end
 
 function getVehicleStation(vehicle)

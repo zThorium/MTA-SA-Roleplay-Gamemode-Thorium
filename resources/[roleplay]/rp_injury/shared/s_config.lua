@@ -14,6 +14,13 @@ INJURY = {
     ANIM_BLOCK = "SWEET",
     ANIM_NAME  = "Sweet_injuredloop",
 
+    -- /cargar: posicion del herido respecto al cargador (a hombros). Ajustar RZ/Z/X en juego.
+    CARRY = {
+        RANGE = 3.0,
+        X = 0.0, Y = 0.0, Z = 0.45,
+        RX = 0, RY = 0, RZ = 90,
+    },
+
     -- Efecto de pantalla del abatido (client/c_screen.lua + files/downed.fx)
     SCREEN = {
         FADE_IN  = 2500,          -- ms hasta el gris total y el desenfoque completo

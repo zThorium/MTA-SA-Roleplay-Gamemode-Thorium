@@ -46,7 +46,8 @@ local function applyPose(player, state, poseId)
     local pose = FOTOGRAM_POSE_BY_ID[poseId]
     if not pose or (pose.mode ~= state.mode and pose.mode ~= "both") then return false end
     if isPedInVehicle(player) then return false end
-    setPedAnimation(player, pose.block, pose.anim, -1, true, false, false, false)
+    setPedAnimation(player, pose.block, pose.anim, -1, true, true, false, false)
+    if getElementData(player, "rp:head") then setPedHeadless(player, true) end
     state.posed, state.pose = true, poseId
     return true
 end

@@ -86,7 +86,9 @@
 
     function categories() {
         var d = T.d;
-        var cats = [{ id: "colors", name: "Pintura" }, { id: "lights", name: "Color de faros" }];
+        var cats = [];
+        if (d.perf) cats.push({ id: "perf", name: "Rendimiento" });
+        cats.push({ id: "colors", name: "Pintura" }, { id: "lights", name: "Color de faros" });
         if (d.paintjobs > 0) cats.push({ id: "paintjob", name: "Vinilos (paintjob)" });
         list(d.slots).forEach(function (s) { cats.push({ id: "slot" + s.slot, name: s.name, slot: s.slot }); });
         return cats;
@@ -100,9 +102,19 @@
         return T.sel.hasOwnProperty(c.slot) && T.sel[c.slot] !== T.current[c.slot];
     }
 
+    // Vista de camara de cada pantalla de rendimiento
+    function cameraFor(cat) {
+        if (!cat) return "colors";
+        if (cat === "perf:engine" || cat === "perf:turbo") return "perf_engine";
+        if (cat === "perf:brakes" || cat === "perf:tires") return "perf_wheel";
+        if (cat === "perf:suspension") return "perf_side";
+        return cat.indexOf("perf") === 0 ? "perf" : cat;
+    }
+
     function open(cat) {
         T.cat = cat;
-        send("rp:tune:ui:camera", cat || "colors");
+        T.pend = null;
+        send("rp:tune:ui:camera", cameraFor(cat));
         draw();
     }
 
@@ -142,8 +154,10 @@
         $("back").classList.toggle("hidden", !T.cat);
         if (!T.cat) {
             $("crumb").textContent = "Categorias";
-            html += '<button type="button" class="item repair" id="repair">Reparar vehiculo<small>Estado ' + d.health + '%</small>' +
-                '<span class="price">' + money(d.repair) + "</span></button>";
+            var repaired = !!d.repaired;
+            html += '<button type="button" class="item repair" id="repair"' + (repaired ? " disabled" : "") + ">" +
+                (repaired ? "Vehiculo reparado" : "Reparar vehiculo") + "<small>Estado " + d.health + "%</small>" +
+                '<span class="price">' + (repaired ? "—" : money(d.repair)) + "</span></button>";
             categories().forEach(function (c) {
                 html += '<button type="button" class="item" data-cat="' + c.id + '">' + esc(c.name) +
                     (isChanged(c) ? '<span class="dot">●</span>' : "") + '<span class="price">&rsaquo;</span></button>';
@@ -173,6 +187,8 @@
             root.querySelectorAll("[data-pj]").forEach(function (b) {
                 b.addEventListener("click", function () { T.p = Number(b.getAttribute("data-pj")); changed(); draw(); });
             });
+        } else if (T.cat.indexOf("perf") === 0) {
+            drawPerf(root);
         } else {
             var slot = Number(T.cat.substr(4));
             var s = list(d.slots).filter(function (x) { return x.slot === slot; })[0];
@@ -196,7 +212,106 @@
         $("buy").disabled = cart.total <= 0;
     }
 
-    $("back").addEventListener("click", function () { open(null); });
+
+    // ---- Rendimiento ----------------------------------------------------
+    var LEVEL_LABELS = ["De fabrica", "Nivel 1", "Nivel 2", "Nivel 3"];
+
+    function pct(n) { n = Number(n) || 0; return (n > 0 ? "+" : "") + (Math.round(n * 10) / 10) + "%"; }
+
+    // Barras de stats. next (opcional) = stats que tendria con la pieza elegida.
+    function statBlock(p, next) {
+        var html = '<div class="stats">';
+        list(p.defs).forEach(function (def, i) {
+            var cur = Number(p.stats[i]) || 0, nxt = next ? Number(next[i]) || 0 : cur;
+            var cap = Number(def.cap) || 1;
+            var lo = Math.max(0, Math.min(cur, nxt)) / cap * 100, hi = Math.max(0, Math.max(cur, nxt)) / cap * 100;
+            var worse = def.cost ? nxt > cur : nxt < cur;
+            var diff = nxt - cur;
+            html += '<div class="stat"><span class="name">' + esc(def.name) + '</span>' +
+                '<div class="bar' + (def.cost ? " cost" : "") + '"><b class="' + (worse ? "bad" : "good") + '" style="width:' + Math.min(100, hi) + '%"></b>' +
+                '<i style="width:' + Math.min(100, lo) + '%"></i></div>' +
+                '<span class="val">' + pct(nxt) + "</span>" +
+                (next && Math.abs(diff) >= 0.05 ? '<span class="diff ' + (worse ? "bad" : "good") + '">' + (diff > 0 ? "▲" : "▼") + "</span>" : "") + "</div>";
+        });
+        return html + "</div>";
+    }
+
+    function wearBar(wear) {
+        var w = Math.max(0, Math.min(100, Number(wear) || 0));
+        var cls = w >= 100 ? "dead" : (w >= 70 ? "warn" : "ok");
+        return '<div class="wear ' + cls + '"><i style="width:' + w + '%"></i></div>';
+    }
+
+    function drawPerf(root) {
+        var p = T.d.perf, html = "";
+        var partId = T.cat.indexOf("perf:") === 0 ? T.cat.substr(5) : null;
+        var part = partId ? list(p.parts).filter(function (x) { return x.id === partId; })[0] : null;
+        if (partId && !part) { T.cat = "perf"; return drawPerf(root); }
+
+        if (!part) {
+            $("crumb").textContent = "Rendimiento · " + p.class;
+            html += '<div class="info"><span>Clase: <strong>' + esc(p.class) + '</strong></span><span>Kilometraje: <strong>' + p.odo + " km</strong></span></div>";
+            html += statBlock(p, null);
+            list(p.parts).forEach(function (x) {
+                html += '<button type="button" class="item" data-part="' + x.id + '"><span>' + esc(x.name) +
+                    '<small class="sub">' + (x.level ? esc(x.levelName) : "De fabrica") + "</small></span>" +
+                    (x.level && x.wears ? '<span class="wearbox">' + wearBar(x.wear) + "<em>" + Math.round(x.wear) + "%</em></span>" : "") +
+                    '<span class="price">&rsaquo;</span></button>';
+            });
+            if (p.maintTotal > 0) {
+                html += '<button type="button" class="item repair" id="maintAll">Mantenimiento general<span class="price">' + money(p.maintTotal) + "</span></button>";
+            }
+            root.innerHTML = html;
+            root.querySelectorAll("[data-part]").forEach(function (b) {
+                b.addEventListener("click", function () { open("perf:" + b.getAttribute("data-part")); });
+            });
+            var all = $("maintAll");
+            if (all) all.addEventListener("click", function () { this.disabled = true; send("rp:tune:ui:maint", "all"); });
+            return;
+        }
+
+        $("crumb").textContent = part.name;
+        var pend = T.pend && T.pend.part === part.id ? T.pend.level : null;
+        var preview = null;
+        if (pend !== null && pend > 0) preview = list(part.levels)[pend - 1].stats;
+        html += '<div class="info"><span>' + esc(part.desc) + "</span></div>";
+        html += statBlock(p, preview);
+        if (part.level && part.wears) {
+            html += '<div class="wearline"><span>Desgaste ' + Math.round(part.wear) + "%</span>" + wearBar(part.wear) + "</div>";
+            if (part.maint > 0) {
+                html += '<button type="button" class="item repair" id="maint">Mantenimiento<span class="price">' + money(part.maint) + "</span></button>";
+            }
+        }
+        html += '<button type="button" class="item' + (part.level === 0 ? " installed" : "") + (pend === 0 ? " selected" : "") + '" data-lv="0">' +
+            "De fabrica" + '<span class="price">' + (part.level === 0 ? "Instalada" : (pend === 0 ? "Confirmar " : "Quitar ") + money(p.remove)) + "</span></button>";
+        list(part.levels).forEach(function (lv) {
+            var disabled = !lv.ok && !lv.installed;
+            html += '<button type="button" class="item' + (lv.installed ? " installed" : "") + (pend === lv.level ? " selected" : "") +
+                (disabled ? " locked" : "") + '" data-lv="' + lv.level + '"' + (disabled ? " disabled" : "") + ">" +
+                '<span>' + esc(lv.name) + (disabled ? '<small class="sub">' + esc(lv.why) + "</small>" : "") + "</span>" +
+                '<span class="price">' + (lv.installed ? "Instalada" : (pend === lv.level ? "Confirmar " : "") + money(lv.price)) + "</span></button>";
+        });
+        root.innerHTML = html;
+        var m = $("maint");
+        if (m) m.addEventListener("click", function () { this.disabled = true; send("rp:tune:ui:maint", part.id); });
+        root.querySelectorAll("[data-lv]").forEach(function (b) {
+            b.addEventListener("click", function () {
+                var level = Number(b.getAttribute("data-lv"));
+                if (T.pend && T.pend.part === part.id && T.pend.level === level) {
+                    b.disabled = true;
+                    T.pend = null;
+                    send("rp:tune:ui:perf", part.id, level);
+                } else {
+                    T.pend = { part: part.id, level: level };   // primer click: vista previa; segundo: confirmar
+                    draw();
+                }
+            });
+        });
+    }
+
+    $("back").addEventListener("click", function () {
+        open(T.cat && T.cat.indexOf("perf:") === 0 ? "perf" : null);
+    });
     $("exit").addEventListener("click", function () { send("rp:tune:ui:exit"); });
     $("buy").addEventListener("click", function () {
         var cart = buildCart();

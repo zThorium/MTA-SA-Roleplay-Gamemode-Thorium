@@ -17,6 +17,8 @@
 
     <script src="client/c_body.lua" type="client" cache="false" />
     <script src="client/c_characters.lua" type="client" cache="false" />
+    <export function="applyPedLook" type="client" />
+    <export function="clearPedLook" type="client" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />

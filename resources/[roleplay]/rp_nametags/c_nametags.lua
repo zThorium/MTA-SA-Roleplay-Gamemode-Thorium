@@ -30,10 +30,38 @@ local function drawBar(x, y, w, h, ratio, r, g, b, alpha)
     dxDrawRectangle(x, y, w * math.max(0, math.min(1, ratio)), h, tocolor(r, g, b, 230 * alpha))
 end
 
+-- Barra roja /ame sobre la cabeza (incluye al jugador local)
+local function drawAme(player, cx, cy, cz, myDim, myInt)
+    local text = getElementData(player, "rp:ame")
+    if not text or isPedDead(player) or getElementDimension(player) ~= myDim or getElementInterior(player) ~= myInt then return end
+    local hx, hy, hz = getPedBonePosition(player, 8)
+    local dist = getDistanceBetweenPoints3D(cx, cy, cz, hx, hy, hz)
+    if dist > MAX_DISTANCE then return end
+    -- Mas arriba que el nametag (que ocupa ~0.35 m); el local no tiene nametag
+    local sx, sy = getScreenFromWorldPosition(hx, hy, hz + (player == localPlayer and 0.4 or 0.6))
+    if not sx then return end
+
+    local alpha = 1 - math.max(0, (dist - MAX_DISTANCE * 0.7) / (MAX_DISTANCE * 0.3))
+    local scale = baseScale * math.max(0.7, 1.2 - dist / MAX_DISTANCE)
+    text = "* " .. text
+    local w = dxGetTextWidth(text, scale, "default-bold") + 20 * scale
+    local h = 20 * scale
+    dxDrawRectangle(sx - w / 2, sy - h, w, h, tocolor(170, 20, 28, 215 * alpha))
+    dxDrawRectangle(sx - w / 2, sy - h, w, 2, tocolor(255, 90, 90, 230 * alpha))
+    dxDrawText(text, sx - w / 2, sy - h, sx + w / 2, sy, tocolor(255, 255, 255, 255 * alpha), scale, "default-bold", "center", "center", true)
+end
+
 addEventHandler("onClientRender", root, function()
     if getElementData(localPlayer, "rp:hudHidden") then return end   -- p. ej. camara de Fotogram (rp_phone)
     local cx, cy, cz = getCameraMatrix()
     local myDim, myInt = getElementDimension(localPlayer), getElementInterior(localPlayer)
+
+    drawAme(localPlayer, cx, cy, cz, myDim, myInt)
+    for _, player in ipairs(getElementsByType("player", root, true)) do
+        if player ~= localPlayer and getElementData(player, "rp:characterId") then
+            drawAme(player, cx, cy, cz, myDim, myInt)
+        end
+    end
 
     for _, player in ipairs(getElementsByType("player", root, true)) do
         if player ~= localPlayer

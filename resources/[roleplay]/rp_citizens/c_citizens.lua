@@ -132,6 +132,13 @@ local function pickPolice(x, y, z)
     return p[1], p[2]
 end
 
+-- Personalidad del conductor: prudente, normal o agresivo (velocidad y distancia)
+local function newDriverStyle()
+    local r = math.random()
+    local base = r < 0.2 and { speed = 0.8, gap = 1.4 } or r > 0.85 and { speed = 1.2, gap = 0.75 } or { speed = 1.0, gap = 1.0 }
+    return { speed = base.speed * (0.95 + math.random() * 0.1), gap = base.gap }
+end
+
 local function pickDriverSkin(x, y, z)
     local pop = population(x, y, z)
     return pick(pop.peds)
@@ -212,6 +219,7 @@ end
 -- Utilidades
 ----------------------------------------------------------------
 local enabled = true
+local suspended = false   -- true mientras este de pasajero: ve el trafico del conductor (c_sync.lua)
 local peds, cars = {}, {}          -- [ped] = estado | [vehicle] = estado
 local pedCount, carCount = 0, 0
 
@@ -251,8 +259,7 @@ local function setWalking(ped, walk, sprint)
 end
 
 local function removePed(ped)
-    peds[ped] = nil
-    pedCount = pedCount - 1
+    if peds[ped] then peds[ped] = nil pedCount = pedCount - 1 end
     if isElement(ped) then destroyElement(ped) end
 end
 
@@ -263,17 +270,66 @@ local function spawnPed(px, py)
     local tx, ty = nodePos(PED_NODES, target)
     local ped = createPed(pickPedSkin(x, y, z), x, y, z + 1, heading(tx - x, ty - y))
     if not ped then return end
+    setElementData(ped, "rp:citizen", true, false)
     peds[ped] = { state = "WALK", node = target, prev = node, brave = math.random() < CFG.BRAVE_CHANCE, until_ = 0 }
     pedCount = pedCount + 1
     setWalking(ped, true, false)
 end
 
-local function startFlee(ped, from, duration)
+local pedSnap = {}   -- posiciones de los peatones (una lectura por tick)
+
+-- "from" es el elemento que asusta o una posicion { x, y } (explosion). El miedo se contagia:
+-- los peatones a menos de 14 m huyen tambien (hops = saltos de contagio que quedan).
+local function startFlee(ped, from, duration, hops)
     local s = peds[ped]
     if not s or s.state == "DEAD" then return end
     setPedAnimation(ped)
-    s.state, s.threat, s.until_ = "FLEE", from, getTickCount() + (duration or math.random(8000, 12000))
+    s.state, s.until_ = "FLEE", getTickCount() + (duration or math.random(8000, 12000))
+    if type(from) == "table" then s.threat, s.threatPos = nil, from else s.threat, s.threatPos = from, nil end
     setWalking(ped, true, true)
+    hops = hops == nil and 1 or hops
+    if hops > 0 then
+        local x, y = getElementPosition(ped)
+        for other, os in pairs(peds) do
+            if other ~= ped and os.state ~= "DEAD" and os.state ~= "FLEE" and os.state ~= "FIGHT" and isElement(other) then
+                local ox, oy = getElementPosition(other)
+                if (ox - x) ^ 2 + (oy - y) ^ 2 < 196 and math.random() < 0.7 then
+                    startFlee(other, from, math.random(4000, 7000), hops - 1)
+                end
+            end
+        end
+    end
+end
+
+-- Hay un auto en movimiento que viene hacia el peaton? Devuelve el rumbo para apartarse y su distancia
+local function carDanger(x, y)
+    for _, o in ipairs(carSnap) do
+        local v = o[1]
+        local dx, dy = x - o[2], y - o[3]
+        local d2 = dx * dx + dy * dy
+        if d2 < 100 and isElement(v) then
+            local vx, vy = getElementVelocity(v)
+            local sp = math.sqrt(vx * vx + vy * vy) * 180
+            if sp > 12 then
+                local ux, uy = vx / math.sqrt(vx * vx + vy * vy), vy / math.sqrt(vx * vx + vy * vy)
+                local along = dx * ux + dy * uy            -- el peaton esta delante del auto
+                local side = dx * uy - dy * ux             -- + = a la derecha del auto
+                if along > 0 and math.abs(side) < 2.8 then
+                    -- se aparta de lado, hacia donde ya esta
+                    local away = heading(side >= 0 and uy or -uy, side >= 0 and -ux or ux)
+                    return away, math.sqrt(d2), sp, v
+                end
+            end
+        end
+    end
+end
+
+local function idleChance()
+    local h = getTime()
+    if h >= 22 or h < 6 then return 0.03 end
+    if h >= 12 and h < 15 then return 0.12 end
+    if h >= 17 and h < 20 then return 0.09 end
+    return 0.06
 end
 
 local function startFight(ped, target)
@@ -287,7 +343,7 @@ local function resumeWalk(ped, s)
     local x, y = getElementPosition(ped)
     local n = nearestNode(PED_NODES, pedGrid, x, y)
     if not n then return removePed(ped) end
-    s.state, s.node, s.prev, s.threat = "WALK", n, nil, nil
+    s.state, s.node, s.prev, s.threat, s.threatPos = "WALK", n, nil, nil, nil
     setPedControlState(ped, "fire", false)
     setWalking(ped, true, false)
 end
@@ -296,6 +352,23 @@ local IDLE_ANIMS = {
     { "ped", "IDLE_chat" }, { "COP_AMBIENT", "Coplook_loop" }, { "ped", "XPRESSscratch" }, { "GANGS", "smkcig_prtl" },
 }
 
+-- Camino libre delante del peaton: dos rayos (rodilla y pecho) contra edificios, postes, objetos y autos
+local function pedClear(x, y, z, rot, dist)
+    local r = math.rad(rot)
+    local ex, ey = x - math.sin(r) * dist, y + math.cos(r) * dist
+    return isLineOfSightClear(x, y, z - 0.5, ex, ey, z - 0.5, true, true, false, true, false, true, false)
+        and isLineOfSightClear(x, y, z + 0.4, ex, ey, z + 0.4, true, true, false, true, false, true, false)
+end
+
+-- Gira hacia el primer lado libre (45, 90, 135 grados; empieza por el lado preferido) o nil
+local function clearDirection(x, y, z, rot, side)
+    for _, delta in ipairs({ 45, 90, 135 }) do
+        for _, sg in ipairs({ side, -side }) do
+            if pedClear(x, y, z, rot + delta * sg, 1.6) then return rot + delta * sg, sg end
+        end
+    end
+end
+
 local function updatePed(ped, s, now, px, py, pz)
     local x, y, z = getElementPosition(ped)
 
@@ -303,7 +376,7 @@ local function updatePed(ped, s, now, px, py, pz)
         local tx, ty = nodePos(PED_NODES, s.node)
         if getDistanceBetweenPoints2D(x, y, tx, ty) < 1.6 then
             -- Llego al nodo: a veces se queda un rato
-            if math.random() < 0.06 then
+            if math.random() < idleChance() then
                 s.state, s.until_ = "IDLE", now + math.random(4000, 9000)
                 setWalking(ped, false)
                 local a = IDLE_ANIMS[math.random(#IDLE_ANIMS)]
@@ -320,8 +393,61 @@ local function updatePed(ped, s, now, px, py, pz)
         if distP < 1.8 and math.abs(angleDiff(heading(dpx, dpy), rot)) < 40 then
             rot = rot + 50
         end
+        -- Evita a otros peatones que tiene justo delante (se aparta hacia el lado contrario)
+        local rr = math.rad(rot)
+        local fx, fy = -math.sin(rr), math.cos(rr)
+        for i = 1, #pedSnap do
+            local o = pedSnap[i]
+            if o[1] ~= ped then
+                local dx, dy = o[2] - x, o[3] - y
+                local along = dx * fx + dy * fy
+                if along > 0 and along < 1.6 then
+                    local lat = dx * fy - dy * fx   -- + = el otro esta a mi derecha
+                    if math.abs(lat) < 0.9 then rot = rot + (lat > 0 and 40 or -40) break end
+                end
+            end
+        end
+        -- Un auto viene hacia el: se aparta y acelera el paso; si esta muy cerca, huye
+        local away, cdist, csp, cveh = carDanger(x, y)
+        local hurry = false
+        if away then
+            rot, hurry = away, true
+            if cdist < 3.5 and csp > 25 then startFlee(ped, cveh, 3500, 0) return end
+        end
+        -- Obstaculos (postes, bancos, muros, autos parados): si hay algo a ~1.6 m, rodea por el lado libre
+        if s.avoidUntil and now < s.avoidUntil then
+            rot = s.avoidRot
+        elseif not pedClear(x, y, z, rot, 1.6) then
+            local nr, sg = clearDirection(x, y, z, rot, s.avoidSide or (math.random() < 0.5 and 1 or -1))
+            if nr then
+                s.avoidRot, s.avoidSide, s.avoidUntil = nr, sg, now + 1000
+                rot = nr
+            end
+        end
+        -- Atascado (apenas avanza en ~2 s): 1) paso lateral  2) da la vuelta  3) se retira o elige otro camino
+        if s.lastWalk and now - s.lastWalk > 1000 then s.posAt = nil end   -- venia de otro estado (idle, huida)
+        s.lastWalk = now
+        if not s.posAt or now - s.posAt > 2000 then
+            if s.posX and getDistanceBetweenPoints2D(x, y, s.posX, s.posY) < 0.6 and not hurry then
+                if not s.stuckReset or now > s.stuckReset then s.stuckCount = 0 end
+                s.stuckCount, s.stuckReset = (s.stuckCount or 0) + 1, now + 20000
+                if s.stuckCount == 1 then
+                    local nr, sg = clearDirection(x, y, z, rot, math.random() < 0.5 and 1 or -1)
+                    s.avoidRot, s.avoidSide, s.avoidUntil = nr or (rot + 90), sg or 1, now + 1600
+                    rot = s.avoidRot
+                elseif s.stuckCount == 2 then
+                    if s.prev then s.node, s.prev = s.prev, s.node end   -- vuelve por donde vino
+                    s.avoidUntil = nil
+                else
+                    s.stuckCount = 0
+                    if not isElementOnScreen(ped) then return removePed(ped) end
+                    return resumeWalk(ped, s)
+                end
+            end
+            s.posX, s.posY, s.posAt = x, y, now
+        end
         setElementRotation(ped, 0, 0, rot, "default", true)
-        setWalking(ped, true, false)
+        setWalking(ped, true, hurry)
 
     elseif s.state == "IDLE" then
         if now > s.until_ then
@@ -330,10 +456,28 @@ local function updatePed(ped, s, now, px, py, pz)
             setWalking(ped, true, false)
         end
 
+    elseif s.state == "WATCH" then
+        -- curioso: se detiene a mirar un suceso (accidente, pelea...) y luego sigue
+        if now > s.until_ then
+            setPedAnimation(ped)
+            return resumeWalk(ped, s)
+        end
+        setElementRotation(ped, 0, 0, heading(s.lookX - x, s.lookY - y), "default", true)
+
     elseif s.state == "FLEE" then
-        if now > s.until_ or not isElement(s.threat) then return resumeWalk(ped, s) end
-        local hx, hy = getElementPosition(s.threat)
-        setElementRotation(ped, 0, 0, heading(x - hx, y - hy) + math.random(-20, 20), "default", true)
+        if now > s.until_ or (not s.threatPos and not isElement(s.threat)) then return resumeWalk(ped, s) end
+        local hx, hy
+        if s.threatPos then hx, hy = s.threatPos[1], s.threatPos[2] else hx, hy = getElementPosition(s.threat) end
+        local rot = heading(x - hx, y - hy) + math.random(-20, 20)
+        -- no corre contra una pared: si el camino esta cerrado, rodea hacia un lado
+        for _, turn in ipairs({ 0, 70, -70 }) do
+            local rr = math.rad(rot + turn)
+            if isLineOfSightClear(x, y, z + 0.3, x - math.sin(rr) * 3, y + math.cos(rr) * 3, z + 0.3, true, false, false, false, false, false, false) then
+                rot = rot + turn
+                break
+            end
+        end
+        setElementRotation(ped, 0, 0, rot, "default", true)
         setWalking(ped, true, true)
 
     elseif s.state == "FIGHT" then
@@ -392,13 +536,22 @@ addEventHandler("onClientPlayerWeaponFire", localPlayer, function(weapon)
     end
 end)
 
+-- Explosiones (de cualquiera): los peatones a menos de 45 m huyen de ese punto
+addEventHandler("onClientExplosion", root, function(x, y)
+    for ped, s in pairs(peds) do
+        if s.state ~= "DEAD" and s.state ~= "FIGHT" and isElement(ped) then
+            local px, py = getElementPosition(ped)
+            if (px - x) ^ 2 + (py - y) ^ 2 < 2025 then startFlee(ped, { x, y }, math.random(9000, 13000), 0) end
+        end
+    end
+end)
+
 ----------------------------------------------------------------
 -- Trafico
 ----------------------------------------------------------------
 local function removeCar(vehicle)
     local s = cars[vehicle]
-    cars[vehicle] = nil
-    carCount = carCount - 1
+    if s then cars[vehicle] = nil carCount = carCount - 1 end
     if s and isElement(s.driver) then destroyElement(s.driver) end
     if isElement(vehicle) then destroyElement(vehicle) end
 end
@@ -548,6 +701,103 @@ local function pickDestination(x, y)
     end
 end
 
+----------------------------------------------------------------
+-- Red principal: los autos solo entran por tramos desde los que se puede volver a la red grande.
+-- Se calcula la mayor componente fuertemente conexa del grafo de ARISTAS dirigidas (un tramo a->b
+-- pasa a otro b->c si c no es a y el giro es < ~140 grados, igual que las salidas de un cruce). Quedan
+-- fuera los tramos de los que no hay salida sin vuelta en U (callejones, sentidos unicos que mueren,
+-- barrios mal enlazados): alli los autos entraban y se quedaban atascados.
+----------------------------------------------------------------
+mainEdge = {}      -- [a * 100000 + b] = true (tramo de la red principal)
+
+function computeMainEdges()
+    local ids, from, to, count = {}, {}, {}, 0
+    for a = 1, #VEH_NODES / 3 do
+        for _, b in ipairs(VEH_LINKS[a] or {}) do
+            if canDrive(a, b) then
+                count = count + 1
+                ids[a * 100000 + b], from[count], to[count] = count, a, b
+            end
+        end
+    end
+    local succ = {}
+    for i = 1, count do
+        local a, b = from[i], to[i]
+        local ax, ay = nodePos(VEH_NODES, a)
+        local bx, by = nodePos(VEH_NODES, b)
+        local d1x, d1y = dir(ax, ay, bx, by)
+        local s = {}
+        for _, c in ipairs(VEH_LINKS[b] or {}) do
+            local j = c ~= a and ids[b * 100000 + c]
+            if j then
+                local cx, cy = nodePos(VEH_NODES, c)
+                local d2x, d2y = dir(bx, by, cx, cy)
+                if d1x * d2x + d1y * d2y > -0.75 then s[#s + 1] = j end
+            end
+        end
+        succ[i] = s
+    end
+    -- Tarjan iterativo
+    local index, low, onStack, comp, compSize = {}, {}, {}, {}, {}
+    local stack, counter, ncomp = {}, 0, 0
+    for root = 1, count do
+        if not index[root] then
+            counter = counter + 1
+            index[root], low[root] = counter, counter
+            stack[#stack + 1], onStack[root] = root, true
+            local work = { { root, 1 } }
+            while #work > 0 do
+                local frame = work[#work]
+                local v, children = frame[1], succ[frame[1]]
+                local ci = frame[2]
+                if ci <= #children then
+                    frame[2] = ci + 1
+                    local w = children[ci]
+                    if not index[w] then
+                        counter = counter + 1
+                        index[w], low[w] = counter, counter
+                        stack[#stack + 1], onStack[w] = w, true
+                        work[#work + 1] = { w, 1 }
+                    elseif onStack[w] and index[w] < low[v] then
+                        low[v] = index[w]
+                    end
+                else
+                    if low[v] == index[v] then
+                        ncomp = ncomp + 1
+                        local size = 0
+                        while true do
+                            local w = stack[#stack]
+                            stack[#stack] = nil
+                            onStack[w] = false
+                            comp[w] = ncomp
+                            size = size + 1
+                            if w == v then break end
+                        end
+                        compSize[ncomp] = size
+                    end
+                    work[#work] = nil
+                    local parent = work[#work]
+                    if parent and low[v] < low[parent[1]] then low[parent[1]] = low[v] end
+                end
+            end
+        end
+    end
+    local best, bestSize = nil, 0
+    for c, size in pairs(compSize) do
+        if size > bestSize then best, bestSize = c, size end
+    end
+    local result = {}
+    for i = 1, count do
+        if comp[i] == best then result[from[i] * 100000 + to[i]] = true end
+    end
+    mainEdge = result
+    outputDebugString(("[rp_citizens] red vial principal: %d de %d tramos"):format(bestSize, count), 3)
+end
+
+local function isMainEdge(a, b)
+    return next(mainEdge) == nil or mainEdge[a * 100000 + b] == true
+end
+
 -- Eleccion en cada cruce, como GTA SA: al azar entre los enlaces permitidos
 -- (respeta sentidos unicos), con preferencia por seguir recto y sin giros en U.
 -- Peso: recto x4, giro suave x2, giro cerrado x1.
@@ -558,18 +808,28 @@ local function exitCandidates(node, prev)
     local nx, ny = nodePos(VEH_NODES, node)
     local d1x, d1y = dir(px, py, nx, ny)
     local options = {}
-    -- solo enlaces viales reales que salen de este nodo, en un sentido permitido
-    for _, n in ipairs(VEH_LINKS[node] or {}) do
-        if n ~= prev and canDrive(node, n) then
-            local qx, qy = nodePos(VEH_NODES, n)
-            local d2x, d2y = dir(nx, ny, qx, qy)
-            local dot = d1x * d2x + d1y * d2y
-            if dot > -0.75 then
-                local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
-                -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
-                options[#options + 1] = { n, math.random() ^ (1 / w) }
+    -- solo enlaces viales reales que salen de este nodo, en un sentido permitido; primero sin giros mayores
+    -- de ~120 grados (casi vueltas en U) y solo si no queda ninguna salida se aceptan hasta ~140.
+    -- Si el auto va por la red principal, solo elige salidas que tambien sean de la red principal
+    -- (nunca entra a callejones ni barrios sin salida); si no hay ninguna, usa cualquiera.
+    local onMain = next(mainEdge) ~= nil and mainEdge[prev * 100000 + node] == true
+    for _, onlyMain in ipairs(onMain and { true, false } or { false }) do
+        for _, limit in ipairs({ -0.5, -0.75 }) do
+            for _, n in ipairs(VEH_LINKS[node] or {}) do
+                if n ~= prev and canDrive(node, n) and (not onlyMain or isMainEdge(node, n)) then
+                    local qx, qy = nodePos(VEH_NODES, n)
+                    local d2x, d2y = dir(nx, ny, qx, qy)
+                    local dot = d1x * d2x + d1y * d2y
+                    if dot > limit then
+                        local w = dot > 0.85 and 4 or dot > 0.3 and 2 or 1
+                        -- orden aleatorio ponderado (Efraimidis-Spirakis): mayor peso -> antes
+                        options[#options + 1] = { n, math.random() ^ (1 / w) }
+                    end
+                end
             end
+            if #options > 0 then break end
         end
+        if #options > 0 then break end
     end
     table.sort(options, function(a, b) return a[2] > b[2] end)
     local list = {}
@@ -639,9 +899,10 @@ function computeTurnPoints(A, B, C)
     -- Si el tramo termina en un semaforo, E es la linea de detencion (campo 6 = eje)
     local axis = nil
     if getLight(A, B) > 0 then axis = math.abs(d1x) > math.abs(d1y) and "ew" or "ns" end
-    pts[1] = { ex, ey, bz, 0, junction, axis }
+    local man = junction and { d1x, d1y, d2x, d2y, turn } or nil   -- maniobra (para la prioridad en cruces)
+    pts[1] = { ex, ey, bz, 0, junction, axis, man }
     if turn < 10 then
-        pts[2] = { xx, xy, bz, 0, junction }
+        pts[2] = { xx, xy, bz, 0, junction, nil, man }
     else
         local qx, qy = intersect(ex, ey, d1x, d1y, xx, xy, -d2x, -d2y)
         if not qx then qx, qy = bx + (d1y * off1 + d2y * off2) / 2, by - (d1x * off1 + d2x * off2) / 2 end
@@ -649,7 +910,7 @@ function computeTurnPoints(A, B, C)
         for i = 1, steps do
             local t = i / steps
             local u = 1 - t
-            pts[#pts + 1] = { u * u * ex + 2 * u * t * qx + t * t * xx, u * u * ey + 2 * u * t * qy + t * t * xy, bz, turn, junction }
+            pts[#pts + 1] = { u * u * ex + 2 * u * t * qx + t * t * xx, u * u * ey + 2 * u * t * qy + t * t * xy, bz, turn, junction, nil, man }
         end
     end
     return pts, turn
@@ -701,22 +962,45 @@ end
 ----------------------------------------------------------------
 -- Reserva de cruces (solo local): pasa un auto a la vez por orden de llegada
 ----------------------------------------------------------------
-local junctionLock = {}    -- [nodo] = { vehicle, tick }
+-- Prioridad real: pueden estar varios a la vez si sus trayectorias no se cruzan
+-- (misma direccion de entrada; dos autos de frente que van recto o giran a la derecha).
+-- Un giro a la izquierda cede ante el que viene de frente; los cruces perpendiculares
+-- se turnan por orden de llegada.
+local junctionLock = {}    -- [nodo] = { [vehiculo] = { man = maniobra, t = tick } }
 local LOCK_TIMEOUT = 7000
 
-local function tryLock(node, vehicle, now)
-    local l = junctionLock[node]
-    if l and l[1] ~= vehicle and isElement(l[1]) and cars[l[1]] and now - l[2] < LOCK_TIMEOUT then
-        return false
+-- man = { d1x, d1y, d2x, d2y, turn }: direccion de entrada y de salida del cruce
+local function maneuversConflict(a, b)
+    if not a or not b then return true end
+    local e = a[1] * b[1] + a[2] * b[2]
+    if e > 0.8 then return false end                 -- misma direccion: hacen cola, no se cruzan
+    if e < -0.8 then                                  -- de frente: solo choca un giro a la izquierda
+        local la = a[1] * a[4] - a[2] * a[3] > 0.35
+        local lb = b[1] * b[4] - b[2] * b[3] > 0.35
+        return la or lb
     end
-    junctionLock[node] = { vehicle, l and l[1] == vehicle and l[2] or now }
+    return true                                       -- perpendiculares u otros: se turnan
+end
+
+local function tryLock(node, vehicle, now, man)
+    local holders = junctionLock[node]
+    if not holders then holders = {} junctionLock[node] = holders end
+    for v, h in pairs(holders) do
+        if v ~= vehicle then
+            if not isElement(v) or not cars[v] or now - h.t > LOCK_TIMEOUT then
+                holders[v] = nil
+            elseif maneuversConflict(man, h.man) then
+                return false
+            end
+        end
+    end
+    local mine = holders[vehicle]
+    if mine then mine.man = man else holders[vehicle] = { man = man, t = now } end
     return true
 end
 
 local function releaseLocks(vehicle)
-    for node, l in pairs(junctionLock) do
-        if l[1] == vehicle then junctionLock[node] = nil end
-    end
+    for _, holders in pairs(junctionLock) do holders[vehicle] = nil end
 end
 
 ----------------------------------------------------------------
@@ -733,7 +1017,18 @@ end
 -- Tramo de carril para volver a la ruta: debe ir en el MISMO sentido que el auto
 -- y su nodo destino debe estar POR DELANTE (nunca un punto que obligue a volver
 -- atras). Puntua por la distancia lateral del auto al tramo.
+local nearestLaneAligned
 local function nearestLane(x, y, fx, fy)
+    -- Nunca salta a una via lejana: primero carriles a menos de 7 m (casi paralelos y luego hasta ~75
+    -- grados); solo si no hay ninguno, hasta 22 m.
+    for _, p in ipairs({ { 0.6, 7 }, { 0.25, 7 }, { 0.6, 22 }, { 0.25, 22 } }) do
+        local n, t = nearestLaneAligned(x, y, fx, fy, p[1], p[2])
+        if n then return n, t end
+    end
+    return nil
+end
+
+function nearestLaneAligned(x, y, fx, fy, minAlign, maxLat)
     local best, bestTarget, bestScore = nil, nil, math.huge
     local cx, cy = math.floor(x / 100), math.floor(y / 100)
     for ox = -1, 1 do
@@ -744,17 +1039,18 @@ local function nearestLane(x, y, fx, fy)
                     local nx, ny = nodePos(VEH_NODES, n)
                     if getDistanceBetweenPoints2D(x, y, nx, ny) < 80 then
                         for _, m in ipairs(VEH_LINKS[n] or {}) do
-                            if canDrive(n, m) then
+                            if canDrive(n, m) and isMainEdge(n, m) then
                                 local mx, my = nodePos(VEH_NODES, m)
                                 local dx, dy, len = dir(nx, ny, mx, my)
                                 local aligned = dx * fx + dy * fy
                                 local ahead = (mx - x) * fx + (my - y) * fy
-                                if aligned > 0.6 and ahead > 4 then
+                                if aligned > minAlign and ahead > -3 then
                                     -- distancia del auto a la recta del tramo (lateral) y si queda dentro del tramo
                                     local t = ((x - nx) * dx + (y - ny) * dy)
                                     local px, py = nx + dx * math.max(0, math.min(len, t)), ny + dy * math.max(0, math.min(len, t))
-                                    local score = getDistanceBetweenPoints2D(x, y, px, py) + (1 - aligned) * 15
-                                    if score < bestScore then best, bestTarget, bestScore = n, m, score end
+                                    local lat = getDistanceBetweenPoints2D(x, y, px, py)
+                                    local score = lat + (1 - aligned) * 15
+                                    if lat <= maxLat and score < bestScore then best, bestTarget, bestScore = n, m, score end
                                 end
                             end
                         end
@@ -790,6 +1086,31 @@ local function aheadSpawnNode(px, py)
     end
 end
 
+-- 1 para un auto normal (~4.6 m); 0.6-0.9 para vehiculos largos (menor radio de giro disponible)
+function vehicleLenFactor(vehicle)
+    local _, y1, _, _, y2 = getElementBoundingBox(vehicle)
+    local len = y1 and (y2 - y1) or 4.6
+    if len < 4.6 then return 1 end
+    return math.max(0.6, 4.6 / len)
+end
+
+-- Hay algun vehiculo (de cualquier tipo) a menos de "radius" metros de (x, y)?
+function spotOccupied(x, y, radius)
+    local r2 = radius * radius
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
+        local vx, vy = getElementPosition(v)
+        if (vx - x) ^ 2 + (vy - y) ^ 2 < r2 then return true end
+    end
+    -- los autos lejanos (dummies) pueden no estar cargados: tambien la poblacion propia
+    for v in pairs(cars) do
+        if isElement(v) then
+            local vx, vy = getElementPosition(v)
+            if (vx - x) ^ 2 + (vy - y) ^ 2 < r2 then return true end
+        end
+    end
+    return false
+end
+
 local function spawnCar(px, py)
     local node, x, y, z = aheadSpawnNode(px, py)
     if not node then
@@ -798,16 +1119,20 @@ local function spawnCar(px, py)
     end
     local target
     for _, n in ipairs(VEH_LINKS[node] or {}) do
-        if canDrive(node, n) then target = n break end
+        if canDrive(node, n) and isMainEdge(node, n) then target = n break end
     end
     if not target then return end
     local sx, sy, sz, dx, dy = laneStart(node, target)
+    -- no aparece encima de otro auto (poblacion, jugador, o cualquier vehiculo cargado)
+    if spotOccupied(sx, sy, 9) then return end
 
     local policeModel, policeSkin = pickPolice(sx, sy, sz)
     local vehicle = createVehicle(policeModel or pickCarModel(sx, sy, sz), sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
     if not vehicle then return end
     local driver = createPed(policeSkin or pickDriverSkin(sx, sy, sz), sx, sy, sz + 2)
     if not driver then destroyElement(vehicle) return end
+    setElementData(vehicle, "rp:citizen", true, false)
+    setElementData(driver, "rp:citizen", true, false)
     warpPedIntoVehicle(driver, vehicle)
     setVehicleEngineState(vehicle, true)
     if isNight() then setVehicleOverrideLights(vehicle, 2) end
@@ -818,7 +1143,7 @@ local function spawnCar(px, py)
     end
 
     cars[vehicle] = {
-        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil,
+        driver = driver, prev = node, node = target, wp = {}, police = policeModel ~= nil, style = newDriverStyle(), lenF = vehicleLenFactor(vehicle),
         state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
     }
     carCount = carCount + 1
@@ -833,7 +1158,34 @@ end
 ----------------------------------------------------------------
 local REAL_DIST, DUMMY_DIST = 55, 80
 
+-- Modo fantasma: sin colision con otros autos unos segundos (para deshacer solapes y atascos).
+-- Se vuelve solido cuando ya no hay ningun auto cerca (ver carTick).
+function ghostCar(vehicle, s, ms)
+    s.ghost, s.ghostUntil = true, getTickCount() + ms
+    setElementCollisionsEnabled(vehicle, false)
+end
+
+-- Hay otro auto de la poblacion (o el del jugador si withPlayer) a menos de "radius" m?
+function nearOtherCar(vehicle, radius, withPlayer)
+    local x, y = getElementPosition(vehicle)
+    local r2 = radius * radius
+    for _, o in ipairs(carSnap) do
+        if o[1] ~= vehicle and (o[2] - x) ^ 2 + (o[3] - y) ^ 2 < r2 then return true end
+    end
+    if withPlayer and playerSnap[2] and playerSnap[1] ~= vehicle and (playerSnap[2] - x) ^ 2 + (playerSnap[3] - y) ^ 2 < r2 then
+        return true
+    end
+    return false
+end
+
+function clearSignal(vehicle, s)
+    if s.signalApplied then setElementData(vehicle, "rp:indicator", false, false) end
+    s.signal, s.signalApplied, s.signalClearAt = nil, nil, nil
+end
+
 function makeDummy(vehicle, s, speedMs)
+    clearSignal(vehicle, s)
+    s.ghost = nil
     s.lod = "dummy"
     s.dSpeed = speedMs or 0
     s.dTarget = s.dSpeed
@@ -888,7 +1240,16 @@ local function reattach(vehicle, s, teleport)
         if isElementOnScreen(vehicle) then return end
         return removeCar(vehicle)
     end
-    s.prev, s.node, s.wp, s.route = n, target, {}, nil
+    s.prev, s.node, s.wp, s.route, s.lastPassed = n, target, {}, nil, nil
+    if not teleport then
+        -- primer punto: la proyeccion del auto sobre su carril, unos metros por delante
+        -- (si no, el primer punto podria quedar detras y el auto daria la vuelta)
+        local sx, sy, sz, dx, dy = laneStart(n, target)
+        local nx2, ny2 = nodePos(VEH_NODES, target)
+        local len = math.max(1, getDistanceBetweenPoints2D(sx, sy, nx2, ny2))
+        local t = math.max(0, math.min(len - 8, (x - sx) * dx + (y - sy) * dy + 8))
+        s.wp[1] = { sx + dx * t, sy + dy * t, sz, 0, nil }
+    end
     if teleport then
         local sx, sy, sz, dx, dy = laneStart(n, target)
         setElementPosition(vehicle, sx, sy, sz + 1.2)
@@ -916,6 +1277,7 @@ function abandonCar(vehicle, s)
     if handOverPolice(vehicle, s) then return end
     releaseLocks(vehicle)
     s.state = "ABANDONED"
+    clearSignal(vehicle, s)
     local driver = s.driver
     s.driver = nil
     if isElement(driver) then
@@ -948,9 +1310,26 @@ end
 ----------------------------------------------------------------
 -- Conduccion
 ----------------------------------------------------------------
-local function setPedal(driver, accel, brake)
-    setPedControlState(driver, "accelerate", accel)
-    setPedControlState(driver, "brake_reverse", brake)
+-- brake_reverse es freno si el auto avanza, pero MARCHA ATRAS si esta parado o rodando hacia atras:
+-- por eso nunca se usa como freno cuando el auto no avanza (ver "fwd" en updateCar). El freno de mano
+-- detiene un auto que rueda hacia atras sin querer.
+-- accel / brake: true/false o un valor 0..1 (parcial = control analogico, mas suave que todo o nada)
+local function setPedalAxis(driver, control, v)
+    v = (v == true and 1) or (v == false and 0) or (tonumber(v) or 0)
+    if v >= 0.95 then
+        setPedControlState(driver, control, true)
+    elseif v > 0.05 then
+        setPedControlState(driver, control, false)
+        setPedAnalogControlState(driver, control, v)
+    else
+        setPedControlState(driver, control, false)
+    end
+end
+
+local function setPedal(driver, accel, brake, handbrake)
+    setPedalAxis(driver, "accelerate", accel)
+    setPedalAxis(driver, "brake_reverse", brake)
+    setPedControlState(driver, "handbrake", handbrake or false)
 end
 
 local function steerTo(driver, value)
@@ -984,6 +1363,121 @@ local function speedOf(el)
 end
 
 ----------------------------------------------------------------
+-- Hay algo (auto, peaton, objeto o pared) justo detras del auto? Tres rayos: centro y esquinas.
+function rearBlocked(vehicle, m, reach)
+    local fx, fy = m[2][1], m[2][2]
+    local sx, sy, sz = m[4][1] - fx * 2.4, m[4][2] - fy * 2.4, m[4][3] + 0.3
+    for _, off in ipairs({ 0, 0.9, -0.9 }) do
+        local ox, oy = m[1][1] * off, m[1][2] * off
+        if processLineOfSight(sx + ox, sy + oy, sz, sx + ox - fx * reach, sy + oy - fy * reach, sz,
+            true, true, true, true, false, true, false, false, vehicle) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Empieza una marcha atras corta solo si detras esta libre
+function startReverse(vehicle, s, now, ms, steer, m)
+    if rearBlocked(vehicle, m, 3.5) then return false end
+    s.recoverUntil, s.recoverSteer, s.recoverPos = now + ms, steer, nil
+    return true
+end
+
+-- Seguimiento de trayectoria: devuelve el error de rumbo (grados, + = girar a la izquierda)
+-- respecto de la ruta unos metros por delante, corregido por la distancia lateral (tipo Stanley).
+function pathTrack(s, wp, x, y, speed, rz)
+    local pts = {}
+    if s.lastPassed then pts[1] = s.lastPassed end
+    for i = 1, math.min(#wp, 12) do pts[#pts + 1] = wp[i] end
+    if #pts < 2 then return nil end
+    -- tramo mas cercano
+    local bi, bt, bd = 1, 0, math.huge
+    for i = 1, #pts - 1 do
+        local ax, ay = pts[i][1], pts[i][2]
+        local sx, sy = pts[i + 1][1] - ax, pts[i + 1][2] - ay
+        local l2 = sx * sx + sy * sy
+        local t = l2 > 0.01 and math.max(0, math.min(1, ((x - ax) * sx + (y - ay) * sy) / l2)) or 0
+        local d = (x - (ax + sx * t)) ^ 2 + (y - (ay + sy * t)) ^ 2
+        if d < bd then bi, bt, bd = i, t, d end
+    end
+    -- error lateral con signo respecto del tramo mas cercano (+ = el auto esta a la izquierda)
+    local ax, ay = pts[bi][1], pts[bi][2]
+    local ux, uy = dir(ax, ay, pts[bi + 1][1], pts[bi + 1][2])
+    local e = (x - ax) * -uy + (y - ay) * ux
+    -- avanza por la ruta una distancia de mirada para tomar el rumbo de ese tramo
+    local remain = 3 + speed * 0.1
+    local i, t = bi, bt
+    while i < #pts - 1 do
+        local seg = getDistanceBetweenPoints2D(pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2])
+        local left = seg * (1 - t)
+        if remain <= left then break end
+        remain = remain - left
+        i, t = i + 1, 0
+    end
+    local vx, vy = dir(pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2])
+    local pathHeading = heading(vx, vy)
+    local desired = pathHeading - math.deg(math.atan(1.5 * e / (speed / 3.6 + 2)))
+    return angleDiff(desired, rz)
+end
+
+-- Velocidad maxima (km/h) para entrar a una curva de "turn" grados que esta a "dist" m:
+-- la velocidad dentro de la curva (cuanto mas cerrada, menos) mas lo que se puede
+-- frenar en esa distancia (~4 m/s2), para que empiece a frenar con tiempo suficiente.
+-- Asi nunca llega a un giro cerrado demasiado rapido y se sale recto.
+function curveCap(turn, dist, lenF)
+    -- lenF < 1 en vehiculos largos (camiones, buses): giran mas abierto, entran mas despacio
+    local inside = math.max(turn >= 70 and 8 or 10, CFG.CAR_SPEED * (1 - turn / 115)) * (lenF or 1)
+    return math.sqrt(inside * inside + 100 * math.max(0, dist - 2))
+end
+
+-- Vehiculos con sirena (se refresca cada 500 ms) y posiciones de los autos
+-- (una sola lectura por tick en vez de N x N para los dummies)
+----------------------------------------------------------------
+local sirenList = {}
+carSnap, playerSnap = {}, { false }
+
+function refreshSnapshots(now)
+    carSnap = {}
+    for v in pairs(cars) do
+        if isElement(v) then
+            local x, y = getElementPosition(v)
+            carSnap[#carSnap + 1] = { v, x, y }
+        end
+    end
+    local pe = getPedOccupiedVehicle(localPlayer) or localPlayer
+    local x, y = getElementPosition(pe)
+    playerSnap = { pe, x, y }
+    if not getVehicleSirensOn or now - (sirenList.at or 0) < 500 then return end
+    local list = { at = now }
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
+        if not cars[v] and getVehicleSirensOn(v) and speedOf(v) > 3 then
+            local mm = getElementMatrix(v)
+            list[#list + 1] = { v, mm[4][1], mm[4][2], mm[2][1], mm[2][2] }
+        end
+    end
+    sirenList = list
+end
+
+-- Distancia a una sirena que viene por detras en nuestro mismo sentido (nil si no hay)
+function sirenBehind(vehicle, x, y, m)
+    local fx, fy = m[2][1], m[2][2]
+    local best
+    for i = 1, #sirenList do
+        local o = sirenList[i]
+        if o[1] ~= vehicle then
+            local dx, dy = o[2] - x, o[3] - y
+            local along = dx * fx + dy * fy
+            local lateral = math.abs(dx * fy - dy * fx)
+            if along < -3 and along > -70 and lateral < 8 and (o[4] * fx + o[5] * fy) > 0.3 then
+                if not best or -along < best then best = -along end
+            end
+        end
+    end
+    return best
+end
+
+----------------------------------------------------------------
 -- Bocina: control del NPC + sonido propio (el del NPC no siempre se oye)
 ----------------------------------------------------------------
 local function honk(vehicle, s, now)
@@ -1004,36 +1498,58 @@ end
 -- Desvio provisional: rodea al jugador por la izquierda (carril contrario) o la
 -- derecha (arcen) si el camino esta libre, y se reincorpora a su ruta.
 ----------------------------------------------------------------
+-- Linea libre con el ancho del auto: tres rayos paralelos (centro y a +-1.1 m). Con uno solo se
+-- colaban postes, semaforos y bordes a los lados del trazado.
 local function clearPath(x1, y1, z1, x2, y2, z2, vehicle)
-    return isLineOfSightClear(x1, y1, z1 + 0.6, x2, y2, z2 + 0.6, true, true, true, true, false, true, false, vehicle)
+    local dx, dy = x2 - x1, y2 - y1
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 0.01 then return true end
+    local nx, ny = -dy / len, dx / len
+    for _, off in ipairs({ 0, 1.1, -1.1 }) do
+        if not isLineOfSightClear(x1 + nx * off, y1 + ny * off, z1 + 0.6, x2 + nx * off, y2 + ny * off, z2 + 0.6,
+            true, true, true, true, false, true, false, vehicle) then
+            return false
+        end
+    end
+    return true
 end
+
+-- Perfil lateral suave (0 -> 1) para entrar y salir del desvio sin quiebres
+local function smooth(t) t = math.max(0, math.min(1, t)) return t * t * (3 - 2 * t) end
 
 local function tryDetour(vehicle, s, m)
     local x, y, z = m[4][1], m[4][2], m[4][3]
     local fx, fy = m[2][1], m[2][2]
     local lx, ly = -fy, fx                          -- izquierda del auto
     local wp = s.wp
-    -- punto de reincorporacion: el primero de la ruta a mas de 24 m
+    -- punto de reincorporacion: el primero de la ruta a mas de 30 m (margen para volver con calma)
     local rejoin = nil
     for i = 1, #wp do
-        if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 24 then rejoin = i break end
+        if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 30 then rejoin = i break end
     end
     if not rejoin then return false end
     local rx, ry, rz = wp[rejoin][1], wp[rejoin][2], wp[rejoin][3]
 
-    for _, side in ipairs({ 5, 7, -4.5 }) do
-        local p1x, p1y = x + fx * 4 + lx * side * 0.6, y + fy * 4 + ly * side * 0.6
-        local p2x, p2y = x + fx * 11 + lx * side, y + fy * 11 + ly * side
-        local p3x, p3y = x + fx * 18 + lx * side * 0.7, y + fy * 18 + ly * side * 0.7
-        local ground = getGroundPosition(p2x, p2y, z + 3)
-        local flat = ground and ground ~= 0 and math.abs(ground - (z - 0.5)) < 1.5
-        if flat and clearPath(x, y, z, p1x, p1y, z, vehicle) and clearPath(p1x, p1y, z, p2x, p2y, z, vehicle)
-            and clearPath(p2x, p2y, z, p3x, p3y, z, vehicle) and clearPath(p3x, p3y, z, rx, ry, rz, vehicle) then
+    -- Cada candidato: separacion lateral maxima. Los puntos siguen un perfil suave (entra, mantiene y
+    -- vuelve al carril) a 4, 9, 14, 19 y 24 m; el ultimo queda casi sobre la ruta original.
+    local STEPS = { { 4, 0.25 }, { 9, 0.75 }, { 14, 1.0 }, { 19, 0.75 }, { 24, 0.25 } }
+    for _, side in ipairs({ 4.5, 6.5, -4, -6.5, 8.5 }) do
+        local pts, ok = {}, true
+        local px, py = x, y
+        for _, st in ipairs(STEPS) do
+            local qx, qy = x + fx * st[1] + lx * side * smooth(st[2]), y + fy * st[1] + ly * side * smooth(st[2])
+            -- el suelo debe estar a la altura de la calzada (sin bordillos altos ni zanjas)
+            local ground = getGroundPosition(qx, qy, z + 3)
+            if not (ground and ground ~= 0 and math.abs(ground - (z - 0.5)) < 1.2) then ok = false break end
+            if not clearPath(px, py, z, qx, qy, z, vehicle) then ok = false break end
+            pts[#pts + 1] = { qx, qy, z, 25 }
+            px, py = qx, qy
+        end
+        if ok and clearPath(px, py, z, rx, ry, rz, vehicle) then
             -- reemplaza el tramo bloqueado por el desvio (giro 25 = va despacio)
             for _ = 1, rejoin - 1 do table.remove(wp, 1) end
-            table.insert(wp, 1, { p3x, p3y, z, 25 })
-            table.insert(wp, 1, { p2x, p2y, z, 25 })
-            table.insert(wp, 1, { p1x, p1y, z, 25 })
+            s.lastPassed = nil
+            for k = #pts, 1, -1 do table.insert(wp, 1, pts[k]) end
             return true
         end
     end
@@ -1054,9 +1570,19 @@ local function updateCar(vehicle, s, now)
     local x, y = getElementPosition(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local m = getElementMatrix(vehicle)
+    -- velocidad con signo: > 0 avanza, < 0 rueda hacia atras
+    local fvx, fvy = getElementVelocity(vehicle)
+    local fwd = (fvx * m[2][1] + fvy * m[2][2]) * 180
 
     -- Volcado: el conductor huye y el auto queda abandonado
     if m[3][3] < 0.3 then return abandonCar(vehicle, s) end
+    -- Inclinado sobre dos ruedas (montado sobre otro auto) y casi parado: tambien se abandona
+    if m[3][3] < 0.6 and speed < 6 then
+        s.tiltSince = s.tiltSince or now
+        if now - s.tiltSince > 3000 then return abandonCar(vehicle, s) end
+    else
+        s.tiltSince = nil
+    end
 
     -- Marcha atras corta (como mucho ~1 s / 3-4 m) solo cuando esta atascado de verdad.
     -- No se reengancha al terminar: sigue con su ruta (solo se recalcula si se alejo de ella).
@@ -1065,9 +1591,18 @@ local function updateCar(vehicle, s, now)
         steerTo(driver, -(s.recoverSteer or 0))
         local vx, vy = getElementVelocity(vehicle)
         local backing = (vx * m[2][1] + vy * m[2][2]) * 180
-        setPedal(driver, false, backing > -12)       -- no supera ~12 km/h marcha atras
+        s.recoverPos = s.recoverPos or { x, y }
+        -- la marcha atras es corta (como mucho ~2.5 m) y se corta al instante si aparece algo detras
+        -- (auto, peaton, objeto o pared); despues se busca otra forma de pasar (desvio o nueva ruta)
+        if getDistanceBetweenPoints2D(x, y, s.recoverPos[1], s.recoverPos[2]) > 2.5
+            or rearBlocked(vehicle, m, 1.8 + math.max(0, -backing) * 0.06) then
+            s.recoverUntil, s.recoverPos, s.afterReverse = 0, nil, now
+            return setPedal(driver, backing < -1, false)
+        end
+        setPedal(driver, false, backing > -10)       -- no supera ~10 km/h marcha atras
         return
     end
+    s.recoverPos = nil
     if s.needReattach then reattach(vehicle, s, false) end
     s.needReattach = nil
 
@@ -1082,52 +1617,190 @@ local function updateCar(vehicle, s, now)
     -- de su carril. Si queda sin camino o muy lejos de el, desaparece cuando no
     -- se ve (el spawn crea otro en una ruta valida).
     if #wp == 0 then
-        if not isElementOnScreen(vehicle) then removeCar(vehicle) end
+        -- sin ruta (callejon sin salida en los datos): se detiene, intenta reengancharse y si no, se retira
+        if not s.noRouteSince and (offLogCount or 0) < 60 then
+            offLogCount = (offLogCount or 0) + 1
+            local lk = {}
+            for _, n in ipairs(VEH_LINKS[s.node] or {}) do lk[#lk + 1] = ("%d(L%d)"):format(n, (getLaneInfo(s.node, n))) end
+            outputDebugString(("[rp_citizens] sin ruta: nodos %s->%s enlaces del nodo: %s"):format(tostring(s.prev), tostring(s.node), table.concat(lk, " ")), 1)
+        end
+        s.noRouteSince = s.noRouteSince or now
+        steerTo(driver, 0)
+        setPedal(driver, false, fwd > 1, fwd < -1)
+        if now - s.noRouteSince > 800 and now - (s.lastReattach or 0) > 2000 then
+            s.lastReattach = now
+            reattach(vehicle, s, false)
+            if not cars[vehicle] then return end
+        end
+        if now - s.noRouteSince > 6000 then
+            if isElementOnScreen(vehicle) then return abandonCar(vehicle, s) end
+            return removeCar(vehicle)
+        end
         return
     end
-    if getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) > 25 and not isElementOnScreen(vehicle) then
+    s.noRouteSince = nil
+    -- Fuera de su carril (esquive, choque, derrape): tras 1.5 s se reengancha al carril mas
+    -- cercano por delante; si sigue muy lejos de la ruta, se elimina aunque se vea (reaparece otro)
+    -- desviacion = distancia al tramo entre el ultimo punto pasado y el siguiente (no solo al siguiente:
+    -- en un cruce recto hay hasta ~24 m entre puntos y eso no es salirse de la ruta)
+    -- Distancia al camino: minimo sobre la poligonal (ultimo punto pasado, si esta cerca) + proximos puntos
+    local lp = s.lastPassed
+    if lp and getDistanceBetweenPoints2D(x, y, lp[1], lp[2]) > 60 then lp = nil end
+    local dev = math.huge
+    local px0, py0 = nil, nil
+    if lp then px0, py0 = lp[1], lp[2] end
+    for k = 1, math.min(#wp, 4) do
+        local qx, qy = wp[k][1], wp[k][2]
+        if px0 then
+            local sx, sy = qx - px0, qy - py0
+            local len2 = sx * sx + sy * sy
+            local t = len2 > 0.01 and math.max(0, math.min(1, ((x - px0) * sx + (y - py0) * sy) / len2)) or 0
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, px0 + sx * t, py0 + sy * t))
+        else
+            dev = math.min(dev, getDistanceBetweenPoints2D(x, y, qx, qy))
+        end
+        px0, py0 = qx, qy
+    end
+    if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
+    if dev > 25 and not isElementOnScreen(vehicle) then
         return removeCar(vehicle)
+    end
+    if dev > 18 and not (s.detourUntil and now < s.detourUntil) then
+        if not s.offSince and (offLogCount or 0) < 60 then
+            -- diagnostico: se sale de su ruta (ver clientscript.log, lineas "[rp_citizens] fuera de ruta")
+            offLogCount = (offLogCount or 0) + 1
+            local w1 = wp[1]
+            local dgn = angleDiff(heading(w1[1] - x, w1[2] - y), rz)
+            local pts = {}
+            for k = 1, math.min(#wp, 6) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
+            outputDebugString(("[rp_citizens] fuera de ruta: modelo %d nodos %s->%s pos (%.1f,%.1f) rumbo %.0f vel %.0f dev %.1f dif %.0f estado %s lenF %.2f lp %s wp: %s")
+                :format(getElementModel(vehicle), tostring(s.prev), tostring(s.node), x, y, rz, speed, dev, dgn, tostring(s.state), s.lenF or 1, s.lastPassed and ("(%.0f,%.0f)"):format(s.lastPassed[1], s.lastPassed[2]) or "nil", table.concat(pts, " ")), 1)
+        end
+        s.offSince = s.offSince or now
+        if now - s.offSince > 1500 and now - (s.lastReattach or 0) > 3000 then
+            s.lastReattach = now
+            s.slowUntil = now + 5000   -- al reengancharse va despacio (nunca a tope por la acera)
+            reattach(vehicle, s, false)
+            if not cars[vehicle] then return end
+            wp = s.wp
+            if #wp == 0 then return end
+        end
+        -- sigue lejos de cualquier carril tras varios intentos: lejos del jugador desaparece (sin que se note);
+        -- cerca, el conductor se baja (en vez de seguir corriendo por aceras o contra muros)
+        if dev > 25 and now - s.offSince > 6000 then
+            local ppx, ppy = getElementPosition(localPlayer)
+            if getDistanceBetweenPoints2D(ppx, ppy, x, y) > 50 or not isElementOnScreen(vehicle) then return removeCar(vehicle) end
+            return abandonCar(vehicle, s)
+        end
+    else
+        s.offSince = nil
     end
 
     -- Pure pursuit: descarta los puntos ya alcanzados y apunta al primero por delante
-    local inCurve = wp[1][4] > 20
-    local lookahead = (inCurve and 3.5 or 6) + speed * (inCurve and 0.06 or 0.1)
+    -- Si hay un giro cerrado en los proximos 14 m de ruta, mira solo unos metros adelante:
+    -- con la mirada larga de las rectas el auto apunta "por la tangente" de la curva y se sale recto
+    local curveSoon, cd, clx, cly = false, 0, x, y
+    for i = 1, math.min(#wp, 8) do
+        cd = cd + getDistanceBetweenPoints2D(clx, cly, wp[i][1], wp[i][2])
+        clx, cly = wp[i][1], wp[i][2]
+        if cd > 14 then break end
+        if wp[i][4] > 40 then curveSoon = true break end
+    end
+    -- (tambien unos metros despues de salir de la curva: el seguimiento de trayectoria lo realinea con el
+    -- carril; si no, la velocidad de giro que traia lo saca hacia la acera)
+    local lpd = s.lastPassed
+    local justLeftCurve = lpd and lpd[4] > 20 and wp[1][4] <= 20 and getDistanceBetweenPoints2D(x, y, lpd[1], lpd[2]) < 12
+    local inCurve = curveSoon or wp[1][4] > 20 or justLeftCurve
+    local lookahead = curveSoon and (2.5 + speed * 0.05) or (inCurve and 3.5 or 6) + speed * (inCurve and 0.06 or 0.1)
     -- tambien descarta los que quedaron DETRAS del auto (nunca se da la vuelta por un punto pasado)
     local fwx, fwy = m[2][1], m[2][2]
     while #wp > 1 and (getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) < lookahead
-        or ((wp[1][1] - x) * fwx + (wp[1][2] - y) * fwy < 0 and (wp[2][1] - x) * fwx + (wp[2][2] - y) * fwy > -2)) do
+        or ((wp[1][1] - x) * fwx + (wp[1][2] - y) * fwy < 0 and (wp[2][1] - x) * fwx + (wp[2][2] - y) * fwy > -2
+            and getDistanceBetweenPoints2D(x, y, wp[1][1], wp[1][2]) < 12)) do
         local passed = table.remove(wp, 1)
+        s.lastPassed = passed
         -- libera el cruce cuando ya no quedan puntos de el
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
-            local l = junctionLock[passed[5]]
-            if l and l[1] == vehicle then junctionLock[passed[5]] = nil end
+            local hs = junctionLock[passed[5]]
+            if hs then hs[vehicle] = nil end
         end
     end
     local tx, ty = wp[1][1], wp[1][2]
     local diff = angleDiff(heading(tx - x, ty - y), rz)
+    -- En curvas: seguimiento de la trayectoria (rumbo de la ruta + correccion de la distancia lateral)
+    -- en vez de apuntar a un punto, que en un arco cerrado casi no se desvia del rumbo actual
+    local trackDiff = nil
+    if inCurve or dev > 1.5 then   -- tambien al volver al carril: corrige el error lateral de forma progresiva
+        trackDiff = pathTrack(s, wp, x, y, speed, rz)
+        if trackDiff then diff = trackDiff end
+    end
 
     -- Lo que viene: mayor giro, cruce y semaforo en los proximos metros
     local upcoming, dist, lx, ly = 0, 0, x, y
-    local junctionAhead, junctionDist, lightAxis, lightDist = nil, 0, nil, 0
+    local curveLimit = 999
+    local junctionAhead, junctionDist, lightAxis, lightDist, junctionMan = nil, 0, nil, 0, nil
+    local wantSignal, signalLead = nil, math.max(18, math.min(40, speed * 0.55))
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
+        if dist > 60 then break end
+        if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
+        -- Intermitente: giro de cruce de >= 30 grados dentro de ~2 s de camino (entre 18 y 40 m)
+        if not wantSignal and wp[i][7] and wp[i][4] >= 30 and dist <= signalLead then
+            local mv = wp[i][7]
+            wantSignal = (mv[1] * mv[4] - mv[2] * mv[3]) > 0 and "left" or "right"   -- + = giro a la izquierda
+        end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
-        if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist = wp[i][5], dist end
+        if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist, junctionMan = wp[i][5], dist, wp[i][7] end
         if wp[i][6] and not lightAxis then lightAxis, lightDist = wp[i][6], dist end
     end
 
-    -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
-    local frontHit, obstacle, gap = ray(vehicle, m, 0, 8 + speed * 0.3, false)
-    local wallFront = ray(vehicle, m, 0, 3 + speed * 0.08, true)
-    local leftHit = ray(vehicle, m, 25, 3.5 + speed * 0.06, true)
-    local rightHit = ray(vehicle, m, -25, 3.5 + speed * 0.06, true)
+    -- Intermitentes (recurso rp_vehicles: dato local "rp:indicator" = "left" | "right"):
+    -- se encienden antes de girar y se apagan al terminar la curva
+    if wantSignal then
+        s.signal, s.signalClearAt = wantSignal, nil
+    elseif s.signal and not inCurve then
+        s.signalClearAt = s.signalClearAt or (now + 700)
+        if now > s.signalClearAt then s.signal, s.signalClearAt = nil, nil end
+    end
+    if s.signal ~= s.signalApplied then
+        s.signalApplied = s.signal
+        setElementData(vehicle, "rp:indicator", s.signal or false, false)
+    end
 
-    local steer = diff / (inCurve and 18 or 25)
-    if leftHit and not rightHit then steer = steer - 0.2 end
-    if rightHit and not leftHit then steer = steer + 0.2 end
-    steerTo(driver, steer)
+    -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
+    local reach = 8 + speed * 0.3
+    local frontHit, obstacle, gap = ray(vehicle, m, 0, reach, false)
+    -- abanico: dos rayos de +-8 grados ven lo que queda medio carril al lado (motos, peatones)
+    for _, a in ipairs({ 8, -8 }) do
+        local h, e, g = ray(vehicle, m, a, reach * 0.8, false)
+        if h and e and (not frontHit or not obstacle or (g and gap and g < gap)) then
+            frontHit, obstacle, gap = h, e, g
+        end
+    end
+    -- en modo fantasma (sin colision, para salir de un atasco) no ve autos delante
+    if s.ghost then frontHit, obstacle, gap = false, nil, nil end
+    local wallFront = ray(vehicle, m, 0, 3 + speed * 0.08, true)
+    -- al esquivar (desvio activo o volviendo a la ruta) los bigotes son mas largos y mas abiertos:
+    -- postes, bordes y muros a los lados se ven antes
+    local careful = (s.detourUntil and now < s.detourUntil) or (s.slowUntil and now < s.slowUntil) or s.offSince
+    local whiskerAngle, whiskerReach = careful and 38 or 25, (careful and 5.5 or 3.5) + speed * (careful and 0.09 or 0.06)
+    local leftHit = ray(vehicle, m, whiskerAngle, whiskerReach, true)
+    local rightHit = ray(vehicle, m, -whiskerAngle, whiskerReach, true)
+
+    -- en curvas cerradas gira con mas decision (volante a tope antes)
+    local steer = diff / (inCurve and ((curveSoon or wp[1][4] > 60) and 12 or 18) or 25)
+    local push = careful and 0.35 or 0.2
+    if leftHit and not rightHit then steer = steer - push end
+    if rightHit and not leftHit then steer = steer + push end
+    -- Sirena detras: se arrima un poco a la derecha (salvo en un cruce o con algo al lado)
+    local sirenDist = sirenBehind(vehicle, x, y, m)
+    if sirenDist and not junctionAhead and not rightHit then steer = steer - 0.12 end
+    -- Filtro del volante: no salta de golpe (mas natural); en curvas cerradas responde casi al instante
+    local prevSteer = s.steerOut or 0
+    s.steerOut = prevSteer + (math.max(-1, math.min(1, steer)) - prevSteer) * (inCurve and 0.8 or 0.5)
+    steerTo(driver, s.steerOut)
 
     -- Asistencia de direccion suave: ayuda al volante (sin imponer el giro) y
     -- reduce solo parte del derrape lateral, para no frenar ni hacer patinar.
@@ -1140,22 +1813,43 @@ local function updateCar(vehicle, s, now)
         if math.abs(side) > 0.02 then
             setElementVelocity(vehicle, fx * along + rx * side * 0.8, fy * along + ry * side * 0.8, vz)
         end
-        local ax, ay, az = getElementAngularVelocity(vehicle)
-        -- velocidad angular de MTA en radianes por 1/50 s (0.015 ~ 43 grados/s)
-        local desired = math.max(-0.015, math.min(0.015, math.rad(diff) * 0.025)) * math.min(1, speed / 20)
-        setElementAngularVelocity(vehicle, ax, ay, az + (desired - az) * 0.35)
+        -- En una curva cerrada NO se limita el giro: esta asistencia fijaba la velocidad angular
+        -- al valor de un apuntado casi recto (la mirada corta sobre el arco apenas se desvia), y
+        -- el auto no podia girar lo que pide el radio del cruce y se salia recto.
+        if inCurve then
+            -- el giro necesario para recuperar el rumbo de la ruta en ~0.4 s, limitado a lo que
+            -- el vehiculo puede girar de verdad (radio minimo ~4.5 m)
+            if trackDiff then
+                local ax, ay, az = getElementAngularVelocity(vehicle)
+                local maxW = math.min(0.03, (speed / 3.6) / 4.5 / 50)
+                local want = math.max(-maxW, math.min(maxW, math.rad(trackDiff) / 0.4 / 50))
+                setElementAngularVelocity(vehicle, ax, ay, az + (want - az) * 0.6)
+            end
+        else
+            local ax, ay, az = getElementAngularVelocity(vehicle)
+            -- velocidad angular de MTA en radianes por 1/50 s (0.015 ~ 43 grados/s)
+            local desired = math.max(-0.015, math.min(0.015, math.rad(diff) * 0.025)) * math.min(1, speed / 20)
+            setElementAngularVelocity(vehicle, ax, ay, az + (desired - az) * 0.35)
+        end
     end
 
     if s.state == "FLEE" then
         setPedControlState(driver, "horn", false)
-        setPedal(driver, not obstacle or speed < 5, (obstacle ~= nil or wallFront) and speed > 20)
+        if fwd < -1.5 then
+            setPedal(driver, true, false)            -- rueda hacia atras: acelera hacia delante, nunca marcha atras
+        else
+            setPedal(driver, not obstacle or fwd < 5, (obstacle ~= nil or wallFront) and fwd > 20)
+        end
         if now > s.until_ then s.state = "DRIVE" end
         return
     end
 
     -- Velocidad objetivo
-    local target = CFG.CAR_SPEED
-    if upcoming > 70 then target = 18 elseif upcoming > 40 then target = 26 elseif upcoming > 20 then target = 36 end
+    local target = CFG.CAR_SPEED * (s.style and s.style.speed or 1)
+    target = math.min(target, curveLimit)
+    -- fuera de su ruta o recien reenganchado: despacio hasta estar de nuevo en el carril
+    if s.offSince or (s.slowUntil and now < s.slowUntil) then target = math.min(target, 15) end
+    if sirenDist then target = math.min(target, sirenDist < 30 and 6 or 18) end
     if math.abs(diff) > 50 then target = math.min(target, 16) end
     if wallFront then target = math.min(target, 15) end
     if s.detourUntil and now < s.detourUntil then target = math.min(target, 18) end
@@ -1174,32 +1868,57 @@ local function updateCar(vehicle, s, now)
     -- Cruce: pide paso; si otro auto lo tiene, espera antes de entrar
     local yielding = false
     if not waiting and junctionAhead and junctionDist < 14 then
-        if not tryLock(junctionAhead, vehicle, now) then
+        if not tryLock(junctionAhead, vehicle, now, junctionMan) then
             yielding = true
             target = junctionDist > 7 and 8 or 0
         end
     end
 
     -- Distancia de seguimiento con lo que tenga delante
+    -- Rodeando un obstaculo (desvio activo): lo sigue viendo de frente mientras gira, pero no debe frenar por el
+    -- hasta que este realmente encima; si no, se queda parado "esperando" aunque su ruta nueva ya este libre
+    if obstacle and s.detourUntil and now < s.detourUntil and gap and gap > 2.2 + speed * 0.04 then
+        obstacle, frontHit = nil, false
+    end
     local isPlayerThing = obstacle and (obstacle == localPlayer or obstacle == getPedOccupiedVehicle(localPlayer))
     if obstacle then
         local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedOf(obstacle) or 0
-        local safeGap = 4 + speed * 0.12
+        local safeGap = (4 + speed * 0.12) * (s.style and s.style.gap or 1)
         if gap and gap < safeGap then target = 0 else target = math.min(target, otherSpeed + 3) end
+        -- tiempo hasta el choque: si se cierra demasiado rapido, frena a fondo
+        local closing = (speed - otherSpeed) / 3.6
+        if gap and closing > 1 and gap / closing < 2.0 then target = 0 end
 
+        -- Tras una marcha atras corta: intenta rodear el obstaculo en vez de repetir lo mismo
+        if s.afterReverse then
+            if now - s.afterReverse > 5000 then
+                s.afterReverse = nil
+            elseif speed < 3 and not waiting and not yielding and tryDetour(vehicle, s, m) then
+                s.detourUntil, s.blockedSince, s.afterReverse = now + 6000, 0, nil
+                setPedControlState(driver, "horn", false)
+            end
+        end
         if target <= 1 and speed < 3 then
             if s.blockedSince == 0 then s.blockedSince = now end
             local waited = now - s.blockedSince
             if isPlayerThing then
                 -- 1) bocina  2) busca un desvio  3) si no hay hueco, retrocede un poco y vuelve a intentar
                 if waited > 900 then honk(vehicle, s, now) end
+                -- bloqueado mucho tiempo sin poder rodear ni retroceder: si no se ve, desaparece;
+                -- si se ve, pasa unos segundos sin colision (nunca embiste al jugador)
+                if waited > 20000 then
+                    s.blockedSince = now
+                    if not isElementOnScreen(vehicle) then return removeCar(vehicle) end
+                    ghostCar(vehicle, s, 6000)
+                end
                 if waited > 2800 and not waiting then
                     if tryDetour(vehicle, s, m) then
                         s.detourUntil, s.blockedSince = now + 6000, 0
                         setPedControlState(driver, "horn", false)
                     elseif waited > 4500 then
                         -- sin hueco: retrocede un instante (~1 s) para abrir angulo y reintenta
-                        s.recoverUntil, s.recoverSteer, s.blockedSince = now + 900, 0, now - 2000
+                        -- (solo si no hay nada detras; si lo hay, espera)
+                        if startReverse(vehicle, s, now, 900, 0, m) then s.blockedSince = now - 2000 end
                     end
                 end
             elseif waited > 8000 and otherSpeed < 1 and not yielding and not waiting then
@@ -1217,18 +1936,57 @@ local function updateCar(vehicle, s, now)
         if not waiting then s.state = yielding and "YIELD" or (s.detourUntil and now < s.detourUntil and "DETOUR" or "DRIVE") end
     end
 
-    setPedal(driver, speed < target - 1, speed > target + 6 or (target == 0 and speed > 1))
+    if fwd < -1.5 then
+        -- rueda hacia atras sin que sea una maniobra de desatasco: lo frena (freno de mano) y,
+        -- si quiere avanzar, acelera hacia delante. NUNCA pisa marcha atras.
+        setPedal(driver, target > 5, false, target <= 5)
+    else
+        -- acelerador y freno proporcionales al error de velocidad (arranque y frenada progresivos)
+        local err = target - fwd
+        local accel, brake = 0, 0
+        if target == 0 then
+            brake = fwd > 1 and 1 or 0
+        elseif err > 1 then
+            accel = math.min(1, 0.3 + err / 12)
+        elseif err < -6 then
+            brake = math.min(1, (-err - 6) / 15 + 0.2)
+        end
+        setPedal(driver, accel, brake)
+    end
 
     -- Atascado sin motivo (pared, otro auto cruzado): marcha atras y reenganche
     -- (en cola, semaforo o cruce NUNCA cuenta como atasco)
+    -- Parado demasiado tiempo (cruce bloqueado, dos autos de frente): pasa a modo fantasma
+    -- unos segundos para atravesar el atasco. Nunca con el jugador de por medio.
+    if speed < 2 and s.state ~= "RED" and not isPlayerThing and target < 5 then
+        s.slowSince = s.slowSince or now
+        if now - s.slowSince > 25000 then
+            s.slowSince = nil
+            ghostCar(vehicle, s, 7000)
+        end
+    else
+        s.slowSince = nil
+    end
     local stopped = waiting or yielding or obstacle ~= nil or s.state == "RED" or s.state == "FOLLOW"
     if speed < 2 and not stopped and target > 5 then
         if s.stuckSince == 0 then s.stuckSince = now end
         if now - s.stuckSince > 3000 then
-            s.recoverUntil, s.recoverSteer, s.stuckSince = now + 1100, steer, 0
-            s.stuckCount = (s.stuckCount or 0) + 1
-            -- atascado de verdad: el conductor se baja y se va; el auto queda como obstaculo
-            if s.stuckCount > 3 then abandonCar(vehicle, s) end
+            s.stuckSince = 0
+            if startReverse(vehicle, s, now, 1100, steer, m) then
+                s.stuckCount = (s.stuckCount or 0) + 1
+                s.stuckBlockedSince = nil
+                -- de cada dos intentos, uno recalcula la ruta desde el carril mas cercano
+                if s.stuckCount % 2 == 0 then s.needReattach = true end
+                -- atascado de verdad: el conductor se baja y se va; el auto queda como obstaculo
+                if s.stuckCount > 5 then abandonCar(vehicle, s) end
+            else
+                -- algo detras: no retrocede; si dura, pasa unos segundos sin colision
+                s.stuckBlockedSince = s.stuckBlockedSince or now
+                if now - s.stuckBlockedSince > 8000 then
+                    s.stuckBlockedSince = nil
+                    ghostCar(vehicle, s, 5000)
+                end
+            end
         end
     else
         s.stuckSince = 0
@@ -1250,7 +2008,9 @@ addEventHandler("onClientVehicleCollision", root, function(hit, force)
             local ahead = (hx - x) * m[2][1] + (hy - y) * m[2][2] > 0
             if ahead then
                 s.blockedSince = now
-                setPedal(s.driver, false, true)
+                local cvx, cvy = getElementVelocity(source)
+                local cfwd = (cvx * m[2][1] + cvy * m[2][2]) * 180
+                setPedal(s.driver, false, cfwd > 1, cfwd < -1)   -- frena solo si avanza (parado, brake_reverse seria marcha atras)
             end
         end
     end
@@ -1285,11 +2045,14 @@ local function dummyDecide(vehicle, s)
     if #wp == 0 then s.dTarget = 0 return end
 
     local x, y = getElementPosition(vehicle)
-    local target = CFG.CAR_SPEED
+    local target = CFG.CAR_SPEED * (s.style and s.style.speed or 1)
     local upcoming, dist, lx, ly = 0, 0, x, y
+    local curveLimit = 999
     for i = 1, math.min(#wp, 14) do
         dist = dist + getDistanceBetweenPoints2D(lx, ly, wp[i][1], wp[i][2])
         lx, ly = wp[i][1], wp[i][2]
+        if dist > 60 then break end
+        if wp[i][4] > 15 then curveLimit = math.min(curveLimit, curveCap(wp[i][4], dist, s.lenF)) end
         if dist > 45 then break end
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
         if wp[i][6] then
@@ -1301,15 +2064,13 @@ local function dummyDecide(vehicle, s)
             break
         end
     end
-    if upcoming > 70 then target = math.min(target, 18) elseif upcoming > 40 then target = math.min(target, 26)
-    elseif upcoming > 20 then target = math.min(target, 36) end
+    target = math.min(target, curveLimit)
 
     -- auto delante (de la poblacion o del jugador) en el mismo sentido: mantiene distancia
     local m = getElementMatrix(vehicle)
     local fx, fy = m[2][1], m[2][2]
-    local function checkAhead(other)
-        if other == vehicle or not isElement(other) then return end
-        local ox, oy = getElementPosition(other)
+    local function checkAheadAt(other, ox, oy)
+        if other == vehicle or not ox then return end
         local dx, dy = ox - x, oy - y
         local along = dx * fx + dy * fy
         local lateral = math.abs(dx * fy - dy * fx)
@@ -1317,8 +2078,8 @@ local function dummyDecide(vehicle, s)
             target = along < 7 and 0 or math.min(target, (along - 7) * 3)
         end
     end
-    for other in pairs(cars) do checkAhead(other) end
-    checkAhead(getPedOccupiedVehicle(localPlayer) or localPlayer)
+    for _, o in ipairs(carSnap) do checkAheadAt(o[1], o[2], o[3]) end
+    checkAheadAt(playerSnap[1], playerSnap[2], playerSnap[3])
 
     if target > 0 and s.state == "RED" then s.state = "DRIVE" end
     s.dTarget = target / 3.6
@@ -1343,7 +2104,7 @@ local function moveDummies(dt)
                 if d <= step then
                     x, y, z = tx, ty, tz
                     step = step - d
-                    table.remove(wp, 1)
+                    table.remove(wp, 1) s.lastPassed = nil
                 else
                     local k = step / d
                     x, y, z = x + (tx - x) * k, y + (ty - y) * k, z + (tz - z) * math.min(1, k * 2)
@@ -1410,12 +2171,237 @@ local function clearAll()
     peds, cars, pedCount, carCount = {}, {}, 0, 0
 end
 
+----------------------------------------------------------------
+-- Salud del sistema: errores, atascos y estadisticas
+--   1) guarded(): cada entidad se actualiza dentro de pcall; un error Lua no rompe al resto. Al pasar
+--      ERR_LIMIT errores esa entidad se elimina.
+--   2) Interruptor de seguridad: demasiados errores por minuto apagan la poblacion un rato.
+--   3) Vigilante (carWatchdog / pedWatchdog): atascos, agua, fuera del mapa, vueltas en circulos.
+--      Se elimina fuera de vista; si se ve y esta cerca, se desvanece en ~1 s.
+--   4) Huerfanos: autos y peatones propios que ya no estan en las tablas se destruyen.
+--   5) Estadisticas por causa y nodos problematicos (/traficostats) y reduccion de poblacion con FPS bajos.
+----------------------------------------------------------------
+local HEALTH = {
+    ERR_LIMIT = 3,                                  -- errores de una entidad antes de eliminarla
+    BREAKER_ERRORS = 30, BREAKER_WINDOW = 60000, BREAKER_PAUSE = 60000,
+    CAR_IDLE_VISIBLE = 60000, CAR_IDLE_HIDDEN = 25000,   -- ms sin avanzar antes de eliminar un auto
+    PED_IDLE_VISIBLE = 45000, PED_IDLE_HIDDEN = 20000,
+    FADE_MS = 1200,
+    LOG_EVERY = 5000,                               -- un aviso de error cada 5 s como maximo
+}
+local stats = { despawn = {}, errors = {}, since = getTickCount() }
+local problemNodes = {}      -- [nodo] = veces que un auto fue eliminado por problemas cerca de el
+local errorTimes, breakerUntil, lastErrLog = {}, 0, 0
+local fpsMs, popScale = 16, 1   -- tiempo medio de fotograma y factor de poblacion
+
+local function noteDespawn(reason, node)
+    stats.despawn[reason] = (stats.despawn[reason] or 0) + 1
+    if node then problemNodes[node] = (problemNodes[node] or 0) + 1 end
+end
+
+-- Ejecuta fn(...) protegida. Devuelve true si no hubo error. "s" lleva el contador de errores de la entidad.
+local function guarded(label, s, fn, ...)
+    local ok, err = pcall(fn, ...)
+    if ok then return true end
+    local now = getTickCount()
+    stats.errors[label] = (stats.errors[label] or 0) + 1
+    if s then s.errCount = (s.errCount or 0) + 1 end
+    errorTimes[#errorTimes + 1] = now
+    if now - lastErrLog > HEALTH.LOG_EVERY then
+        lastErrLog = now
+        outputDebugString(("[rp_citizens] error en %s: %s"):format(label, tostring(err)), 1)
+    end
+    return false
+end
+
+local function breakerActive() return getTickCount() < breakerUntil end
+
+-- Revisa el interruptor (una vez por segundo desde spawnTick)
+local function checkBreaker(now)
+    local keep = {}
+    for _, t in ipairs(errorTimes) do
+        if now - t < HEALTH.BREAKER_WINDOW then keep[#keep + 1] = t end
+    end
+    errorTimes = keep
+    if #errorTimes >= HEALTH.BREAKER_ERRORS and now >= breakerUntil then
+        breakerUntil = now + HEALTH.BREAKER_PAUSE
+        errorTimes = {}
+        stats.despawn["interruptor"] = (stats.despawn["interruptor"] or 0) + 1
+        clearAll()
+        outputDebugString("[rp_citizens] demasiados errores: poblacion apagada 60 s (revisa el log del cliente)", 1)
+        outputChatBox("[Trafico] Demasiados errores en la IA de trafico y peatones: se apaga 60 s y se reinicia sola. Avisa a un admin.", 255, 120, 80)
+    end
+end
+
+-- Elimina un auto por "reason". Si se ve y esta cerca de la camara se desvanece en ~1 s.
+local function despawnCar(vehicle, s, reason, soft)
+    if not isElement(vehicle) then return removeCar(vehicle) end
+    noteDespawn(reason, s.node or s.prev)
+    if soft and isElementOnScreen(vehicle) then
+        local x, y = getElementPosition(vehicle)
+        local px, py = getElementPosition(localPlayer)
+        if getDistanceBetweenPoints2D(px, py, x, y) < 90 then
+            if not s.fadeStart then
+                s.fadeStart = getTickCount()
+                setElementCollisionsEnabled(vehicle, false)
+                if s.driver and isElement(s.driver) then
+                    setPedControlState(s.driver, "accelerate", false)
+                    setPedControlState(s.driver, "handbrake", true)
+                end
+            end
+            return
+        end
+    end
+    removeCar(vehicle)
+end
+
+-- Desvanecimiento de un auto marcado para eliminar (true si ya se elimino)
+local function fadeStep(vehicle, s)
+    local k = (getTickCount() - s.fadeStart) / HEALTH.FADE_MS
+    if k >= 1 then
+        removeCar(vehicle)
+        return true
+    end
+    local a = math.floor(255 * (1 - k))
+    setElementAlpha(vehicle, a)
+    if s.driver and isElement(s.driver) then setElementAlpha(s.driver, a) end
+    return false
+end
+
+-- Vigilante de un auto con fisica o lejano
+local function carWatchdog(v, s, now)
+    local x, y, z = getElementPosition(v)
+    if z < -30 or z > 500 then return despawnCar(v, s, "fuera_del_mapa") end
+    if isElementInWater(v) then
+        s.waterSince = s.waterSince or now
+        if now - s.waterSince > 2500 then return despawnCar(v, s, "agua", true) end
+    else
+        s.waterSince = nil
+    end
+    -- cada 5 s: avance y recorrido
+    if not s.wdAt then
+        s.wdX, s.wdY, s.wdAt, s.idleMs, s.pathLen = x, y, now, 0, 0
+        s.anchorX, s.anchorY, s.anchorAt = x, y, now
+        return
+    end
+    if now - s.wdAt >= 5000 then
+        local moved = getDistanceBetweenPoints2D(x, y, s.wdX, s.wdY)
+        local legit = s.state == "RED"            -- esperando un semaforo no es atasco
+        if moved < 1.5 and not legit then s.idleMs = s.idleMs + (now - s.wdAt) else s.idleMs = 0 end
+        s.pathLen = s.pathLen + moved
+        s.wdX, s.wdY, s.wdAt = x, y, now
+        -- vueltas en circulos: un minuto recorriendo mucho sin alejarse de un mismo punto
+        if now - s.anchorAt >= 60000 then
+            local net = getDistanceBetweenPoints2D(x, y, s.anchorX, s.anchorY)
+            if net < 30 and s.pathLen > 120 then return despawnCar(v, s, "vueltas", true) end
+            s.anchorX, s.anchorY, s.anchorAt, s.pathLen = x, y, now, 0
+        end
+    end
+    local queued = s.state == "FOLLOW" or s.state == "YIELD"   -- en cola: se tolera el doble
+    local limit = isElementOnScreen(v) and HEALTH.CAR_IDLE_VISIBLE or HEALTH.CAR_IDLE_HIDDEN
+    if queued then limit = limit * 2 end
+    if s.idleMs > limit then return despawnCar(v, s, "atascado", true) end
+end
+
+-- Vigilante de un peaton que camina o huye
+local function pedWatchdog(ped, s, now)
+    local x, y, z = getElementPosition(ped)
+    if z < -30 or z > 500 then
+        noteDespawn("ped_fuera_del_mapa")
+        return removePed(ped)
+    end
+    if isElementInWater(ped) then
+        s.waterSince = s.waterSince or now
+        if now - s.waterSince > 2500 then
+            noteDespawn("ped_agua")
+            return removePed(ped)
+        end
+    else
+        s.waterSince = nil
+    end
+    if s.state ~= "WALK" and s.state ~= "FLEE" then
+        s.wdAt = nil
+        return
+    end
+    if not s.wdAt then
+        s.wdX, s.wdY, s.wdAt, s.idleMs = x, y, now, 0
+        return
+    end
+    if now - s.wdAt >= 5000 then
+        if getDistanceBetweenPoints2D(x, y, s.wdX, s.wdY) < 1.5 then s.idleMs = s.idleMs + (now - s.wdAt) else s.idleMs = 0 end
+        s.wdX, s.wdY, s.wdAt = x, y, now
+    end
+    local limit = isElementOnScreen(ped) and HEALTH.PED_IDLE_VISIBLE or HEALTH.PED_IDLE_HIDDEN
+    if s.idleMs > limit then
+        noteDespawn("ped_atascado")
+        return removePed(ped)
+    end
+end
+
+-- Autos y peatones creados por este recurso que ya no estan en las tablas (se marcan con rp:citizen)
+local function sweepOrphans()
+    for _, v in ipairs(getElementsByType("vehicle", resourceRoot)) do
+        if not cars[v] and getElementData(v, "rp:citizen") and not getElementData(v, "rp:copCar")
+            and getVehicleController(v) ~= localPlayer then
+            stats.despawn["huerfano"] = (stats.despawn["huerfano"] or 0) + 1
+            destroyElement(v)
+        end
+    end
+    for _, p in ipairs(getElementsByType("ped", resourceRoot)) do
+        if not peds[p] and getElementData(p, "rp:citizen") and not getElementData(p, "rp:cop") then
+            local veh = getPedOccupiedVehicle(p)
+            if not (veh and cars[veh]) then
+                stats.despawn["huerfano"] = (stats.despawn["huerfano"] or 0) + 1
+                destroyElement(p)
+            end
+        end
+    end
+end
+
+-- /traficostats: estado de la poblacion, causas de eliminacion, errores y nodos problematicos
+addCommandHandler("traficostats", function()
+    local now = getTickCount()
+    outputChatBox(("[Trafico] Autos %d  Peatones %d  Poblacion x%.1f  Fotograma %.0f ms  Interruptor: %s"):format(
+        carCount, pedCount, popScale, fpsMs, breakerActive() and "APAGADO" or "ok"), 120, 200, 255)
+    local parts = {}
+    for k, n in pairs(stats.despawn) do parts[#parts + 1] = k .. "=" .. n end
+    table.sort(parts)
+    outputChatBox("[Trafico] Eliminados (" .. math.floor((now - stats.since) / 60000) .. " min): "
+        .. (#parts > 0 and table.concat(parts, ", ") or "ninguno"), 120, 200, 255)
+    local errs = {}
+    for k, n in pairs(stats.errors) do errs[#errs + 1] = k .. "=" .. n end
+    if #errs > 0 then outputChatBox("[Trafico] Errores Lua: " .. table.concat(errs, ", "), 255, 140, 90) end
+    local list = {}
+    for node, n in pairs(problemNodes) do list[#list + 1] = { node, n } end
+    table.sort(list, function(a, b) return a[2] > b[2] end)
+    for i = 1, math.min(5, #list) do
+        local x, y = nodePos(VEH_NODES, list[i][1])
+        outputChatBox(("[Trafico] Nodo problematico #%d: %d veces cerca de (%.0f, %.0f) -> revisalo con /nodos"):format(
+            list[i][1], list[i][2], x, y), 255, 200, 90)
+    end
+end)
+
 local function spawnTick()
-    if not enabled or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
+    -- pasajero: no se crea nada; lo que queda se desvanece solo (ver setCitizensSuspended)
+    if suspended and enabled and getElementData(localPlayer, "rp:characterId") and playerIsActive() then return end
+    if not enabled or suspended or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
         if pedCount > 0 or carCount > 0 then clearAll() end
         return
     end
     local px, py, pz = getElementPosition(localPlayer)
+
+    -- Salud: interruptor de seguridad, limpieza de huerfanos y poblacion segun los FPS
+    local nowH = getTickCount()
+    checkBreaker(nowH)
+    if breakerActive() then
+        if pedCount > 0 or carCount > 0 then clearAll() end
+        return
+    end
+    if nowH - (stats.lastSweep or 0) > 20000 then
+        stats.lastSweep = nowH
+        guarded("huerfanos", nil, sweepOrphans)
+    end
+    if fpsMs > 40 then popScale = 0.6 elseif fpsMs < 30 then popScale = 1 end   -- < 25 FPS: menos poblacion
 
     -- Despawn de lo lejano (y de lo que no se ve)
     for ped in pairs(peds) do
@@ -1441,8 +2427,14 @@ local function spawnTick()
 
     -- Spawn hasta el limite (uno por tick para repartir el coste)
     local night = isNight()
-    if pedCount < (night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) then spawnPed(px, py) end
-    local maxCars = (night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
+    -- rp_events (c_scenes.lua): hora punta, lluvia y escenas activas ajustan los cupos
+    local pedMul, carMul = 1, 1
+    if eventPopScale then pedMul, carMul = eventPopScale() end
+    local maxPeds = math.floor((night and CFG.MAX_PEDS_NIGHT or CFG.MAX_PEDS) * pedMul * popScale + 0.5)
+    local scenePeds = sceneExtraPeds and sceneExtraPeds() or 0
+    -- siempre quedan al menos 4 peatones caminando aunque haya muchos grupos quietos
+    if pedCount + math.min(scenePeds, math.max(0, maxPeds - 4)) < maxPeds then spawnPed(px, py) end
+    local maxCars = math.floor((night and CFG.MAX_CARS_NIGHT or CFG.MAX_CARS) * carMul * popScale + 0.5) + (playerWanted() and CFG.MAX_CARS_WANTED or 0)
     -- hasta 2 por tick cuando faltan muchos (yendo rapido se despawnean seguido)
     for _ = 1, (maxCars - carCount > 4) and 2 or 1 do
         if carCount < maxCars then spawnCar(px, py) end
@@ -1450,25 +2442,47 @@ local function spawnTick()
 end
 
 local function pedTick()
-    if pedCount == 0 then return end
+    if pedCount == 0 or breakerActive() then return end
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     local aimTarget = getPedTarget(localPlayer)
+    pedSnap = {}
+    for p in pairs(peds) do
+        if isElement(p) then
+            local sx, sy = getElementPosition(p)
+            pedSnap[#pedSnap + 1] = { p, sx, sy }
+        end
+    end
     for ped, s in pairs(peds) do
-        if isElement(ped) and s.state ~= "DEAD" then
+        local fading = false
+        if s.fadeStart and isElement(ped) then
+            -- marcado para retirar (el jugador pasa a ver el trafico de otro): se desvanece y se borra
+            fading = true
+            local k = (now - s.fadeStart) / 1200
+            if k >= 1 then removePed(ped) else setElementAlpha(ped, math.floor(255 * (1 - k))) end
+        end
+        if not fading and isElement(ped) and s.state ~= "DEAD" then
             -- Le apuntan con un arma de fuego: huye
             if aimTarget == ped and getPedWeapon(localPlayer) >= 22 and s.state ~= "FLEE" and s.state ~= "FIGHT" then
                 startFlee(ped, localPlayer)
             end
-            if isElementStreamedIn(ped) then updatePed(ped, s, now, px, py, pz) end
+            if isElementStreamedIn(ped) then
+                if not guarded("peaton", s, updatePed, ped, s, now, px, py, pz) and (s.errCount or 0) >= HEALTH.ERR_LIMIT then
+                    noteDespawn("ped_error")
+                    removePed(ped)
+                elseif peds[ped] then
+                    guarded("peaton", s, pedWatchdog, ped, s, now)
+                end
+            end
         end
     end
 end
 
 local function carTick()
-    if carCount == 0 then return end
+    if carCount == 0 or breakerActive() then return end
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
+    refreshSnapshots(now)
     for v, s in pairs(cars) do
         -- Patrulla del trafico (aunque el agente se haya caido de la moto) cerca de un
         -- jugador buscado: se suma a la persecucion de rp_wanted y deja de ser trafico
@@ -1486,13 +2500,44 @@ local function carTick()
             -- cambio de LOD: fisica completa cerca; dummy lejos y fuera de camara
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)
+                -- los dummies no chocan entre si: al hacerse solido puede quedar encima de otro auto
+                if nearOtherCar(v, 3, true) then ghostCar(v, s, 4000) end
             elseif s.lod ~= "dummy" and d > DUMMY_DIST and not isElementOnScreen(v) then
                 makeDummy(v, s, speedOf(v) / 3.6)
             end
-            if s.lod == "dummy" then
-                dummyDecide(v, s)
-            elseif isElementStreamedIn(v) then
-                updateCar(v, s, now)
+            if s.lod ~= "dummy" then
+                if s.ghost then
+                    -- vuelve a ser solido cuando no queda ningun auto encima
+                    if now > s.ghostUntil then
+                        if nearOtherCar(v, 4.2, true) then
+                            s.ghostUntil = now + 1000
+                        else
+                            s.ghost = nil
+                            setElementCollisionsEnabled(v, true)
+                        end
+                    end
+                elseif nearOtherCar(v, 2.4, false) then
+                    -- dos autos superpuestos mas de 2 s: uno pasa a fantasma
+                    s.overlapSince = s.overlapSince or now
+                    if now - s.overlapSince > 2000 then ghostCar(v, s, 5000) s.overlapSince = nil end
+                else
+                    s.overlapSince = nil
+                end
+            end
+            if s.fadeStart then
+                fadeStep(v, s)   -- marcado para eliminar: se desvanece y se borra
+            else
+                local ok
+                if s.lod == "dummy" then
+                    ok = guarded("auto_lejano", s, dummyDecide, v, s)
+                elseif isElementStreamedIn(v) then
+                    ok = guarded("auto", s, updateCar, v, s, now)
+                end
+                if ok == false and (s.errCount or 0) >= HEALTH.ERR_LIMIT then
+                    despawnCar(v, s, "error")
+                elseif cars[v] then
+                    guarded("auto_vigilante", s, carWatchdog, v, s, now)
+                end
             end
             end
         elseif isElement(v) and s.lod == "dummy" then
@@ -1504,12 +2549,17 @@ end
 addEventHandler("onClientResourceStart", resourceRoot, function()
     pedGrid = buildGrid(PED_NODES, PED_LINKS)
     vehGrid = buildGrid(VEH_NODES, VEH_LINKS)
+    computeMainEdges()
     setPedsLODDistance(60)
     setTimer(spawnTick, CFG.SPAWN_TICK, 0)
     setTimer(pedTick, CFG.PED_TICK, 0)
     setTimer(carTick, CFG.CAR_TICK, 0)
     -- solo mueve dummies (pocos calculos por auto); sin dummies no hace nada
-    addEventHandler("onClientPreRender", root, moveDummies)
+    addEventHandler("onClientPreRender", root, function(dt)
+        fpsMs = fpsMs * 0.97 + math.min(dt or 16, 200) * 0.03   -- tiempo medio de fotograma
+        if breakerActive() then return end
+        guarded("auto_lejano_mov", nil, moveDummies, dt)
+    end)
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, clearAll)
@@ -1518,6 +2568,7 @@ addEventHandler("onClientResourceStop", resourceRoot, clearAll)
 function rebuildCitizenGrids()
     pedGrid = buildGrid(PED_NODES, PED_LINKS)
     vehGrid = buildGrid(VEH_NODES, VEH_LINKS)
+    computeMainEdges()
 end
 
 function clearCitizens()
@@ -1546,4 +2597,240 @@ end)
 ----------------------------------------------------------------
 function getRoadGraph()
     return VEH_NODES, VEH_LINKS, VEH_LANES, VEH_OFFSET
+end
+
+----------------------------------------------------------------
+-- API para rp_events (escenas ambientales en c_scenes.lua y eventos
+-- compartidos). Todo barato: busquedas puntuales sobre las rejillas.
+----------------------------------------------------------------
+
+function citizensEnabled()
+    return enabled and not suspended
+end
+
+function citizenCounts()
+    return pedCount, carCount
+end
+
+function citizenPickSkin(x, y, z)
+    return pickPedSkin(x, y, z)
+end
+
+function citizenPickCar(x, y, z)
+    return pickCarModel(x, y, z)
+end
+
+-- Punto de acera a [minD, maxD] del jugador. hidden = fuera de la camara.
+-- Devuelve x, y, z, rotacion (siguiendo el camino) o nil.
+function citizenWalkSpot(minD, maxD, hidden)
+    if not pedGrid then return end
+    local px, py = getElementPosition(localPlayer)
+    for _ = 1, 4 do
+        local node, x, y, z = randomNodeAround(PED_NODES, pedGrid, px, py, minD, maxD)
+        if node and not (hidden and visibleFromCamera(x, y, z)) then
+            local target = nextNode(PED_LINKS, node, nil)
+            local tx, ty = nodePos(PED_NODES, target)
+            return x, y, z, heading(tx - x, ty - y)
+        end
+    end
+end
+
+-- Punto de calzada (carril derecho) con la direccion de la via. Con minD <= 0 busca
+-- el nodo mas cercano al jugador (uso de admin). Devuelve x, y, z, rotacion o nil.
+function citizenRoadSpot(minD, maxD, hidden)
+    if not vehGrid then return end
+    local px, py = getElementPosition(localPlayer)
+    for _ = 1, 5 do
+        local node, x, y, z
+        if minD <= 0 then
+            node = nearestNode(VEH_NODES, vehGrid, px, py)
+            if node then x, y, z = nodePos(VEH_NODES, node) end
+            if not node or getDistanceBetweenPoints2D(px, py, x, y) > 60 then return end
+        else
+            node, x, y, z = randomNodeAround(VEH_NODES, vehGrid, px, py, minD, maxD)
+        end
+        if node and not (hidden and visibleFromCamera(x, y, z)) then
+            local target
+            for _, n in ipairs(VEH_LINKS[node] or {}) do
+                if canDrive(node, n) and isMainEdge(node, n) then target = n break end
+            end
+            if target then
+                local sx, sy, sz, dx, dy = laneStart(node, target)
+                if not spotOccupied(sx, sy, 12) then return sx, sy, sz, heading(dx, dy) end
+            end
+        end
+        if minD <= 0 then return end
+    end
+end
+
+-- Los peatones a menos de "radius" de (x, y) se paran a mirar durante "ms" (max. 6 por llamada)
+function citizenWatch(x, y, radius, ms)
+    if pedCount == 0 then return 0 end
+    local now, r2, n = getTickCount(), radius * radius, 0
+    for ped, s in pairs(peds) do
+        if (s.state == "WALK" or s.state == "IDLE") and isElement(ped) and n < 6 then
+            local px, py = getElementPosition(ped)
+            if (px - x) ^ 2 + (py - y) ^ 2 < r2 and math.random() < 0.6 then
+                n = n + 1
+                setPedAnimation(ped)
+                setWalking(ped, false)
+                s.state, s.lookX, s.lookY = "WATCH", x, y
+                s.until_ = now + ms * (0.6 + math.random() * 0.8)
+                if math.random() < 0.3 then setPedAnimation(ped, "ped", "phone_talk", -1, true, false, false, false) end
+            end
+        end
+    end
+    return n
+end
+
+-- Barrio de un punto: perfil ("ghetto", "rich", "industrial", "default"), nombre de zona y
+-- skins de la banda local (o nil). Lo usa c_hangouts.lua.
+function citizenZoneInfo(x, y, z)
+    local zone = getZoneName(x, y, z, false)
+    return ZONE_PROFILE[zone] or "default", zone, GANGS[zone]
+end
+
+function citizenProfileSkin(profile)
+    return pick((POP[profile] or POP.default).peds)
+end
+
+-- Vector unitario que se aleja de la calzada mas cercana (hacia las casas), o nil
+function citizenAwayFromRoad(x, y)
+    if not vehGrid then return end
+    local n = nearestNode(VEH_NODES, vehGrid, x, y)
+    if not n then return end
+    local rx, ry = nodePos(VEH_NODES, n)
+    local dx, dy = x - rx, y - ry
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 1 or len > 40 then return end
+    return dx / len, dy / len
+end
+
+function citizenIsVisible(x, y, z)
+    return visibleFromCamera(x, y, z)
+end
+
+function citizenWantedLevel()
+    return playerWanted() and true or false
+end
+
+----------------------------------------------------------------
+-- Sincronizacion entre jugadores del mismo auto (c_sync.lua)
+-- Conductor: envia los autos y peatones cercanos (getNearbyForSync).
+-- Pasajero: suspende su poblacion local y muestra la del conductor.
+----------------------------------------------------------------
+function setCitizensSuspended(state)
+    state = state and true or false
+    if suspended == state then return end
+    suspended = state
+    if not suspended then return end
+    -- Los que se ven se desvanecen en ~1 s (no desaparecen de golpe); los que no se ven se borran ya
+    local now = getTickCount()
+    for v, s in pairs(cars) do
+        if isElement(v) and getVehicleController(v) ~= localPlayer and isElementOnScreen(v) then
+            if not s.fadeStart then
+                s.fadeStart = now
+                setElementCollisionsEnabled(v, false)
+                if isElement(s.driver) then setPedControlState(s.driver, "handbrake", true) end
+            end
+        else
+            removeCar(v)
+        end
+    end
+    for p, s in pairs(peds) do
+        if isElement(p) and isElementOnScreen(p) then s.fadeStart = s.fadeStart or now else removePed(p) end
+    end
+end
+
+-- El pasajero deja de serlo: la copia de un auto del conductor pasa a ser un auto real de su poblacion
+-- (conserva posicion, rumbo y velocidad y se engancha al carril mas cercano). false si no se pudo.
+function adoptMirrorCar(vehicle, driver, speedMs)
+    if cars[vehicle] or not isElement(vehicle) or not isElement(driver) or carCount >= CFG.MAX_CARS + 4 then return false end
+    local x, y = getElementPosition(vehicle)
+    local m = getElementMatrix(vehicle)
+    local n, target = nearestLane(x, y, m[2][1], m[2][2])
+    if not n then return false end
+    setElementData(vehicle, "rp:citizen", true, false)
+    setElementData(driver, "rp:citizen", true, false)
+    local s = {
+        driver = driver, prev = n, node = target, wp = {}, police = false, style = newDriverStyle(),
+        lenF = vehicleLenFactor(vehicle), state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
+    }
+    cars[vehicle] = s
+    carCount = carCount + 1
+    s.dSpeed = speedMs or 0
+    makeReal(vehicle, s)            -- fisica, apoya sobre el suelo y conserva la velocidad
+    -- primer punto: proyeccion sobre el carril elegido, unos metros por delante
+    local sx, sy, sz, dx, dy = laneStart(n, target)
+    local nx2, ny2 = nodePos(VEH_NODES, target)
+    local len = math.max(1, getDistanceBetweenPoints2D(sx, sy, nx2, ny2))
+    local t = math.max(0, math.min(len - 8, (x - sx) * dx + (y - sy) * dy + 8))
+    s.wp[1] = { sx + dx * t, sy + dy * t, sz, 0, nil }
+    return true
+end
+
+-- Igual para un peaton copiado: sigue caminando desde donde esta
+function adoptMirrorPed(ped)
+    if peds[ped] or not isElement(ped) or pedCount >= CFG.MAX_PEDS + 4 then return false end
+    setElementData(ped, "rp:citizen", true, false)
+    local s = { state = "WALK", node = nil, prev = nil, brave = math.random() < CFG.BRAVE_CHANCE, until_ = 0 }
+    peds[ped] = s
+    pedCount = pedCount + 1
+    setElementCollisionsEnabled(ped, true)
+    setPedControlState(ped, "forwards", false)
+    setPedControlState(ped, "walk", false)
+    setPedControlState(ped, "sprint", false)
+    resumeWalk(ped, s)              -- elige el nodo peatonal mas cercano (o lo retira si no hay)
+    return peds[ped] ~= nil
+end
+
+local nextSid = 0
+
+-- Lista plana de numeros: por entidad { tipo (1 auto, 2 peaton), id, modelo, x, y, z, rx, ry, rz, vx, vy, vz, colores(6), skin conductor, variantes(2), luces }
+function getNearbyForSync(px, py, radius, maxCars, maxPeds)
+    local r2 = radius * radius
+    local function nearest(tbl, limit, keep)
+        local found = {}
+        for el, s in pairs(tbl) do
+            if isElement(el) and keep(el, s) then
+                local x, y = getElementPosition(el)
+                local d2 = (x - px) ^ 2 + (y - py) ^ 2
+                if d2 < r2 then found[#found + 1] = { d2, el, s } end
+            end
+        end
+        table.sort(found, function(a, b) return a[1] < b[1] end)
+        for i = #found, limit + 1, -1 do found[i] = nil end
+        return found
+    end
+    local out = {}
+    local function emit(kind, el, s)
+        if not s.sid then
+            nextSid = nextSid + 1
+            s.sid = nextSid
+        end
+        local x, y, z = getElementPosition(el)
+        local rx, ry, rz = getElementRotation(el)
+        local vx, vy, vz = getElementVelocity(el)
+        local i = #out
+        out[i + 1], out[i + 2], out[i + 3] = kind, s.sid, getElementModel(el)
+        out[i + 4], out[i + 5], out[i + 6] = x, y, z
+        out[i + 7], out[i + 8], out[i + 9] = rx, ry, rz
+        out[i + 10], out[i + 11], out[i + 12] = vx, vy, vz
+        -- 13-22: colores (2 x RGB), skin del conductor, variantes, luces (solo autos; ceros en peatones)
+        if kind == 1 then
+            local r1, g1, b1, r2, g2, b2 = getVehicleColor(el, true)
+            local drv = getVehicleController(el)
+            local v1, v2 = getVehicleVariant(el)
+            out[i + 13], out[i + 14], out[i + 15] = r1 or 0, g1 or 0, b1 or 0
+            out[i + 16], out[i + 17], out[i + 18] = r2 or 0, g2 or 0, b2 or 0
+            out[i + 19] = drv and getElementModel(drv) or 0
+            out[i + 20], out[i + 21] = v1 or 255, v2 or 255
+            out[i + 22] = getVehicleOverrideLights(el) or 0
+        else
+            for k = 13, 22 do out[i + k] = 0 end
+        end
+    end
+    for _, f in ipairs(nearest(cars, maxCars, function() return true end)) do emit(1, f[2], f[3]) end
+    for _, f in ipairs(nearest(peds, maxPeds, function(p, s) return s.state ~= "DEAD" end)) do emit(2, f[2], f[3]) end
+    return out
 end

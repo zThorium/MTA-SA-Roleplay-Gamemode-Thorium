@@ -1,5 +1,6 @@
 # Credenciales reales de la base de datos (copia config.example.lua)
 **/rp_database/config.lua
+**/rp_phone/config.music.lua
 
 # Logs, bases locales y basura de editor
 *.log
@@ -34,3 +35,6 @@ luac.out
 # --- Docker (docs/DOCKER.md) ---
 .env
 docker/logs/
+
+# Respaldos locales con sufijo de fecha
+*.bak-*

@@ -2,14 +2,13 @@
  * rp_phone / tinder.js  (parte 1: perfil)
  * Lua -> RP.tinder.setProfile(perfil)
  * JS  -> mta.triggerEvent("rp:phone:ui:tinderOpen" | "rp:phone:ui:tinderSave", ...)
- * La foto se toma con la camara del telefono (rp:phone:ui:capture); RP.setPhoto se
- * intercepta mientras se espera la foto de perfil.
+ * La foto de perfil se toma con la camara o se elige de la galeria (gallery.js).
  */
 (function () {
     "use strict";
 
     var $ = function (id) { return document.getElementById(id); };
-    var st = { photo: null, interest: "a", waitingPhoto: false, profile: null };
+    var st = { photo: null, interest: "a", draft: null, profile: null };
 
     function send() {
         var args = Array.prototype.slice.call(arguments);
@@ -35,25 +34,26 @@
         b.addEventListener("click", function () { setInterest(b.dataset.interest); });
     });
 
+    // Al ir a la camara o a la galeria se guarda lo escrito: al volver, tinderOpen recarga el perfil del servidor
+    function setPhoto(base64) {
+        st.photo = base64;
+        window.Phone.show("tinder");
+        renderPhoto(base64);
+    }
+    function keepDraft() { st.draft = { bio: $("tinder-bio").value, interest: st.interest, active: $("tinder-active").checked }; }
     $("tinder-camera").addEventListener("click", function () {
-        st.waitingPhoto = true;
-        send("rp:phone:ui:capture");
+        keepDraft();
+        Gallery.takePhoto(setPhoto);
+    });
+    $("tinder-gallery").addEventListener("click", function () {
+        keepDraft();
+        Gallery.pick("Foto de perfil", setPhoto);
     });
 
     $("tinder-save").addEventListener("click", function () {
         send("rp:phone:ui:tinderSave", $("tinder-bio").value.trim(), st.interest, $("tinder-active").checked, st.photo || "");
         st.photo = null;   // si no se cambio, el servidor conserva la anterior
     });
-
-    // Intercepta la foto de la camara cuando es para el perfil
-    var originalSetPhoto = window.RP.setPhoto;
-    window.RP.setPhoto = function (base64) {
-        if (!st.waitingPhoto) return originalSetPhoto(base64);
-        st.waitingPhoto = false;
-        st.photo = base64;
-        renderPhoto(base64);
-        window.RP.show("tinder");
-    };
 
     window.RP.tinder = {
         setProfile: function (p) {
@@ -62,7 +62,13 @@
             $("tinder-bio").value = p.bio || "";
             $("tinder-active").checked = p.active !== false;
             setInterest(p.interested || "a");
-            if (!st.photo) renderPhoto(p.photo);
+            if (st.draft) {   // cambios sin guardar de antes de ir a la camara o galeria
+                $("tinder-bio").value = st.draft.bio;
+                $("tinder-active").checked = st.draft.active;
+                setInterest(st.draft.interest);
+                st.draft = null;
+            }
+            renderPhoto(st.photo || p.photo);
         }
     };
 })();

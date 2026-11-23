@@ -32,6 +32,8 @@
         document.querySelector(".screen").classList.toggle("dark-status", name === "home" || name === "call");
         if (name === "bank") send("rp:phone:ui:bankOpen");
         if (window.Fotogram) Fotogram.onShow(name);
+        if (window.Music) Music.onShow(name);
+        if (window.Gallery) Gallery.onShow(name);
         if (name === "tinder") send("rp:phone:ui:tinderOpen");
         if (name === "contact-add") send("rp:phone:ui:nearby");
     }

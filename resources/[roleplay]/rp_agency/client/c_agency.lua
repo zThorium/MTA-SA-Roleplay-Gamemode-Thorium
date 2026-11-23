@@ -406,3 +406,47 @@ end)
 setTimer(function()
     if leaveWarnUntil > 0 and currentSpot() ~= "exit" then leaveWarnUntil = 0 end
 end, 500, 0)
+
+-- Salida segura: tras salir al exterior busca suelo firme, sin techo ni paredes pegadas
+addEvent("rp:agency:groundFix", true)
+local safeTimer
+
+local function groundAt(x, y, z)
+    local hit, _, _, gz = processLineOfSight(x, y, z + 3, x, y, z - 6, true, false, false, true, false, false, false, false, localPlayer)
+    return hit and gz or nil
+end
+
+local function isSafe(x, y, z)
+    local gz = groundAt(x, y, z)
+    if not gz or math.abs(gz - z) > 2.5 then return nil end
+    local head = gz + 1.0
+    if processLineOfSight(x, y, head, x, y, head + 8, true, false, false, true, false, false, false, false, localPlayer) then return nil end
+    for a = 0, 315, 45 do
+        local r = math.rad(a)
+        if processLineOfSight(x, y, head, x + math.cos(r) * 0.8, y + math.sin(r) * 0.8, head, true, false, false, true, false, false, false, false, localPlayer) then return nil end
+    end
+    return gz
+end
+
+addEventHandler("rp:agency:groundFix", resourceRoot, function(x, y, z)
+    if isTimer(safeTimer) then killTimer(safeTimer) end
+    setElementFrozen(localPlayer, true)
+    local tries = 0
+    safeTimer = setTimer(function()
+        tries = tries + 1
+        if groundAt(x, y, z) or tries >= 40 then
+            killTimer(safeTimer)
+            local px, py, pz
+            for _, r in ipairs({ 0, 1.2, 2, 3, 4, 5.5, 7 }) do
+                for a = 0, 359, (r == 0 and 360 or 30) do
+                    local cx, cy = x + math.cos(math.rad(a)) * r, y + math.sin(math.rad(a)) * r
+                    local gz = isSafe(cx, cy, z)
+                    if gz then px, py, pz = cx, cy, gz break end
+                end
+                if px then break end
+            end
+            if px then setElementPosition(localPlayer, px, py, pz + 1.0) end
+            setElementFrozen(localPlayer, false)
+        end
+    end, 100, 40)
+end)

@@ -145,10 +145,29 @@ local function ownedDriverVehicle(player)
     return v, data
 end
 
+local hiddenMarker = {} -- [player] = marker oculto mientras tunea
+
 local function shopOf(vehicle)
     for m, shop in pairs(shopMarkers) do
-        if isElementWithinMarker(vehicle, m) then return shop end
+        if isElementWithinMarker(vehicle, m) then return shop, m end
     end
+end
+
+-- Oculta el marker del taller para todos mientras alguien lo usa (taller ocupado)
+local markerUsers = {} -- [marker] = jugadores tuneando
+local function hideShopMarker(player, marker)
+    if not marker then return end
+    hiddenMarker[player] = marker
+    markerUsers[marker] = (markerUsers[marker] or 0) + 1
+    setElementVisibleTo(marker, root, false)
+end
+
+local function showShopMarker(player)
+    local marker = hiddenMarker[player]
+    hiddenMarker[player] = nil
+    if not marker then return end
+    markerUsers[marker] = math.max(0, (markerUsers[marker] or 1) - 1)
+    if markerUsers[marker] == 0 and isElement(marker) then setElementVisibleTo(marker, root, true) end
 end
 
 -- El marcador puede detectar al vehiculo o al jugador; se usa siempre al conductor
@@ -206,8 +225,14 @@ end
 local function close(player)
     local v = tuning[player]
     tuning[player] = nil
+    showShopMarker(player)
     if isElement(v) then updateFrozen(v) end
 end
+
+-- Para s_perf.lua: vehiculo que el jugador esta tuneando y taller donde esta
+function getTuningVehicle(player) return tuning[player] end
+function getVehicleTuningShop(vehicle) return (shopOf(vehicle)) end
+function isVehicleInTuningShop(vehicle) return shopOf(vehicle) ~= nil end
 
 -- Reparacion: base + segun el dano del motor (vida de 1000 a 0)
 function repairPrice(v)
@@ -224,6 +249,8 @@ function sendTuning(player, v, shop)
         slots = catalog(v), state = captureTuning(v), paintjobs = PAINTJOB_MODELS[data.model] or 0,
         prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
         money = getPlayerMoney(player), health = math.floor(getElementHealth(v) / 10), repair = repairPrice(v),
+        repaired = getElementHealth(v) >= 999,
+        perf = getPerfPanel and getPerfPanel(v) or nil,
     })
 end
 
@@ -231,10 +258,11 @@ addEventHandler("rp:tune:open", resourceRoot, function()
     local player = client
     local v, data = ownedDriverVehicle(player)
     if not v then return notify(player, "Debes estar al volante de tu vehiculo.", "warning") end
-    local shop = shopOf(v)
+    local shop, marker = shopOf(v)
     if not shop then return notify(player, "No estas en un taller.", "warning") end
     if vehicleSpeedKmh(v) > 5 then return notify(player, "Detente para entrar al taller.", "warning") end
     tuning[player] = v
+    hideShopMarker(player, marker)
     setElementFrozen(v, true)
     -- Si el taller tiene orientacion guardada, el auto queda justo en el punto
     if shop.rz then
@@ -338,6 +366,7 @@ addEventHandler("rp:tune:buy", resourceRoot, function(cart)
     exports.rp_characters:saveCharacter(player)
 
     notify(player, ("Tuning aplicado por $%d."):format(total), "success")
+    triggerClientEvent(player, "rp:tune:sound", resourceRoot, "install")
     -- Sigue en el taller con el estado nuevo
     sendTuning(player, v, shopOf(v) or { name = "Taller" })
 end)
@@ -349,6 +378,8 @@ addEventHandler("rp:tune:repair", resourceRoot, function()
     local player = client
     local v = tuning[player]
     if not v or not isElement(v) or getPedOccupiedVehicle(player) ~= v or not shopOf(v) then return end
+    -- Ya al 100%: no se cobra (el panel tambien lo deshabilita, pero el servidor valida)
+    if getElementHealth(v) >= 999 then return notify(player, "Tu vehiculo ya esta reparado.", "warning") end
     local price = repairPrice(v)
     if getPlayerMoney(player) < price then return notify(player, ("Necesitas $%d en efectivo."):format(price), "error") end
     takePlayerMoney(player, price)

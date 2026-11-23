@@ -52,7 +52,7 @@ Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados d
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
 Trámites: `rp_agency` (agencia de empleo: turnos, DNI `id_card` y alta en trabajos).
-Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: lista de comandos de admin; añade ahí cada comando de admin nuevo).
+Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: dashboard, jugadores en 3D, cuentas, IAM/RBAC, auditoría y catálogo de comandos; añade ahí cada comando de admin nuevo). `rp_resmanager` (F9, solo super admin).
 
 **En PR abierto, aún no en `main`** (revisa el PR antes de tocar esas áreas):
 vehículos con llaves/interacción M/tuning y combustible (#6), panel de ayuda F1 con

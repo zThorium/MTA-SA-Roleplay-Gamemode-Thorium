@@ -14,7 +14,7 @@ local attached = {}   -- [ped] = objeto cabeza
 -- Correccion global de altura (eje del cuello). Los ajustes de Countryside se
 -- hicieron con su bone_attach compilado; con las fuentes .lua la cabeza quedaba
 -- unos 0.3 por encima del cuello. Se puede afinar en juego con /ajustecabeza.
-local HEAD_Z_FIX = -0.32
+local HEAD_Z_FIX = -0.28
 
 ----------------------------------------------------------------
 -- Sangre del cuello: GTA dibuja un chorro de sangre en los peds sin cabeza.
@@ -53,6 +53,7 @@ function removeHead(ped)
     local obj = attached[ped]
     if isElement(obj) then destroyElement(obj) end
     attached[ped] = nil
+    if isElement(ped) and setPedHeadless then setPedHeadless(ped, false) end
     return true
 end
 
@@ -72,6 +73,7 @@ function applyHead(ped, headId)
     setElementDimension(obj, getElementDimension(ped))
     setElementDoubleSided(obj, true)
     exports.bone_attach:attachElementToBone(obj, ped, 2, head.x, head.y, head.z + HEAD_Z_FIX, head.rx, head.ry, head.rz)
+    if setPedHeadless then setPedHeadless(ped, true) end
     attached[ped] = obj
     return true
 end
@@ -156,6 +158,17 @@ addEventHandler("onClientRender", root, function()
     local aiming = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN"
     setElementAlpha(obj, aiming and 0 or 255)
 end)
+
+-- Oculta la cabeza original del ped en cada frame (tambien durante la pose de
+-- selfie con el brazo levantado, que la volvia a mostrar y duplicaba la cabeza).
+local function forceHeadless()
+    if not setPedHeadless then return end
+    for ped, obj in pairs(attached) do
+        if isElement(ped) and isElement(obj) then setPedHeadless(ped, true) end
+    end
+end
+addEventHandler("onClientPreRender", root, forceHeadless)
+addEventHandler("onClientPedsProcessed", root, forceHeadless)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     loadModels()

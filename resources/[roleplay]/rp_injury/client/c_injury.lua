@@ -175,6 +175,7 @@ end
 local animWatch
 local function checkAnimation()
     if not active or isPedDead(localPlayer) then return end
+    if isPedInVehicle(localPlayer) and getElementData(localPlayer, "rp:loaded") then return end
     local block, anim = getPedAnimation(localPlayer)
     if isPedInVehicle(localPlayer) or not block or block:lower() ~= INJURY.ANIM_BLOCK:lower()
         or not anim or anim:lower() ~= INJURY.ANIM_NAME:lower() then

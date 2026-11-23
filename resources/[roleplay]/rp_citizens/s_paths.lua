@@ -32,6 +32,26 @@ local function broadcast(op)
     triggerClientEvent(root, "rp:paths:apply", resourceRoot, { op })
 end
 
+----------------------------------------------------------------
+-- Respaldo automatico: copia de todos los cambios de rutas en backups/ (texto plano)
+-- al arrancar y antes de editar (como mucho uno cada 5 minutos). Cada linea:
+--   N tipo idx x y z borrado   |   L tipo a b quitado
+----------------------------------------------------------------
+local lastBackup = nil
+
+local function backup(force)
+    local now = getTickCount()
+    if not force and lastBackup and now - lastBackup < 300000 then return end
+    lastBackup = now
+    local rt = getRealTime()
+    local name = ("backups/paths_%04d%02d%02d_%02d%02d%02d.txt"):format(rt.year + 1900, rt.month + 1, rt.monthday, rt.hour, rt.minute, rt.second)
+    local f = fileCreate(name)
+    if not f then return end
+    for _, n in pairs(cache.nodes) do fileWrite(f, ("N %s %d %.3f %.3f %.3f %d\n"):format(n.t, n.i, n.x, n.y, n.z, n.d)) end
+    for _, l in pairs(cache.links) do fileWrite(f, ("L %s %d %d %d\n"):format(l.t, l.a, l.b, l.r)) end
+    fileClose(f)
+end
+
 local function saveNode(t, i, x, y, z, deleted)
     cache.nodes[nodeKey(t, i)] = { t = t, i = i, x = x, y = y, z = z, d = deleted and 1 or 0 }
     dbExec(db(), [[
@@ -63,6 +83,7 @@ local function load()
                 cache.links[linkKey(r.type, a, b)] = { t = r.type, a = a, b = b, r = tonumber(r.removed) }
             end
             outputDebugString("[rp_citizens] Cambios de rutas cargados")
+            backup(true)
         end, db(), "SELECT * FROM path_links")
     end, db(), "SELECT * FROM path_nodes")
 end
@@ -97,6 +118,7 @@ end)
 
 addEventHandler("rp:paths:move", resourceRoot, function(t, i, x, y, z)
     if not isAdmin(client) or not validType(t) or not validIdx(t, i) then return end
+    backup()
     if not (validCoord(x) and validCoord(y) and validCoord(z)) then return end
     saveNode(t, i, x, y, z, false)
     broadcast({ op = "node", t = t, i = i, x = x, y = y, z = z })
@@ -105,6 +127,7 @@ end)
 -- Nuevo nodo en (x,y,z). Si se dan a y b (enlazados), se inserta entre ellos.
 addEventHandler("rp:paths:add", resourceRoot, function(t, x, y, z, a, b)
     if not isAdmin(client) or not validType(t) then return end
+    backup()
     if not (validCoord(x) and validCoord(y) and validCoord(z)) then return end
     nextIdx[t] = nextIdx[t] + 1
     local i = nextIdx[t]
@@ -125,12 +148,14 @@ end)
 
 addEventHandler("rp:paths:delete", resourceRoot, function(t, i, x, y, z)
     if not isAdmin(client) or not validType(t) or not validIdx(t, i) then return end
+    backup()
     saveNode(t, i, tonumber(x) or 0, tonumber(y) or 0, tonumber(z) or 0, true)
     broadcast({ op = "delete", t = t, i = i })
 end)
 
 addEventHandler("rp:paths:link", resourceRoot, function(t, a, b, removed)
     if not isAdmin(client) or not validType(t) or not validIdx(t, a) or not validIdx(t, b) or a == b then return end
+    backup()
     saveLink(t, a, b, removed and true or false)
     broadcast({ op = "link", t = t, a = a, b = b, removed = removed and true or false })
 end)

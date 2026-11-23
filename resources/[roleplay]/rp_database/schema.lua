@@ -412,6 +412,121 @@ SCHEMA = {
     ALTER TABLE characters
         ADD COLUMN IF NOT EXISTS payday_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER energy
     ]],
+    -- Vehiculos personales: llaves, freno de mano, cepo policial, tuning y ultimo conductor
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS key_given        TINYINT(1)   NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS handbrake        TINYINT(1)   NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS clamped          TINYINT(1)   NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS tuning           TEXT         NULL,
+        ADD COLUMN IF NOT EXISTS last_driver_id   INT UNSIGNED NULL,
+        ADD COLUMN IF NOT EXISTS last_driver_name VARCHAR(32)  NULL,
+        ADD COLUMN IF NOT EXISTS last_driver_at   DATETIME     NULL
+    ]],
+    -- Maletero: items guardados en cada vehiculo
+    [[
+    CREATE TABLE IF NOT EXISTS vehicle_items (
+        vehicle_id INT UNSIGNED NOT NULL,
+        item_id    VARCHAR(32)  NOT NULL,
+        amount     INT UNSIGNED NOT NULL,
+        PRIMARY KEY (vehicle_id, item_id),
+        CONSTRAINT fk_vehicle_items_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Golpes recibidos (se conservan 1 dia, rp_vehicles borra los viejos cada hora)
+    [[
+    CREATE TABLE IF NOT EXISTS vehicle_hits (
+        id             INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+        vehicle_id     INT UNSIGNED      NOT NULL,
+        character_id   INT UNSIGNED      NULL,
+        character_name VARCHAR(32)       NOT NULL,
+        weapon         SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        loss           FLOAT             NOT NULL DEFAULT 0,
+        hits           SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+        created_at     DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_vehicle_hits_vehicle (vehicle_id, id),
+        KEY idx_vehicle_hits_created (created_at),
+        CONSTRAINT fk_vehicle_hits_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Quien se subio a cada vehiculo y en que asiento (se conserva 1 dia)
+    [[
+    CREATE TABLE IF NOT EXISTS vehicle_entries (
+        id             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        vehicle_id     INT UNSIGNED     NOT NULL,
+        character_id   INT UNSIGNED     NULL,
+        character_name VARCHAR(32)      NOT NULL,
+        seat           TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        created_at     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_vehicle_entries_vehicle (vehicle_id, id),
+        KEY idx_vehicle_entries_created (created_at),
+        CONSTRAINT fk_vehicle_entries_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Policia: multas a vehiculos y registro de acciones (cepo, multas, pagos)
+    [[
+    CREATE TABLE IF NOT EXISTS vehicle_fines (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        vehicle_id   INT UNSIGNED NOT NULL,
+        officer_id   INT UNSIGNED NULL,
+        officer_name VARCHAR(32)  NOT NULL,
+        amount       INT UNSIGNED NOT NULL,
+        reason       VARCHAR(128) NOT NULL,
+        paid         TINYINT(1)   NOT NULL DEFAULT 0,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        paid_at      DATETIME     NULL,
+        PRIMARY KEY (id),
+        KEY idx_vehicle_fines_vehicle (vehicle_id, paid),
+        CONSTRAINT fk_vehicle_fines_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS vehicle_police_log (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        vehicle_id INT UNSIGNED NOT NULL,
+        actor_name VARCHAR(32)  NOT NULL,
+        text       VARCHAR(255) NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_vehicle_police_log (vehicle_id, id),
+        CONSTRAINT fk_vehicle_police_log_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Faccion 1 reservada para la Policia (necesita las tablas de rp_factions;
+    -- si aun no existen, estas dos sentencias fallan sin bloquear el resto y se
+    -- reintentan en el siguiente arranque).
+    [[
+    INSERT IGNORE INTO factions (id, name, tag, type, color, state_funded)
+    VALUES (1, 'Policia de Los Santos', 'LSPD', 'policia', '#3b6fe0', 1)
+    ]],
+    [[
+    INSERT IGNORE INTO faction_ranks (faction_id, name, level, salary, permissions)
+    SELECT 1, r.name, r.level, r.salary, r.permissions FROM (
+        SELECT 'Comisario' AS name, 10 AS level, 2000 AS salary, 1023 AS permissions
+        UNION ALL SELECT 'Oficial', 1, 800, 1
+    ) r
+    WHERE EXISTS (SELECT 1 FROM factions WHERE id = 1 AND type = 'policia')
+      AND NOT EXISTS (SELECT 1 FROM faction_ranks WHERE faction_id = 1)
+    ]],
+    -- Bencina de los vehiculos (NULL = tanque lleno) y tarjetas de debito
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS fuel FLOAT NULL
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS bank_cards (
+        character_id INT UNSIGNED NOT NULL,
+        number       CHAR(16)     NOT NULL,
+        pin          CHAR(4)      NOT NULL,
+        holder       VARCHAR(32)  NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        UNIQUE KEY uq_bank_cards_number (number),
+        CONSTRAINT fk_bank_cards_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- rp_injury: ms que le quedan abatido (0 = no esta abatido). Se retoma al volver a entrar
     [[
     ALTER TABLE characters
@@ -722,6 +837,105 @@ SCHEMA = {
         UNIQUE KEY uq_driving_licenses_number (number),
         CONSTRAINT fk_driving_licenses_character FOREIGN KEY (character_id)
             REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: catálogo reproducible de música (propio, SoundCloud o cualquier proveedor externo directo)
+    [[
+    CREATE TABLE IF NOT EXISTS music_tracks (
+        id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        track_key      VARCHAR(96)  NOT NULL,
+        provider       VARCHAR(24)  NOT NULL DEFAULT 'local',
+        provider_id    VARCHAR(96)  NULL,
+        title          VARCHAR(160) NOT NULL,
+        artist         VARCHAR(160) NOT NULL,
+        artwork_url    VARCHAR(512) NULL,
+        stream_url     VARCHAR(512) NOT NULL,
+        duration_ms    INT UNSIGNED NOT NULL DEFAULT 0,
+        active         TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_music_tracks_key (track_key),
+        KEY idx_music_tracks_search (provider, active, title),
+        KEY idx_music_tracks_artist (artist)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: canciones favoritas por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS music_favorites (
+        character_id INT UNSIGNED NOT NULL,
+        track_key    VARCHAR(96)  NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, track_key),
+        KEY idx_music_favorites_character (character_id, created_at),
+        CONSTRAINT fk_music_favorites_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: historial reciente de reproducciones por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS music_history (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        track_key    VARCHAR(96)  NOT NULL,
+        played_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_music_history_character (character_id, played_at),
+        CONSTRAINT fk_music_history_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: cache persistente de búsquedas externas (no guarda archivos de audio)
+    [[
+    CREATE TABLE IF NOT EXISTS music_search_cache (
+        provider  VARCHAR(24)  NOT NULL,
+        query_key VARCHAR(96)  NOT NULL,
+        payload   MEDIUMTEXT   NOT NULL,
+        expires_at DATETIME    NOT NULL,
+        created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (provider, query_key),
+        KEY idx_music_search_cache_expiry (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Rendimiento del tuning: piezas y desgaste (JSON) y kilometraje del vehiculo
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS perf     TEXT  NULL,
+        ADD COLUMN IF NOT EXISTS odometer FLOAT NOT NULL DEFAULT 0
+    ]],
+    -- rp_levels: experiencia (RP) total por personaje; el nivel se calcula con la curva del recurso
+    [[
+    CREATE TABLE IF NOT EXISTS character_levels (
+        character_id INT UNSIGNED NOT NULL,
+        xp           INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_character_levels_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone: galeria del telefono (fotos tomadas con la camara, JPEG en base64) por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS phone_gallery (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        image        MEDIUMTEXT   NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_phone_gallery_character (character_id, id),
+        CONSTRAINT fk_phone_gallery_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_chat: historial de PMs (OOC) para que los admins revisen MG. Sin FK: se conserva aunque se borre el personaje
+    [[
+    CREATE TABLE IF NOT EXISTS chat_pm_log (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        sender_char INT UNSIGNED NOT NULL,
+        sender_name VARCHAR(64)  NOT NULL,
+        target_char INT UNSIGNED NOT NULL,
+        target_name VARCHAR(64)  NOT NULL,
+        message     VARCHAR(255) NOT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_chat_pm_sender (sender_name, id),
+        KEY idx_chat_pm_target (target_name, id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
 }

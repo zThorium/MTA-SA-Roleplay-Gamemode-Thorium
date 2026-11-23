@@ -1,0 +1,20 @@
+<meta>
+    <info author="Thorium" name="RP Levels" description="Niveles y experiencia (RP) por personaje con barra animada estilo GTA Online" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_ids" />
+    <include resource="rp_characters" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_levels.lua" type="server" />
+    <script src="client/c_levels.lua" type="client" cache="false" />
+
+    <file src="sounds/levelup.ogg" />
+
+    <export function="giveXP" type="server" />
+    <export function="getPlayerLevel" type="server" />
+    <export function="getPlayerXP" type="server" />
+</meta>

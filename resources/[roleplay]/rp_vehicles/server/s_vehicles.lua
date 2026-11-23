@@ -117,6 +117,7 @@ local function spawnRow(row)
     setElementData(v, "rp:vehicleId", id)
     setElementData(v, "rp:indicator", false)
     if applyTuning then applyTuning(v, row.tuning) end
+    if initPerf then initPerf(v, row.perf, row.odometer) end
     if initFuel then initFuel(v, tonumber(row.fuel)) end
     updateFrozen(v)
     labelKey(v)
@@ -130,17 +131,25 @@ function saveVehicle(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local tuning = captureTuning and toJSON(captureTuning(vehicle), true) or nil
     dbExec(db(), [[UPDATE vehicles SET x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, interior = ?, dimension = ?, health = ?,
-        locked = ?, handbrake = ?, clamped = ?, tuning = ?, fuel = ? WHERE id = ?]],
+        locked = ?, handbrake = ?, clamped = ?, tuning = ?, fuel = ?, perf = ?, odometer = COALESCE(?, odometer) WHERE id = ?]],
         x, y, z, rx, ry, rz, getElementInterior(vehicle), getElementDimension(vehicle), getElementHealth(vehicle),
         data.locked and 1 or 0, data.handbrake and 1 or 0, data.clamped and 1 or 0, tuning,
-        getVehicleFuel and getVehicleFuel(vehicle) or nil, data.id)
+        getVehicleFuel and getVehicleFuel(vehicle) or nil,
+        capturePerf and capturePerf(vehicle) or nil, getVehicleOdometer and getVehicleOdometer(vehicle) or nil, data.id)
 end
 
 local function loadVehicles()
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0) or {}
-        for _, row in ipairs(rows) do spawnRow(row) end
-        outputDebugString(("[rp_vehicles] %d vehiculos cargados"):format(#rows))
+        local spawned = 0
+        for _, row in ipairs(rows) do
+            -- Idempotente: si rp_database se reinicia, rp:onDatabaseReady vuelve a dispararse; no duplicar
+            local existing = byId[tonumber(row.id)]
+            if not (existing and isElement(existing)) then
+                if spawnRow(row) then spawned = spawned + 1 end
+            end
+        end
+        outputDebugString(("[rp_vehicles] %d vehiculos cargados (%d nuevos)"):format(#rows, spawned))
     end, db(), "SELECT * FROM vehicles")
 end
 

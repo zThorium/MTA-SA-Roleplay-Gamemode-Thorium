@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Gestor de recursos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window">
+        <header>
+            <div>
+                <h1>Gestor de recursos</h1>
+                <p class="hint">Pulsa <kbd>F9</kbd> o <kbd>Esc</kbd> para cerrar</p>
+            </div>
+            <input id="search" type="search" placeholder="Buscar recurso..." autocomplete="off">
+            <button type="button" id="btn-refresh" class="btn">Refrescar disco</button>
+            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+        </header>
+        <div class="filters" id="filters"></div>
+        <section class="list" id="list"></section>
+        <footer><span id="count"></span></footer>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
