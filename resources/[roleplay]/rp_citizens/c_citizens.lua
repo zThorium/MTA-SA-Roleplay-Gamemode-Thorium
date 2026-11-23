@@ -1659,10 +1659,23 @@ local function setPedal(driver, accel, brake, handbrake)
     setPedControlState(driver, "handbrake", handbrake or false)
 end
 
+-- "vehicle_left" y "vehicle_right" comparten el mismo eje del volante: poner un control en 0 BORRA lo que acaba
+-- de poner el otro, asi que el ultimo que se escribe manda. Antes se escribia siempre primero la izquierda y
+-- despues la derecha (en 0): los giros a la izquierda quedaban SIEMPRE en 0 (la telemetria: volante pedido 0.95,
+-- lectura 0.00 en 137 muestras; a la derecha la lectura coincidia con lo pedido). Ahora se pone primero el lado
+-- contrario en 0 y el lado activo al final.
 local function steerTo(driver, value)
     value = math.max(-1, math.min(1, value))
-    setPedAnalogControlState(driver, "vehicle_left", value > 0 and value or 0)
-    setPedAnalogControlState(driver, "vehicle_right", value < 0 and -value or 0)
+    if value > 0 then
+        setPedAnalogControlState(driver, "vehicle_right", 0)
+        setPedAnalogControlState(driver, "vehicle_left", value)
+    elseif value < 0 then
+        setPedAnalogControlState(driver, "vehicle_left", 0)
+        setPedAnalogControlState(driver, "vehicle_right", -value)
+    else
+        setPedAnalogControlState(driver, "vehicle_left", 0)
+        setPedAnalogControlState(driver, "vehicle_right", 0)
+    end
 end
 
 ----------------------------------------------------------------
