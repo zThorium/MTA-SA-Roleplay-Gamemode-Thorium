@@ -1800,30 +1800,38 @@ local function tryDetour(vehicle, s, m)
     return false
 end
 
-local function updateCar(vehicle, s, now)
-    local driver = s.driver
-    if not isElement(driver) or isPedDead(driver) or getVehicleController(vehicle) ~= driver then
-        -- conductor muerto o sacado del auto: el auto queda abandonado y se borra al alejarse
-        if s.state ~= "ABANDONED" then releaseLocks(vehicle) end
-        s.state = "ABANDONED"
-        return
-    end
-    if s.state == "ABANDONED" then return end
-
+----------------------------------------------------------------
+-- CONDUCCION POR ETAPAS (cada auto, cada tick de IA):
+--   senseSelf     lee la fisica del auto (velocidad, posicion, rumbo)
+--   stageGuards   volcado / inclinacion / choque con algo fijo (pide retroceso al arbitro)
+--   stageReverse  ejecuta la maniobra REVERSE si esta activa (toma el control del tick)
+--   stageRoute    PERCEPCION de la ruta: puntos, desviacion, nodos saltados, rumbo deseado
+--   stageAhead    PERCEPCION de lo que viene y de los sensores: curvas, cruce, semaforo, obstaculos
+--   stageAssist   ayudas de fisica (intermitentes, derrape, giro asistido)
+--   stageDecide   DECISION: volante, modo, velocidad objetivo, cruces, obstaculos, atascos
+--   actuate       ACTUADOR: unico sitio que escribe volante y pedales
+-- Las etapas se pasan los datos en la tabla "f" (s.f, reutilizada cada tick). Devuelven false si el auto
+-- fue retirado o abandonado y el tick debe terminar.
+----------------------------------------------------------------
+local function senseSelf(vehicle, f)
     local speed = speedOf(vehicle)
     local x, y = getElementPosition(vehicle)
     local rx, ry, rz = getElementRotation(vehicle)
     local m = getElementMatrix(vehicle)
     -- velocidad con signo: > 0 avanza, < 0 rueda hacia atras
     local fvx, fvy = getElementVelocity(vehicle)
-    local fwd = (fvx * m[2][1] + fvy * m[2][2]) * 180
+    f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m = speed, x, y, rx, ry, rz, m
+    f.fwd = (fvx * m[2][1] + fvy * m[2][2]) * 180
+end
 
+local function stageGuards(vehicle, s, f, now)
+    local speed, x, y, rx, ry, rz, m, fwd = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd
     -- Volcado: el conductor huye y el auto queda abandonado
-    if m[3][3] < 0.3 then return abandonCar(vehicle, s) end
+    if m[3][3] < 0.3 then abandonCar(vehicle, s) return false end
     -- Inclinado sobre dos ruedas (montado sobre otro auto) y casi parado: tambien se abandona
     if m[3][3] < 0.6 and speed < 6 then
         s.tiltSince = s.tiltSince or now
-        if now - s.tiltSince > 3000 then return abandonCar(vehicle, s) end
+        if now - s.tiltSince > 3000 then abandonCar(vehicle, s) return false end
     else
         s.tiltSince = nil
     end
@@ -1842,6 +1850,13 @@ local function updateCar(vehicle, s, now)
         end
     end
 
+    return true
+end
+
+-- true = la marcha atras tomo el control de este tick
+local function stageReverse(vehicle, s, f, now)
+    local driver = s.driver
+    local speed, x, y, rx, ry, rz, m, fwd = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd
     -- Marcha atras corta (como mucho ~1 s / 3-4 m) solo cuando esta atascado de verdad.
     -- No se reengancha al terminar: sigue con su ruta (solo se recalcula si se alejo de ella).
     if now < s.recoverUntil then
@@ -1856,10 +1871,11 @@ local function updateCar(vehicle, s, now)
             or rearBlocked(vehicle, m, 1.8 + math.max(0, -backing) * 0.06) then
             s.recoverUntil, s.recoverPos, s.afterReverse = 0, nil, now
             manEnd(s, "REVERSE", now)
-            return actuate(driver, s, backing < -1, false, false, revSteer)
+            actuate(driver, s, backing < -1, false, false, revSteer)
+            return true
         end
         actuate(driver, s, false, backing > -10, false, revSteer)       -- no supera ~10 km/h marcha atras
-        return
+        return true
     end
     s.recoverPos = nil
     -- fin del retroceso (por tiempo): libera la maniobra para que el reenganche pendiente pueda empezar
@@ -1872,6 +1888,12 @@ local function updateCar(vehicle, s, now)
     end
     if s.needReattach then s.needReattachAt = s.needReattachAt or now else s.needReattachAt = nil end
 
+    return false
+end
+
+local function stageRoute(vehicle, s, f, now)
+    local driver = s.driver
+    local speed, x, y, rx, ry, rz, m, fwd = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd
     -- Cola de puntos: siempre algunos por delante (planifica cruce a cruce)
     local wp = s.wp
     local guard = 0
@@ -1895,13 +1917,13 @@ local function updateCar(vehicle, s, now)
         if now - s.noRouteSince > 800 and now - (s.lastReattach or 0) > 2000 then
             s.lastReattach = now
             reattach(vehicle, s, false)
-            if not cars[vehicle] then return end
+            if not cars[vehicle] then return false end
         end
         if now - s.noRouteSince > 6000 then
-            if isElementOnScreen(vehicle) then return abandonCar(vehicle, s) end
-            return removeCar(vehicle)
+            if isElementOnScreen(vehicle) then abandonCar(vehicle, s) return false end
+            removeCar(vehicle) return false
         end
-        return
+        return false
     end
     s.noRouteSince = nil
     -- Fuera de su carril (esquive, choque, derrape): tras 1.5 s se reengancha al carril mas
@@ -1928,7 +1950,7 @@ local function updateCar(vehicle, s, now)
     end
     if not lp then dev = math.min(dev, 14) end   -- recien creado/reenganchado: aun no hay tramo de referencia
     if dev > 25 and not isElementOnScreen(vehicle) then
-        return removeCar(vehicle)
+        removeCar(vehicle) return false
     end
     -- el reenganche termina cuando el auto ya esta sobre su carril (o pasados unos segundos)
     if s.man and s.man.kind == "REJOIN" and lp and dev < 1.5 and now - s.man.since > 800 then manEnd(s, "REJOIN", now) end
@@ -1948,16 +1970,16 @@ local function updateCar(vehicle, s, now)
         if now - s.offSince > 1000 and now - (s.lastReattach or 0) > 2500 then
             s.lastReattach = now
             reattach(vehicle, s, false)
-            if not cars[vehicle] then return end
+            if not cars[vehicle] then return false end
             wp = s.wp
-            if #wp == 0 then return end
+            if #wp == 0 then return false end
         end
         -- sigue lejos de cualquier carril tras varios intentos: lejos del jugador desaparece (sin que se note);
         -- cerca, el conductor se baja (en vez de seguir corriendo por aceras o contra muros)
         if dev > 25 and now - s.offSince > 6000 then
             local ppx, ppy = getElementPosition(localPlayer)
-            if getDistanceBetweenPoints2D(ppx, ppy, x, y) > 50 or not isElementOnScreen(vehicle) then return removeCar(vehicle) end
-            return abandonCar(vehicle, s)
+            if getDistanceBetweenPoints2D(ppx, ppy, x, y) > 50 or not isElementOnScreen(vehicle) then removeCar(vehicle) return false end
+            abandonCar(vehicle, s) return false
         end
     else
         s.offSince = nil
@@ -1985,9 +2007,9 @@ local function updateCar(vehicle, s, now)
         if now - s.sideSince > 700 and now - (s.lastReattach or 0) > 2000 then
             s.lastReattach, s.sideSince = now, nil
             reattach(vehicle, s, false)
-            if not cars[vehicle] then return end
+            if not cars[vehicle] then return false end
             wp = s.wp
-            if #wp == 0 then return end
+            if #wp == 0 then return false end
             inCurve = wp[1][4] > 20
         end
     else
@@ -2036,6 +2058,13 @@ local function updateCar(vehicle, s, now)
         if trackDiff then diff = trackDiff end
     end
 
+    f.wp, f.lp, f.dev, f.curveSoon, f.inCurve, f.diff, f.trackDiff, f.trackErr, f.tux, f.tuy = wp, lp, dev, curveSoon, inCurve, diff, trackDiff, trackErr, tux, tuy
+    return true
+end
+
+local function stageAhead(vehicle, s, f, now)
+    local driver = s.driver
+    local speed, x, y, rx, ry, rz, m, fwd, wp, lp, dev, curveSoon, inCurve, diff, trackDiff, trackErr, tux, tuy = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd, f.wp, f.lp, f.dev, f.curveSoon, f.inCurve, f.diff, f.trackDiff, f.trackErr, f.tux, f.tuy
     -- Lo que viene: mayor giro, cruce y semaforo en los proximos metros
     local upcoming, dist, lx, ly = 0, 0, x, y
     local curveLimit = 999
@@ -2055,19 +2084,6 @@ local function updateCar(vehicle, s, now)
         if dist <= 30 and wp[i][4] > upcoming then upcoming = wp[i][4] end
         if wp[i][5] and not junctionAhead and dist <= 30 then junctionAhead, junctionDist, junctionMan = wp[i][5], dist, wp[i][7] end
         if wp[i][6] and not lightAxis then lightAxis, lightDist = wp[i][6], dist end
-    end
-
-    -- Intermitentes (recurso rp_vehicles: dato local "rp:indicator" = "left" | "right"):
-    -- se encienden antes de girar y se apagan al terminar la curva
-    if wantSignal then
-        s.signal, s.signalClearAt = wantSignal, nil
-    elseif s.signal and not inCurve then
-        s.signalClearAt = s.signalClearAt or (now + 700)
-        if now > s.signalClearAt then s.signal, s.signalClearAt = nil, nil end
-    end
-    if s.signal ~= s.signalApplied then
-        s.signalApplied = s.signal
-        setElementData(vehicle, "rp:indicator", s.signal or false, false)
     end
 
     -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
@@ -2102,26 +2118,25 @@ local function updateCar(vehicle, s, now)
     local leftHit = ray(vehicle, m, whiskerAngle, whiskerReach, true)
     local rightHit = ray(vehicle, m, -whiskerAngle, whiskerReach, true)
 
-    -- en curvas cerradas gira con mas decision (volante a tope antes)
-    local steer = diff / (inCurve and ((curveSoon or wp[1][4] > 60) and 12 or 18) or 25)
-    local push = careful and 0.35 or 0.2
-    -- Algo fijo (poste, semaforo, esquina) justo delante de la trayectoria: esquiva hacia el lado mas
-    -- despejado, con mas fuerza cuanto mas cerca, en vez de seguir la linea hasta chocar con el.
-    if wallFront and wallDist then
-        local lh, _, ld = ray(vehicle, m, 40, 6, true)
-        local rh, _, rd = ray(vehicle, m, -40, 6, true)
-        ld, rd = lh and ld or 6, rh and rd or 6
-        local urgency = math.max(0.3, 1 - wallDist / (4 + speed * 0.1))
-        steer = steer + (ld >= rd and 1 or -1) * 0.8 * urgency   -- + = izquierda
+    f.curveLimit, f.junctionAhead, f.junctionDist, f.lightAxis, f.lightDist, f.junctionMan, f.wantSignal, f.upcoming, f.frontHit, f.obstacle, f.gap, f.wallFront, f.wallDist, f.careful, f.leftHit, f.rightHit = curveLimit, junctionAhead, junctionDist, lightAxis, lightDist, junctionMan, wantSignal, upcoming, frontHit, obstacle, gap, wallFront, wallDist, careful, leftHit, rightHit
+    return true
+end
+
+local function stageAssist(vehicle, s, f, now)
+    local driver = s.driver
+    local speed, x, y, rx, ry, rz, m, fwd, wp, lp, dev, curveSoon, inCurve, diff, trackDiff, trackErr, tux, tuy, wantSignal = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd, f.wp, f.lp, f.dev, f.curveSoon, f.inCurve, f.diff, f.trackDiff, f.trackErr, f.tux, f.tuy, f.wantSignal
+    -- Intermitentes (recurso rp_vehicles: dato local "rp:indicator" = "left" | "right"):
+    -- se encienden antes de girar y se apagan al terminar la curva
+    if wantSignal then
+        s.signal, s.signalClearAt = wantSignal, nil
+    elseif s.signal and not inCurve then
+        s.signalClearAt = s.signalClearAt or (now + 700)
+        if now > s.signalClearAt then s.signal, s.signalClearAt = nil, nil end
     end
-    if leftHit and not rightHit then steer = steer - push end
-    if rightHit and not leftHit then steer = steer + push end
-    -- Sirena detras: se arrima un poco a la derecha (salvo en un cruce o con algo al lado)
-    local sirenDist = sirenBehind(vehicle, x, y, m)
-    if sirenDist and not junctionAhead and not rightHit then steer = steer - 0.12 end
-    -- Filtro del volante: no salta de golpe (mas natural); en curvas cerradas responde casi al instante
-    local prevSteer = s.steerOut or 0
-    s.steerOut = prevSteer + (math.max(-1, math.min(1, steer)) - prevSteer) * (inCurve and 0.8 or 0.5)
+    if s.signal ~= s.signalApplied then
+        s.signalApplied = s.signal
+        setElementData(vehicle, "rp:indicator", s.signal or false, false)
+    end
 
     -- Asistencia de direccion suave: ayuda al volante (sin imponer el giro) y
     -- reduce solo parte del derrape lateral, para no frenar ni hacer patinar.
@@ -2192,6 +2207,32 @@ local function updateCar(vehicle, s, now)
         end
     end
 
+end
+
+local function stageDecide(vehicle, s, f, now)
+    local driver = s.driver
+    local speed, x, y, rx, ry, rz, m, fwd, wp, lp, dev, curveSoon, inCurve, diff, trackDiff, trackErr, tux, tuy, curveLimit, junctionAhead, junctionDist, lightAxis, lightDist, junctionMan, wantSignal, upcoming, frontHit, obstacle, gap, wallFront, wallDist, careful, leftHit, rightHit = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd, f.wp, f.lp, f.dev, f.curveSoon, f.inCurve, f.diff, f.trackDiff, f.trackErr, f.tux, f.tuy, f.curveLimit, f.junctionAhead, f.junctionDist, f.lightAxis, f.lightDist, f.junctionMan, f.wantSignal, f.upcoming, f.frontHit, f.obstacle, f.gap, f.wallFront, f.wallDist, f.careful, f.leftHit, f.rightHit
+    -- en curvas cerradas gira con mas decision (volante a tope antes)
+    local steer = diff / (inCurve and ((curveSoon or wp[1][4] > 60) and 12 or 18) or 25)
+    local push = careful and 0.35 or 0.2
+    -- Algo fijo (poste, semaforo, esquina) justo delante de la trayectoria: esquiva hacia el lado mas
+    -- despejado, con mas fuerza cuanto mas cerca, en vez de seguir la linea hasta chocar con el.
+    if wallFront and wallDist then
+        local lh, _, ld = ray(vehicle, m, 40, 6, true)
+        local rh, _, rd = ray(vehicle, m, -40, 6, true)
+        ld, rd = lh and ld or 6, rh and rd or 6
+        local urgency = math.max(0.3, 1 - wallDist / (4 + speed * 0.1))
+        steer = steer + (ld >= rd and 1 or -1) * 0.8 * urgency   -- + = izquierda
+    end
+    if leftHit and not rightHit then steer = steer - push end
+    if rightHit and not leftHit then steer = steer + push end
+    -- Sirena detras: se arrima un poco a la derecha (salvo en un cruce o con algo al lado)
+    local sirenDist = sirenBehind(vehicle, x, y, m)
+    if sirenDist and not junctionAhead and not rightHit then steer = steer - 0.12 end
+    -- Filtro del volante: no salta de golpe (mas natural); en curvas cerradas responde casi al instante
+    local prevSteer = s.steerOut or 0
+    s.steerOut = prevSteer + (math.max(-1, math.min(1, steer)) - prevSteer) * (inCurve and 0.8 or 0.5)
+
     if s.state == "FLEE" then
         setPedControlState(driver, "horn", false)
         if fwd < -1.5 then
@@ -2200,7 +2241,7 @@ local function updateCar(vehicle, s, now)
             actuate(driver, s, not obstacle or fwd < 5, (obstacle ~= nil or wallFront) and fwd > 20)
         end
         if now > s.until_ then s.state = "DRIVE" end
-        return
+        return false
     end
 
     -- Velocidad objetivo
@@ -2305,7 +2346,7 @@ local function updateCar(vehicle, s, now)
                 -- si se ve, pasa unos segundos sin colision (nunca embiste al jugador)
                 if waited > 20000 then
                     s.blockedSince = now
-                    if not isElementOnScreen(vehicle) then return removeCar(vehicle) end
+                    if not isElementOnScreen(vehicle) then removeCar(vehicle) return false end
                     ghostCar(vehicle, s, 6000)
                 end
                 if waited > 2800 and not waiting then
@@ -2403,6 +2444,28 @@ local function updateCar(vehicle, s, now)
     else
         s.stuckSince = 0
     end
+    return true
+end
+
+local function updateCar(vehicle, s, now)
+    local driver = s.driver
+    if not isElement(driver) or isPedDead(driver) or getVehicleController(vehicle) ~= driver then
+        -- conductor muerto o sacado del auto: el auto queda abandonado y se borra al alejarse
+        if s.state ~= "ABANDONED" then releaseLocks(vehicle) end
+        s.state = "ABANDONED"
+        return
+    end
+    if s.state == "ABANDONED" then return end
+
+    local f = s.f
+    if not f then f = {} s.f = f end
+    senseSelf(vehicle, f)
+    if not stageGuards(vehicle, s, f, now) then return end
+    if stageReverse(vehicle, s, f, now) then return end
+    if not stageRoute(vehicle, s, f, now) then return end
+    stageAhead(vehicle, s, f, now)
+    stageAssist(vehicle, s, f, now)
+    stageDecide(vehicle, s, f, now)
 end
 
 -- Choques entre autos de la poblacion: maniobra corta y reenganche al carril
