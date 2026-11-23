@@ -2933,7 +2933,10 @@ local function moveDummies(dt)
                 if math.abs(s.lastGround - laneZ) < 1.5 then
                     z = s.lastGround + s.baseZ
                     pitch = s.lastPitch or 0
-                elseif TEL.send and (s.altLogs or 0) < 2 and now0 - (s.altLogAt or 0) > 30000 then
+                else
+                    if laneZ - s.lastGround > 1.5 then s.levita = true end   -- el carril flota sobre el suelo: el vigilante lo retira
+                end
+                if math.abs(s.lastGround - laneZ) >= 1.5 and TEL.send and (s.altLogs or 0) < 2 and now0 - (s.altLogAt or 0) > 30000 then
                     s.altLogs, s.altLogAt = (s.altLogs or 0) + 1, now0
                     telSend({ k = "altura", x = math.floor(x * 10 + 0.5) / 10, y = math.floor(y * 10 + 0.5) / 10, ground = math.floor(s.lastGround * 10 + 0.5) / 10,
                         lane = math.floor(laneZ * 10 + 0.5) / 10, model = getElementModel(vehicle), lod = "dummy" })
@@ -3075,6 +3078,7 @@ end
 
 -- Vigilante de un auto con fisica o lejano
 local function carWatchdog(v, s, now)
+    if s.levita then return despawnCar(v, s, "levita", false) end   -- dummy que flotaba (ver moveDummies)
     local x, y, z = getElementPosition(v)
     if z < -30 or z > 500 then return despawnCar(v, s, "fuera_del_mapa") end
     if isElementInWater(v) then
@@ -3102,24 +3106,20 @@ local function carWatchdog(v, s, now)
         if hit or math.abs(ax) > 0.05 or math.abs(ay) > 0.05 then
             if math.abs(ax) > 0.02 or math.abs(ay) > 0.02 then setElementAngularVelocity(v, ax * 0.3, ay * 0.3, az) end
         end
-        if now - (s.airAt or 0) >= 250 then
+        -- Levitar o volar: un auto de la poblacion a mas de 1 m sobre el suelo (rayo sobre el mapa, sin objetos)
+        -- DESAPARECE EN EL ACTO, sin desvanecerse. Se mide cada ~160 ms. El margen de 1 m cubre baches,
+        -- rampas suaves y la diferencia entre la altura real del chasis y la estimada (s.baseZ).
+        if now - (s.airAt or 0) >= 160 then
             s.airAt = now
             s.baseZ = s.baseZ or vehicleBaseZ(v)
             local gz = groundAt(x, y, z)
-            if gz and z - gz - s.baseZ > 1.3 then
-                s.airSince = s.airSince or now
-                if now - s.airSince > 600 then
-                    -- lo endereza y lo empuja al suelo
-                    local cvx, cvy, cvz = getElementVelocity(v)
-                    local aax, aay, aaz = getElementAngularVelocity(v)
-                    setElementAngularVelocity(v, 0, 0, aaz)
-                    setElementVelocity(v, cvx * 0.6, cvy * 0.6, math.min(cvz, -0.02))
-                    local _, _, rz = getElementRotation(v)
-                    setElementRotation(v, 0, 0, rz)
+            if gz and z - gz - s.baseZ > 1.0 then
+                if TEL.send and (stats.levitaLogs or 0) < 40 then
+                    stats.levitaLogs = (stats.levitaLogs or 0) + 1
+                    telSend({ k = "levita", x = math.floor(x * 10 + 0.5) / 10, y = math.floor(y * 10 + 0.5) / 10, z = math.floor(z * 10 + 0.5) / 10,
+                        ground = math.floor(gz * 10 + 0.5) / 10, model = getElementModel(v), lod = s.lod or "real", state = s.state or "?" })
                 end
-                if now - s.airSince > 2500 then return despawnCar(v, s, "volando", true) end
-            else
-                s.airSince = nil
+                return despawnCar(v, s, "levita", false)
             end
         end
     end
