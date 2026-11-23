@@ -153,17 +153,21 @@ local function shopOf(vehicle)
     end
 end
 
--- Oculta el marker del taller solo a quien esta tuneando (no estorba la vista)
+-- Oculta el marker del taller para todos mientras alguien lo usa (taller ocupado)
+local markerUsers = {} -- [marker] = jugadores tuneando
 local function hideShopMarker(player, marker)
     if not marker then return end
     hiddenMarker[player] = marker
-    setElementVisibleTo(marker, player, false)
+    markerUsers[marker] = (markerUsers[marker] or 0) + 1
+    setElementVisibleTo(marker, root, false)
 end
 
 local function showShopMarker(player)
     local marker = hiddenMarker[player]
     hiddenMarker[player] = nil
-    if marker and isElement(marker) and isElement(player) then setElementVisibleTo(marker, player, true) end
+    if not marker then return end
+    markerUsers[marker] = math.max(0, (markerUsers[marker] or 1) - 1)
+    if markerUsers[marker] == 0 and isElement(marker) then setElementVisibleTo(marker, root, true) end
 end
 
 -- El marcador puede detectar al vehiculo o al jugador; se usa siempre al conductor

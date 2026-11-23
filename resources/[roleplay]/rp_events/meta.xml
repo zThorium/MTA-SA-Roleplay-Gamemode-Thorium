@@ -1,0 +1,26 @@
+<meta>
+    <info author="Thorium" name="RP Events" description="Mundo vivo: reloj y clima compartidos y director de eventos dinamicos (accidentes, emergencias, controles, obras, mercados...)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_citizens" />
+    <include resource="rp_shops" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_world.lua" type="server" />
+    <script src="server/s_catalog.lua" type="server" />
+    <script src="server/s_director.lua" type="server" />
+    <script src="server/s_admin.lua" type="server" />
+    <script src="client/c_events.lua" type="client" cache="false" />
+
+    <export function="getWorldState" type="server" />
+    <export function="setWeatherState" type="server" />
+    <export function="getActiveEvents" type="server" />
+    <export function="startEvent" type="server" />
+    <export function="endEvent" type="server" />
+    <export function="registerEvent" type="server" />
+    <export function="unregisterEvent" type="server" />
+    <export function="getIntensity" type="server" />
+</meta>

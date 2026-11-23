@@ -242,3 +242,65 @@ addCommandHandler("borrarshop", function(player, _, id)
     destroyShop(id)
     notify(player, ("Tienda #%d eliminada."):format(id), "success")
 end)
+
+----------------------------------------------------------------
+-- Tiendas temporales (sin SQL): otro recurso (p. ej. el mercadillo de rp_events)
+-- convierte uno de sus NPC en vendedor durante un rato. Usan el mismo menu y la misma
+-- compra validada por el servidor; el precio sale SIEMPRE de este catalogo.
+--   addTempShop(ped, nombre, { item = precio, ... }) -> id (negativo) | false
+--   removeTempShop(id)
+-- El NPC no se destruye aqui: lo gestiona quien lo creo (si desaparece, la tienda se quita sola).
+----------------------------------------------------------------
+local nextTempId = -1
+
+function removeTempShop(id)
+    id = tonumber(id)
+    local shop = id and shops[id]
+    if not shop or not shop.temp then return false end
+    if isElement(shop.col) then destroyElement(shop.col) end
+    for player, sid in pairs(nearby) do
+        if sid == id then
+            nearby[player] = nil
+            if isElement(player) then triggerClientEvent(player, "rp:shop:near", resourceRoot, false) end
+        end
+    end
+    shops[id] = nil
+    return true
+end
+
+function addTempShop(ped, name, catalog)
+    if not isElement(ped) or getElementType(ped) ~= "ped" or type(catalog) ~= "table" then return false end
+    local items = {}
+    for itemId, price in pairs(catalog) do
+        price = tonumber(price)
+        if type(itemId) == "string" and price and price > 0 and exports.rp_inventory:getItemDefinition(itemId) then
+            items[itemId] = math.floor(price)
+        end
+    end
+    if next(items) == nil then return false end
+    name = tostring(name or "Vendedor"):sub(1, 48)
+
+    local id = nextTempId
+    nextTempId = nextTempId - 1
+    local x, y, z = getElementPosition(ped)
+    local col = createColSphere(x, y, z, INTERACT_RADIUS)
+    setElementData(ped, "rp:shopId", id)      -- invulnerable en el cliente (c_shops.lua)
+    setElementData(ped, "rp:shopName", name)
+    shops[id] = { row = { id = id, name = name }, items = items, ped = ped, col = col, temp = true }
+
+    addEventHandler("onColShapeHit", col, function(el, sameDim)
+        if getElementType(el) ~= "player" or not sameDim then return end
+        if not exports.rp_characters:getPlayerCharacterId(el) then return end
+        nearby[el] = id
+        exports.rp_notify:bubble(el, ped, "¡Buen provecho! Pulsa E para ver lo que vendo.", 4500)
+        triggerClientEvent(el, "rp:shop:near", resourceRoot, id, name)
+    end)
+    addEventHandler("onColShapeLeave", col, function(el)
+        if getElementType(el) == "player" and nearby[el] == id then
+            nearby[el] = nil
+            triggerClientEvent(el, "rp:shop:near", resourceRoot, false)
+        end
+    end)
+    addEventHandler("onElementDestroy", ped, function() removeTempShop(id) end)
+    return id
+end

@@ -15,7 +15,7 @@ AGENCY = {
 
     -- Puerta exterior (Ayuntamiento de Los Santos, Pershing Square)
     ENTRANCE = { x = 1481.03, y = -1771.31, z = 18.79 },
-    EXIT_SPAWN = { x = 1481.05, y = -1773.80, z = 18.79, rot = 180 },
+    EXIT_SPAWN = { x = 1481.05, y = -1768.80, z = 18.79, rot = 0 },   -- al norte de la puerta (hacia Pershing Square); el edificio queda al sur
 
     -- Interior: Planning Department
     INTERIOR = 3,

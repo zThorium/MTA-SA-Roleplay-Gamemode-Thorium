@@ -509,24 +509,14 @@ dispatchAI = function(ride)
     end, 10000, 1)
 end
 
-addEventHandler("rp:rides:aiSpawn", resourceRoot, function(rideId, x, y, z, rot, clientErr)
+addEventHandler("rp:rides:aiSpawn", resourceRoot, function(rideId, x, y, z, rot)
     local player = client
     local ride = rides[player]
     x, y, z, rot = tonumber(x), tonumber(y), tonumber(z), tonumber(rot) or 0
-    if not ride or ride.id ~= rideId or ride.state ~= "ai_spawning" then
-        return outputServerLog("[rp_rides] aiSpawn ignorado: viaje/estado no coincide")
-    end
-    local px, py, pz = getElementPosition(player)
-    if not (x and y and z) then
-        -- El cliente no pudo elegir un punto (p. ej. sin red vial): aparece a 120 m en linea recta
-        outputServerLog("[rp_rides] el cliente no envio punto de aparicion (" .. tostring(clientErr) .. "); se usa uno de reserva")
-        local a = math.random() * math.pi * 2
-        x, y, z, rot = px + math.cos(a) * 120, py + math.sin(a) * 120, pz, math.deg(a) + 90
-    end
+    if not ride or ride.id ~= rideId or ride.state ~= "ai_spawning" or not (x and y and z) then return end
+    local px, py = getElementPosition(player)
     local dist = getDistanceBetweenPoints2D(px, py, x, y)
-    if dist < 30 or dist > 300 then
-        return outputServerLog(("[rp_rides] aiSpawn rechazado: distancia %.0f m fuera de 30-300"):format(dist))
-    end
+    if dist < 30 or dist > 300 then return end
     if isTimer(ride.timer) then killTimer(ride.timer) end
 
     local vehicle = createVehicle(RIDES.AI_MODEL, x, y, z + 0.6, 0, 0, rot, "VROOM")

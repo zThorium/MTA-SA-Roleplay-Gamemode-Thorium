@@ -113,11 +113,7 @@ end)
 
 -- El servidor pide un punto de la calle para que aparezca el auto IA
 addEventHandler("rp:rides:aiSpawnRequest", resourceRoot, function(rideId)
-    local ok, x, y, z, rot = pcall(pickAISpawnPoint)
-    if not ok then
-        outputDebugString("[rp_rides] pickAISpawnPoint fallo: " .. tostring(x), 1)
-        return triggerServerEvent("rp:rides:aiSpawn", resourceRoot, rideId, nil, nil, nil, nil, tostring(x))
-    end
+    local x, y, z, rot = pickAISpawnPoint()
     triggerServerEvent("rp:rides:aiSpawn", resourceRoot, rideId, x, y, z, rot)
 end)
 
