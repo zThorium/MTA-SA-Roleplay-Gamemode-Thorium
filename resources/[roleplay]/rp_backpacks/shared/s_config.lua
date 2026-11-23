@@ -5,7 +5,7 @@
       weight    kg que pesa la mochila vacia (se suma a la carga del personaje)
       model     modelo GTA SA que se ve en la espalda; scale = tamano
     shortcut: el unico modelo de mochila de vanilla es 3026; la variedad se logra con la escala.
-    Los offsets de la espalda estan a ojo: ajustarlos en juego si la mochila se ve mal colocada.
+    Offsets y rotacion a ojo: ajustarlos en juego con /mochilaoffset.
 ]]
 BACKPACKS = {
     bp_small      = { capacity = 5,  weight = 0.4, model = 3026, scale = 0.75 },
@@ -15,5 +15,5 @@ BACKPACKS = {
     bp_expedition = { capacity = 45, weight = 2.5, model = 3026, scale = 1.5 },
 }
 
-BACKPACK_BONE = 3                               -- columna (bone_attach)
-BACKPACK_OFFSET = { 0, -0.17, 0.02, 0, 0, 0 }   -- x, y, z, rx, ry, rz relativos al hueso
+BACKPACK_BONE = 3                                -- columna (pAttach)
+BACKPACK_OFFSET = { 0, -0.17, 0.02, 90, 0, 0 }   -- x, y, z, rx, ry, rz relativos al hueso (el modelo 3026 nace tumbado: rx 90 lo levanta)
