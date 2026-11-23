@@ -262,7 +262,13 @@ local STAMINA_DRAIN, STAMINA_REGEN, STAMINA_RESUME = 8, 5, 20   -- puntos/segund
 local staminaTick = getTickCount()
 local staminaLocked = false
 local STAMINA_JUMP_COST = 8   -- puntos por salto
-local wasJumping = false
+local jumpPressed = false
+
+-- Tecla de salto (bindKey respeta el rebind del jugador). Solo cuenta si realmente despega.
+bindKey("jump", "down", function()
+    if staminaLocked or isPedInVehicle(localPlayer) or not isPedOnGround(localPlayer) then return end
+    jumpPressed = true
+end)
 
 local function updateStamina()
     local now = getTickCount()
@@ -272,10 +278,10 @@ local function updateStamina()
     local meth = getElementData(localPlayer, "rp:meth") == true
     local state = getPedMoveState(localPlayer)
     local jumping = state == "jump"
-    if jumping and not wasJumping and not meth then
-        st = st - STAMINA_JUMP_COST   -- saltar gasta estamina (una vez por salto)
+    if jumpPressed then
+        jumpPressed = false
+        if not meth then st = st - STAMINA_JUMP_COST end   -- saltar gasta estamina (una vez por salto)
     end
-    wasJumping = jumping
     if not meth and not isPedInVehicle(localPlayer) and state == "sprint" then
         st = st - STAMINA_DRAIN * dt
     elseif not jumping then
@@ -286,9 +292,11 @@ local function updateStamina()
     if st <= 0 and not staminaLocked then
         staminaLocked = true
         toggleControl("sprint", false)
+        toggleControl("jump", false)   -- sin estamina no se salta
     elseif staminaLocked and (st >= STAMINA_RESUME or meth) and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
         staminaLocked = false
         toggleControl("sprint", true)
+        toggleControl("jump", true)
     end
 end
 
