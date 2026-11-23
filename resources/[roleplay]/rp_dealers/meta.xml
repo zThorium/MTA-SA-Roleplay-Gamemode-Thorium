@@ -12,7 +12,5 @@
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_dealers.lua" type="server" />
-    <script src="server/s_drugs.lua" type="server" />
     <script src="client/c_dealers.lua" type="client" cache="false" />
-    <script src="client/c_effects.lua" type="client" cache="false" />
 </meta>

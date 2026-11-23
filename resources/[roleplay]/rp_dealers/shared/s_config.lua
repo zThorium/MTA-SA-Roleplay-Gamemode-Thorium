@@ -10,13 +10,3 @@ DEALERS = {
     COP_RADIUS = 30,        -- m: distancia maxima a la que un policia te ve comprar
     COP_REPORT_MS = 8000,   -- el aviso del cliente vale este tiempo para la compra
 }
-
--- Efectos de las drogas (rp_dealers/server/s_drugs.lua y client/c_effects.lua)
-DRUGS = {
-    -- ms: duracion; dose: puntos de sobredosis; crash: necesidades que se restan al pasarse el efecto
-    weed    = { ms = 90000,  dose = 1, crash = { hunger = -25 } },                -- relajado, ojos verdosos, mucha hambre despues
-    cocaine = { ms = 60000,  dose = 2, crash = { energy = -30, thirst = -15 } },  -- acelerado y con energia, bajon despues
-    lsd     = { ms = 120000, dose = 1, crash = { energy = -15 } },                -- alucinaciones visuales
-    OD_LIMIT = 5,            -- sobredosis si los puntos recientes llegan a esto
-    DOSE_DECAY_MS = 60000,   -- cada tanto baja 1 punto
-}

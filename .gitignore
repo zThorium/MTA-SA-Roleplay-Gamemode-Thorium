@@ -35,3 +35,6 @@ luac.out
 # --- Docker (docs/DOCKER.md) ---
 .env
 docker/logs/
+
+# Respaldos locales con sufijo de fecha
+*.bak-*
