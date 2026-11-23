@@ -14,6 +14,7 @@
                   meth = segundos de efecto de metanfetamina (elementData "rp:meth")
                   event = dispara rp:onItemUse en el servidor (no se gasta)
       consumable  true si se gasta al usarlo
+      lot         unidades que entrega cada compra en una tienda (el precio es por lote)
 ]]
 
 INVENTORY = {
@@ -195,6 +196,31 @@ ITEMS = {
         description = "Cristales de metanfetamina. Ilegal. 1 minuto corriendo mas rapido y sin gastar estamina.",
         use = { meth = 60, message = "Fumas metanfetamina: te sientes imparable." },
     },
+
+    -- rp_ammunation: armas (use.event = "weapon": equipar/guardar) y municion (balas sueltas en el inventario).
+    -- weapon = id de arma GTA, ammo = item de municion que gasta. lot = balas por compra en la tienda.
+    wpn_colt45 = { name = "Colt 45", icon = "🔫", weight = 1.0, stack = 1, weapon = 22, ammo = "ammo_pistol",
+        description = "Pistola de 9mm.", use = { event = "weapon" } },
+    wpn_deagle = { name = "Desert Eagle", icon = "🔫", weight = 1.5, stack = 1, weapon = 24, ammo = "ammo_pistol",
+        description = "Pistola pesada.", use = { event = "weapon" } },
+    wpn_shotgun = { name = "Escopeta", icon = "🔫", weight = 3.0, stack = 1, weapon = 25, ammo = "ammo_shotgun",
+        description = "Escopeta de caza.", use = { event = "weapon" } },
+    wpn_mp5 = { name = "MP5", icon = "🔫", weight = 2.5, stack = 1, weapon = 29, ammo = "ammo_smg",
+        description = "Subfusil.", use = { event = "weapon" } },
+    wpn_ak47 = { name = "AK-47", icon = "🔫", weight = 4.0, stack = 1, weapon = 30, ammo = "ammo_rifle",
+        description = "Fusil de asalto.", use = { event = "weapon" } },
+    wpn_m4 = { name = "M4", icon = "🔫", weight = 3.5, stack = 1, weapon = 31, ammo = "ammo_rifle",
+        description = "Fusil de asalto.", use = { event = "weapon" } },
+    wpn_rifle = { name = "Rifle de caza", icon = "🔫", weight = 3.5, stack = 1, weapon = 33, ammo = "ammo_rifle",
+        description = "Rifle de cerrojo.", use = { event = "weapon" } },
+    ammo_pistol = { name = "Municion de pistola", icon = "🔸", weight = 0.02, stack = 120, lot = 30,
+        description = "Balas 9mm / .50. Se gastan al disparar el arma equipada." },
+    ammo_shotgun = { name = "Cartuchos de escopeta", icon = "🔸", weight = 0.04, stack = 40, lot = 10,
+        description = "Cartuchos del calibre 12." },
+    ammo_smg = { name = "Municion de subfusil", icon = "🔸", weight = 0.015, stack = 150, lot = 30,
+        description = "Balas para subfusil." },
+    ammo_rifle = { name = "Municion de fusil", icon = "🔸", weight = 0.025, stack = 90, lot = 30,
+        description = "Balas para fusiles y rifles." },
 }
 
 --[[
