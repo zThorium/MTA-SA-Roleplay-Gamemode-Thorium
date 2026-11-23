@@ -224,6 +224,7 @@ function sendTuning(player, v, shop)
         slots = catalog(v), state = captureTuning(v), paintjobs = PAINTJOB_MODELS[data.model] or 0,
         prices = { color = TUNING.PRICE_COLOR, paintjob = TUNING.PRICE_PAINTJOB, remove = TUNING.PRICE_REMOVE },
         money = getPlayerMoney(player), health = math.floor(getElementHealth(v) / 10), repair = repairPrice(v),
+        repaired = getElementHealth(v) >= 999,
     })
 end
 
@@ -349,6 +350,8 @@ addEventHandler("rp:tune:repair", resourceRoot, function()
     local player = client
     local v = tuning[player]
     if not v or not isElement(v) or getPedOccupiedVehicle(player) ~= v or not shopOf(v) then return end
+    -- Ya al 100%: no se cobra (el panel tambien lo deshabilita, pero el servidor valida)
+    if getElementHealth(v) >= 999 then return notify(player, "Tu vehiculo ya esta reparado.", "warning") end
     local price = repairPrice(v)
     if getPlayerMoney(player) < price then return notify(player, ("Necesitas $%d en efectivo."):format(price), "error") end
     takePlayerMoney(player, price)
