@@ -16,6 +16,7 @@ AMMU = {
         wpn_colt45 = 600, wpn_deagle = 1800, wpn_shotgun = 1200, wpn_mp5 = 2200,
         wpn_ak47 = 3500, wpn_m4 = 4500, wpn_rifle = 2800,
         ammo_pistol = 60, ammo_shotgun = 50, ammo_smg = 80, ammo_rifle = 120,
+        bp_small = 150, bp_school = 300, bp_hiking = 700, bp_tactical = 1200, bp_expedition = 2000,
     },
 }
 

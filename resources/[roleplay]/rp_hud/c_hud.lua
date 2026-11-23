@@ -263,7 +263,18 @@ local STAMINA_DRAIN, STAMINA_REGEN, STAMINA_RESUME = 8, 5, 20   -- puntos/segund
 local staminaTick = getTickCount()
 local staminaLocked = false
 local STAMINA_JUMP_COST = 8   -- puntos por salto
-local wasJumping = false
+local jumpPressed = false
+
+-- Carga de la mochila en kg (rp_backpacks la publica). 30 kg = -24 % de velocidad y +90 % de gasto al correr.
+local function packKg() return tonumber(getElementData(localPlayer, "rp:packWeight")) or 0 end
+local function packSlowdown() return math.max(0.7, 1 - packKg() * 0.008) end
+local function packDrainFactor() return 1 + packKg() * 0.03 end
+
+-- Tecla de salto (bindKey respeta el rebind del jugador). Solo cuenta si realmente despega.
+bindKey("jump", "down", function()
+    if staminaLocked or isPedInVehicle(localPlayer) or not isPedOnGround(localPlayer) then return end
+    jumpPressed = true
+end)
 
 local function updateStamina()
     local now = getTickCount()
@@ -273,12 +284,12 @@ local function updateStamina()
     local meth = getElementData(localPlayer, "rp:meth") == true
     local state = getPedMoveState(localPlayer)
     local jumping = state == "jump"
-    if jumping and not wasJumping and not meth then
-        st = st - STAMINA_JUMP_COST   -- saltar gasta estamina (una vez por salto)
+    if jumpPressed then
+        jumpPressed = false
+        if not meth then st = st - STAMINA_JUMP_COST end   -- saltar gasta estamina (una vez por salto)
     end
-    wasJumping = jumping
     if not meth and not isPedInVehicle(localPlayer) and state == "sprint" then
-        st = st - STAMINA_DRAIN * dt
+        st = st - STAMINA_DRAIN * packDrainFactor() * dt
     elseif not jumping then
         st = st + STAMINA_REGEN * dt
     end
@@ -287,9 +298,11 @@ local function updateStamina()
     if st <= 0 and not staminaLocked then
         staminaLocked = true
         toggleControl("sprint", false)
+        toggleControl("jump", false)   -- sin estamina no se salta
     elseif staminaLocked and (st >= STAMINA_RESUME or meth) and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
         staminaLocked = false
         toggleControl("sprint", true)
+        toggleControl("jump", true)
     end
 end
 
@@ -297,13 +310,21 @@ end
 local METH_SPEED = 1.5
 local RUN_ANIMS = { "run_player", "run_civi", "run_fat", "run_old", "run_gang1", "run_wuzi",
                     "sprint_civi", "sprint_panic", "swat_run", "woman_run", "woman_runfast", "woman_runpanic" }
-local methSpeedOn = false
+-- Mochila (rp_backpacks): el peso que lleva a la espalda frena trote y caminata.
+local WALK_ANIMS = { "walk_player", "walk_civi", "walk_fat", "walk_old", "walk_gang1", "walk_gang2", "walk_wuzi", "woman_walknorm" }
+local lastRunSpeed, lastWalkSpeed = 1, 1
 addEventHandler("onClientPreRender", root, function()
     local meth = getElementData(localPlayer, "rp:meth") == true
-    if not meth and not methSpeedOn then return end
-    methSpeedOn = meth
-    local speed = meth and METH_SPEED or 1
-    for i = 1, #RUN_ANIMS do setPedAnimationSpeed(localPlayer, RUN_ANIMS[i], speed) end
+    local slow = packSlowdown()
+    local run = (meth and METH_SPEED or 1) * slow
+    if run ~= 1 or lastRunSpeed ~= 1 then
+        for i = 1, #RUN_ANIMS do setPedAnimationSpeed(localPlayer, RUN_ANIMS[i], run) end
+        lastRunSpeed = run
+    end
+    if slow ~= 1 or lastWalkSpeed ~= 1 then
+        for i = 1, #WALK_ANIMS do setPedAnimationSpeed(localPlayer, WALK_ANIMS[i], slow) end
+        lastWalkSpeed = slow
+    end
 end)
 local statusLines = {}
 local hasNeeds = false   -- false hasta recibir "rp:needs" (no mostrar 100 falsos)

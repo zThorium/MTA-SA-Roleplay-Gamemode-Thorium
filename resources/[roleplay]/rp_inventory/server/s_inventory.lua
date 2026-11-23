@@ -318,6 +318,25 @@ local function canAct(player)
     return not getElementData(player, "rp:downed") and not isPedDead(player) and not isPedInVehicle(player)
 end
 
+-- Export: crea el objeto recogible en el suelo SIN tocar ningun inventario (quien llama ya quito el item).
+function spawnGroundItem(itemId, amount, x, y, z, dimension, interior)
+    local def = getItemDefinition(itemId)
+    amount = tonumber(amount)
+    if not def or not validAmount(amount) then return false end
+    local model, scale = getItemGroundModel(itemId)
+    local object = createObject(model, x, y, z + 0.1)
+    setObjectScale(object, scale)
+    setElementCollisionsEnabled(object, false)
+    setElementDimension(object, dimension or 0)
+    setElementInterior(object, interior or 0)
+    setElementData(object, "rp:ground", { name = def.name, icon = def.icon, amount = amount })
+    ground[object] = { itemId = itemId, amount = amount }
+    setTimer(function()
+        if isElement(object) then ground[object] = nil; destroyElement(object) end
+    end, GROUND_LIFETIME, 1)
+    return true
+end
+
 local function dropAt(player, itemId, amount, x, y, z)
     local def = getItemDefinition(itemId)
     if not def then return end
@@ -329,17 +348,7 @@ local function dropAt(player, itemId, amount, x, y, z)
     local ok, reason = takeItem(player, itemId, amount)
     if not ok then return notify(player, reason, "error") end
 
-    local model, scale = getItemGroundModel(itemId)
-    local object = createObject(model, x, y, z + 0.1)
-    setObjectScale(object, scale)
-    setElementCollisionsEnabled(object, false)
-    setElementDimension(object, getElementDimension(player))
-    setElementInterior(object, getElementInterior(player))
-    setElementData(object, "rp:ground", { name = def.name, icon = def.icon, amount = amount })
-    ground[object] = { itemId = itemId, amount = amount }
-    setTimer(function()
-        if isElement(object) then ground[object] = nil; destroyElement(object) end
-    end, GROUND_LIFETIME, 1)
+    spawnGroundItem(itemId, amount, x, y, z, getElementDimension(player), getElementInterior(player))
 
     setPedAnimation(player, "BOMBER", "BOM_Plant", 1200, false, false, false, false, 250)
     setAme(player, ("deja %s en el suelo"):format(def.name:lower()))
