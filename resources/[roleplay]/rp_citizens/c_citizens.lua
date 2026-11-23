@@ -961,6 +961,123 @@ end
 
 local STEP = 6   -- metros entre puntos en los tramos rectos (seguimiento preciso del carril)
 
+----------------------------------------------------------------
+-- Esquinas cerradas: en algunos cruces la red tiene varios nodos casi juntos (a ~1 m) que forman un giro
+-- de 90 grados. Cada nodo genera su propia maniobra con un radio diminuto (limitado por el largo del enlace)
+-- y la ruta resultante es una esquina viva: ningun auto puede tomarla (radio minimo ~4.5 m), se pasa de
+-- largo y se sale. Esta pasada detecta esas esquinas en la ruta ya generada (giro >= 55 grados en 6 m de
+-- camino) y las reemplaza por un arco de radio 5.8 m tangente a la entrada y a la salida.
+----------------------------------------------------------------
+local FILLET_R, FILLET_MIN_TURN = 5.8, 55
+
+local function wdist(a, b) return math.sqrt((a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2) end
+
+local function pathBackIdx(wp, i, d, lo)
+    local acc, j = 0, i
+    while j > lo do
+        acc = acc + wdist(wp[j], wp[j - 1])
+        j = j - 1
+        if acc >= d then return j end
+    end
+    return nil
+end
+
+local function pathFwdIdx(wp, i, d)
+    local acc, k = 0, i
+    while k < #wp do
+        acc = acc + wdist(wp[k], wp[k + 1])
+        k = k + 1
+        if acc >= d then return k end
+    end
+    return nil
+end
+
+local function turnAt(wp, i, jj, kk)
+    local ax, ay = wp[i][1] - wp[jj][1], wp[i][2] - wp[jj][2]
+    local bx, by = wp[kk][1] - wp[i][1], wp[kk][2] - wp[i][2]
+    local la, lb = math.sqrt(ax * ax + ay * ay), math.sqrt(bx * bx + by * by)
+    if la < 0.01 or lb < 0.01 then return 0 end
+    return math.deg(math.acos(math.max(-1, math.min(1, (ax * bx + ay * by) / (la * lb)))))
+end
+
+local function unitVec(ax, ay, bx, by)
+    local dx, dy = bx - ax, by - ay
+    local l = math.sqrt(dx * dx + dy * dy)
+    if l < 0.01 then return nil end
+    return dx / l, dy / l
+end
+
+local function filletCorners(wp, from)
+    local lo = math.max(1, from)
+    local i, done = lo + 1, 0
+    while i < #wp and done < 3 do
+        local jj, kk = pathBackIdx(wp, i, 3, lo), pathFwdIdx(wp, i, 3)
+        if jj and kk and turnAt(wp, i, jj, kk) >= FILLET_MIN_TURN then
+            -- agrupa los puntos consecutivos que siguen en la esquina
+            local i1, i2, jj1, kk2 = i, i, jj, kk
+            local k = i + 1
+            while k < #wp do
+                local j2, k2 = pathBackIdx(wp, k, 3, lo), pathFwdIdx(wp, k, 3)
+                if j2 and k2 and turnAt(wp, k, j2, k2) >= FILLET_MIN_TURN then i2, kk2, k = k, k2, k + 1 else break end
+            end
+            local ok = false
+            -- anclas: A (antes de la esquina) con su direccion de entrada, B (despues) con la de salida
+            local ax, ay = wp[jj1][1], wp[jj1][2]
+            local bx, by = wp[kk2][1], wp[kk2][2]
+            local d1x, d1y
+            if jj1 > lo then d1x, d1y = unitVec(wp[jj1 - 1][1], wp[jj1 - 1][2], ax, ay) end
+            if not d1x then d1x, d1y = unitVec(ax, ay, wp[i1][1], wp[i1][2]) end
+            local d2x, d2y
+            if kk2 < #wp then d2x, d2y = unitVec(bx, by, wp[kk2 + 1][1], wp[kk2 + 1][2]) end
+            if not d2x then d2x, d2y = unitVec(wp[i2][1], wp[i2][2], bx, by) end
+            -- no toca las lineas de detencion de semaforo (campo 6)
+            local blocked = false
+            for q = jj1 + 1, kk2 - 1 do if wp[q][6] then blocked = true break end end
+            if d1x and d2x and not blocked then
+                local den = d1x * d2y - d1y * d2x
+                if math.abs(den) > 0.1 then
+                    -- A + d1*t = B + d2*u
+                    local t = ((bx - ax) * d2y - (by - ay) * d2x) / den
+                    local u = ((bx - ax) * d1y - (by - ay) * d1x) / den
+                    if t > 0.5 and u < -0.5 and t < 40 and -u < 40 then
+                        local cosT = math.max(-1, math.min(1, d1x * d2x + d1y * d2y))
+                        local theta = math.acos(cosT)                      -- giro total (rad)
+                        local L = math.min(FILLET_R * math.tan(theta / 2), t - 0.3, -u - 0.3)
+                        if L >= 2 and theta > 0.5 then
+                            local cx, cy = ax + d1x * t, ay + d1y * t
+                            local t1x, t1y = cx - d1x * L, cy - d1y * L
+                            local t2x, t2y = cx + d2x * L, cy + d2y * L
+                            local z0, z1 = wp[jj1][3], wp[kk2][3]
+                            local steps = math.max(4, math.ceil(math.deg(theta) / 12))
+                            local src = wp[i1]
+                            local deg = math.deg(theta)
+                            local arc = {}
+                            for st = 0, steps do
+                                local f = st / steps
+                                local g = 1 - f
+                                arc[#arc + 1] = { g * g * t1x + 2 * g * f * cx + f * f * t2x, g * g * t1y + 2 * g * f * cy + f * f * t2y,
+                                    z0 + (z1 - z0) * f, deg, src[5], nil, src[7] }
+                            end
+                            -- reemplaza (jj1+1 .. kk2-1) por el arco
+                            local tail = {}
+                            for q = kk2, #wp do tail[#tail + 1] = wp[q] end
+                            for q = #wp, jj1 + 1, -1 do wp[q] = nil end
+                            for q = 1, #arc do wp[#wp + 1] = arc[q] end
+                            for q = 1, #tail do wp[#wp + 1] = tail[q] end
+                            i = jj1 + #arc + 1
+                            done = done + 1
+                            ok = true
+                        end
+                    end
+                end
+            end
+            if not ok then i = i2 + 1 end
+        else
+            i = i + 1
+        end
+    end
+end
+
 local function planSegment(s)
     local A, B = s.prev, s.node
     -- elige la salida y comprueba que su curva no atraviese muros; si lo hace,
@@ -1006,7 +1123,9 @@ local function planSegment(s)
         local t = i / n
         wp[#wp + 1] = { sx + (ex - sx) * t, sy + (ey - sy) * t, sz + (ez - sz) * t, 0, nil }
     end
+    local oldN = #wp
     for _, p in ipairs(pts) do wp[#wp + 1] = p end
+    filletCorners(wp, math.max(1, oldN - 3))
     s.prev, s.node = B, C
     return true
 end
@@ -2131,15 +2250,16 @@ local function stageRoute(vehicle, s, f, now)
     -- Nodo saltado: si el auto paso de largo de un punto (por el lado, mas lejos que la mirada), ese punto
     -- ya no se persigue: se descarta y sigue con el siguiente. Antes intentaba volver atras (retroceder o
     -- dar la vuelta) hasta alcanzarlo. Se descarta si (a) el auto ya avanzo mas alla del punto siguiendo la
-    -- direccion del tramo, o (b) el punto queda detras del auto (mas de 100 grados de su rumbo).
+    -- direccion del tramo.
     while #wp > 1 do
         local a, b = wp[1], wp[2]
         local sx2, sy2 = b[1] - a[1], b[2] - a[2]
         local l2 = sx2 * sx2 + sy2 * sy2
         local ahead = (a[1] - x) * fwx + (a[2] - y) * fwy
         local passedAlong = l2 > 0.01 and ((x - a[1]) * sx2 + (y - a[2]) * sy2) / l2 > 0
-        local behindHead = ahead < 0 and math.abs(angleDiff(heading(a[1] - x, a[2] - y), rz)) > 100
-        if not ((passedAlong and ahead < 2) or behindHead) then break end
+        -- (solo si el auto ya avanzo mas alla del punto siguiendo la direccion del tramo; un punto que queda
+        -- de lado o "detras" por el rumbo del auto NO se descarta: el auto esta girando o se paso de la esquina)
+        if not (passedAlong and ahead < 2) then break end
         local passed = table.remove(wp, 1)
         pushPassed(s, passed)
         if passed[5] and (not wp[1][5] or wp[1][5] ~= passed[5]) then
