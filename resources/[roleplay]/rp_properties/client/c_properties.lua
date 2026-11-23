@@ -71,7 +71,11 @@ addEventHandler("rp:prop:ui:close", root, closeModal)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
-        if not current or isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() or getElementData(localPlayer, "rp:downed") then return end
+        if isElement(browserGui) or isCursorShowing() or isChatBoxInputActive() or getElementData(localPlayer, "rp:downed") then return end
+        if not current then
+            if getElementDimension(localPlayer) > 10000 then triggerServerEvent("rp:prop:exit", resourceRoot) end
+            return
+        end
         if current.inside then
             triggerServerEvent("rp:prop:exit", resourceRoot)
         elseif current.info.owner then
@@ -113,3 +117,51 @@ addEventHandler("onClientResourceStop", resourceRoot, closeModal)
 -- Abatido (rp_injury): se cierra la interfaz
 addEvent("rp:onClientPlayerDowned", false)
 addEventHandler("rp:onClientPlayerDowned", localPlayer, closeModal)
+
+-- Tras salir al exterior: espera a que cargue el suelo y busca una coordenada segura
+-- (suelo firme, sin techo encima, sin paredes pegadas) alrededor de la puerta.
+addEvent("rp:prop:groundFix", true)
+local groundTimer
+
+local function groundAt(x, y, z)
+    local hit, _, _, gz = processLineOfSight(x, y, z + 3, x, y, z - 6, true, false, false, true, false, false, false, false, localPlayer)
+    return hit and gz or nil
+end
+
+local function isSafe(x, y, z)
+    local gz = groundAt(x, y, z)
+    if not gz or math.abs(gz - z) > 2.5 then return nil end
+    local head = gz + 1.0
+    -- Sin techo / dentro de un edificio
+    if processLineOfSight(x, y, head, x, y, head + 8, true, false, false, true, false, false, false, false, localPlayer) then return nil end
+    -- Sin paredes pegadas
+    for a = 0, 315, 45 do
+        local r = math.rad(a)
+        if processLineOfSight(x, y, head, x + math.cos(r) * 0.8, y + math.sin(r) * 0.8, head, true, false, false, true, false, false, false, false, localPlayer) then return nil end
+    end
+    return gz
+end
+
+addEventHandler("rp:prop:groundFix", resourceRoot, function(x, y, z)
+    if isTimer(groundTimer) then killTimer(groundTimer) end
+    setElementFrozen(localPlayer, true)
+    local tries = 0
+    groundTimer = setTimer(function()
+        tries = tries + 1
+        if groundAt(x, y, z) or tries >= 40 then
+            killTimer(groundTimer)
+            local px, py, pz
+            for _, r in ipairs({ 0, 1.2, 2, 3, 4, 5.5, 7 }) do
+                local step = r == 0 and 360 or 30
+                for a = 0, 359, step do
+                    local cx, cy = x + math.cos(math.rad(a)) * r, y + math.sin(math.rad(a)) * r
+                    local gz = isSafe(cx, cy, z)
+                    if gz then px, py, pz = cx, cy, gz break end
+                end
+                if px then break end
+            end
+            if px then setElementPosition(localPlayer, px, py, pz + 1.0) end
+            setElementFrozen(localPlayer, false)
+        end
+    end, 100, 40)
+end)

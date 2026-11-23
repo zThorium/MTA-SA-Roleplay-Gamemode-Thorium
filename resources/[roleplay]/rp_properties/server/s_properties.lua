@@ -68,7 +68,7 @@ end
 local function destroyProperty(id)
     local p = props[id]
     if not p then return end
-    for _, el in ipairs({ p.pickup, p.col, p.exitCol }) do if isElement(el) then destroyElement(el) end end
+    for _, el in ipairs({ p.pickup, p.col, p.exitCol, p.exitMarker }) do if isElement(el) then destroyElement(el) end end
     props[id] = nil
 end
 
@@ -85,11 +85,15 @@ local function spawnProperty(row)
     -- Zona de la puerta (tubo vertical: tolera pequenos errores de altura)
     local col = createColTube(row.x, row.y, row.z - 2, 1.4, 4)
     -- Zona de salida dentro del interior
-    local exitCol = createColSphere(t.x, t.y, t.z, 1.6)
+    local exitCol = createColSphere(t.x, t.y, t.z, 2.0)
     setElementInterior(exitCol, t.interior)
     setElementDimension(exitCol, dimensionOf(id))
+    -- Marcador visible de salida (mismo interior y dimension que la propiedad)
+    local exitMarker = createMarker(t.x, t.y, t.z - 1, "cylinder", 1.4, 245, 165, 36, 150)
+    setElementInterior(exitMarker, t.interior)
+    setElementDimension(exitMarker, dimensionOf(id))
 
-    props[id] = { row = row, pickup = pickup, col = col, exitCol = exitCol }
+    props[id] = { row = row, pickup = pickup, col = col, exitCol = exitCol, exitMarker = exitMarker, exit = t }
 
     addEventHandler("onColShapeHit", col, function(el, sameDim)
         if getElementType(el) ~= "player" or not sameDim or not characterOf(el) or isPedInVehicle(el) then return end
@@ -218,16 +222,32 @@ end)
 ----------------------------------------------------------------
 -- Entrar / salir
 ----------------------------------------------------------------
+-- Coloca al jugador congelado (espera a que cargue el mapa) para no caer a traves del suelo
+local function placePlayer(player, interior, dimension, x, y, z, rot)
+    setElementFrozen(player, true)
+    setElementInterior(player, interior)
+    setElementDimension(player, dimension)
+    setElementPosition(player, x, y, z)
+    if rot then setElementRotation(player, 0, 0, rot) end
+    setCameraTarget(player, player)
+    setTimer(function()
+        if isElement(player) then setElementFrozen(player, false) end
+    end, 1500, 1)
+end
+
+local entryPos = {}   -- [player] = { id, x, y, z }: donde estaba al entrar, para volver exacto ahi
+
 local function teleportInside(player, id)
+    if getElementInterior(player) == 0 and getElementDimension(player) == 0 then
+        local ex, ey, ez = getElementPosition(player)
+        entryPos[player] = { id = id, x = ex, y = ey, z = ez }
+    end
     local row = props[id].row
     local t = interiorOf(row)
     fadeCamera(player, false, 0.5)
     setTimer(function()
         if not isElement(player) then return end
-        setElementInterior(player, t.interior, t.x, t.y, t.z)
-        setElementDimension(player, dimensionOf(id))
-        setElementRotation(player, 0, 0, t.rot)
-        setCameraTarget(player, player)
+        placePlayer(player, t.interior, dimensionOf(id), t.x, t.y, t.z, t.rot)
         fadeCamera(player, true, 0.8)
     end, 600, 1)
 end
@@ -237,10 +257,16 @@ local function teleportOutside(player, id)
     fadeCamera(player, false, 0.5)
     setTimer(function()
         if not isElement(player) then return end
-        setElementInterior(player, 0)
-        setElementDimension(player, 0)
-        if row then setElementPosition(player, row.x, row.y - 2.0, row.z) end
-        setCameraTarget(player, player)
+        -- Sale exactamente en la puerta (el pickup siempre esta en el exterior)
+        local ep = entryPos[player]
+        if ep and ep.id == id then row = { x = ep.x, y = ep.y, z = ep.z } end
+        if row then
+            placePlayer(player, 0, 0, tonumber(row.x), tonumber(row.y), tonumber(row.z) + 0.6)
+            triggerClientEvent(player, "rp:prop:groundFix", resourceRoot, tonumber(row.x), tonumber(row.y), tonumber(row.z))
+        else
+            setElementInterior(player, 0)
+            setElementDimension(player, 0)
+        end
         fadeCamera(player, true, 0.8)
     end, 600, 1)
 end
@@ -276,7 +302,16 @@ addEventHandler("rp:prop:exit", resourceRoot, function()
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local n = near[player]
-    if not n or not n.inside then return end
+    if not n or not n.inside then
+        -- Respaldo: si el jugador esta en la dimension de una propiedad y cerca de la salida, sale igual
+        local dim = getElementDimension(player)
+        local id = dim > PROPERTY.DIMENSION_BASE and dim - PROPERTY.DIMENSION_BASE
+        local p = id and props[id]
+        if not p then return end
+        local px, py, pz = getElementPosition(player)
+        if getElementInterior(player) ~= p.exit.interior or getDistanceBetweenPoints3D(px, py, pz, p.exit.x, p.exit.y, p.exit.z) > 8 then return end
+        n = { id = id, inside = true }
+    end
     if previews[player] then return endPreview(player) end
     teleportOutside(player, n.id)
 end)
@@ -417,10 +452,12 @@ addEventHandler("onPlayerQuit", root, function()
         local pv = previews[source]
         endPreview(source, true)
         local row = props[pv.id] and props[pv.id].row
+        local ep = entryPos[player]
+        if ep and ep.id == id then row = { x = ep.x, y = ep.y, z = ep.z } end
         if row then
             setElementInterior(source, 0)
             setElementDimension(source, 0)
-            setElementPosition(source, row.x, row.y - 2.0, row.z)
+            setElementPosition(source, tonumber(row.x), tonumber(row.y), tonumber(row.z) + 0.6)
         end
     end
     near[source] = nil

@@ -139,8 +139,15 @@ end
 local function loadVehicles()
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0) or {}
-        for _, row in ipairs(rows) do spawnRow(row) end
-        outputDebugString(("[rp_vehicles] %d vehiculos cargados"):format(#rows))
+        local spawned = 0
+        for _, row in ipairs(rows) do
+            -- Idempotente: si rp_database se reinicia, rp:onDatabaseReady vuelve a dispararse; no duplicar
+            local existing = byId[tonumber(row.id)]
+            if not (existing and isElement(existing)) then
+                if spawnRow(row) then spawned = spawned + 1 end
+            end
+        end
+        outputDebugString(("[rp_vehicles] %d vehiculos cargados (%d nuevos)"):format(#rows, spawned))
     end, db(), "SELECT * FROM vehicles")
 end
 
