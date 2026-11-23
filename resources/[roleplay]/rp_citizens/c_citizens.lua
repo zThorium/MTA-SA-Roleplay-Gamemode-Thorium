@@ -2382,6 +2382,8 @@ addCommandHandler("traficostats", function()
 end)
 
 local function spawnTick()
+    -- pasajero: no se crea nada; lo que queda se desvanece solo (ver setCitizensSuspended)
+    if suspended and enabled and getElementData(localPlayer, "rp:characterId") and playerIsActive() then return end
     if not enabled or suspended or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
         if pedCount > 0 or carCount > 0 then clearAll() end
         return
@@ -2452,7 +2454,14 @@ local function pedTick()
         end
     end
     for ped, s in pairs(peds) do
-        if isElement(ped) and s.state ~= "DEAD" then
+        local fading = false
+        if s.fadeStart and isElement(ped) then
+            -- marcado para retirar (el jugador pasa a ver el trafico de otro): se desvanece y se borra
+            fading = true
+            local k = (now - s.fadeStart) / 1200
+            if k >= 1 then removePed(ped) else setElementAlpha(ped, math.floor(255 * (1 - k))) end
+        end
+        if not fading and isElement(ped) and s.state ~= "DEAD" then
             -- Le apuntan con un arma de fuego: huye
             if aimTarget == ped and getPedWeapon(localPlayer) >= 22 and s.state ~= "FLEE" and s.state ~= "FIGHT" then
                 startFlee(ped, localPlayer)
@@ -2714,12 +2723,70 @@ function setCitizensSuspended(state)
     state = state and true or false
     if suspended == state then return end
     suspended = state
-    if suspended then clearAll() end
+    if not suspended then return end
+    -- Los que se ven se desvanecen en ~1 s (no desaparecen de golpe); los que no se ven se borran ya
+    local now = getTickCount()
+    for v, s in pairs(cars) do
+        if isElement(v) and getVehicleController(v) ~= localPlayer and isElementOnScreen(v) then
+            if not s.fadeStart then
+                s.fadeStart = now
+                setElementCollisionsEnabled(v, false)
+                if isElement(s.driver) then setPedControlState(s.driver, "handbrake", true) end
+            end
+        else
+            removeCar(v)
+        end
+    end
+    for p, s in pairs(peds) do
+        if isElement(p) and isElementOnScreen(p) then s.fadeStart = s.fadeStart or now else removePed(p) end
+    end
+end
+
+-- El pasajero deja de serlo: la copia de un auto del conductor pasa a ser un auto real de su poblacion
+-- (conserva posicion, rumbo y velocidad y se engancha al carril mas cercano). false si no se pudo.
+function adoptMirrorCar(vehicle, driver, speedMs)
+    if cars[vehicle] or not isElement(vehicle) or not isElement(driver) or carCount >= CFG.MAX_CARS + 4 then return false end
+    local x, y = getElementPosition(vehicle)
+    local m = getElementMatrix(vehicle)
+    local n, target = nearestLane(x, y, m[2][1], m[2][2])
+    if not n then return false end
+    setElementData(vehicle, "rp:citizen", true, false)
+    setElementData(driver, "rp:citizen", true, false)
+    local s = {
+        driver = driver, prev = n, node = target, wp = {}, police = false, style = newDriverStyle(),
+        lenF = vehicleLenFactor(vehicle), state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0,
+    }
+    cars[vehicle] = s
+    carCount = carCount + 1
+    s.dSpeed = speedMs or 0
+    makeReal(vehicle, s)            -- fisica, apoya sobre el suelo y conserva la velocidad
+    -- primer punto: proyeccion sobre el carril elegido, unos metros por delante
+    local sx, sy, sz, dx, dy = laneStart(n, target)
+    local nx2, ny2 = nodePos(VEH_NODES, target)
+    local len = math.max(1, getDistanceBetweenPoints2D(sx, sy, nx2, ny2))
+    local t = math.max(0, math.min(len - 8, (x - sx) * dx + (y - sy) * dy + 8))
+    s.wp[1] = { sx + dx * t, sy + dy * t, sz, 0, nil }
+    return true
+end
+
+-- Igual para un peaton copiado: sigue caminando desde donde esta
+function adoptMirrorPed(ped)
+    if peds[ped] or not isElement(ped) or pedCount >= CFG.MAX_PEDS + 4 then return false end
+    setElementData(ped, "rp:citizen", true, false)
+    local s = { state = "WALK", node = nil, prev = nil, brave = math.random() < CFG.BRAVE_CHANCE, until_ = 0 }
+    peds[ped] = s
+    pedCount = pedCount + 1
+    setElementCollisionsEnabled(ped, true)
+    setPedControlState(ped, "forwards", false)
+    setPedControlState(ped, "walk", false)
+    setPedControlState(ped, "sprint", false)
+    resumeWalk(ped, s)              -- elige el nodo peatonal mas cercano (o lo retira si no hay)
+    return peds[ped] ~= nil
 end
 
 local nextSid = 0
 
--- Lista plana de numeros: por entidad { tipo (1 auto, 2 peaton), id, modelo, x, y, z, rx, ry, rz, vx, vy, vz }
+-- Lista plana de numeros: por entidad { tipo (1 auto, 2 peaton), id, modelo, x, y, z, rx, ry, rz, vx, vy, vz, colores(6), skin conductor, variantes(2), luces }
 function getNearbyForSync(px, py, radius, maxCars, maxPeds)
     local r2 = radius * radius
     local function nearest(tbl, limit, keep)
@@ -2749,6 +2816,19 @@ function getNearbyForSync(px, py, radius, maxCars, maxPeds)
         out[i + 4], out[i + 5], out[i + 6] = x, y, z
         out[i + 7], out[i + 8], out[i + 9] = rx, ry, rz
         out[i + 10], out[i + 11], out[i + 12] = vx, vy, vz
+        -- 13-22: colores (2 x RGB), skin del conductor, variantes, luces (solo autos; ceros en peatones)
+        if kind == 1 then
+            local r1, g1, b1, r2, g2, b2 = getVehicleColor(el, true)
+            local drv = getVehicleController(el)
+            local v1, v2 = getVehicleVariant(el)
+            out[i + 13], out[i + 14], out[i + 15] = r1 or 0, g1 or 0, b1 or 0
+            out[i + 16], out[i + 17], out[i + 18] = r2 or 0, g2 or 0, b2 or 0
+            out[i + 19] = drv and getElementModel(drv) or 0
+            out[i + 20], out[i + 21] = v1 or 255, v2 or 255
+            out[i + 22] = getVehicleOverrideLights(el) or 0
+        else
+            for k = 13, 22 do out[i + k] = 0 end
+        end
     end
     for _, f in ipairs(nearest(cars, maxCars, function() return true end)) do emit(1, f[2], f[3]) end
     for _, f in ipairs(nearest(peds, maxPeds, function(p, s) return s.state ~= "DEAD" end)) do emit(2, f[2], f[3]) end

@@ -10,12 +10,12 @@
 
 addEvent("rp:citizens:snap", true)
 
-local MAX_NUMBERS = 12 * 28      -- 28 entidades como maximo (12 numeros cada una)
+local MAX_NUMBERS = 22 * 28      -- 28 entidades como maximo (22 numeros cada una)
 local lastSnap = {}              -- [conductor] = tick del ultimo paquete
 
 addEventHandler("rp:citizens:snap", resourceRoot, function(list)
     local driver = client
-    if not isElement(driver) or type(list) ~= "table" or #list > MAX_NUMBERS or #list % 12 ~= 0 then return end
+    if not isElement(driver) or type(list) ~= "table" or #list > MAX_NUMBERS or #list % 22 ~= 0 then return end
     local veh = getPedOccupiedVehicle(driver)
     if not veh or getVehicleOccupant(veh, 0) ~= driver then return end
     local now = getTickCount()
