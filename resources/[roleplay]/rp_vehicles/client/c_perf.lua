@@ -37,16 +37,20 @@ end
 
 -- Silbido del turbo: un sonido en bucle por vehiculo, solo mientras se acelera
 local function whistle(vehicle, s, on, level, speed)
+    level = math.max(1, math.min(3, level or 1))
+    -- Cada nivel de turbo tiene su propio sonido; si cambia la pieza se recrea
+    if isElement(s.whistle) and (not on or s.whistleLevel ~= level) then
+        destroyElement(s.whistle)
+        s.whistle = nil
+    end
     if on and not isElement(s.whistle) then
         local x, y, z = getElementPosition(vehicle)
-        s.whistle = playSound3D("sounds/tune_turbo.wav", x, y, z, true)
+        s.whistleLevel = level
+        s.whistle = playSound3D("sounds/tune_turbo_" .. level .. ".wav", x, y, z, true)
         if s.whistle then
             setSoundMaxDistance(s.whistle, 35)
             attachElements(s.whistle, vehicle)
         end
-    elseif not on and isElement(s.whistle) then
-        destroyElement(s.whistle)
-        s.whistle = nil
     end
     if on and isElement(s.whistle) then
         setSoundVolume(s.whistle, math.min(1, 0.2 + 0.15 * level))
