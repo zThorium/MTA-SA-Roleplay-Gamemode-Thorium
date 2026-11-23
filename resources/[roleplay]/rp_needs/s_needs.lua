@@ -37,9 +37,11 @@ end
 local function publish(player)
     local n = needs[player]
     if not n or not isElement(player) then return end
+    -- "subscribe": solo lo reciben los clientes suscritos (el propio jugador). Con "local" nunca llegaba al cliente.
+    addElementDataSubscriber(player, "rp:needs", player)
     setElementData(player, "rp:needs", {
         hunger = math.floor(n.hunger + 0.5), thirst = math.floor(n.thirst + 0.5), energy = math.floor(n.energy + 0.5),
-    }, "local")
+    }, "subscribe")
 end
 
 local function save(player)
@@ -84,7 +86,7 @@ local function unload(player)
     if isTimer(sleeping[player]) then killTimer(sleeping[player]) end
     needs[player], sleeping[player] = nil, nil
     if isElement(player) then
-        setElementData(player, "rp:needs", false)
+        setElementData(player, "rp:needs", false, "subscribe")
         toggleControl(player, "sprint", true)
     end
 end
