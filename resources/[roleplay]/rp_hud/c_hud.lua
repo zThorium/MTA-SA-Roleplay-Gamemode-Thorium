@@ -251,10 +251,11 @@ local NEEDS = {
     { key = "hunger", icon = "food",  r = 245, g = 165, b = 36 },
     { key = "thirst", icon = "drop", r = 70,  g = 150, b = 255 },
     { key = "energy", icon = "bolt", r = 168, g = 120, b = 255 },
+    { key = "sanity", icon = "heart", r = 224, g = 98, b = 190 },   -- cordura: baja al matar civiles (rp_needs)
     { key = "stamina", icon = "run", r = 63, g = 191, b = 106 },   -- solo cliente, no se guarda
 }
-local needValues = { hunger = 100, thirst = 100, energy = 100, stamina = 100 }
-local needShown = { hunger = 100, thirst = 100, energy = 100, stamina = 100 }   -- valor suavizado para animar
+local needValues = { hunger = 100, thirst = 100, energy = 100, stamina = 100, sanity = 100 }
+local needShown = { hunger = 100, thirst = 100, energy = 100, stamina = 100, sanity = 100 }   -- valor suavizado para animar
 
 -- Estamina: baja corriendo (sprint), sube trotando/caminando/quieto. Al agotarse
 -- se bloquea el sprint hasta recuperar STAMINA_RESUME.
@@ -318,6 +319,7 @@ local function refreshNeeds()
             lines[#lines + 1] = { "Sin comida/bebida: pierdes vida", 229, 72, 77 }
         end
         if (n.energy or 100) <= 0 then lines[#lines + 1] = { "Agotado: no puedes correr (/dormir)", 168, 120, 255 } end
+        if (n.sanity or 100) <= 25 then lines[#lines + 1] = { "Tu cordura esta al limite", 224, 98, 190 } end
     end
     statusLines = lines
 end

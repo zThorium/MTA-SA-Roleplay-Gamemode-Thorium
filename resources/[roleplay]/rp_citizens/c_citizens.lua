@@ -44,7 +44,7 @@ local POP = {
             507, 516, 517, 518, 526, 527, 529, 540, 542, 546, 547, 549, 550, 551, 554, 566, 585, 589, 600 },
     },
     ghetto = {
-        peds = { 7, 14, 15, 21, 22, 28, 29, 30, 47, 66, 67, 79, 134, 135, 136, 143, 144, 176, 180, 183, 13, 41, 56, 63, 69, 190, 195, 207, 238 },
+        peds = { 7, 14, 15, 21, 22, 28, 29, 30, 47, 66, 67, 79, 134, 135, 136, 143, 144, 176, 180, 183, 13, 41, 56, 69, 190, 195, 207 },
         cars = { 412, 534, 535, 536, 566, 567, 575, 576, 474, 467, 401, 410, 436, 466, 492, 517, 518, 542, 549, 600, 404, 479 },
     },
     rich = {
@@ -140,7 +140,9 @@ local function newDriverStyle()
 end
 
 local function pickDriverSkin(x, y, z)
-    local pop = population(x, y, z)
+    local pop, zone = population(x, y, z)
+    local gang = GANGS[zone]
+    if gang and math.random() < 0.3 then return pick(gang) end   -- conductores de la banda del barrio
     return pick(pop.peds)
 end
 
@@ -291,7 +293,7 @@ local function startFlee(ped, from, duration, hops)
     if hops > 0 then
         local x, y = getElementPosition(ped)
         for other, os in pairs(peds) do
-            if other ~= ped and os.state ~= "DEAD" and os.state ~= "FLEE" and os.state ~= "FIGHT" and isElement(other) then
+            if other ~= ped and os.state ~= "DEAD" and os.state ~= "FLEE" and os.state ~= "FIGHT" and os.state ~= "GANG" and isElement(other) then
                 local ox, oy = getElementPosition(other)
                 if (ox - x) ^ 2 + (oy - y) ^ 2 < 196 and math.random() < 0.7 then
                     startFlee(other, from, math.random(4000, 7000), hops - 1)
@@ -369,8 +371,32 @@ local function clearDirection(x, y, z, rot, side)
     end
 end
 
+local aimedPed = nil   -- peaton al que apunta el jugador con un arma de fuego (lo fija pedTick)
+
+-- Le apuntan: se paraliza con las manos arriba; si dejan de apuntarle, sale corriendo
+local function startHandsUp(ped)
+    local s = peds[ped]
+    if not s or s.state == "DEAD" then return end
+    if s.brave then return startFlee(ped, localPlayer, 6000, 0) end
+    setWalking(ped, false)
+    setPedAnimation(ped, "ped", "handsup", -1, false, false, false, true)
+    s.state, s.until_, s.aimedAt = "HANDSUP", getTickCount() + 15000, getTickCount()
+end
+
 local function updatePed(ped, s, now, px, py, pz)
     local x, y, z = getElementPosition(ped)
+
+    if s.state == "GANG" then return end   -- lo controla c_gangs.lua
+
+    if s.state == "HANDSUP" then
+        if aimedPed == ped then s.aimedAt = now end
+        if now > s.until_ or now - s.aimedAt > 1500 then
+            setPedAnimation(ped)
+            return startFlee(ped, localPlayer, math.random(6000, 9000), 0)
+        end
+        setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
+        return
+    end
 
     if s.state == "WALK" then
         local tx, ty = nodePos(PED_NODES, s.node)
@@ -497,10 +523,36 @@ local function updatePed(ped, s, now, px, py, pz)
     end
 end
 
+-- Disparo de arma de fuego en la cabeza: muerte instantanea y el cadaver queda sin cabeza
+local function isHeadshot(weapon, bodypart)
+    return bodypart == 9 and weapon and ((weapon >= 22 and weapon <= 34) or weapon == 38)
+end
+
+addEventHandler("onClientPedDamage", root, function(attacker, weapon, bodypart)
+    if not (peds[source] or getElementData(source, "rp:citizen")) or isPedDead(source) then return end
+    if not isHeadshot(weapon, bodypart) then return end
+    local ped = source
+    local x, y, z = getPedBonePosition(ped, 8)
+    if x then
+        for _ = 1, 6 do
+            fxAddBlood(x, y, z, (math.random() - 0.5) * 1.2, (math.random() - 0.5) * 1.2, 0.4 + math.random() * 0.5, math.random(3, 6), 1.2)
+        end
+    end
+    killPed(ped, isElement(attacker) and attacker or nil, weapon, 9)
+    if setPedHeadless then setPedHeadless(ped, true) end
+    -- por si el modelo se recarga al caer, se reaplica unos instantes
+    local n = 0
+    setTimer(function()
+        n = n + 1
+        if isElement(ped) and setPedHeadless then setPedHeadless(ped, true) end
+    end, 250, 12)
+end)
+
 -- Golpes / disparos a un peaton
 addEventHandler("onClientPedDamage", root, function(attacker)
     local s = peds[source]
     if not s or s.state == "DEAD" then return end
+    if s.state == "GANG" or (gangHandles and gangHandles(source)) then return end   -- c_gangs.lua decide
     if attacker and isElement(attacker) and getElementType(attacker) == "vehicle" then attacker = getVehicleController(attacker) end
     if not attacker or not isElement(attacker) then return end
     local weapon = getPedWeapon(attacker)
@@ -511,13 +563,53 @@ addEventHandler("onClientPedDamage", root, function(attacker)
     end
 end)
 
-addEventHandler("onClientPedWasted", root, function()
+-- Los testigos de una muerte (a la vista y a menos de 30 m) entran en panico; los mas cercanos, mas rato
+local function witnessKill(victim, x, y, z)
+    for ped, s in pairs(peds) do
+        if ped ~= victim and s.state ~= "DEAD" and s.state ~= "FLEE" and isElement(ped) then
+            local ox, oy, oz = getElementPosition(ped)
+            local d = getDistanceBetweenPoints3D(x, y, z, ox, oy, oz)
+            if d < 30 and isLineOfSightClear(ox, oy, oz + 0.6, x, y, z + 0.6, true, false, false, true, false, false, false) then
+                startFlee(ped, localPlayer, math.random(7000, 12000) + (d < 10 and 4000 or 0), 0)
+            end
+        end
+    end
+end
+
+addEvent("rp:citizens:drop", true)
+local drops = {}   -- [id] = pickup
+
+addEventHandler("onClientPedWasted", root, function(killer)
     local s = peds[source]
     if not s then return end
+    local wasDead = s.state == "DEAD"
     s.state = "DEAD"
     setWalking(source, false)
     local ped = source
     setTimer(function() if peds[ped] then removePed(ped) end end, 15000, 1)
+    if wasDead then return end
+    if isElement(killer) and getElementType(killer) == "vehicle" then killer = getVehicleController(killer) end
+    if killer == localPlayer then
+        local x, y, z = getElementPosition(source)
+        witnessKill(source, x, y, z)
+        -- El servidor decide si hay dinero y cuanta cordura se pierde
+        triggerServerEvent("rp:citizens:killed", resourceRoot, x, y, z)
+    end
+end)
+
+-- El servidor concede un botin: aparece un fajo en el suelo, se recoge andando encima
+addEventHandler("rp:citizens:drop", resourceRoot, function(id, x, y, z)
+    local gz = getGroundPosition(x, y, z + 1)
+    local pickup = createPickup(x, y, (gz and gz > -100 and gz or z - 1) + 0.6, 3, 1212, 0)
+    if not pickup then return end
+    drops[id] = pickup
+    local function clear() if drops[id] then drops[id] = nil end if isElement(pickup) then destroyElement(pickup) end end
+    setTimer(clear, 90000, 1)
+    addEventHandler("onClientPickupHit", pickup, function(player)
+        if player ~= localPlayer then return end
+        triggerServerEvent("rp:citizens:collect", resourceRoot, id)
+        clear()
+    end)
 end)
 
 -- Disparos del jugador: el que este cerca huye
@@ -525,7 +617,7 @@ addEventHandler("onClientPlayerWeaponFire", localPlayer, function(weapon)
     if weapon < 22 then return end
     local x, y, z = getElementPosition(localPlayer)
     for ped, s in pairs(peds) do
-        if s.state ~= "DEAD" and s.state ~= "FIGHT" then
+        if s.state ~= "DEAD" and s.state ~= "FIGHT" and s.state ~= "GANG" and not (gangHandles and gangHandles(ped)) then
             local px, py, pz = getElementPosition(ped)
             if getDistanceBetweenPoints3D(x, y, z, px, py, pz) < 35 then startFlee(ped, localPlayer) end
         end
@@ -1599,7 +1691,8 @@ local function handOverPolice(vehicle, s)
     return true
 end
 
-function abandonCar(vehicle, s)
+-- angry: el conductor es de banda y se baja a pelear (c_gangs.lua) en vez de huir
+function abandonCar(vehicle, s, angry)
     if s.state == "ABANDONED" then return end
     if handOverPolice(vehicle, s) then return end
     releaseLocks(vehicle)
@@ -1616,7 +1709,7 @@ function abandonCar(vehicle, s)
         setElementPosition(driver, x - m[1][1] * 2, y - m[1][2] * 2, z + 0.5)
         peds[driver] = { state = "WALK", node = nil, prev = nil, brave = false, until_ = 0 }
         pedCount = pedCount + 1
-        startFlee(driver, vehicle, 7000)
+        if angry and gangEngage then gangEngage(driver) else startFlee(driver, vehicle, 7000) end
     end
 end
 
@@ -2753,6 +2846,9 @@ end
 addEventHandler("onClientVehicleCollision", root, function(hit, force)
     local s = cars[source]
     if not s or s.state == "ABANDONED" or force < 150 then return end
+    -- el jugador choca a un conductor de banda: se baja a reclamar
+    if hit and hit == getPedOccupiedVehicle(localPlayer) and gangCarProvoked then gangCarProvoked(source, s, 60) end
+    if s.state == "ABANDONED" then return end
     if not hit or getElementType(hit) ~= "vehicle" then
         -- choque con el mundo (poste, pared, objeto): marca el golpe para retroceder en el siguiente tick
         if force > 250 then s.wallHitAt = getTickCount() end
@@ -2931,6 +3027,7 @@ addEventHandler("onClientVehicleDamage", root, function(attacker)
     local s = cars[source]
     if not s or s.state == "ABANDONED" then return end
     if attacker == localPlayer or attacker == getPedOccupiedVehicle(localPlayer) then
+        if gangCarProvoked and gangCarProvoked(source, s, 100) then return end   -- conductor de banda: se baja a pelear
         s.state, s.until_ = "FLEE", getTickCount() + 8000
         setPedControlState(s.driver, "horn", true)
         setTimer(function() if isElement(s.driver) then setPedControlState(s.driver, "horn", false) end end, 1200, 1)
@@ -3479,6 +3576,7 @@ local function pedTick()
     local now = getTickCount()
     local px, py, pz = getElementPosition(localPlayer)
     local aimTarget = getPedTarget(localPlayer)
+    aimedPed = aimTarget
     pedSnap = {}
     for p in pairs(peds) do
         if isElement(p) then
@@ -3495,9 +3593,10 @@ local function pedTick()
             if k >= 1 then removePed(ped) else setElementAlpha(ped, math.floor(255 * (1 - k))) end
         end
         if not fading and isElement(ped) and s.state ~= "DEAD" then
-            -- Le apuntan con un arma de fuego: huye
-            if aimTarget == ped and getPedWeapon(localPlayer) >= 22 and s.state ~= "FLEE" and s.state ~= "FIGHT" then
-                startFlee(ped, localPlayer)
+            -- Le apuntan con un arma de fuego: manos arriba (y huye al bajar el arma)
+            if aimTarget == ped and getPedWeapon(localPlayer) >= 22 and s.state ~= "FLEE" and s.state ~= "FIGHT" and s.state ~= "HANDSUP"
+                and s.state ~= "GANG" and not (gangHandles and gangHandles(ped)) then
+                startHandsUp(ped)
             end
             if isElementStreamedIn(ped) then
                 if not guarded("peaton", s, updatePed, ped, s, now, px, py, pz) and (s.errCount or 0) >= HEALTH.ERR_LIMIT then
@@ -3867,4 +3966,13 @@ function getNearbyForSync(px, py, radius, maxCars, maxPeds)
     for _, f in ipairs(nearest(cars, maxCars, function() return true end)) do emit(1, f[2], f[3]) end
     for _, f in ipairs(nearest(peds, maxPeds, function(p, s) return s.state ~= "DEAD" end)) do emit(2, f[2], f[3]) end
     return out
+end
+
+-- Estado interno para c_gangs.lua (pandilleros con personalidad)
+function citizenInternals()
+    return {
+        peds = peds, cars = cars,
+        startFlee = startFlee, resumeWalk = resumeWalk, setWalking = setWalking, pedClear = pedClear,
+        abandonCar = abandonCar,
+    }
 end
