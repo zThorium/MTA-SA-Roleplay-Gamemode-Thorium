@@ -911,4 +911,18 @@ SCHEMA = {
         CONSTRAINT fk_character_levels_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_dealers: traficantes (peds con skin 28/29/30) que venden drogas
+    [[
+    CREATE TABLE IF NOT EXISTS dealers (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ped_skin  SMALLINT UNSIGNED NOT NULL,
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rotation  FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

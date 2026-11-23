@@ -100,6 +100,7 @@ WANTED = {
       explosion                  provocar una explosion
       speeding                   exceso de velocidad delante de la policia
       aim_gun                    apuntar con un arma a alguien
+      drug_buy                   comprar drogas con un policia cerca (rp_dealers)
 ]]
 -- instant = N: el delito deja como minimo N estrellas al momento (aunque no haya testigos)
 WANTED_CRIMES = {
@@ -120,6 +121,7 @@ WANTED_CRIMES = {
     explosion    = { points = 25,  label = "Explosion" },
     speeding     = { points = 5,   label = "Exceso de velocidad" },
     aim_gun      = { points = 2,   label = "Amenaza con arma" },
+    drug_buy     = { points = 25,  label = "Compra de drogas", instant = 1 },   -- rp_dealers
 }
 
 -- Pandilleros: a la policia "no le importan" (PoliceDontCareAboutCrimesAgainstPedType)
