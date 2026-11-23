@@ -145,10 +145,25 @@ local function ownedDriverVehicle(player)
     return v, data
 end
 
+local hiddenMarker = {} -- [player] = marker oculto mientras tunea
+
 local function shopOf(vehicle)
     for m, shop in pairs(shopMarkers) do
-        if isElementWithinMarker(vehicle, m) then return shop end
+        if isElementWithinMarker(vehicle, m) then return shop, m end
     end
+end
+
+-- Oculta el marker del taller solo a quien esta tuneando (no estorba la vista)
+local function hideShopMarker(player, marker)
+    if not marker then return end
+    hiddenMarker[player] = marker
+    setElementVisibleTo(marker, player, false)
+end
+
+local function showShopMarker(player)
+    local marker = hiddenMarker[player]
+    hiddenMarker[player] = nil
+    if marker and isElement(marker) and isElement(player) then setElementVisibleTo(marker, player, true) end
 end
 
 -- El marcador puede detectar al vehiculo o al jugador; se usa siempre al conductor
@@ -206,6 +221,7 @@ end
 local function close(player)
     local v = tuning[player]
     tuning[player] = nil
+    showShopMarker(player)
     if isElement(v) then updateFrozen(v) end
 end
 
@@ -232,10 +248,11 @@ addEventHandler("rp:tune:open", resourceRoot, function()
     local player = client
     local v, data = ownedDriverVehicle(player)
     if not v then return notify(player, "Debes estar al volante de tu vehiculo.", "warning") end
-    local shop = shopOf(v)
+    local shop, marker = shopOf(v)
     if not shop then return notify(player, "No estas en un taller.", "warning") end
     if vehicleSpeedKmh(v) > 5 then return notify(player, "Detente para entrar al taller.", "warning") end
     tuning[player] = v
+    hideShopMarker(player, marker)
     setElementFrozen(v, true)
     -- Si el taller tiene orientacion guardada, el auto queda justo en el punto
     if shop.rz then
