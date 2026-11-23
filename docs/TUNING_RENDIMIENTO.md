@@ -21,7 +21,7 @@ monster trucks no se pueden mejorar.
 
 ## Desgaste
 - Por **kilometraje** (cada pieza tiene su `km`, y más rápido a más velocidad y a mayor nivel) y por **uso**:
-  frenazos fuertes (frenos), derrapes y freno de mano (neumáticos), choques (suspensión).
+  frenazos fuertes (frenos), derrapes (neumáticos), choques (suspensión).
 - El desgaste (0-100%) reduce los beneficios de la pieza; al 100% la pieza empeora el vehículo
   (`WORN_PENALTY`). Se avisa al conductor al 70% y al 100%.
 - **Mantenimiento** en el taller (por pieza o general): cuesta `precio * desgaste * MAINT_FACTOR`.

@@ -177,6 +177,7 @@ PERF = {
     WARN_AT = 70,               -- % de desgaste al que se avisa al conductor
     BRAKE_USE = 0.012,          -- % extra de desgaste de frenos por muestra frenando fuerte
     BRAKE_MIN_SPEED = 25,       -- km/h minimos para contar un frenazo
+    BRAKE_DROP = 25,            -- km/h que debe bajar la velocidad entre muestras (3 s) para contar un frenazo
     SLIP_USE = 0.01,            -- % extra de desgaste de neumaticos por muestra derrapando
     SLIP_SPEED = 0.16,          -- velocidad (unidades de GTA) minima para medir derrape
     SLIP_ANGLE = 18,            -- grados entre la direccion y el movimiento que cuentan como derrape
@@ -241,7 +242,7 @@ PERF = {
               { name = "Suspension Pro", price = 4800, stats = { grip = 0.12, steer = 0.08 } },
               { name = "Suspension de competicion", price = 10000, stats = { grip = 0.18, steer = 0.12, mass = 0.01 } },
           } },
-        { id = "tires", name = "Neumaticos", desc = "Agarre y direccion. Los derrapes y el freno de mano los desgastan.",
+        { id = "tires", name = "Neumaticos", desc = "Agarre y direccion. Los derrapes los desgastan.",
           wear = { km = 0.22, speed = 0.6, level = 0.40, use = "slip" },
           levels = {
               { name = "Neumaticos deportivos", price = 1500, stats = { grip = 0.08 } },

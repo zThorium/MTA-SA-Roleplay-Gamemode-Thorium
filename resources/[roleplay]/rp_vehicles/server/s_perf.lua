@@ -18,6 +18,7 @@ addEvent("rp:tune:maint", true)
 
 local perf = {}      -- [vehicle] = { parts = {}, wear = {}, odo = km, applied = bool, stats = {}, fx = "" }
 local lastPos = {}   -- [vehicle] = { x, y, z }
+local lastSpeed = {} -- [vehicle] = km/h en la muestra anterior
 
 local function round(n, d)
     local m = 10 ^ (d or 0)
@@ -119,7 +120,7 @@ end
 
 addEventHandler("onElementDestroy", root, function()
     if getElementType(source) ~= "vehicle" then return end
-    perf[source], lastPos[source] = nil, nil
+    perf[source], lastPos[source], lastSpeed[source] = nil, nil, nil
 end)
 
 ----------------------------------------------------------------
@@ -159,8 +160,11 @@ local function wearVehicle(vehicle, st, driver, km)
     local speed = vehicleSpeedKmh(vehicle)
     local vmax = tonumber(getVehicleHandling(vehicle).maxVelocity) or 150
     local ratio = math.min(1.3, speed / math.max(vmax, 50))
-    local braking = speed > PERF.BRAKE_MIN_SPEED and getPedControlState(driver, "brake_reverse")
-    local slipping = getPedControlState(driver, "handbrake") or slipAngle(vehicle) > PERF.SLIP_ANGLE
+    -- El servidor no lee las teclas: frenazo = bajada fuerte de velocidad entre muestras
+    local previous = lastSpeed[vehicle] or speed
+    lastSpeed[vehicle] = speed
+    local braking = previous > PERF.BRAKE_MIN_SPEED and previous - speed >= PERF.BRAKE_DROP
+    local slipping = slipAngle(vehicle) > PERF.SLIP_ANGLE
     local turbo = st.parts.turbo or 0
     local changed = false
 
@@ -191,7 +195,7 @@ setTimer(function()
                 if dist > 400 then dist = 0 end   -- teletransporte
                 if dist > 1 then wearVehicle(v, st, driver, dist / 1000) end
             else
-                lastPos[v] = nil
+                lastPos[v], lastSpeed[v] = nil, nil
             end
         end
     end
