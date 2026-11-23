@@ -81,6 +81,8 @@ function payPlayer(player)
     s.minutes, s.ticks = 0, 0
     dbExec(db(), "UPDATE characters SET bank_money = bank_money + ?, payday_minutes = 0 WHERE id = ?", amount, s.characterId)
     dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'payday', ?, ?)", s.characterId, amount, label)
+    local lv = getResourceFromName("rp_levels")
+    if lv and getResourceState(lv) == "running" then exports.rp_levels:giveXP(player, 400, "payday") end
     exports.rp_notify:popup(player, "Payday", ("Se depositaron $%d en tu cuenta bancaria. %s"):format(amount, detail), kind, 9000)
     outputServerLog(("[rp_payday] %s cobro $%d (%s)"):format(getPlayerName(player), amount, label))
     return amount

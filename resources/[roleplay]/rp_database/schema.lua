@@ -902,4 +902,13 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS perf     TEXT  NULL,
         ADD COLUMN IF NOT EXISTS odometer FLOAT NOT NULL DEFAULT 0
     ]],
+    -- rp_levels: experiencia (RP) total por personaje; el nivel se calcula con la curva del recurso
+    [[
+    CREATE TABLE IF NOT EXISTS character_levels (
+        character_id INT UNSIGNED NOT NULL,
+        xp           INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_character_levels_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
