@@ -28,6 +28,7 @@ ADMIN_CATALOG = {
             { cmd = "/borrarpost", args = "<id>", desc = "Borra una foto de Fotogram (con sus likes, comentarios y avisos). El id sale en la base de datos (social_posts).", res = "rp_phone" },
             { cmd = "/darlicencia", args = "<id o nombre>", desc = "Entrega o rehabilita la licencia de conducir sin hacer las pruebas.", res = "rp_driving" },
             { cmd = "/forzarpayday", args = "[id o nombre]", desc = "Paga el sueldo (payday) al instante a un jugador; sin argumento, a ti.", res = "rp_payday" },
+            { cmd = "/darxp", args = "<id o nombre> <cantidad>", desc = "Da XP (RP) a un jugador; si llega al siguiente nivel, sube con la animacion.", res = "rp_levels" },
         },
     },
     {
