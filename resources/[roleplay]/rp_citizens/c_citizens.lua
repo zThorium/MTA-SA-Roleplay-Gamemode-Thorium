@@ -1336,6 +1336,52 @@ local function makeReal(vehicle, s)
     s.stuckSince, s.blockedSince = 0, 0
 end
 
+----------------------------------------------------------------
+-- ARBITRO DE MANIOBRAS: un solo responsable de "que esta haciendo el auto ahora".
+-- Maniobras que alteran la ruta o el movimiento (REVERSE, REJOIN, DETOUR): solo una activa a la vez,
+-- por prioridad, con tiempo de enfriamiento entre repeticiones. Antes cada regla (atasco, choque, fuera de
+-- ruta, obstaculo...) las disparaba por su cuenta y se pisaban entre si: retroceder + reenganchar + desviar
+-- al mismo tiempo, vueltas atras, etc. Todas pasan ahora por manCan / manSet / manEnd.
+--   prioridad: REVERSE 4 > REJOIN 3 > DETOUR 2  (una de mayor prioridad interrumpe a la menor)
+----------------------------------------------------------------
+local MAN_PRI = { DETOUR = 2, REJOIN = 3, REVERSE = 4 }
+local MAN_COOLDOWN = { REVERSE = 1200, REJOIN = 2000, DETOUR = 2500 }   -- ms tras terminar la misma maniobra
+
+local function manActive(s, now)
+    local m = s.man
+    if m and now >= m.untilT then
+        s.manEnded = s.manEnded or {}
+        s.manEnded[m.kind] = now
+        s.man = nil
+        return nil
+    end
+    return m
+end
+
+-- Puede empezar la maniobra "kind" ahora?
+local function manCan(s, kind, now)
+    if s.state == "ABANDONED" then return false end
+    local act = manActive(s, now)
+    if act and act.kind == kind then return true end                       -- refrescar la misma
+    if act and MAN_PRI[act.kind] >= MAN_PRI[kind] then return false end    -- hay una igual o mas importante
+    local last = s.manEnded and s.manEnded[kind]
+    if last and now - last < (MAN_COOLDOWN[kind] or 0) then return false end
+    return true
+end
+
+local function manSet(s, kind, now, ms)
+    local act = manActive(s, now)
+    s.man = { kind = kind, since = (act and act.kind == kind) and act.since or now, untilT = now + ms }
+end
+
+local function manEnd(s, kind, now)
+    if s.man and s.man.kind == kind then
+        s.manEnded = s.manEnded or {}
+        s.manEnded[kind] = now
+        s.man = nil
+    end
+end
+
 local clearPath   -- se define mas abajo (linea libre con el ancho del auto)
 
 -- Trayectoria suave para volver al carril desde donde esta el auto: va cerrando el error lateral
@@ -1370,7 +1416,10 @@ local function rejoinPoints(vehicle, x, y, z, n, target)
 end
 
 -- Vuelve al carril mas cercano y descarta la ruta (se recalcula desde ahi)
-local function reattach(vehicle, s, teleport)
+local function reattach(vehicle, s, teleport, force)
+    -- el reenganche normal pasa por el arbitro (no mientras retrocede, ni repetido sin pausa);
+    -- "force" (sin ruta) y el teletransporte lo saltan
+    if not teleport and not force and not manCan(s, "REJOIN", getTickCount()) then return end
     releaseLocks(vehicle)
     local x, y = getElementPosition(vehicle)
     local m = getElementMatrix(vehicle)
@@ -1384,6 +1433,7 @@ local function reattach(vehicle, s, teleport)
     if not teleport then
         -- primer punto: la proyeccion del auto sobre su carril, unos metros por delante
         -- (si no, el primer punto podria quedar detras y el auto daria la vuelta)
+        manSet(s, "REJOIN", getTickCount(), 4000)
         local _, _, vz0 = getElementPosition(vehicle)
         local pts = rejoinPoints(vehicle, x, y, vz0, n, target)
         if pts then
@@ -1525,7 +1575,9 @@ end
 
 -- Empieza una marcha atras corta solo si detras esta libre
 function startReverse(vehicle, s, now, ms, steer, m)
+    if not manCan(s, "REVERSE", now) then return false end
     if rearBlocked(vehicle, m, 3.5) then return false end
+    manSet(s, "REVERSE", now, ms + 300)
     s.recoverUntil, s.recoverSteer, s.recoverPos = now + ms, steer, nil
     return true
 end
@@ -1664,6 +1716,7 @@ end
 local function smooth(t) t = math.max(0, math.min(1, t)) return t * t * (3 - 2 * t) end
 
 local function tryDetour(vehicle, s, m)
+    if not manCan(s, "DETOUR", getTickCount()) then return false end
     local x, y, z = m[4][1], m[4][2], m[4][3]
     local fx, fy = m[2][1], m[2][2]
     local lx, ly = -fy, fx                          -- izquierda del auto
@@ -1706,6 +1759,7 @@ local function tryDetour(vehicle, s, m)
         if ok and clearPath(px, py, z, rx, ry, rz, vehicle) then
             -- reemplaza el tramo bloqueado por el desvio (giro 25 = va despacio)
             for _ = 1, rejoin - 1 do table.remove(wp, 1) end
+            manSet(s, "DETOUR", getTickCount(), 6000)
             s.lastPassed = nil
             for k = #pts, 1, -1 do table.insert(wp, 1, pts[k]) end
             return true
@@ -1769,14 +1823,22 @@ local function updateCar(vehicle, s, now)
         if getDistanceBetweenPoints2D(x, y, s.recoverPos[1], s.recoverPos[2]) > 2.5
             or rearBlocked(vehicle, m, 1.8 + math.max(0, -backing) * 0.06) then
             s.recoverUntil, s.recoverPos, s.afterReverse = 0, nil, now
+            manEnd(s, "REVERSE", now)
             return setPedal(driver, backing < -1, false)
         end
         setPedal(driver, false, backing > -10)       -- no supera ~10 km/h marcha atras
         return
     end
     s.recoverPos = nil
-    if s.needReattach then reattach(vehicle, s, false) end
-    s.needReattach = nil
+    -- fin del retroceso (por tiempo): libera la maniobra para que el reenganche pendiente pueda empezar
+    if now >= s.recoverUntil then manEnd(s, "REVERSE", now) end
+    if s.needReattach and manCan(s, "REJOIN", now) then
+        reattach(vehicle, s, false)
+        s.needReattach = nil
+    elseif s.needReattach and now - (s.needReattachAt or now) > 3000 then
+        s.needReattach = nil   -- no pudo empezar en 3 s: se descarta (otra regla ya se ocupa)
+    end
+    if s.needReattach then s.needReattachAt = s.needReattachAt or now else s.needReattachAt = nil end
 
     -- Cola de puntos: siempre algunos por delante (planifica cruce a cruce)
     local wp = s.wp
@@ -1837,6 +1899,8 @@ local function updateCar(vehicle, s, now)
     if dev > 25 and not isElementOnScreen(vehicle) then
         return removeCar(vehicle)
     end
+    -- el reenganche termina cuando el auto ya esta sobre su carril (o pasados unos segundos)
+    if s.man and s.man.kind == "REJOIN" and lp and dev < 1.5 and now - s.man.since > 800 then manEnd(s, "REJOIN", now) end
     s.devNow = lp and dev or 0   -- desviacion fiable (solo con tramo de referencia): frena si se aleja del carril
     if dev > 18 and not (s.detourUntil and now < s.detourUntil) then
         if not s.offSince and (offLogCount or 0) < 60 then
@@ -2362,7 +2426,7 @@ function getCitizenCarPlans()
     local list = {}
     for vehicle, s in pairs(cars) do
         if isElement(vehicle) and s.wp then
-            list[#list + 1] = { vehicle = vehicle, wp = s.wp, state = s.state, lod = s.lod }
+            list[#list + 1] = { vehicle = vehicle, wp = s.wp, state = s.state .. (s.man and ("/" .. s.man.kind) or ""), lod = s.lod }
         end
     end
     return list
