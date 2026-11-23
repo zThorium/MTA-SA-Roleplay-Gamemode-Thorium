@@ -973,4 +973,85 @@ SCHEMA = {
         PRIMARY KEY (character_id, item_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_pool: mesas de pool colocadas (las de Ten Green Bottles se siembran al arrancar)
+    [[
+    CREATE TABLE IF NOT EXISTS pool_tables (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rotation  FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension INT UNSIGNED NOT NULL DEFAULT 0,
+        native    TINYINT(1) NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_pool: estadisticas globales por personaje (ranking de victorias y de dinero ganado)
+    [[
+    CREATE TABLE IF NOT EXISTS pool_stats (
+        character_id INT UNSIGNED NOT NULL,
+        name         VARCHAR(64)  NOT NULL,
+        games        INT UNSIGNED NOT NULL DEFAULT 0,
+        wins         INT UNSIGNED NOT NULL DEFAULT 0,
+        losses       INT UNSIGNED NOT NULL DEFAULT 0,
+        money_won    BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        money_lost   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        best_win     INT UNSIGNED NOT NULL DEFAULT 0,
+        updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        KEY idx_pool_stats_wins (wins),
+        KEY idx_pool_stats_money (money_won)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_pool: historial de partidas
+    [[
+    CREATE TABLE IF NOT EXISTS pool_matches (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        winner_id   INT UNSIGNED NOT NULL,
+        loser_id    INT UNSIGNED NOT NULL,
+        winner_name VARCHAR(64)  NOT NULL,
+        loser_name  VARCHAR(64)  NOT NULL,
+        bet         INT UNSIGNED NOT NULL DEFAULT 0,
+        reason      VARCHAR(24)  NOT NULL DEFAULT 'normal',
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_pool_matches_winner (winner_id),
+        KEY idx_pool_matches_loser (loser_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_pool: apuestas en custodia (se devuelven si el servidor cae a mitad de partida)
+    [[
+    CREATE TABLE IF NOT EXISTS pool_escrow (
+        character_id INT UNSIGNED NOT NULL,
+        amount       INT UNSIGNED NOT NULL,
+        table_id     INT UNSIGNED NOT NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_npcrel: vinculos del personaje con personas del barrio (amistad, romance, numero de telefono)
+    [[
+    CREATE TABLE IF NOT EXISTS npc_contacts (
+        id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id     INT UNSIGNED NOT NULL,
+        name             VARCHAR(48)  NOT NULL,
+        gender           TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        skin             SMALLINT UNSIGNED NOT NULL,
+        traits           VARCHAR(64)  NOT NULL DEFAULT '',
+        likes            CHAR(1)      NOT NULL DEFAULT 'a',
+        phone_number     INT UNSIGNED NULL,
+        friendship       SMALLINT     NOT NULL DEFAULT 0,
+        romance          SMALLINT     NOT NULL DEFAULT 0,
+        dating           TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        number_shared    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        interactions     INT UNSIGNED NOT NULL DEFAULT 0,
+        last_interaction DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_npc_contacts_phone (phone_number),
+        KEY idx_npc_contacts_character (character_id),
+        CONSTRAINT fk_npc_contacts_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

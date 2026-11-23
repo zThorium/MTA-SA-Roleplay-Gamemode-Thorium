@@ -3816,6 +3816,18 @@ function citizenWatch(x, y, radius, ms)
     return n
 end
 
+-- Entrega un peaton a otro recurso (rp_npcrel): deja de gobernarlo y de borrarlo.
+-- Devuelve true si era de este recurso y estaba libre.
+function citizenAdopt(ped)
+    if not isElement(ped) or not peds[ped] then return false end
+    peds[ped] = nil
+    pedCount = pedCount - 1
+    setWalking(ped, false)
+    setPedAnimation(ped)
+    setElementData(ped, "rp:citizen", false, false)   -- que sweepOrphans no lo borre
+    return true
+end
+
 -- Barrio de un punto: perfil ("ghetto", "rich", "industrial", "default"), nombre de zona y
 -- skins de la banda local (o nil). Lo usa c_hangouts.lua.
 function citizenZoneInfo(x, y, z)
