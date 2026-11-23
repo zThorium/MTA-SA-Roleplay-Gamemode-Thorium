@@ -41,4 +41,6 @@
     <export function="citizenWalkSpot" type="client" />
     <export function="citizenRoadSpot" type="client" />
     <export function="citizenWatch" type="client" />
+    <!-- rp_npcrel: toma un peaton para conversar con el -->
+    <export function="citizenAdopt" type="client" />
 </meta>

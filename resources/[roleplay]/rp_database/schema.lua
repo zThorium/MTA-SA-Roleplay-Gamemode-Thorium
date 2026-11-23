@@ -952,4 +952,28 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_npcrel: vinculos del personaje con personas del barrio (amistad, romance, numero de telefono)
+    [[
+    CREATE TABLE IF NOT EXISTS npc_contacts (
+        id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id     INT UNSIGNED NOT NULL,
+        name             VARCHAR(48)  NOT NULL,
+        gender           TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        skin             SMALLINT UNSIGNED NOT NULL,
+        traits           VARCHAR(64)  NOT NULL DEFAULT '',
+        likes            CHAR(1)      NOT NULL DEFAULT 'a',
+        phone_number     INT UNSIGNED NULL,
+        friendship       SMALLINT     NOT NULL DEFAULT 0,
+        romance          SMALLINT     NOT NULL DEFAULT 0,
+        dating           TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        number_shared    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        interactions     INT UNSIGNED NOT NULL DEFAULT 0,
+        last_interaction DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_npc_contacts_phone (phone_number),
+        KEY idx_npc_contacts_character (character_id),
+        CONSTRAINT fk_npc_contacts_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
