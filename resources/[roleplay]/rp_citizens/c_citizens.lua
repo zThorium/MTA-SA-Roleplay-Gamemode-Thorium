@@ -1143,9 +1143,22 @@ end
 -- brake_reverse es freno si el auto avanza, pero MARCHA ATRAS si esta parado o rodando hacia atras:
 -- por eso nunca se usa como freno cuando el auto no avanza (ver "fwd" en updateCar). El freno de mano
 -- detiene un auto que rueda hacia atras sin querer.
+-- accel / brake: true/false o un valor 0..1 (parcial = control analogico, mas suave que todo o nada)
+local function setPedalAxis(driver, control, v)
+    v = (v == true and 1) or (v == false and 0) or (tonumber(v) or 0)
+    if v >= 0.95 then
+        setPedControlState(driver, control, true)
+    elseif v > 0.05 then
+        setPedControlState(driver, control, false)
+        setPedAnalogControlState(driver, control, v)
+    else
+        setPedControlState(driver, control, false)
+    end
+end
+
 local function setPedal(driver, accel, brake, handbrake)
-    setPedControlState(driver, "accelerate", accel)
-    setPedControlState(driver, "brake_reverse", brake)
+    setPedalAxis(driver, "accelerate", accel)
+    setPedalAxis(driver, "brake_reverse", brake)
     setPedControlState(driver, "handbrake", handbrake or false)
 end
 
@@ -1315,36 +1328,58 @@ end
 -- Desvio provisional: rodea al jugador por la izquierda (carril contrario) o la
 -- derecha (arcen) si el camino esta libre, y se reincorpora a su ruta.
 ----------------------------------------------------------------
+-- Linea libre con el ancho del auto: tres rayos paralelos (centro y a +-1.1 m). Con uno solo se
+-- colaban postes, semaforos y bordes a los lados del trazado.
 local function clearPath(x1, y1, z1, x2, y2, z2, vehicle)
-    return isLineOfSightClear(x1, y1, z1 + 0.6, x2, y2, z2 + 0.6, true, true, true, true, false, true, false, vehicle)
+    local dx, dy = x2 - x1, y2 - y1
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 0.01 then return true end
+    local nx, ny = -dy / len, dx / len
+    for _, off in ipairs({ 0, 1.1, -1.1 }) do
+        if not isLineOfSightClear(x1 + nx * off, y1 + ny * off, z1 + 0.6, x2 + nx * off, y2 + ny * off, z2 + 0.6,
+            true, true, true, true, false, true, false, vehicle) then
+            return false
+        end
+    end
+    return true
 end
+
+-- Perfil lateral suave (0 -> 1) para entrar y salir del desvio sin quiebres
+local function smooth(t) t = math.max(0, math.min(1, t)) return t * t * (3 - 2 * t) end
 
 local function tryDetour(vehicle, s, m)
     local x, y, z = m[4][1], m[4][2], m[4][3]
     local fx, fy = m[2][1], m[2][2]
     local lx, ly = -fy, fx                          -- izquierda del auto
     local wp = s.wp
-    -- punto de reincorporacion: el primero de la ruta a mas de 24 m
+    -- punto de reincorporacion: el primero de la ruta a mas de 30 m (margen para volver con calma)
     local rejoin = nil
     for i = 1, #wp do
-        if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 24 then rejoin = i break end
+        if getDistanceBetweenPoints2D(x, y, wp[i][1], wp[i][2]) > 30 then rejoin = i break end
     end
     if not rejoin then return false end
     local rx, ry, rz = wp[rejoin][1], wp[rejoin][2], wp[rejoin][3]
 
-    for _, side in ipairs({ 5, 7, -4.5, -7.5, 9 }) do
-        local p1x, p1y = x + fx * 4 + lx * side * 0.6, y + fy * 4 + ly * side * 0.6
-        local p2x, p2y = x + fx * 11 + lx * side, y + fy * 11 + ly * side
-        local p3x, p3y = x + fx * 18 + lx * side * 0.7, y + fy * 18 + ly * side * 0.7
-        local ground = getGroundPosition(p2x, p2y, z + 3)
-        local flat = ground and ground ~= 0 and math.abs(ground - (z - 0.5)) < 1.5
-        if flat and clearPath(x, y, z, p1x, p1y, z, vehicle) and clearPath(p1x, p1y, z, p2x, p2y, z, vehicle)
-            and clearPath(p2x, p2y, z, p3x, p3y, z, vehicle) and clearPath(p3x, p3y, z, rx, ry, rz, vehicle) then
+    -- Cada candidato: separacion lateral maxima. Los puntos siguen un perfil suave (entra, mantiene y
+    -- vuelve al carril) a 4, 9, 14, 19 y 24 m; el ultimo queda casi sobre la ruta original.
+    local STEPS = { { 4, 0.25 }, { 9, 0.75 }, { 14, 1.0 }, { 19, 0.75 }, { 24, 0.25 } }
+    for _, side in ipairs({ 4.5, 6.5, -4, -6.5, 8.5 }) do
+        local pts, ok = {}, true
+        local px, py = x, y
+        for _, st in ipairs(STEPS) do
+            local qx, qy = x + fx * st[1] + lx * side * smooth(st[2]), y + fy * st[1] + ly * side * smooth(st[2])
+            -- el suelo debe estar a la altura de la calzada (sin bordillos altos ni zanjas)
+            local ground = getGroundPosition(qx, qy, z + 3)
+            if not (ground and ground ~= 0 and math.abs(ground - (z - 0.5)) < 1.2) then ok = false break end
+            if not clearPath(px, py, z, qx, qy, z, vehicle) then ok = false break end
+            pts[#pts + 1] = { qx, qy, z, 25 }
+            px, py = qx, qy
+        end
+        if ok and clearPath(px, py, z, rx, ry, rz, vehicle) then
             -- reemplaza el tramo bloqueado por el desvio (giro 25 = va despacio)
-            for _ = 1, rejoin - 1 do table.remove(wp, 1) end s.lastPassed = nil
-            table.insert(wp, 1, { p3x, p3y, z, 25 })
-            table.insert(wp, 1, { p2x, p2y, z, 25 })
-            table.insert(wp, 1, { p1x, p1y, z, 25 })
+            for _ = 1, rejoin - 1 do table.remove(wp, 1) end
+            s.lastPassed = nil
+            for k = #pts, 1, -1 do table.insert(wp, 1, pts[k]) end
             return true
         end
     end
@@ -1519,7 +1554,7 @@ local function updateCar(vehicle, s, now)
     -- En curvas: seguimiento de la trayectoria (rumbo de la ruta + correccion de la distancia lateral)
     -- en vez de apuntar a un punto, que en un arco cerrado casi no se desvia del rumbo actual
     local trackDiff = nil
-    if inCurve then
+    if inCurve or dev > 1.5 then   -- tambien al volver al carril: corrige el error lateral de forma progresiva
         trackDiff = pathTrack(s, wp, x, y, speed, rz)
         if trackDiff then diff = trackDiff end
     end
@@ -1571,17 +1606,25 @@ local function updateCar(vehicle, s, now)
     -- en modo fantasma (sin colision, para salir de un atasco) no ve autos delante
     if s.ghost then frontHit, obstacle, gap = false, nil, nil end
     local wallFront = ray(vehicle, m, 0, 3 + speed * 0.08, true)
-    local leftHit = ray(vehicle, m, 25, 3.5 + speed * 0.06, true)
-    local rightHit = ray(vehicle, m, -25, 3.5 + speed * 0.06, true)
+    -- al esquivar (desvio activo o volviendo a la ruta) los bigotes son mas largos y mas abiertos:
+    -- postes, bordes y muros a los lados se ven antes
+    local careful = (s.detourUntil and now < s.detourUntil) or (s.slowUntil and now < s.slowUntil) or s.offSince
+    local whiskerAngle, whiskerReach = careful and 38 or 25, (careful and 5.5 or 3.5) + speed * (careful and 0.09 or 0.06)
+    local leftHit = ray(vehicle, m, whiskerAngle, whiskerReach, true)
+    local rightHit = ray(vehicle, m, -whiskerAngle, whiskerReach, true)
 
     -- en curvas cerradas gira con mas decision (volante a tope antes)
     local steer = diff / (inCurve and ((curveSoon or wp[1][4] > 60) and 12 or 18) or 25)
-    if leftHit and not rightHit then steer = steer - 0.2 end
-    if rightHit and not leftHit then steer = steer + 0.2 end
+    local push = careful and 0.35 or 0.2
+    if leftHit and not rightHit then steer = steer - push end
+    if rightHit and not leftHit then steer = steer + push end
     -- Sirena detras: se arrima un poco a la derecha (salvo en un cruce o con algo al lado)
     local sirenDist = sirenBehind(vehicle, x, y, m)
     if sirenDist and not junctionAhead and not rightHit then steer = steer - 0.12 end
-    steerTo(driver, steer)
+    -- Filtro del volante: no salta de golpe (mas natural); en curvas cerradas responde casi al instante
+    local prevSteer = s.steerOut or 0
+    s.steerOut = prevSteer + (math.max(-1, math.min(1, steer)) - prevSteer) * (inCurve and 0.8 or 0.5)
+    steerTo(driver, s.steerOut)
 
     -- Asistencia de direccion suave: ayuda al volante (sin imponer el giro) y
     -- reduce solo parte del derrape lateral, para no frenar ni hacer patinar.
@@ -1722,7 +1765,17 @@ local function updateCar(vehicle, s, now)
         -- si quiere avanzar, acelera hacia delante. NUNCA pisa marcha atras.
         setPedal(driver, target > 5, false, target <= 5)
     else
-        setPedal(driver, fwd < target - 1, fwd > target + 6 or (target == 0 and fwd > 1))
+        -- acelerador y freno proporcionales al error de velocidad (arranque y frenada progresivos)
+        local err = target - fwd
+        local accel, brake = 0, 0
+        if target == 0 then
+            brake = fwd > 1 and 1 or 0
+        elseif err > 1 then
+            accel = math.min(1, 0.3 + err / 12)
+        elseif err < -6 then
+            brake = math.min(1, (-err - 6) / 15 + 0.2)
+        end
+        setPedal(driver, accel, brake)
     end
 
     -- Atascado sin motivo (pared, otro auto cruzado): marcha atras y reenganche
