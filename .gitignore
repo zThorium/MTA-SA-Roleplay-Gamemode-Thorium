@@ -38,3 +38,7 @@ docker/logs/
 
 # Respaldos locales con sufijo de fecha
 *.bak-*
+
+# Telemetria de conduccion y salidas de tools/trafico (se generan en local)
+**/rp_citizens/telemetry/
+tools/trafico/out/

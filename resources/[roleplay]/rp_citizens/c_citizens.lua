@@ -1086,6 +1086,7 @@ local function planSegment(s)
     -- elige la salida y comprueba que su curva no atraviese muros; si lo hace,
     -- prueba la siguiente opcion (nunca "sigue recto" por un camino que no existe)
     local candidates = exitCandidates(B, A)
+    if s.forceExit and s.forceExit[B] then candidates = { s.forceExit[B] } end   -- modo de prueba (/trafico_test)
     if #candidates == 0 then return false end
     local bx0, by0, bz0 = nodePos(VEH_NODES, B)
     local C, pts = nil, nil
@@ -1961,14 +1962,23 @@ end
 --   [rp_citizens][TEL] motivo ... | muestras: ms-antes km/h volante dev dif objetivo modo curva giro
 -- Con eso se ve si fallo por velocidad de entrada, volante saturado, geometria de la curva o un obstaculo.
 ----------------------------------------------------------------
-local TEL = { on = true, dumps = 0, MAX = 80, N = 25 }
+local TEL = { on = true, dumps = 0, MAX = 80, N = 25, send = true }
+local TEST = { on = false, queue = {}, cur = nil, results = {}, total = 0 }   -- modo de prueba (/trafico_test), ver mas abajo
 
-local function telRecord(s, now, speed, diff, target, inCurve, wpTurn, rz)
+-- Envia un evento de telemetria al servidor (que lo guarda en telemetry/*.jsonl, ver s_telemetry.lua).
+-- Solo lo acepta si eres admin; el servidor limita tamano y frecuencia.
+local function telSend(tbl)
+    if not TEL.send then return end
+    local ok, json = pcall(toJSON, tbl, true)
+    if ok and json and #json < 15000 then triggerServerEvent("rp:citizens:tel", resourceRoot, json) end
+end
+
+local function telRecord(s, now, speed, diff, target, inCurve, wpTurn, rz, x, y)
     local t = s.tel
     if not t then t = { n = 0, i = 0 } s.tel = t end
     t.i = t.i % TEL.N + 1
     t.n = math.min(t.n + 1, TEL.N)
-    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0, rz or 0 }
+    t[t.i] = { now, speed, s.steerOut or 0, s.devNow or 0, diff or 0, target or 0, s.state or "?", inCurve and 1 or 0, wpTurn or 0, rz or 0, x or 0, y or 0 }
 end
 
 local function telDump(vehicle, s, why, now, force)
@@ -1996,6 +2006,21 @@ local function telDump(vehicle, s, why, now, force)
     local pts = {}
     for k = 1, math.min(#wp, 4) do pts[#pts + 1] = ("(%.0f,%.0f,g%.0f)"):format(wp[k][1], wp[k][2], wp[k][4]) end
     local lp = s.lastPassed
+    if TEL.send then
+        local route, samples = {}, {}
+        for k = 1, math.min(#wp, 14) do route[#route + 1] = { math.floor(wp[k][1] * 10 + 0.5) / 10, math.floor(wp[k][2] * 10 + 0.5) / 10, math.floor(wp[k][4] + 0.5) } end
+        for k = t.n, 1, -1 do
+            local e = t[(t.i - (k - 1) - 1) % TEL.N + 1]
+            if e then
+                samples[#samples + 1] = { now - e[1], math.floor(e[2] + 0.5), math.floor(e[3] * 100 + 0.5) / 100, math.floor(e[4] * 10 + 0.5) / 10,
+                    math.floor(e[5] + 0.5), math.floor(e[6] + 0.5), e[7], e[8], math.floor(e[9] + 0.5), math.floor(e[10] + 0.5),
+                    math.floor((e[11] or 0) * 10 + 0.5) / 10, math.floor((e[12] or 0) * 10 + 0.5) / 10 }
+            end
+        end
+        telSend({ k = "tel", why = why, model = isElement(vehicle) and getElementModel(vehicle) or 0, bike = s.bike and 1 or 0, prev = s.prev, node = s.node,
+            x = math.floor(x * 10 + 0.5) / 10, y = math.floor(y * 10 + 0.5) / 10, rz = math.floor(rz + 0.5), lenF = s.lenF or 1, man = s.man and s.man.kind or "",
+            route = route, samples = samples })
+    end
     outputDebugString(("[rp_citizens][TEL] %s modelo %d%s nodos %s->%s pos (%.0f,%.0f) rumbo %.0f lenF %.2f man %s lp %s wp %s | muestras(ms km/h volante dev dif obj modo curva giro rumbo): %s")
         :format(why, isElement(vehicle) and getElementModel(vehicle) or 0, s.bike and " (moto)" or "", tostring(s.prev), tostring(s.node), x, y, rz, s.lenF or 1,
             s.man and s.man.kind or "-", lp and ("(%.0f,%.0f,g%.0f)"):format(lp[1], lp[2], lp[4]) or "nil", table.concat(pts, " "), table.concat(out, " | ")), 3)
@@ -2019,10 +2044,13 @@ addCommandHandler("trafico_tel", function(_, arg)
         else
             outputChatBox("[Trafico] No hay autos de la poblacion a menos de 60 m.", 255, 140, 90)
         end
+    elseif arg == "send" then
+        TEL.send = not TEL.send
+        outputChatBox(("[Trafico] Envio de telemetria al servidor (telemetry/*.jsonl): %s"):format(TEL.send and "ACTIVADO" or "apagado"), 120, 200, 255)
     else
         TEL.on = not TEL.on
-        outputChatBox(("[Trafico] Telemetria de fallos: %s (%d registros). Usa /trafico_tel dump para el auto mas cercano.")
-            :format(TEL.on and "ACTIVADA" or "apagada", TEL.dumps), 120, 200, 255)
+        outputChatBox(("[Trafico] Telemetria de fallos: %s (%d registros, envio al servidor: %s). /trafico_tel dump = auto mas cercano, /trafico_tel send = envio.")
+            :format(TEL.on and "ACTIVADA" or "apagada", TEL.dumps, TEL.send and "si" or "no"), 120, 200, 255)
     end
 end)
 
@@ -2674,7 +2702,7 @@ local function stageDecide(vehicle, s, f, now)
     end
 
     -- Telemetria: guarda la muestra y, si se salio de la linea poco despues de una curva, vuelca el historial
-    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4], rz)
+    telRecord(s, now, speed, diff, target, inCurve, wp[1] and wp[1][4], rz, x, y)
     if inCurve then s.telCurveAt = now end
     if s.devNow > 5 and s.telCurveAt and now - s.telCurveAt < 3000 then
         telDump(vehicle, s, "fuera_de_linea_en_curva", now)
@@ -3181,7 +3209,191 @@ addCommandHandler("traficostats", function()
     end
 end)
 
+----------------------------------------------------------------
+-- PRUEBAS EN JUEGO (/trafico_test): pone UN auto a la vez delante de cada giro de un cruce (el auto entra
+-- por A -> B y se le fuerza la salida C), lo deja conducir con la IA real y mide si completa la maniobra:
+-- desviacion maxima, velocidad al pasar por B, retrocesos, tiempo. Escribe un resumen en el chat y manda cada
+-- resultado (con la trayectoria) a telemetry/*.jsonl para compararlo con el simulador de tools/trafico.
+--   /trafico_test             giros del cruce mas cercano a ti (hasta 12 maniobras)
+--   /trafico_test A B C [modelo]   una sola maniobra por numero de nodo
+--   /trafico_test radio M     todos los cruces a menos de M metros de ti (maximo 24 maniobras)
+--   /trafico_test stop        termina y devuelve el trafico normal
+-- Quedate cerca del cruce (el suelo solo existe cerca de ti). Modelo por defecto 405; 463 = moto.
+----------------------------------------------------------------
+local TEST_TIMEOUT, TEST_PASS_DEV = 40000, 4.0
+
+local function testChain(A, B)
+    local chain, seen = { A, B }, { [A] = true, [B] = true }
+    local first, nxt, acc = A, B, 0
+    while acc < 40 and #chain < 12 do
+        local fx, fy = nodePos(VEH_NODES, first)
+        local nx, ny = nodePos(VEH_NODES, nxt)
+        local wx, wy = dir(fx, fy, nx, ny)
+        local best, bestDot = nil, -0.5
+        for _, p in ipairs(VEH_LINKS[first] or {}) do
+            if not seen[p] and canDrive(p, first) then
+                local px, py = nodePos(VEH_NODES, p)
+                local dx, dy = dir(px, py, fx, fy)
+                local dot = dx * wx + dy * wy
+                if dot > bestDot then best, bestDot = p, dot end
+            end
+        end
+        if not best then break end
+        local px, py = nodePos(VEH_NODES, best)
+        acc = acc + getDistanceBetweenPoints2D(px, py, fx, fy)
+        table.insert(chain, 1, best)
+        seen[best] = true
+        nxt, first = first, best
+    end
+    return chain
+end
+
+local function testFinish(res)
+    local cur = TEST.cur
+    if cur then
+        if isElement(cur.vehicle) then removeCar(cur.vehicle) end
+        res.A, res.B, res.C = cur.A, cur.B, cur.C
+        res.maxDev = math.floor(cur.maxDev * 10 + 0.5) / 10
+        res.vB = cur.vB and math.floor(cur.vB + 0.5) or -1
+        res.vmin = math.floor(math.min(cur.vmin, 999) + 0.5)
+        res.t = math.floor((getTickCount() - cur.t0) / 100 + 0.5) / 10
+        res.rev = cur.reversed and 1 or 0
+        res.model = cur.model
+        res.traj = cur.traj
+        TEST.results[#TEST.results + 1] = res
+        outputChatBox(("[Test %d/%d] %d>%d>%d  %s  desvio max %.1f m  vel en B %s km/h  %s"):format(#TEST.results, TEST.total, cur.A, cur.B, cur.C,
+            res.ok and "OK" or "FALLA", res.maxDev, tostring(res.vB), res.ok and "" or ("(" .. res.why .. ")")), res.ok and 120 or 255, res.ok and 230 or 120, 120)
+        telSend({ k = "test", A = res.A, B = res.B, C = res.C, ok = res.ok and 1 or 0, why = res.why or "", maxDev = res.maxDev, vB = res.vB, vmin = res.vmin,
+            t = res.t, rev = res.rev, model = res.model, traj = res.traj })
+    end
+    TEST.cur = nil
+end
+
+local function testNext()
+    local item = table.remove(TEST.queue, 1)
+    if not item then
+        local okn = 0
+        for _, r in ipairs(TEST.results) do if r.ok then okn = okn + 1 end end
+        outputChatBox(("[Test] Terminado: %d de %d maniobras OK. Detalle en telemetry/*.jsonl (tools/trafico/compare.js lo compara con el simulador)."):format(okn, #TEST.results), 120, 200, 255)
+        TEST.on = false
+        return
+    end
+    local A, B, C, model = item[1], item[2], item[3], item[4] or 405
+    local chain = testChain(A, B)
+    local node, target = chain[1], chain[2]
+    local sx, sy, sz, dx, dy = laneStart(node, target)
+    local vehicle = createVehicle(model, sx, sy, sz + 1.2, 0, 0, heading(dx, dy))
+    local driver = vehicle and createPed(29, sx, sy, sz + 2)
+    if not vehicle or not driver then
+        if vehicle then destroyElement(vehicle) end
+        TEST.cur = { A = A, B = B, C = C, vehicle = nil, maxDev = 0, vmin = 999, t0 = getTickCount(), model = model, traj = {} }
+        testFinish({ ok = false, why = "no_se_pudo_crear" })
+        return testNext()
+    end
+    setElementData(vehicle, "rp:citizen", true, false)
+    setElementData(driver, "rp:citizen", true, false)
+    warpPedIntoVehicle(driver, vehicle)
+    setVehicleEngineState(vehicle, true)
+    cars[vehicle] = {
+        driver = driver, prev = node, node = target, wp = {}, police = false, style = { speed = 1, gap = 1 }, lenF = vehicleLenFactor(vehicle),
+        state = "DRIVE", blockedSince = 0, stuckSince = 0, until_ = 0, recoverUntil = 0, test = true, forceExit = { [B] = C }, lod = "real",
+    }
+    carCount = carCount + 1
+    local s = cars[vehicle]
+    setElementCollisionsEnabled(vehicle, true)
+    setElementFrozen(vehicle, false)
+    -- arranca ya en marcha (50 km/h) en el sentido del carril
+    local v = (CFG.CAR_SPEED / 3.6) / 50
+    setElementVelocity(vehicle, dx * v, dy * v, 0)
+    TEST.cur = { A = A, B = B, C = C, vehicle = vehicle, s = s, maxDev = 0, vmin = 999, vB = nil, t0 = getTickCount(), model = model, traj = {}, lastSample = 0 }
+end
+
+local function testTick()
+    local cur = TEST.cur
+    if not cur then if TEST.on then testNext() end return end
+    local v, s = cur.vehicle, cur.s
+    local now = getTickCount()
+    if not isElement(v) or not cars[v] then return testFinish({ ok = false, why = "auto_retirado" }) end
+    local x, y = getElementPosition(v)
+    local speed = speedOf(v)
+    cur.vmin = math.min(cur.vmin, speed)
+    if (s.devNow or 0) > cur.maxDev then cur.maxDev = s.devNow end
+    if s.man and s.man.kind == "REVERSE" then cur.reversed = true end
+    local bx, by = nodePos(VEH_NODES, cur.B)
+    local cx, cy = nodePos(VEH_NODES, cur.C)
+    local dB = getDistanceBetweenPoints2D(x, y, bx, by)
+    if dB < 10 and (not cur.vB or dB < (cur.dBmin or 99)) then cur.vB, cur.dBmin = speed, dB end
+    if now - cur.lastSample >= 200 and #cur.traj < 160 then
+        cur.lastSample = now
+        cur.traj[#cur.traj + 1] = { math.floor(x * 10 + 0.5) / 10, math.floor(y * 10 + 0.5) / 10, math.floor(speed + 0.5) }
+    end
+    if s.state == "ABANDONED" then return testFinish({ ok = false, why = "abandonado" }) end
+    if getDistanceBetweenPoints2D(x, y, cx, cy) < 8 and cur.vB then
+        if cur.maxDev <= TEST_PASS_DEV and not cur.reversed then return testFinish({ ok = true }) end
+        return testFinish({ ok = false, why = cur.reversed and "retrocedio" or "desvio" })
+    end
+    if cur.maxDev > 12 then return testFinish({ ok = false, why = "se_perdio" }) end
+    if now - cur.t0 > TEST_TIMEOUT then return testFinish({ ok = false, why = "tiempo" }) end
+end
+
+local function testStop()
+    if TEST.cur and isElement(TEST.cur.vehicle) then removeCar(TEST.cur.vehicle) end
+    TEST.cur, TEST.queue, TEST.on = nil, {}, false
+end
+
+addCommandHandler("trafico_test", function(_, a1, a2, a3, a4)
+    if a1 == "stop" then
+        testStop()
+        outputChatBox("[Test] Detenido. Vuelve el trafico normal.", 120, 200, 255)
+        return
+    end
+    local queue = {}
+    local function addNode(B, model)
+        for _, A in ipairs(VEH_LINKS[B] or {}) do
+            if canDrive(A, B) then
+                for _, C in ipairs(exitCandidates(B, A)) do
+                    if C ~= A then queue[#queue + 1] = { A, B, C, model } end
+                end
+            end
+        end
+    end
+    local px, py = getElementPosition(localPlayer)
+    if tonumber(a1) and tonumber(a2) and tonumber(a3) then
+        queue[1] = { tonumber(a1), tonumber(a2), tonumber(a3), tonumber(a4) or 405 }
+    elseif a1 == "radio" then
+        local r = math.min(tonumber(a2) or 60, 150)
+        for B = 1, #VEH_NODES / 3 do
+            if #(VEH_LINKS[B] or {}) >= 2 then
+                local x, y = nodePos(VEH_NODES, B)
+                if getDistanceBetweenPoints2D(px, py, x, y) <= r then addNode(B, tonumber(a3)) end
+            end
+            if #queue >= 24 then break end
+        end
+    else
+        local best, bd = nil, 120
+        for B = 1, #VEH_NODES / 3 do
+            if #(VEH_LINKS[B] or {}) >= 2 then
+                local x, y = nodePos(VEH_NODES, B)
+                local d = getDistanceBetweenPoints2D(px, py, x, y)
+                if d < bd then best, bd = B, d end
+            end
+        end
+        if not best then return outputChatBox("[Test] No hay ningun cruce a menos de 120 m.", 255, 140, 90) end
+        addNode(best, tonumber(a1))
+        outputChatBox(("[Test] Nodo %d a %.0f m."):format(best, bd), 120, 200, 255)
+    end
+    while #queue > 12 and a1 ~= "radio" do table.remove(queue) end
+    if #queue == 0 then return outputChatBox("[Test] No hay maniobras que probar ahi.", 255, 140, 90) end
+    if TEST.on then testStop() end
+    clearAll()
+    TEST.on, TEST.queue, TEST.results, TEST.total, TEST.cur = true, queue, {}, #queue, nil
+    outputChatBox(("[Test] %d maniobras. Quedate cerca del cruce; /trafico_test stop para terminar."):format(#queue), 120, 200, 255)
+end)
+
+setTimer(testTick, 100, 0)
+
 local function spawnTick()
+    if TEST.on then return end   -- /trafico_test: solo hay autos de prueba (ver mas abajo)
     -- pasajero: no se crea nada; lo que queda se desvanece solo (ver setCitizensSuspended)
     if suspended and enabled and getElementData(localPlayer, "rp:characterId") and playerIsActive() then return end
     if not enabled or suspended or not getElementData(localPlayer, "rp:characterId") or not playerIsActive() then
@@ -3302,7 +3514,7 @@ local function carTick()
                 makeReal(v, s)
                 -- los dummies no chocan entre si: al hacerse solido puede quedar encima de otro auto
                 if nearOtherCar(v, 4.8, true) then ghostCar(v, s, 4000) end
-            elseif s.lod ~= "dummy" and d > DUMMY_DIST and not isElementOnScreen(v) then
+            elseif s.lod ~= "dummy" and d > DUMMY_DIST and not isElementOnScreen(v) and not s.test then
                 makeDummy(v, s, speedOf(v) / 3.6)
             end
             if s.lod ~= "dummy" then
