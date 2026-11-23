@@ -125,24 +125,16 @@ end
 local function rollBall(vis, b, dx, dy)
     local dist = sqrt(dx * dx + dy * dy)
     if dist < 1e-6 then return end
-    local kx, ky = -dy / dist, dx / dist
-    local ang = dist / R
-    local c, s = cos(ang), sin(ang)
-    rotateVec(vis.ax[b], kx, ky, 0, c, s)
-    rotateVec(vis.ay[b], kx, ky, 0, c, s)
-    rotateVec(vis.az[b], kx, ky, 0, c, s)
+    -- Aproximacion sencilla: giro acumulado sobre los ejes X e Y del mundo
+    vis.rx[b] = (vis.rx[b] + deg(dy / R)) % 360
+    vis.ry[b] = (vis.ry[b] - deg(dx / R)) % 360
 end
 
 local function setBallObject(vis, b, x, y, z)
     local obj = vis.balls[b]
     if not isElement(obj) then return end
-    local ax, ay, az = vis.ax[b], vis.ay[b], vis.az[b]
-    setElementMatrix(obj, {
-        { ax[1], ax[2], ax[3], 0 },
-        { ay[1], ay[2], ay[3], 0 },
-        { az[1], az[2], az[3], 0 },
-        { x, y, z, 1 },
-    })
+    setElementPosition(obj, x, y, z)
+    setElementRotation(obj, vis.rx[b], vis.ry[b], vis.rz[b])
 end
 
 ----------------------------------------------------------------
@@ -177,14 +169,14 @@ end
 
 local function createVisual(T)
     if visual[T.id] then return end
-    local vis = { balls = {}, ax = {}, ay = {}, az = {} }
+    local vis = { balls = {}, rx = {}, ry = {}, rz = {} }
     for b = 0, 15 do
         local obj = createObject(POOL_BALL_MODELS[b], 0, 0, 0)
         setElementCollisionsEnabled(obj, false)
         setElementInterior(obj, T.interior)
         setElementDimension(obj, T.dimension)
         vis.balls[b] = obj
-        vis.ax[b], vis.ay[b], vis.az[b] = randomOrient()
+        vis.rx[b], vis.ry[b], vis.rz[b] = math.random(0, 359), math.random(0, 359), math.random(0, 359)
     end
     visual[T.id] = vis
     syncVisual(T)
@@ -250,8 +242,18 @@ addEventHandler("rp:pool:tables", resourceRoot, function(list, states)
     end
 end)
 
+-- Si llega un estado de una mesa que este cliente no conoce (la lista inicial se perdio o la
+-- mesa es nueva), se pide de nuevo al servidor. Sin esto, ese cliente nunca vera las apuestas.
+local lastSyncRequest = 0
+local function requestSync()
+    local now = getTickCount()
+    if now - lastSyncRequest < 2000 then return end
+    lastSyncRequest = now
+    triggerServerEvent("rp:pool:requestSync", resourceRoot)
+end
+
 addEventHandler("rp:pool:state", resourceRoot, function(s)
-    if tablesData[s.id] then applyState(s) end
+    if tablesData[s.id] and tablesData[s.id].x then applyState(s) else requestSync() end
 end)
 
 addEventHandler("rp:pool:tableRemoved", resourceRoot, function(id)
@@ -260,7 +262,13 @@ addEventHandler("rp:pool:tableRemoved", resourceRoot, function(id)
     if near == id then near = false end
 end)
 
-addEventHandler("rp:pool:near", resourceRoot, function(id) near = id end)
+addEventHandler("rp:pool:near", resourceRoot, function(id)
+    near = id
+    if id and not (tablesData[id] and tablesData[id].x) then requestSync() end
+end)
+
+-- Red de seguridad: resincroniza cada 15 s por si se perdio algun mensaje
+setTimer(function() requestSync() end, 15000, 0)
 
 ----------------------------------------------------------------
 -- Sonidos
@@ -269,7 +277,7 @@ local function playAt(T, file, x, y, z, vol)
     local snd = playSound3D("sounds/" .. file, x, y, z, false)
     if snd then
         setSoundVolume(snd, clamp(vol or 0.8, 0.05, 1))
-        setSoundMaxDistance(18)
+        setSoundMaxDistance(snd, 18)
         setElementInterior(snd, T.interior)
         setElementDimension(snd, T.dimension)
     end
@@ -514,6 +522,29 @@ local function drawDebug(T)
     end
 end
 
+-- Diagnostico: vuelca en el chat el estado de las mesas cercanas
+addCommandHandler("poolinfo", function()
+    local px, py, pz = getElementPosition(localPlayer)
+    outputChatBox(("[pool] yo: %.1f %.1f %.1f int %d dim %d | match=%s mode=%s shotLock=%s replay=%s"):format(
+        px, py, pz, getElementInterior(localPlayer), getElementDimension(localPlayer),
+        tostring(match and match.id), tostring(match and currentMode(tablesData[match.id])), tostring(shotLock), tostring(replay ~= nil)), 245, 165, 36)
+    for id, T in pairs(tablesData) do
+        local vis = visual[id]
+        local cue = T.balls[0]
+        local pocketed = 0
+        for b = 0, 15 do if T.balls[b].p then pocketed = pocketed + 1 end end
+        outputChatBox(("[pool] mesa %d pos %.1f %.1f %.1f rz %s int %s dim %s estado %s | visual=%s embocadas=%d blanca u=%.3f v=%.3f p=%s"):format(
+            id, T.x or 0, T.y or 0, T.z or 0, tostring(T.rz), tostring(T.interior), tostring(T.dimension), tostring(T.status),
+            tostring(vis ~= nil), pocketed, cue.u, cue.v, tostring(cue.p)), 255, 255, 255)
+        if vis and isElement(vis.balls[0]) then
+            local o = vis.balls[0]
+            local ox, oy, oz = getElementPosition(o)
+            outputChatBox(("[pool]   bola blanca objeto: %.2f %.2f %.2f modelo %d alpha %d int %d dim %d streamedIn=%s"):format(
+                ox, oy, oz, getElementModel(o), getElementAlpha(o), getElementInterior(o), getElementDimension(o), tostring(isElementStreamedIn(o))), 255, 255, 255)
+        end
+    end
+end)
+
 addCommandHandler("pooldebug", function()
     debugDraw = not debugDraw
     outputChatBox("Pool debug: " .. (debugDraw and "activado" or "desactivado") .. " (rojo = bandas, verde = bocas de troneras)", 245, 165, 36)
@@ -535,10 +566,56 @@ local function currentMode(T)
     return "watch"
 end
 
+local savedSlot, lastBoneScan, boneHidden = nil, 0, {}
+local opponent = nil   -- jugador rival de mi partida (solo para ocultarlo en mi pantalla)
+
+-- Oculta (solo en mi pantalla) a los dos jugadores de la partida y todo lo que llevan
+-- pegado con bone_attach (cabeza custom, ropa, mochila). Se reaplica en cada llamada
+-- porque otros recursos pueden devolver el alpha.
 local function setHidden(hidden)
-    if hidden == playerHidden then return end
+    if not hidden and not playerHidden then return end
+    local wasHidden = playerHidden
     playerHidden = hidden
-    setElementAlpha(localPlayer, hidden and 0 or 255)
+    -- rp_heads oculta la cabeza custom propia cuando ve esta marca (local, no se sincroniza)
+    setElementData(localPlayer, "rp:hideBody", hidden and true or nil, false)
+    local a = hidden and 0 or 255
+    local bodies = { localPlayer }
+    if isElement(opponent) then bodies[2] = opponent end
+    for _, p in ipairs(bodies) do
+        setElementAlpha(p, a)
+        for _, el in ipairs(getAttachedElements(p)) do
+            if getElementType(el) == "object" then setElementAlpha(el, a) end
+        end
+    end
+
+    if hidden then
+        -- El arma en mano no obedece al alpha: se guarda mientras dura la partida
+        if not wasHidden then savedSlot = getPedWeaponSlot(localPlayer) end
+        if getPedWeaponSlot(localPlayer) ~= 0 then setPedWeaponSlot(localPlayer, 0) end
+        local now = getTickCount()
+        if not wasHidden or now - lastBoneScan > 500 then
+            lastBoneScan = now
+            for _, obj in ipairs(getElementsByType("object", root, true)) do
+                if not boneHidden[obj] then
+                    local ok, owner = pcall(function() return (exports.bone_attach:getElementBoneAttachmentDetails(obj)) end)
+                    if ok and owner and (owner == localPlayer or owner == opponent) then
+                        boneHidden[obj] = true
+                    end
+                end
+            end
+        end
+        for obj in pairs(boneHidden) do
+            if isElement(obj) then setElementAlpha(obj, 0) else boneHidden[obj] = nil end
+        end
+    else
+        for obj in pairs(boneHidden) do
+            if isElement(obj) then setElementAlpha(obj, 255) end
+            boneHidden[obj] = nil
+        end
+        if isElement(opponent) then setElementAlpha(opponent, 255) end
+        if savedSlot then setPedWeaponSlot(localPlayer, savedSlot) end
+        savedSlot = nil
+    end
 end
 
 local function topCamera(T, height)
@@ -652,9 +729,7 @@ local function updatePlacement(T)
 end
 
 local function leaveMode(prev)
-    if prev == "aim" or prev == "hold" then
-        setHidden(false)
-    end
+    -- (el cuerpo se mantiene oculto durante toda la partida; ver setHidden)
     if prev == "place" then
         showCursor(false)
         placePos = nil
@@ -663,7 +738,7 @@ end
 
 local function enterMode(mode, T)
     if mode == "aim" or mode == "hold" then
-        setHidden(aim.cam == 1)
+        setHidden(true)
         setElementFrozen(localPlayer, true)
         if mode == "aim" then
             aim.power, aim.charging = 0, false
@@ -729,6 +804,7 @@ addEventHandler("onClientPreRender", root, function()
     local T = tablesData[match.id]
     if not T then return end
     local mode = currentMode(T)
+    setHidden(true)
     if mode ~= lastMode then
         leaveMode(lastMode)
         enterMode(mode, T)
@@ -747,7 +823,7 @@ addEventHandler("onClientPreRender", root, function()
         end
         placeShooter(T)
         if aim.cam == 1 then behindCamera(T) else topCamera(T, 2.0) end
-        setHidden(aim.cam == 1)
+        setHidden(true)
         placeCue(T, aim.theta, 0.04 + aim.power * 0.34)
 
         if now - lastAimSend > 120 then
@@ -787,6 +863,7 @@ local function cleanupMatch()
     showCursor(false)
     setCameraTarget(localPlayer)
     hideCue()
+    opponent = nil
     match, replay, stroke, shotLock, placePos, lastMode = nil, nil, nil, false, nil, nil
     aim.charging, aim.power = false, 0
 end
@@ -795,7 +872,8 @@ addEventHandler("rp:pool:waiting", resourceRoot, function(id, bet)
     waitingInfo = { id = id, bet = bet }
 end)
 
-addEventHandler("rp:pool:matchStart", resourceRoot, function(id, idx)
+addEventHandler("rp:pool:matchStart", resourceRoot, function(id, idx, rival)
+    opponent = isElement(rival) and rival or nil
     waitingInfo = nil
     match = { id = id, idx = idx }
     resultBanner = nil

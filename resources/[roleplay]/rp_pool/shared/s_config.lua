@@ -6,17 +6,17 @@
     Marco de coordenadas de la mesa ("local"): u = a lo largo de la mesa (lado largo),
     v = a lo ancho, en metros, con (0,0) en el centro del area de juego. La mesa del
     juego (modelo 2964, k_pooltablesm) mide 1.94 x 1.07 m de juego y la bola tiene
-    radio 0.037 m; las medidas salen del propio .dff (fieltro a z = 0.77).
+    radio 0.037 m; las medidas salen del propio .dff (fieltro a z = 0.90).
 ]]
 
 POOL = {
     -- Geometria (medida del modelo 2964)
     BALL_R       = 0.037,
-    FELT_Z       = 0.77,      -- altura del fieltro sobre el origen del modelo
+    FELT_Z       = 0.90,      -- altura del fieltro sobre el origen del modelo (nivel del area de juego en el .dff)
     CENTER_U     = 0.007,     -- el centro de juego esta desplazado del origen del modelo
     CENTER_V     = 0.011,
-    HALF_L       = 0.96,      -- cara de las bandas (mitad del largo de juego)
-    HALF_W       = 0.525,     -- cara de las bandas (mitad del ancho de juego)
+    HALF_L       = 0.968,     -- cara de las bandas (mitad del largo de juego)
+    HALF_W       = 0.534,     -- cara de las bandas (mitad del ancho de juego)
     MOUTH_CORNER = 0.085,     -- boca de las troneras de esquina
     MOUTH_SIDE   = 0.07,      -- boca de las troneras laterales (semiancho)
 

@@ -290,7 +290,8 @@ local function startMatch(T, p1, p2)
     }
     for i = 1, 2 do
         playerTable[players[i]] = T.id
-        triggerClientEvent(players[i], "rp:pool:matchStart", resourceRoot, T.id, i)
+        setPedWeaponSlot(players[i], 0)   -- sin arma en mano (no se oculta con alpha)
+        triggerClientEvent(players[i], "rp:pool:matchStart", resourceRoot, T.id, i, players[3 - i])
     end
     notify(players[1], "Rompes tú. ¡Suerte!", "info")
     notify(players[2], ("Rompe %s."):format(names[1]), "info")
@@ -686,7 +687,7 @@ local function teleportPlayer(player, to, interior, dimension)
         setElementInterior(player, interior)
         setElementDimension(player, dimension)
         setCameraInterior(player, interior)
-        setElementPosition(player, to.x, to.y, to.z)
+        setElementPosition(player, to.x, to.y, to.z + 1.0)
         setElementRotation(player, 0, 0, to.rot or 0)
         setCameraTarget(player, player)
         fadeCamera(player, true, 0.4)
@@ -696,9 +697,9 @@ end
 local function createVenues()
     for _, v in ipairs(POOL.VENUES) do
         local e, i = v.exterior, v.interior
-        local m1 = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.3, 245, 165, 36, 90)
+        local m1 = createMarker(e.x, e.y, e.z - 0.1, "cylinder", 1.3, 245, 165, 36, 90)
         setElementInterior(m1, e.interior); setElementDimension(m1, e.dimension)
-        local m2 = createMarker(i.x, i.y, i.z - 1, "cylinder", 1.1, 245, 165, 36, 90)
+        local m2 = createMarker(i.x, i.y, i.z - 0.1, "cylinder", 1.1, 245, 165, 36, 90)
         setElementInterior(m2, i.interior); setElementDimension(m2, i.dimension)
         addEventHandler("onMarkerHit", m1, function(el, sameDim)
             if getElementType(el) == "player" and sameDim and not isPedInVehicle(el) and characterOf(el) then
