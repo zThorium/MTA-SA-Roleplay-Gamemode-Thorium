@@ -11,6 +11,7 @@
       stack       maximo de unidades de este item
       use         efecto al usarlo (nil = no se puede usar):
                   health, armor, hunger, thirst, energy (rp_needs), message,
+                  meth = segundos de efecto de metanfetamina (elementData "rp:meth")
                   event = dispara rp:onItemUse en el servidor (no se gasta)
       consumable  true si se gasta al usarlo
 ]]
@@ -188,6 +189,11 @@ ITEMS = {
         name = "LSD", icon = "🌀", weight = 0.01, stack = 30, consumable = true,
         description = "Carton de LSD. Ilegal.",
         use = { message = "Te pones el carton de LSD bajo la lengua." },
+    },
+    meth = {
+        name = "Metanfetamina", icon = "💎", weight = 0.05, stack = 30, consumable = true,
+        description = "Cristales de metanfetamina. Ilegal. 1 minuto corriendo mas rapido y sin gastar estamina.",
+        use = { meth = 60, message = "Fumas metanfetamina: te sientes imparable." },
     },
 }
 
