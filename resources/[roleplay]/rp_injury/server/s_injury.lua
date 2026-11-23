@@ -31,6 +31,7 @@
 
 addEvent("rp:injury:down", true)
 addEvent("rp:injury:reanim", true)
+addEvent("rp:injury:headshot", true)
 addEvent("rp:onPlayerDowned", false)
 addEvent("rp:onPlayerDownedEnd", false)
 addEvent("rp:onDownedLogout", false)
@@ -135,6 +136,7 @@ local function respawnAtHospital(player)
     dying[player] = nil
     if not isElement(player) or not characterOf(player) then return end
     setElementData(player, "rp:downed", false)
+    setElementData(player, "rp:headshot", false)   -- vuelve con cabeza (rp_heads)
     toggleAllControls(player, true, true, true)
     exports.rp_characters:respawnAtHospital(player)
     triggerEvent("rp:onPlayerDownedEnd", player)   -- p. ej. rp_needs vuelve a aplicar el cansancio
@@ -240,6 +242,40 @@ addEventHandler("rp:injury:down", resourceRoot, function(attacker, weapon)
     downPlayer(player)
 end)
 
+-- Disparo en la cabeza: muerte instantanea (sin quedar abatido) y el cuerpo queda sin cabeza.
+-- Lo avisa la victima, asi que un tramposo solo puede matarse a si mismo; aqui se comprueba
+-- que el atacante sea un jugador cercano con esa arma de fuego en la mano.
+local HEADSHOT_WEAPONS = {}
+for w = 22, 34 do HEADSHOT_WEAPONS[w] = true end
+HEADSHOT_WEAPONS[38] = true
+
+addEventHandler("rp:injury:headshot", resourceRoot, function(attacker, weapon)
+    local player = client
+    if not player or dying[player] or isPedDead(player) or not characterOf(player) then return end
+    if not isElement(attacker) or getElementType(attacker) ~= "player" or attacker == player or isPedDead(attacker) then return end
+    if not HEADSHOT_WEAPONS[weapon] or getPedWeapon(attacker) ~= weapon then return end
+    if getElementDimension(attacker) ~= getElementDimension(player) or getElementInterior(attacker) ~= getElementInterior(player) then return end
+    local ax, ay, az = getElementPosition(attacker)
+    local px, py, pz = getElementPosition(player)
+    if getDistanceBetweenPoints3D(ax, ay, az, px, py, pz) > 400 then return end
+
+    outputServerLog(("[rp_injury] %s murio de un disparo en la cabeza (atacante: %s, arma: %s)"):format(
+        getPlayerName(player), getPlayerName(attacker), tostring(weapon)))
+    if downed[player] then clearDowned(player, true) end
+    dying[player] = true
+    setElementData(player, "rp:downed", "dying")
+    setElementData(player, "rp:headshot", true)
+    triggerClientEvent(player, "rp:injury:state", resourceRoot, "dying")
+    setPedAnimation(player)
+    toggleAllControls(player, false, true, true)
+    killPed(player, attacker, weapon, 9)
+    setTimer(function()
+        if isElement(player) and dying[player] == true then
+            dying[player] = setTimer(respawnAtHospital, INJURY.RESPAWN_DELAY, 1, player)
+        end
+    end, 500, 1)
+end)
+
 -- Muertes que el cliente no pudo interceptar: reaparece en el sitio, abatido
 addEventHandler("onPlayerWasted", root, function()
     local player = source
@@ -308,7 +344,7 @@ end)
 
 -- Solo el servidor decide si alguien esta abatido
 addEventHandler("onElementDataChange", root, function(key, oldValue)
-    if key == "rp:downed" and client then
+    if (key == "rp:downed" or key == "rp:headshot") and client then
         setElementData(source, key, oldValue)
     end
 end)
@@ -355,6 +391,7 @@ addEventHandler("rp:onCharacterSpawn", root, function()
     if downed[player] then clearDowned(player, false, true) end
     dying[player] = nil
     setElementData(player, "rp:downed", false)
+    setElementData(player, "rp:headshot", false)
     -- Pequena espera para que termine el spawn (camara, apariencia)
     setTimer(function() if isElement(player) then resumeDowned(player) end end, 1000, 1)
 end)

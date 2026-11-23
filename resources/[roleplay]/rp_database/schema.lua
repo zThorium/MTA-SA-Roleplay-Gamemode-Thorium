@@ -952,6 +952,11 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_needs: cordura del personaje (0-100); baja al matar civiles
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS sanity TINYINT UNSIGNED NOT NULL DEFAULT 100
+    ]],
     -- rp_backpacks: mochila equipada por personaje y su contenido (se pierde al tirarla)
     [[
     CREATE TABLE IF NOT EXISTS character_backpack (

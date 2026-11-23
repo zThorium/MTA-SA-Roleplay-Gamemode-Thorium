@@ -11,4 +11,6 @@
     <export function="addNeed" type="server" />
     <export function="getNeed" type="server" />
     <export function="getNeeds" type="server" />
+    <export function="addSanity" type="server" />
+    <export function="getSanity" type="server" />
 </meta>

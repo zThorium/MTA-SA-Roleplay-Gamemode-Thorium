@@ -10,8 +10,12 @@
     <include resource="rp_database" />
     <include resource="rp_login" />
     <include resource="rp_notify" />
+    <include resource="rp_needs" />
+    <include resource="rp_characters" />
 
     <script src="s_paths.lua" type="server" />
+    <!-- Matar peatones: botin y perdida de cordura (rp_needs) -->
+    <script src="s_kills.lua" type="server" />
     <script src="s_sync.lua" type="server" />
     <!-- Telemetria de conduccion (admins): telemetry/*.jsonl, ver tools/trafico -->
     <script src="s_telemetry.lua" type="server" />
@@ -24,6 +28,8 @@
     <script src="c_scenes.lua" type="client" />
     <!-- Vida de barrio: bandas, vecinos y grupos fijos en cada rincon -->
     <script src="c_hangouts.lua" type="client" />
+    <!-- Pandilleros con personalidad: miradas, acorralan entre varios, bajan del auto, te sacan del auto -->
+    <script src="c_gangs.lua" type="client" />
 
     <settings>
         <!-- URL del colector opcional (tools/trafico/collector.js), p. ej. http://127.0.0.1:22100/tel ; vacio = solo archivo -->

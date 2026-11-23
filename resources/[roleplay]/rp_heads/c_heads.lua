@@ -49,10 +49,129 @@ local function loadModels()
     end
 end
 
+----------------------------------------------------------------
+-- Vinculo a la matriz real del hueso de la cabeza (sin bone_attach).
+-- bone_attach deduce la orientacion de 3 posiciones de huesos y la pasa por
+-- angulos de Euler: se rompe al agacharse o girar rapido la mira. Aqui se usa
+-- getElementBoneMatrix(ped, 8) + setElementMatrix, sin Euler. Los offsets de
+-- HEADS siguen expresados en el marco del cuello de bone_attach; se convierten
+-- con una matriz fija C (cuello -> hueso cabeza) medida con un ped de pie.
+-- USE_BONE_MATRIX = false vuelve al metodo antiguo de bone_attach.
+----------------------------------------------------------------
+local USE_BONE_MATRIX = false
+local HEAD_Y_FIX = 0
+local headInfo = {}   -- [ped] = datos HEADS de su cabeza
+local calib           -- { R = 3x3 (cuello*cabeza^T), c = {x,y,z} }
+
+local function dot(a, b) return a[1]*b[1] + a[2]*b[2] + a[3]*b[3] end
+
+local function normalized(x, y, z)
+    local l = math.sqrt(x*x + y*y + z*z)
+    if l < 1e-6 then return nil end
+    return { x/l, y/l, z/l }
+end
+
+-- Marco del cuello igual que bone_attach (hueso 2: origen 4, destino 5, referencia 8)
+local function getNeckFrame(ped)
+    local x, y, z = getPedBonePosition(ped, 4)
+    local tx, ty, tz = getPedBonePosition(ped, 5)
+    local fx, fy, fz = getPedBonePosition(ped, 8)
+    local ax, ay, az = tx - x, ty - y, tz - z
+    local bx, by, bz = fx - x, fy - y, fz - z
+    local x1, y1, z1 = by*az - bz*ay, bz*ax - bx*az, bx*ay - by*ax
+    local x2, y2, z2 = ay*z1 - az*y1, az*x1 - ax*z1, ax*y1 - ay*x1
+    local r1, r2, r3 = normalized(x1, y1, z1), normalized(x2, y2, z2), normalized(ax, ay, az)
+    if not (r1 and r2 and r3) then return nil end
+    return { r1, r2, r3 }, { x, y, z }
+end
+
+local function getHeadBoneFrame(ped)
+    updateElementRpHAnim(ped)
+    local m = getElementBoneMatrix(ped, 8)
+    if not m then return nil end
+    local r1 = normalized(m[1][1], m[1][2], m[1][3])
+    local r2 = normalized(m[2][1], m[2][2], m[2][3])
+    local r3 = normalized(m[3][1], m[3][2], m[3][3])
+    if not (r1 and r2 and r3) then return nil end
+    return { r1, r2, r3 }, { m[4][1], m[4][2], m[4][3] }
+end
+
+-- Mide C con un ped de pie y quieto (el marco del cuello es fiable en esa pose)
+local function tryCalibrate(ped)
+    if calib or not isElement(ped) then return end
+    if isPedDucked(ped) or isPedInVehicle(ped) or getPedMoveState(ped) ~= "stand" then return end
+    if getPedTask(ped, "secondary", 0) == "TASK_SIMPLE_USE_GUN" then return end  -- apuntando: no es pose neutra
+    local Rn, pn = getNeckFrame(ped)
+    local Rh, ph = getHeadBoneFrame(ped)
+    if not (Rn and Rh) then return end
+    local R = {}
+    for i = 1, 3 do
+        R[i] = {}
+        for j = 1, 3 do R[i][j] = dot(Rn[i], Rh[j]) end
+    end
+    local d = { pn[1] - ph[1], pn[2] - ph[2], pn[3] - ph[3] }
+    calib = { R = R, c = { dot(d, Rh[1]), dot(d, Rh[2]), dot(d, Rh[3]) } }
+end
+
+local function eulerRows(x, y, z)
+    x, y, z = math.rad(x), math.rad(y), math.rad(z)
+    local sx, cx, sy, cy, sz, cz = math.sin(x), math.cos(x), math.sin(y), math.cos(y), math.sin(z), math.cos(z)
+    return {
+        { cy*cz - sy*sx*sz,  cy*sz + sy*sx*cz, -sy*cx },
+        { -cx*sz,            cx*cz,             sx },
+        { sy*cz + cy*sx*sz,  sy*sz - cy*sx*cz,  cy*cx },
+    }
+end
+
+local function updateHeadMatrices()
+    for ped, obj in pairs(attached) do
+        local head = headInfo[ped]
+        if head and isElement(ped) and isElement(obj) and isElementStreamedIn(ped) then
+            tryCalibrate(ped)
+            local Rh, ph = getHeadBoneFrame(ped)
+            if Rh then
+                if not calib then
+                    setElementPosition(obj, ph[1], ph[2], ph[3])
+                else
+                    local Roff = eulerRows(head.rx, head.ry, head.rz)
+                    local C = calib.R
+                    -- Rc = Roff * C ; Rw = Rc * Rh
+                    local Rw = {}
+                    for i = 1, 3 do
+                        local rc = {}
+                        for j = 1, 3 do rc[j] = Roff[i][1]*C[1][j] + Roff[i][2]*C[2][j] + Roff[i][3]*C[3][j] end
+                        Rw[i] = {
+                            rc[1]*Rh[1][1] + rc[2]*Rh[2][1] + rc[3]*Rh[3][1],
+                            rc[1]*Rh[1][2] + rc[2]*Rh[2][2] + rc[3]*Rh[3][2],
+                            rc[1]*Rh[1][3] + rc[2]*Rh[2][3] + rc[3]*Rh[3][3],
+                        }
+                    end
+                    local o = { head.x, head.y + HEAD_Y_FIX, head.z + HEAD_Z_FIX }
+                    local ph2 = {}
+                    for j = 1, 3 do ph2[j] = o[1]*C[1][j] + o[2]*C[2][j] + o[3]*C[3][j] + calib.c[j] end
+                    local px = ph[1] + ph2[1]*Rh[1][1] + ph2[2]*Rh[2][1] + ph2[3]*Rh[3][1]
+                    local py = ph[2] + ph2[1]*Rh[1][2] + ph2[2]*Rh[2][2] + ph2[3]*Rh[3][2]
+                    local pz = ph[3] + ph2[1]*Rh[1][3] + ph2[2]*Rh[2][3] + ph2[3]*Rh[3][3]
+                    setElementMatrix(obj, {
+                        { Rw[1][1], Rw[1][2], Rw[1][3], 0 },
+                        { Rw[2][1], Rw[2][2], Rw[2][3], 0 },
+                        { Rw[3][1], Rw[3][2], Rw[3][3], 0 },
+                        { px, py, pz, 1 },
+                    })
+                end
+            end
+        end
+    end
+end
+addEventHandler("onClientPedsProcessed", root, function()
+    if USE_BONE_MATRIX then updateHeadMatrices() end
+end)
+
 function removeHead(ped)
     local obj = attached[ped]
     if isElement(obj) then destroyElement(obj) end
     attached[ped] = nil
+    headInfo[ped] = nil
     if isElement(ped) and setPedHeadless then setPedHeadless(ped, false) end
     return true
 end
@@ -72,7 +191,11 @@ function applyHead(ped, headId)
     setElementInterior(obj, getElementInterior(ped))
     setElementDimension(obj, getElementDimension(ped))
     setElementDoubleSided(obj, true)
-    exports.bone_attach:attachElementToBone(obj, ped, 2, head.x, head.y, head.z + HEAD_Z_FIX, head.rx, head.ry, head.rz)
+    if USE_BONE_MATRIX then
+        headInfo[ped] = head
+    else
+        exports.bone_attach:attachElementToBone(obj, ped, 2, head.x, head.y, head.z + HEAD_Z_FIX, head.rx, head.ry, head.rz)
+    end
     if setPedHeadless then setPedHeadless(ped, true) end
     attached[ped] = obj
     return true
@@ -87,7 +210,9 @@ addCommandHandler("ajustecabeza", function(_, z, y)
         return
     end
     HEAD_Z_FIX = z
+    HEAD_Y_FIX = y
     for ped, obj in pairs(attached) do
+        if USE_BONE_MATRIX then break end
         local headId
         for id, model in pairs(modelIds) do
             if model == getElementModel(obj) then headId = id break end
@@ -107,7 +232,26 @@ end
 ----------------------------------------------------------------
 -- Jugadores (sincronizado por elementData del servidor)
 ----------------------------------------------------------------
+-- Muerto de un disparo en la cabeza (rp_injury): sin cabeza, ni la propia ni la personalizada
+local headshotPeds = {}   -- [ped] = true
+
+local function bloodBurst(ped)
+    local x, y, z = getPedBonePosition(ped, 8)
+    if not x then return end
+    for _ = 1, 6 do
+        fxAddBlood(x, y, z, (math.random() - 0.5) * 1.2, (math.random() - 0.5) * 1.2, 0.4 + math.random() * 0.5, math.random(3, 6), 1.2)
+    end
+end
+
 local function refreshPlayer(player)
+    if getElementData(player, "rp:headshot") then
+        removeHead(player)
+        if setPedHeadless then setPedHeadless(player, true) end
+        if not headshotPeds[player] then bloodBurst(player) end
+        headshotPeds[player] = true
+        return
+    end
+    headshotPeds[player] = nil
     local headId = getElementData(player, "rp:head")
     if headId and isElementStreamedIn(player) then
         applyHead(player, headId)
@@ -117,7 +261,7 @@ local function refreshPlayer(player)
 end
 
 addEventHandler("onClientElementDataChange", root, function(key)
-    if key == "rp:head" and getElementType(source) == "player" then
+    if (key == "rp:head" or key == "rp:headshot") and getElementType(source) == "player" then
         refreshPlayer(source)
     end
 end)
@@ -132,6 +276,7 @@ end)
 
 addEventHandler("onClientPlayerQuit", root, function()
     removeHead(source)
+    headshotPeds[source] = nil
 end)
 
 addEventHandler("onClientElementDestroy", root, function()
@@ -165,6 +310,9 @@ local function forceHeadless()
     if not setPedHeadless then return end
     for ped, obj in pairs(attached) do
         if isElement(ped) and isElement(obj) then setPedHeadless(ped, true) end
+    end
+    for ped in pairs(headshotPeds) do
+        if isElement(ped) then setPedHeadless(ped, true) else headshotPeds[ped] = nil end
     end
 end
 addEventHandler("onClientPreRender", root, forceHeadless)

@@ -49,6 +49,7 @@
 
 Hombres = cuerpo de CJ (skin 0) sin cabeza + cabeza + ropa nativa de CJ. Mujeres = skin.
 
+- `rp_hookers`: prostitutas ambientales (Ganton, Idlewood, East Beach, Willowfield, Jefferson...). Bocina junto a una desde un auto con asiento libre -> modal SI/NO con precio ($50-150, fijado y cobrado por el servidor) -> se sube, buscas un lugar tranquilo y detienes el auto -> animacion BLOWJOBZ, +25 de vida. Sin comandos ni exports; eventos `rp:hooker:*`.
 ## Créditos
 - Modelos y ajustes de cabezas: Aleks (https://forum.mtasa.com/profile/40470-mraleks/), Countryside-RP, publicado por Neus. Su licencia prohíbe vender estos recursos.
 - bone_attach: CrystalMV.

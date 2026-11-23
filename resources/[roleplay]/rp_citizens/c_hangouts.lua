@@ -279,6 +279,7 @@ local function decide()
     if not t then best.rest = now + 60000 return end
     local g = { spot = best, peds = {}, anim = now + math.random(12000, 22000), born = now }
     best.group = g
+    g.gang = (t == "gang")   -- c_gangs.lua: personalidad y enojo en vez de panico
     groups[#groups + 1] = g
     TYPES[t](g, best)
     if #g.peds == 0 then destroyGroup(g, 60000) end
@@ -299,10 +300,12 @@ local function keep()
                 destroyGroup(g, 20000)
             elseif g.endAt and now > g.endAt then
                 destroyGroup(g, 180000)
+            elseif g.gang and #g.peds == 0 then
+                destroyGroup(g, 180000)   -- todos pasaron a c_gangs.lua
             elseif not g.endAt then
                 local scared = false
                 for _, p in ipairs(g.peds) do
-                    if isElement(p) then
+                    if isElement(p) and not g.gang then
                         if isPedDead(p) or (armed and aimed == p) then scared = true end
                     end
                 end
@@ -326,9 +329,22 @@ local function groupOf(ped)
     end
 end
 
+-- c_gangs.lua: ver si un peaton es de un grupo y sacarlo de el (queda libre, sin animacion)
+function hangoutHas(ped) return groupOf(ped) ~= nil end
+
+function hangoutRelease(ped)
+    local g = groupOf(ped)
+    if not g then return false end
+    for i = #g.peds, 1, -1 do if g.peds[i] == ped then table.remove(g.peds, i) end end
+    hangPeds = hangPeds - 1
+    setPedAnimation(ped)
+    return true
+end
+
 addEventHandler("onClientPedDamage", root, function(attacker)
     if #groups == 0 then return end
     local g = groupOf(source)
+    if g and g.gang then return end   -- las bandas las gobierna c_gangs.lua
     if g then
         local x, y = getElementPosition(isElement(attacker) and attacker or localPlayer)
         panicGroup(g, x, y)
@@ -340,7 +356,7 @@ addEventHandler("onClientPlayerWeaponFire", localPlayer, function(weapon)
     if weapon < 22 or #groups == 0 then return end
     local x, y = getElementPosition(localPlayer)
     for _, g in ipairs(groups) do
-        if getDistanceBetweenPoints2D(x, y, g.spot.x, g.spot.y) < 40 then panicGroup(g, x, y) end
+        if not g.gang and getDistanceBetweenPoints2D(x, y, g.spot.x, g.spot.y) < 40 then panicGroup(g, x, y) end
     end
 end)
 

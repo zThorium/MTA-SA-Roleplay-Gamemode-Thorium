@@ -17,6 +17,8 @@ local CONFIG = {
     WARN_AT = 20,
     SAVE_INTERVAL = 5 * 60000,
     SLEEP_TIME = 10000,                             -- ms dormido
+    SANITY_REGEN = 0.5,                             -- cordura por minuto
+    SANITY_CALM = 5 * 60000,                        -- ms sin matar para empezar a recuperarla
 }
 
 local NAMES = { hunger = "hambre", thirst = "sed", energy = "cansancio" }
@@ -41,14 +43,16 @@ local function publish(player)
     addElementDataSubscriber(player, "rp:needs", player)
     setElementData(player, "rp:needs", {
         hunger = math.floor(n.hunger + 0.5), thirst = math.floor(n.thirst + 0.5), energy = math.floor(n.energy + 0.5),
+        sanity = math.floor((n.sanity or 100) + 0.5),
     }, "subscribe")
 end
 
 local function save(player)
     local n = needs[player]
     if not n then return end
-    dbExec(db(), "UPDATE characters SET hunger = ?, thirst = ?, energy = ? WHERE id = ?",
-        math.floor(n.hunger + 0.5), math.floor(n.thirst + 0.5), math.floor(n.energy + 0.5), n.characterId)
+    dbExec(db(), "UPDATE characters SET hunger = ?, thirst = ?, energy = ?, sanity = ? WHERE id = ?",
+        math.floor(n.hunger + 0.5), math.floor(n.thirst + 0.5), math.floor(n.energy + 0.5),
+        math.floor((n.sanity or 100) + 0.5), n.characterId)
 end
 
 local function applyEffects(player)
@@ -74,11 +78,12 @@ local function load(player, characterId)
         needs[player] = {
             characterId = characterId,
             hunger = tonumber(row.hunger) or 100, thirst = tonumber(row.thirst) or 100, energy = tonumber(row.energy) or 100,
+            sanity = tonumber(row.sanity) or 100,
             warned = {},
         }
         publish(player)
         applyEffects(player)
-    end, db(), "SELECT hunger, thirst, energy FROM characters WHERE id = ?", characterId)
+    end, db(), "SELECT hunger, thirst, energy, sanity FROM characters WHERE id = ?", characterId)
 end
 
 local function unload(player)
@@ -141,6 +146,10 @@ setTimer(function()
                 setElementHealth(player, math.max(1, getElementHealth(player) - CONFIG.STARVING_DAMAGE))
                 if getElementHealth(player) <= 1 then killPed(player) end
             end
+            -- La cordura se recupera sola, despacio, si no hubo muertes recientes
+            if getTickCount() - (n.lastKill or -CONFIG.SANITY_CALM) > CONFIG.SANITY_CALM then
+                n.sanity = math.min(100, (n.sanity or 100) + CONFIG.SANITY_REGEN)
+            end
             applyEffects(player)
             publish(player)
         end
@@ -161,6 +170,25 @@ function addNeed(player, need, amount)
     applyEffects(player)
     publish(player)
     return n[need]
+end
+
+-- Cordura (0-100). addSanity(player, -8, true) la baja; "violent" frena su recuperacion un rato.
+function addSanity(player, amount, violent)
+    local n = needs[player]
+    if not n or type(amount) ~= "number" then return false end
+    local old = n.sanity or 100
+    n.sanity = math.max(0, math.min(100, old + amount))
+    if violent then n.lastKill = getTickCount() end
+    if n.sanity <= 25 and old > 25 then
+        notify(player, "Tu mente se quiebra. La violencia te esta pasando factura.", "warning")
+    end
+    publish(player)
+    return n.sanity
+end
+
+function getSanity(player)
+    local n = needs[player]
+    return n and (n.sanity or 100) or false
 end
 
 function getNeed(player, need)
