@@ -13,6 +13,8 @@
 
     <script src="s_paths.lua" type="server" />
     <script src="s_sync.lua" type="server" />
+    <!-- Telemetria de conduccion (admins): telemetry/*.jsonl, ver tools/trafico -->
+    <script src="s_telemetry.lua" type="server" />
     <script src="c_nodes_ls.lua" type="client" />
     <script src="c_citizens.lua" type="client" />
     <script src="c_editor.lua" type="client" />
@@ -22,6 +24,11 @@
     <script src="c_scenes.lua" type="client" />
     <!-- Vida de barrio: bandas, vecinos y grupos fijos en cada rincon -->
     <script src="c_hangouts.lua" type="client" />
+
+    <settings>
+        <!-- URL del colector opcional (tools/trafico/collector.js), p. ej. http://127.0.0.1:22100/tel ; vacio = solo archivo -->
+        <setting name="collector_url" value="" />
+    </settings>
 
     <!-- Bocina de los autos de la poblacion (sonido generado para el proyecto) -->
     <file src="sounds/horn.wav" />
