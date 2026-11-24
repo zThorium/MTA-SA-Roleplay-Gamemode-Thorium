@@ -902,6 +902,19 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS perf     TEXT  NULL,
         ADD COLUMN IF NOT EXISTS odometer FLOAT NOT NULL DEFAULT 0
     ]],
+    -- rp_phone (Tinder, parte 2): likes y dislikes. Un match es un like mutuo (parte 3 los lista)
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_swipes (
+        swiper_id  INT UNSIGNED NOT NULL,
+        target_id  INT UNSIGNED NOT NULL,
+        liked      TINYINT(1)   NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (swiper_id, target_id),
+        KEY idx_tinder_swipes_target (target_id, liked),
+        CONSTRAINT fk_tinder_swipes_swiper FOREIGN KEY (swiper_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tinder_swipes_target FOREIGN KEY (target_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- rp_levels: experiencia (RP) total por personaje; el nivel se calcula con la curva del recurso
     [[
     CREATE TABLE IF NOT EXISTS character_levels (
@@ -1052,6 +1065,60 @@ SCHEMA = {
         UNIQUE KEY uq_npc_contacts_phone (phone_number),
         KEY idx_npc_contacts_character (character_id),
         CONSTRAINT fk_npc_contacts_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_characters / rp_gym: stats de cuerpo con escala 0-1000 (la del juego). NULL = sin entrenar:
+    -- se usa body_fat / body_muscle (0-100) y la resistencia queda como esta
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS stat_fat     FLOAT NULL,
+        ADD COLUMN IF NOT EXISTS stat_muscle  FLOAT NULL,
+        ADD COLUMN IF NOT EXISTS stat_stamina FLOAT NULL
+    ]],
+    -- rp_gym: maquinas y entrenadores colocados por admins
+    [[
+    CREATE TABLE IF NOT EXISTS gym_machines (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        kind      VARCHAR(16)  NOT NULL,
+        gym       VARCHAR(24)  NOT NULL DEFAULT 'gym',
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rotation  FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS gym_trainers (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        style     VARCHAR(16)  NOT NULL,
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rotation  FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_gym: estilos de combate, estilo actual, progreso del dia, bloqueo de 12 h y ultimo entrenamiento
+    [[
+    CREATE TABLE IF NOT EXISTS character_gym (
+        character_id  INT UNSIGNED NOT NULL,
+        boxing        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        kungfu        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        kickboxing    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        style         TINYINT UNSIGNED NULL,
+        day_start     INT UNSIGNED NOT NULL DEFAULT 0,
+        day_fat       FLOAT NOT NULL DEFAULT 0,
+        day_stamina   FLOAT NOT NULL DEFAULT 0,
+        day_muscle    FLOAT NOT NULL DEFAULT 0,
+        locked_until  INT UNSIGNED NOT NULL DEFAULT 0,
+        last_trained  INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_gym_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
 }

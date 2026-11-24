@@ -15,6 +15,9 @@
 BODY = {
     STAT_FAT = 21,
     STAT_MUSCLE = 23,
+    STAT_STAMINA = 22,
+    STAT_MAX = 1000,        -- escala interna de GTA para grasa, musculo y resistencia
+    STAMINA_DEFAULT = 100,  -- resistencia inicial del juego original (10 %)
     FAT_MAX = 100,
     MUSCLE_MAX = 100,
 

@@ -10,7 +10,12 @@ end
 -- Cuerpo, complexion, ropa y cabeza. La cabeza la dibuja rp_heads en cada cliente a partir
 -- de "rp:head"; la altura y el tono de piel, client/c_body.lua a partir de "rp:body".
 function applyPlayerLook(player, row)
-    local head = applyCharacterLook(player, row)
+    -- Grasa y musculo entrenados (stat_*, escala 0-1000) mandan sobre los del creador (body_*, 0-100)
+    local look = setmetatable({}, { __index = row })
+    if row.stat_fat then look.body_fat = tonumber(row.stat_fat) / 10 end
+    if row.stat_muscle then look.body_muscle = tonumber(row.stat_muscle) / 10 end
+    local head = applyCharacterLook(player, look)
+    if row.stat_stamina then setPedStat(player, BODY.STAT_STAMINA, tonumber(row.stat_stamina)) end
     setElementData(player, "rp:head", head or false)
     setElementData(player, "rp:body", {
         height = tonumber(row.height) or BODY.HEIGHT_BASE,
@@ -126,6 +131,47 @@ function setCharacterLook(player, changes)
     params[#params + 1] = row.id
     dbExec(db(), "UPDATE characters SET " .. table.concat(sets, ", ") .. " WHERE id = ?", unpack(params))
     applyPlayerLook(player, row)
+    return true
+end
+
+----------------------------------------------------------------
+-- Cuerpo entrenado (usado por rp_gym): unico lugar que escribe grasa, musculo y resistencia
+----------------------------------------------------------------
+local function clampStat(v)
+    return math.max(0, math.min(BODY.STAT_MAX, tonumber(v) or 0))
+end
+
+-- Stats actuales del personaje activo, escala 0-1000: { fat, muscle, stamina }
+function getBodyStats(player)
+    local row = active[player]
+    if not row then return false end
+    return {
+        fat = tonumber(row.stat_fat) or (tonumber(row.body_fat) or 0) * 10,
+        muscle = tonumber(row.stat_muscle) or (tonumber(row.body_muscle) or 0) * 10,
+        stamina = tonumber(row.stat_stamina) or BODY.STAMINA_DEFAULT,
+    }
+end
+
+-- Guarda y aplica stats (escala 0-1000; nil = sin cambios). rebuild = true vuelve a vestir el cuerpo
+-- de CJ para que se vea el cambio (es caro: hacerlo al terminar el entrenamiento, no en cada paso).
+function setBodyStats(player, fat, muscle, stamina, rebuild)
+    local row = active[player]
+    if not row then return false end
+    local current = getBodyStats(player)
+    fat = clampStat(fat == nil and current.fat or fat)
+    muscle = clampStat(muscle == nil and current.muscle or muscle)
+    stamina = clampStat(stamina == nil and current.stamina or stamina)
+
+    row.stat_fat, row.stat_muscle, row.stat_stamina = fat, muscle, stamina
+    row.body_fat = math.floor(fat / 10 + 0.5)       -- se mantiene el valor 0-100 que usa el creador y el peso
+    row.body_muscle = math.floor(muscle / 10 + 0.5)
+    dbExec(db(), "UPDATE characters SET stat_fat = ?, stat_muscle = ?, stat_stamina = ?, body_fat = ?, body_muscle = ? WHERE id = ?",
+        fat, muscle, stamina, row.body_fat, row.body_muscle, row.id)
+
+    setPedStat(player, BODY.STAT_STAMINA, stamina)
+    setPedStat(player, BODY.STAT_FAT, fat)         -- solo tienen efecto en el cuerpo de CJ
+    setPedStat(player, BODY.STAT_MUSCLE, muscle)
+    if rebuild then applyPlayerLook(player, row) end
     return true
 end
 
