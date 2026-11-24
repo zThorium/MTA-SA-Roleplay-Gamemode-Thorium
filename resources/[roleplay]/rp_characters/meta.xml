@@ -19,6 +19,7 @@
     <script src="client/c_characters.lua" type="client" cache="false" />
     <export function="applyPedLook" type="client" />
     <export function="clearPedLook" type="client" />
+    <export function="getPedBodyScale" type="client" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
