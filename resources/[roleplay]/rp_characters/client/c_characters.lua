@@ -227,3 +227,21 @@ end)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     closeUI(false)
 end)
+
+
+-- Para otros recursos (panel de admin): viste un ped local con la apariencia de un personaje.
+-- look = getCharacterLook(). Aplica skin/ropa, cabeza custom y altura/tono (shaders de c_body.lua).
+-- Devuelve el id de cabeza o false.
+function applyPedLook(ped, look)
+    if not isElement(ped) or type(look) ~= "table" then return false end
+    local head = applyCharacterLook(ped, look)
+    if head then exports.rp_heads:applyHead(ped, head) else exports.rp_heads:removeHead(ped) end
+    setPedBody(ped, look.height, head and tonumber(look.skin_tone) or 0)
+    return head or false
+end
+
+function clearPedLook(ped)
+    if not isElement(ped) then return end
+    exports.rp_heads:removeHead(ped)
+    removePedBody(ped)
+end

@@ -49,6 +49,8 @@ bone_0[18],bone_t[18],bone_f[18] = 53,52,54 --right angle
 bone_0[19],bone_t[19],bone_f[19] = 44,43,42 --left foot
 bone_0[20],bone_t[20],bone_f[20] = 54,53,52 --right foot
 
+neckSign = nil -- 1 o -1: signo normal del eje X del cuello respecto al costado derecho del ped
+
 function putAttachedElementsOnBones()
 	for element,ped in pairs(attached_ped) do
 		if not isElement(element) then
@@ -57,6 +59,20 @@ function putAttachedElementsOnBones()
 			local bone = attached_bone[element]
 			local x,y,z = getPedBonePosition(ped,bone_0[bone])
 			local xx,xy,xz,yx,yy,yz,zx,zy,zz = getBoneMatrix(ped,bone)
+				-- [rp] Al agacharse, el hueso de la cabeza queda casi alineado con el eje
+				-- torso->cuello y el producto vectorial cambia de signo (cabeza girada 180).
+				-- Se mantiene la continuidad con el frame anterior negando X e Y (sigue
+				-- siendo una rotacion valida).
+				if bone == 2 and xx == xx and xy == xy and xz == xz then
+					local _,_,prz = getElementRotation(ped)
+						local d = xx*math.cos(math.rad(prz)) + xy*math.sin(math.rad(prz))
+						if neckSign == nil and not isPedDucked(ped) and getPedMoveState(ped) == "stand" and getPedTask(ped,"secondary",0) ~= "TASK_SIMPLE_USE_GUN" and math.abs(d) > 0.5 then
+							neckSign = d > 0 and 1 or -1
+						end
+					if neckSign and d*neckSign < 0 then
+						xx,xy,xz,yx,yy,yz = -xx,-xy,-xz,-yx,-yy,-yz
+					end
+									end
 			local offx,offy,offz = attached_x[element],attached_y[element],attached_z[element]
 			local offrx,offry,offrz = attached_rx[element],attached_ry[element],attached_rz[element]
 			local objx = x+offx*xx+offy*yx+offz*zx
@@ -85,4 +101,7 @@ function putAttachedElementsOnBones()
 		end
 	end
 end
-addEventHandler("onClientPreRender",root,putAttachedElementsOnBones)
+-- [rp] onClientPedsProcessed corre despues de animar los peds: leer los huesos aqui
+-- evita que el objeto vaya un frame atrasado respecto al cuerpo (se notaba al
+-- apuntar agachado moviendo la mira rapido). Para volver: onClientPreRender.
+addEventHandler("onClientPedsProcessed",root,putAttachedElementsOnBones)

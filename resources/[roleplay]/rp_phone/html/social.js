@@ -792,6 +792,7 @@
     function openCamera(mode) { camera("open", mode || "selfie"); }
 
     function closeCameraHud() {
+        if (window.Gallery) Gallery.cancel();   // camara cerrada sin disparar: olvida quien la pidio
         cancelCountdown();
         releaseKeys();
         document.body.classList.remove("camera-mode");
@@ -827,6 +828,12 @@
     $("cam-shutter").addEventListener("click", shoot);
     $("cam-close").addEventListener("click", function () { closeCameraHud(); camera("close"); });
     $("cam-flip").addEventListener("click", function () { camera("flip"); });
+    // Publicar una foto que ya esta en la galeria
+    $("cam-gallery").addEventListener("click", function () {
+        closeCameraHud();
+        camera("close");
+        Gallery.pick("Elegir foto", function (b64) { P.show("social"); Editor.open(b64); });
+    });
     $("cam-timer").addEventListener("click", function () {
         Cam.timer = TIMERS[(TIMERS.indexOf(Cam.timer) + 1) % TIMERS.length];
         $("cam-timer-label").textContent = Cam.timer ? Cam.timer + "s" : "";
@@ -838,6 +845,25 @@
         this.classList.toggle("on", Cam.grid);
     });
     $("cam-zoom").addEventListener("input", function () { camera("zoomTo", Number(this.value) / 100); });
+    // Clic derecho + arrastrar: mover la camara para encuadrar (se acumula y se envia una vez por frame)
+    var look = { on: false, dx: 0, dy: 0, queued: false };
+    function flushLook() {
+        look.queued = false;
+        if (look.dx || look.dy) camera("look", look.dx, look.dy);
+        look.dx = look.dy = 0;
+    }
+    $("camera-hud").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    $("camera-hud").addEventListener("mousedown", function (e) {
+        if (e.button === 2) { look.on = true; $("camera-hud").classList.add("looking"); }
+    });
+    document.addEventListener("mousemove", function (e) {
+        if (!look.on) return;
+        look.dx += e.movementX; look.dy += e.movementY;
+        if (!look.queued) { look.queued = true; requestAnimationFrame(flushLook); }
+    });
+    function endLook() { look.on = false; $("camera-hud").classList.remove("looking"); }
+    document.addEventListener("mouseup", function (e) { if (e.button === 2) endLook(); });
+    window.addEventListener("blur", endLook);
     $("camera-hud").addEventListener("wheel", function (e) {
         e.preventDefault();
         camera("zoom", e.deltaY < 0 ? 1 : -1);
@@ -856,6 +882,7 @@
         else if (k === "e") camera("nextPose", 1);
         else if (k === "+" || k === "=") camera("zoom", 1);
         else if (k === "-") camera("zoom", -1);
+        else if (k === "r") camera("resetLook");
         else if (k === "t") $("cam-timer").click();
         else if (k === "g") $("cam-grid-btn").click();
     });
@@ -902,8 +929,11 @@
         shot: function (base64) {
             var flash = $("cam-flash");
             flash.classList.remove("go"); void flash.offsetWidth; flash.classList.add("go");
+            // Toda foto se guarda en la galeria; si otra app la pidio (Camara, Tinder), ella decide el destino
+            var after = Gallery.onShot(base64);
             setTimeout(function () {
                 closeCameraHud();
+                if (after) return after(base64);
                 P.show("social");
                 Editor.open(base64);
             }, 220);

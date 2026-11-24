@@ -12,6 +12,7 @@ local catalog = {}
 local cooldownSearch = {}
 local cooldownPlay = {}
 local remoteSearchCache = {}
+local resolvedUrls = {} -- identifier de archive.org -> URL mp3/ogg ya resuelta
 
 local function notify(player, text, kind)
     if exports.rp_notify then exports.rp_notify:notify(player, text, kind or "info") end
@@ -243,6 +244,22 @@ local function syncVehicle(vehicle, state)
     setElementData(vehicle, "rp:musicVolume", state.volume, true)
 end
 
+-- Un vehiculo suena con UNA sola fuente: al usar el telefono se apaga la radio de rp_radio
+local function silenceVehicleRadio(vehicle)
+    if not isElement(vehicle) then return end
+    pcall(function() exports.rp_radio:setVehicleStation(vehicle, nil) end)
+end
+
+-- Export para rp_radio: detiene la musica del vehiculo (la radio la reemplaza) y limpia el vehiculo
+function stopVehicleMusic(vehicle)
+    local owners = {}
+    for player, state in pairs(active) do
+        if state.origin == "vehicle" and state.vehicle == vehicle then owners[#owners + 1] = player end
+    end
+    for _, player in ipairs(owners) do stopPlayer(player) end
+    clearVehicleState(vehicle)
+end
+
 local function sendTrackToPlayer(player, track)
     if not isElement(player) or not track then return end
     if track.provider == "archive" then
@@ -250,6 +267,11 @@ local function sendTrackToPlayer(player, track)
         local identifier = tostring(track.providerId or "")
         if identifier == "" then
             triggerClientEvent(player, "rp:music:playTrack", resourceRoot, track.key, track.streamUrl)
+            return
+        end
+        local cached = resolvedUrls[identifier]
+        if cached then
+            triggerClientEvent(player, "rp:music:playTrack", resourceRoot, track.key, cached)
             return
         end
         local metadataUrl = base .. "/metadata/" .. urlEncode(identifier)
@@ -323,6 +345,7 @@ local function sendTrackToPlayer(player, track)
             end
             outputDebugString(("[rp_phone][music] resolved id=%s format=%s url=%s")
                 :format(identifier, tostring(foundFormat), resolved))
+            resolvedUrls[identifier] = resolved
             triggerClientEvent(player, "rp:music:playTrack", resourceRoot, track.key, resolved)
         end)
         return
@@ -386,7 +409,7 @@ addEventHandler("rp:music:search", resourceRoot, function(query)
         return a.artist < b.artist
     end)
 
-    local cacheKey = "ia2:" .. query:lower()
+    local cacheKey = "ia3:" .. query:lower()
     local cached = remoteSearchCache[cacheKey]
     if cached and getTickCount() - cached.at < 1800000 then
         triggerClientEvent(player, "rp:music:searchResults", resourceRoot, cached.results)
@@ -405,6 +428,8 @@ addEventHandler("rp:music:search", resourceRoot, function(query)
 
         local base = tostring(MUSIC_PROVIDER_CONFIG.archiveBaseUrl or "https://archive.org")
         local queryText = query:gsub("[\"%%+]", " ")
+        -- solo items de audio con MP3, si no la mayoria de resultados no se pueden reproducir
+        queryText = "mediatype:audio AND format:MP3 AND (" .. queryText .. ")"
         local url = ("%s/advancedsearch.php?q=%s&fl%%5B%%5D=identifier&fl%%5B%%5D=title&fl%%5B%%5D=creator&rows=50&page=1&output=json")
             :format(base, urlEncode(queryText))
         fetchRemote(url, {
@@ -494,6 +519,7 @@ addEventHandler("rp:music:play", resourceRoot, function(trackKey)
     local vehicle = getPedOccupiedVehicle(player)
     local origin = "personal"
     if vehicle and vehicleCanControl(player, vehicle) then origin = "vehicle" end
+    local previous = active[player]
     active[player] = {
         trackKey = trackKey,
         owner = player,
@@ -502,11 +528,15 @@ addEventHandler("rp:music:play", resourceRoot, function(trackKey)
         paused = false,
         position = 0,
         startedAt = getTickCount(),
-        volume = MUSIC_CONFIG.DEFAULT_VOLUME,
-        speaker = false,
+        volume = previous and previous.volume or MUSIC_CONFIG.DEFAULT_VOLUME,
+        -- el altavoz se conserva al cambiar de cancion
+        speaker = origin == "personal" and previous ~= nil and previous.speaker == true,
     }
     syncPlayer(player)
-    if origin == "vehicle" then syncVehicle(vehicle, active[player]) end
+    if origin == "vehicle" then
+        silenceVehicleRadio(vehicle)
+        syncVehicle(vehicle, active[player])
+    end
     sendTrackToPlayer(player, track)
     sendTrackToListeners(track, active[player])
     sendState(player)
@@ -577,6 +607,8 @@ addEventHandler("rp:music:vehicle", resourceRoot, function(enabled)
     local player = client
     if not hasPhone(player) then return end
     local vehicle = getPedOccupiedVehicle(player)
+    outputDebugString(("[rp_phone][music] vehicleToggle enabled=%s type=%s vehicle=%s seat=%s")
+        :format(tostring(enabled), type(enabled), tostring(vehicle), tostring(getPedOccupiedVehicleSeat(player))))
     if enabled == true then
         if not vehicleCanControl(player, vehicle) then
             return notify(player, "Solo el conductor o copiloto pueden activar la radio.", "warning")
@@ -586,6 +618,7 @@ addEventHandler("rp:music:vehicle", resourceRoot, function(enabled)
         state.origin = "vehicle"
         state.vehicle = vehicle
         state.speaker = false
+        silenceVehicleRadio(vehicle)
         syncPlayer(player)
         syncVehicle(vehicle, state)
         sendTrackToListeners(catalog[state.trackKey], state)
@@ -642,6 +675,9 @@ setTimer(function()
 end, 1500, 0)
 
 addEventHandler("onPlayerQuit", root, function()
+    -- si se va el dueño, el vehiculo no debe seguir sonando solo
+    local state = active[source]
+    if state and state.origin == "vehicle" then clearVehicleState(state.vehicle) end
     active[source] = nil
     cooldownSearch[source] = nil
     cooldownPlay[source] = nil

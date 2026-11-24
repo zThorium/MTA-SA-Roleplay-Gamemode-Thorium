@@ -30,7 +30,20 @@ end
 ----------------------------------------------------------------
 -- Dano
 ----------------------------------------------------------------
+local headshotAsked = false
 addEventHandler("onClientPlayerDamage", localPlayer, function(attacker, weapon, bodypart, loss)
+    -- Disparo en la cabeza de otro jugador: muerte instantanea (el servidor lo valida)
+    if bodypart == 9 and not dyingLocal and isElement(attacker) and attacker ~= localPlayer
+        and getElementType(attacker) == "player" and getElementData(localPlayer, "rp:characterId")
+        and ((weapon >= 22 and weapon <= 34) or weapon == 38) then
+        cancelEvent()
+        if not headshotAsked then
+            headshotAsked = true
+            triggerServerEvent("rp:injury:headshot", resourceRoot, attacker, weapon)
+            setTimer(function() headshotAsked = false end, 3000, 1)
+        end
+        return
+    end
     if getElementData(localPlayer, "rp:downed") or dyingLocal then
         cancelEvent()
         return
@@ -175,6 +188,7 @@ end
 local animWatch
 local function checkAnimation()
     if not active or isPedDead(localPlayer) then return end
+    if isPedInVehicle(localPlayer) and getElementData(localPlayer, "rp:loaded") then return end
     local block, anim = getPedAnimation(localPlayer)
     if isPedInVehicle(localPlayer) or not block or block:lower() ~= INJURY.ANIM_BLOCK:lower()
         or not anim or anim:lower() ~= INJURY.ANIM_NAME:lower() then

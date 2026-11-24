@@ -201,6 +201,15 @@ addEventHandler("rp:phone:call", resourceRoot, function(number)
     if lastCall[player] and now - lastCall[player] < 3000 then return end
     lastCall[player] = now
     if type(number) ~= "string" or #number > 12 then return end
+    -- Numeros de vinculos (rp_npcrel): la persona contesta y viene a verte
+    local npcNumber = tonumber(number)
+    if npcNumber and npcNumber >= 5560000 and npcNumber <= 5569999 then
+        local npcrel = getResourceFromName("rp_npcrel")
+        if npcrel and getResourceState(npcrel) == "running" then
+            exports.rp_npcrel:callNpc(player, npcNumber)   -- responde con rp:phone:callResult
+            return
+        end
+    end
     local entry = BY_NUMBER[number]
     if not entry then
         triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)

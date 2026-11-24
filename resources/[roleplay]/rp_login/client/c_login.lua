@@ -10,6 +10,34 @@
 local screenW, screenH = guiGetScreenSize()
 local browserGui, browser = nil, nil
 
+-- Credenciales recordadas: archivo privado del recurso en el PC del jugador
+-- (el prefijo "@" lo hace inaccesible a otros recursos). Solo se guarda tras
+-- un login correcto y solo si el jugador marco "Recordar".
+local SAVED_FILE = "@saved_login.xml"
+local pendingRemember = nil  -- { user, pass } del ultimo intento con "Recordar"
+
+local function loadSaved()
+    if not fileExists(SAVED_FILE) then return nil, nil end
+    local node = xmlLoadFile(SAVED_FILE)
+    if not node then return nil, nil end
+    local user = xmlNodeGetAttribute(node, "user")
+    local pass = xmlNodeGetAttribute(node, "pass")
+    xmlUnloadFile(node)
+    if type(user) ~= "string" or type(pass) ~= "string" or user == "" then return nil, nil end
+    return user, pass
+end
+
+local function writeSaved(user, pass)
+    if fileExists(SAVED_FILE) then fileDelete(SAVED_FILE) end
+    if not user then return end
+    local node = xmlCreateFile(SAVED_FILE, "login")
+    if not node then return end
+    xmlNodeSetAttribute(node, "user", user)
+    xmlNodeSetAttribute(node, "pass", pass)
+    xmlSaveFile(node)
+    xmlUnloadFile(node)
+end
+
 -- Camara de fondo mientras el jugador esta en el login (vista de Los Santos)
 local CAMERA = { 1468.8, -919.2, 100.2, 1468.4, -918.2, 99.9 }
 
@@ -46,6 +74,12 @@ local function showLoginScreen()
     addEventHandler("onClientBrowserCreated", browser, function()
         loadBrowserURL(source, "http://mta/local/html/index.html")
     end)
+    addEventHandler("onClientBrowserDocumentReady", browser, function()
+        local user, pass = loadSaved()
+        if user then
+            callJS(("RP.setSaved(%s, %s)"):format(jsString(user), jsString(pass)))
+        end
+    end)
 
     showCursor(true)
     guiSetInputEnabled(true)
@@ -63,9 +97,12 @@ end
 -- Puente JS -> servidor (validacion basica; la real esta en el servidor)
 ----------------------------------------------------------------
 local function forward(serverEvent)
-    return function(username, password)
+    return function(username, password, remember)
         if type(username) ~= "string" or type(password) ~= "string" then return end
         if #username > 24 or #password > 64 then return end
+        if serverEvent == "rp:auth:login" then
+            pendingRemember = (remember == true) and { username, password } or false
+        end
         triggerServerEvent(serverEvent, resourceRoot, username, password)
     end
 end
@@ -81,6 +118,13 @@ addEventHandler("rp:auth:result", resourceRoot, function(ok, message, form)
 end)
 
 addEventHandler("rp:auth:success", resourceRoot, function(username)
+    -- Login correcto: guarda u olvida segun la casilla "Recordar"
+    if pendingRemember then
+        writeSaved(pendingRemember[1], pendingRemember[2])
+    elseif pendingRemember == false then
+        writeSaved(nil)
+    end
+    pendingRemember = nil
     callJS(("RP.onSuccess(%s)"):format(jsString(username)))
     -- deja que la animacion de salida termine antes de cerrar el navegador
     setTimer(hideLoginScreen, 700, 1)

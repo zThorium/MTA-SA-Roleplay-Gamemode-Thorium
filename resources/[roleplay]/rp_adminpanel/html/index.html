@@ -6,18 +6,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="window">
-        <header>
-            <div>
-                <h1>Panel de administracion</h1>
-                <p class="hint"><kbd>Esc</kbd> cierra &middot; clic en un comando para copiarlo</p>
-            </div>
-            <input id="search" type="text" placeholder="Buscar comando o descripcion..." autocomplete="off" maxlength="40">
-            <button id="btn-close" class="close" title="Cerrar">&times;</button>
-        </header>
-        <nav id="tabs"></nav>
-        <main id="list" class="list"></main>
-        <footer><span id="count"></span><span>Requiere <code>admin_level &ge; 1</code></span></footer>
+    <div class="app">
+        <aside class="side">
+            <div class="brand"><span class="logo">T</span><div><b>Thorium</b><small>Centro de administracion</small></div></div>
+            <nav id="tabs"></nav>
+            <div class="side-foot"><kbd>Esc</kbd> cerrar panel</div>
+        </aside>
+        <section class="main">
+            <header class="top">
+                <div><h1 id="page-title">Panel</h1><p id="page-sub"></p></div>
+                <input id="search" type="text" placeholder="Buscar..." autocomplete="off" maxlength="40">
+                <div class="me"><span class="avatar" id="avatar"></span><div><b id="who"></b><small id="role"></small></div></div>
+                <button id="btn-close" class="close" title="Cerrar">&times;</button>
+            </header>
+            <main id="view"></main>
+            <footer><span id="count"></span><span id="status"></span></footer>
+        </section>
     </div>
     <script src="app.js"></script>
 </body>

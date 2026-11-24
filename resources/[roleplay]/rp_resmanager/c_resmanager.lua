@@ -1,6 +1,6 @@
 --[[
     rp_resmanager / c_resmanager.lua
-    UI (CEF) del gestor de recursos. F10 o /recursos. El servidor valida todo:
+    UI (CEF) del gestor de recursos. F9 o /recursos. El servidor valida todo:
     el cliente solo pide abrir y el servidor responde si eres super admin.
 ]]
 
@@ -62,7 +62,7 @@ addEventHandler("rp:resmgr:ui:refresh", root, function()
 end)
 addEventHandler("rp:resmgr:ui:close", root, close)
 
-bindKey("F10", "down", function()
+bindKey("F9", "down", function()
     if visible then close() return end
     triggerServerEvent("rp:resmgr:tryOpen", resourceRoot)
 end)

@@ -11,8 +11,10 @@
       stack       maximo de unidades de este item
       use         efecto al usarlo (nil = no se puede usar):
                   health, armor, hunger, thirst, energy (rp_needs), message,
+                  meth = segundos de efecto de metanfetamina (elementData "rp:meth")
                   event = dispara rp:onItemUse en el servidor (no se gasta)
       consumable  true si se gasta al usarlo
+      lot         unidades que entrega cada compra en una tienda (el precio es por lote)
 ]]
 
 INVENTORY = {
@@ -68,6 +70,28 @@ ITEMS = {
         name = "DNI", icon = "🆔", weight = 0.02, stack = 1, document = true,
         description = "Documento Nacional de Identidad. Usalo para verlo o ensenalo con /mostrardni [id]. Se tramita en la agencia de empleo.",
         use = { event = "id_card" },
+    },
+
+    -- rp_backpacks: al usarlas se equipan en la espalda (capacidad y peso en rp_backpacks/shared/s_config.lua)
+    bp_small = {
+        name = "Mochila pequena", icon = "🎒", weight = 0.4, stack = 1,
+        description = "Mochila compacta. Capacidad 5 kg.", use = { event = "backpack" },
+    },
+    bp_school = {
+        name = "Mochila escolar", icon = "🎒", weight = 0.6, stack = 1,
+        description = "Mochila de uso diario. Capacidad 10 kg.", use = { event = "backpack" },
+    },
+    bp_hiking = {
+        name = "Mochila de senderismo", icon = "🎒", weight = 1.2, stack = 1,
+        description = "Mochila grande para excursiones. Capacidad 20 kg.", use = { event = "backpack" },
+    },
+    bp_tactical = {
+        name = "Mochila tactica", icon = "🎒", weight = 1.8, stack = 1,
+        description = "Mochila reforzada de gran capacidad. Capacidad 30 kg.", use = { event = "backpack" },
+    },
+    bp_expedition = {
+        name = "Mochila de expedicion", icon = "🎒", weight = 2.5, stack = 1,
+        description = "La mochila mas grande. Capacidad 45 kg, pero te frena y te cansa mas.", use = { event = "backpack" },
     },
 
     -- rp_jobs: productos y hallazgos de los trabajos (se venden en los puntos de venta de rp_jobs)
@@ -173,6 +197,52 @@ ITEMS = {
         description = "Licencia de conducir clase B. Usala para verla; /mostrarlicencia [id] para ensenarla.",
         use = { event = "driver_license" },
     },
+    -- Drogas (rp_dealers): solo se compran a los traficantes. "drug" avisa a rp_dealers (evento rp:onDrugUsed) que aplica el efecto.
+    weed = {
+        name = "Marihuana", icon = "🌿", weight = 0.05, stack = 30, consumable = true,
+        description = "Bolsita de marihuana. Ilegal.",
+        use = { message = "Te fumas un porro.", drug = "weed" },
+    },
+    cocaine = {
+        name = "Cocaina", icon = "❄️", weight = 0.05, stack = 30, consumable = true,
+        description = "Bolsita de cocaina. Ilegal.",
+        use = { message = "Esnifas una linea de cocaina.", drug = "cocaine" },
+    },
+    lsd = {
+        name = "LSD", icon = "🌀", weight = 0.01, stack = 30, consumable = true,
+        description = "Carton de LSD. Ilegal.",
+        use = { message = "Te pones el carton de LSD bajo la lengua.", drug = "lsd" },
+    },
+    meth = {
+        name = "Metanfetamina", icon = "💎", weight = 0.05, stack = 30, consumable = true,
+        description = "Cristales de metanfetamina. Ilegal. 1 minuto corriendo mas rapido y sin gastar estamina.",
+        use = { meth = 60, message = "Fumas metanfetamina: te sientes imparable." },
+    },
+
+    -- rp_ammunation: armas (use.event = "weapon": equipar/guardar) y municion (balas sueltas en el inventario).
+    -- weapon = id de arma GTA, ammo = item de municion que gasta. lot = balas por compra en la tienda.
+    wpn_colt45 = { name = "Colt 45", icon = "🔫", weight = 1.0, stack = 1, weapon = 22, ammo = "ammo_pistol",
+        description = "Pistola de 9mm.", use = { event = "weapon" } },
+    wpn_deagle = { name = "Desert Eagle", icon = "🔫", weight = 1.5, stack = 1, weapon = 24, ammo = "ammo_pistol",
+        description = "Pistola pesada.", use = { event = "weapon" } },
+    wpn_shotgun = { name = "Escopeta", icon = "🔫", weight = 3.0, stack = 1, weapon = 25, ammo = "ammo_shotgun",
+        description = "Escopeta de caza.", use = { event = "weapon" } },
+    wpn_mp5 = { name = "MP5", icon = "🔫", weight = 2.5, stack = 1, weapon = 29, ammo = "ammo_smg",
+        description = "Subfusil.", use = { event = "weapon" } },
+    wpn_ak47 = { name = "AK-47", icon = "🔫", weight = 4.0, stack = 1, weapon = 30, ammo = "ammo_rifle",
+        description = "Fusil de asalto.", use = { event = "weapon" } },
+    wpn_m4 = { name = "M4", icon = "🔫", weight = 3.5, stack = 1, weapon = 31, ammo = "ammo_rifle",
+        description = "Fusil de asalto.", use = { event = "weapon" } },
+    wpn_rifle = { name = "Rifle de caza", icon = "🔫", weight = 3.5, stack = 1, weapon = 33, ammo = "ammo_rifle",
+        description = "Rifle de cerrojo.", use = { event = "weapon" } },
+    ammo_pistol = { name = "Municion de pistola", icon = "🔸", weight = 0.02, stack = 120, lot = 30,
+        description = "Balas 9mm / .50. Se gastan al disparar el arma equipada." },
+    ammo_shotgun = { name = "Cartuchos de escopeta", icon = "🔸", weight = 0.04, stack = 40, lot = 10,
+        description = "Cartuchos del calibre 12." },
+    ammo_smg = { name = "Municion de subfusil", icon = "🔸", weight = 0.015, stack = 150, lot = 30,
+        description = "Balas para subfusil." },
+    ammo_rifle = { name = "Municion de fusil", icon = "🔸", weight = 0.025, stack = 90, lot = 30,
+        description = "Balas para fusiles y rifles." },
 }
 
 --[[
@@ -231,4 +301,41 @@ end
 
 function getItemList()
     return ITEMS
+end
+
+--[[
+    Modelo 3D (GTA SA) con el que se ve el item al tirarlo al suelo.
+    { modelo, escala }. IDs verificados en data/*.ide del juego.
+    Sin entrada = bolsa de dinero (1550). Al crear un item nuevo, anadele su modelo aqui.
+    shortcut: sin modelo exacto en vanilla (agua, botiquin, encendedor, pescado...) se usa el mas parecido.
+]]
+local BOTTLE, CUP, BURGER, WRAP = { 1484, 1.0 }, { 2647, 1.0 }, { 2880, 1.0 }, { 2821, 1.0 }
+local SACK, MEAT_A, MEAT_B, BOX = { 2060, 0.5 }, { 2803, 0.6 }, { 2805, 0.6 }, { 1558, 0.6 }
+local CARD = { 1581, 1.0 }
+
+local ITEM_MODELS = {
+    water = BOTTLE, message_bottle = BOTTLE,
+    coffee = CUP,
+    burger = BURGER,
+    sandwich = WRAP,
+    medkit = { 1240, 0.8 },
+    vest = { 1242, 0.8 },
+    cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
+    phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
+    id_card = CARD, driver_license = CARD,
+    bp_small = { 3026, 0.75 }, bp_school = { 3026, 0.9 }, bp_hiking = { 3026, 1.15 },
+    bp_tactical = { 3026, 1.3 }, bp_expedition = { 3026, 1.5 },
+    old_watch = { 2710, 1.0 },
+    rare_vinyl = { 1210, 0.6 },
+    fish_sardine = BOX, fish_bass = BOX, fish_tuna = BOX, fish_swordfish = BOX, old_boot = BOX,
+    meat_game = MEAT_A,
+    hide_rabbit = MEAT_B, hide_deer = MEAT_B, hide_boar = MEAT_B, hide_bear = MEAT_B, antlers = MEAT_B,
+    ore_coal = SACK, ore_iron = SACK, ore_copper = SACK, ore_silver = SACK,
+}
+
+function getItemGroundModel(itemId)
+    local entry = ITEM_MODELS[itemId]
+    if not entry and type(itemId) == "string" and (itemId:find("^vkey:") or itemId:find("^bcard:")) then entry = CARD end
+    entry = entry or { 1550, 0.7 }
+    return entry[1], entry[2]
 end

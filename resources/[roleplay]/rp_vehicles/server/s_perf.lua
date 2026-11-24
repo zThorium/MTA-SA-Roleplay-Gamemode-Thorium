@@ -283,6 +283,7 @@ local function finish(player, v, message)
     saveVehicle(v)
     exports.rp_characters:saveCharacter(player)
     notify(player, message, "success")
+    triggerClientEvent(player, "rp:tune:sound", resourceRoot, "install")
     sendTuning(player, v, getVehicleTuningShop(v) or { name = "Taller" })
 end
 

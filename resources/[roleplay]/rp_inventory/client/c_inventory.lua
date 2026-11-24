@@ -91,6 +91,97 @@ addEventHandler("rp:inv:ui:drop", root, function(itemId, amount)
     if type(itemId) == "string" and amount then triggerServerEvent("rp:inv:drop", resourceRoot, itemId, amount) end
 end)
 
+----------------------------------------------------------------
+-- Dar a jugadores cercanos y tirar al suelo arrastrando
+----------------------------------------------------------------
+local GIVE_RANGE = 3   -- el servidor vuelve a validarlo
+addEvent("rp:inv:ui:give", false)
+addEvent("rp:inv:ui:dropAt", false)
+
+local function pushNearby()
+    if not (isOpen() and ready) then return end
+    local x, y, z = getElementPosition(localPlayer)
+    local dim, int = getElementDimension(localPlayer), getElementInterior(localPlayer)
+    local list = {}
+    for _, p in ipairs(getElementsByType("player", root, true)) do
+        local id = getElementData(p, "id")
+        if p ~= localPlayer and id and getElementData(p, "rp:characterId") and not isPedDead(p)
+            and getElementDimension(p) == dim and getElementInterior(p) == int then
+            local px, py, pz = getElementPosition(p)
+            if getDistanceBetweenPoints3D(x, y, z, px, py, pz) <= GIVE_RANGE then
+                list[#list + 1] = { id = id, name = (getPlayerName(p):gsub("_", " ")) }
+            end
+        end
+    end
+    executeBrowserJavascript(browser, ("RP.nearby(%s[0])"):format(toJSON(list, true)))
+end
+setTimer(pushNearby, 700, 0)
+
+addEventHandler("rp:inv:ui:give", root, function(itemId, amount, targetId)
+    amount, targetId = tonumber(amount), tonumber(targetId)
+    if type(itemId) == "string" and amount and targetId then
+        triggerServerEvent("rp:inv:give", resourceRoot, itemId, amount, targetId)
+    end
+end)
+
+-- (sx, sy) = donde se solto el click; se traza un rayo desde la camara hasta el suelo
+addEventHandler("rp:inv:ui:dropAt", root, function(itemId, amount, sx, sy)
+    amount, sx, sy = tonumber(amount), tonumber(sx), tonumber(sy)
+    if type(itemId) ~= "string" or not (amount and sx and sy) then return end
+    local cx, cy, cz = getCameraMatrix()
+    local fx, fy, fz = getWorldFromScreenPosition(sx, sy, 40)
+    local hit, hx, hy, hz = processLineOfSight(cx, cy, cz, fx, fy, fz, true, false, false, true, false, false, false, false, localPlayer)
+    if not hit then   -- apuntaste al cielo: lo dejamos delante del personaje
+        local px, py, pz = getElementPosition(localPlayer)
+        local _, _, rot = getElementRotation(localPlayer)
+        hx, hy, hz = px + math.sin(math.rad(rot)) * 0.8, py + math.cos(math.rad(rot)) * 0.8, pz - 0.9
+    end
+    triggerServerEvent("rp:inv:dropAt", resourceRoot, itemId, amount, hx, hy, hz)
+end)
+
+-- Etiqueta sobre los items del suelo + tecla E para recogerlos
+local PICK_RANGE = 2.5
+local function nearestGround()
+    local px, py, pz = getElementPosition(localPlayer)
+    local best, bestDist
+    for _, obj in ipairs(getElementsByType("object", resourceRoot, true)) do
+        if getElementData(obj, "rp:ground") then
+            local x, y, z = getElementPosition(obj)
+            local d = getDistanceBetweenPoints3D(px, py, pz, x, y, z)
+            if d <= PICK_RANGE and (not bestDist or d < bestDist) then best, bestDist = obj, d end
+        end
+    end
+    return best
+end
+
+addEventHandler("onClientRender", root, function()
+    if getElementData(localPlayer, "rp:hudHidden") then return end
+    local cx, cy, cz = getCameraMatrix()
+    local target = (not isOpen()) and nearestGround() or nil
+    for _, obj in ipairs(getElementsByType("object", resourceRoot, true)) do
+        local data = getElementData(obj, "rp:ground")
+        if data then
+            local x, y, z = getElementPosition(obj)
+            local dist = getDistanceBetweenPoints3D(cx, cy, cz, x, y, z)
+            local sx, sy = getScreenFromWorldPosition(x, y, z + 0.4)
+            if sx and dist < 12 then
+                local text = ("%s %s x%d"):format(data.icon or "", data.name or "?", data.amount or 1)
+                dxDrawText(text, sx + 1, sy + 1, sx + 1, sy + 1, tocolor(0, 0, 0, 220), 1, "default-bold", "center", "bottom")
+                dxDrawText(text, sx, sy, sx, sy, tocolor(255, 255, 255, 255), 1, "default-bold", "center", "bottom")
+                if obj == target then
+                    dxDrawText("[E] Recoger", sx, sy + 2, sx, sy + 2, tocolor(245, 165, 36, 255), 1, "default-bold", "center", "top")
+                end
+            end
+        end
+    end
+end)
+
+bindKey("e", "down", function()
+    if isOpen() or isCursorShowing() then return end
+    local obj = nearestGround()
+    if obj then triggerServerEvent("rp:inv:pickup", resourceRoot, obj) end
+end)
+
 -- Cerrar si el personaje muere o sale
 addEventHandler("onClientPlayerWasted", localPlayer, close)
 addEvent("rp:onClientPlayerDowned", false)

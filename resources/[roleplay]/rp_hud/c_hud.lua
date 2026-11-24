@@ -11,7 +11,7 @@
 ]]
 
 local screenW, screenH = guiGetScreenSize()
-local s = math.max(0.75, math.min(1.3, screenH / 900))
+local s = math.max(0.9, math.min(1.3, screenH / 900))   -- minimo 0.9: en ventanas pequenas el texto era ilegible
 
 local MAP_SIZE = 1536          -- px del archivo map.png
 local WORLD = 6000             -- unidades que cubre el mapa (-3000 a 3000)
@@ -57,8 +57,59 @@ local COLORS = {
     muted = tocolor(154, 163, 178),
     accent = tocolor(245, 165, 36),
     money = tocolor(76, 211, 138),
+    moneyDown = tocolor(229, 72, 77),
 }
+-- Paleta tomada del kit de Figma (Grand Figma Kit V):
+--   vida #4f914a sobre #2e592a, dinero #84e36c / baja #f09999 (contorno negro),
+--   barras de progreso "Good" #78ff74 y "Urgent" #e03232 sobre su propio color al 20 %,
+--   filas con degradado negro (0 % -> 80 %) de izquierda a derecha.
+local BAR = {
+    health = { 79, 145, 74 }, healthLost = { 46, 89, 42 },
+    armor = { 86, 150, 200 }, armorLost = { 28, 52, 72 },
+    good = { 120, 255, 116 }, normal = { 245, 200, 70 }, urgent = { 224, 50, 50 },
+    level = { 93, 182, 229 },
+}
+local MONEY_UP, MONEY_DOWN = { 132, 227, 108 }, { 240, 153, 153 }
+local STRIP_H = math.floor(20 * s)   -- alto de las barras de vida/chaleco bajo el minimapa
 
+local OUT = math.max(1, math.floor(1.5 * s + 0.5))
+local OFFS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
+
+-- Texto con contorno negro (como los numeros de dinero del juego)
+local function outlineText(text, x1, y1, x2, y2, color, scale, font, ax, ay)
+    local black = tocolor(0, 0, 0, 255)
+    for _, o in ipairs(OFFS) do
+        dxDrawText(text, x1 + o[1] * OUT, y1 + o[2] * OUT, x2 + o[1] * OUT, y2 + o[2] * OUT, black, scale, font, ax, ay, false, false, false)
+    end
+    dxDrawText(text, x1, y1, x2, y2, color, scale, font, ax, ay, false, false, false)
+end
+
+local function shadowText(text, x1, y1, x2, y2, color, scale, font, ax, ay)
+    dxDrawText(text, x1 + 1, y1 + 1, x2 + 1, y2 + 1, tocolor(0, 0, 0, 200), scale, font, ax, ay, true)
+    dxDrawText(text, x1, y1, x2, y2, color, scale, font, ax, ay, true)
+end
+
+-- Degradado negro de las filas (64x1 px): alfa 0 -> 204 (0xCC). reversed = al reves
+local gradients = {}
+local function getGradient(reversed)
+    local key = reversed and "r" or "n"
+    if isElement(gradients[key]) then return gradients[key] end
+    local tex = dxCreateTexture(64, 1, "argb", "clamp")
+    if not tex then return nil end
+    local px = dxGetTexturePixels(tex)
+    for i = 0, 63 do
+        local k = math.min(1, (reversed and (63 - i) or i) / 56)
+        dxSetPixelColor(px, i, 0, 0, 0, 0, math.floor(204 * k))
+    end
+    dxSetTexturePixels(tex, px)
+    gradients[key] = tex
+    return tex
+end
+
+local function drawRowPanel(x, y, w, h, reversed)
+    local tex = getGradient(reversed)
+    if tex then dxDrawImage(x, y, w, h, tex) else dxDrawRectangle(x, y, w, h, tocolor(0, 0, 0, 140)) end
+end
 
 ----------------------------------------------------------------
 -- Componentes de GTA
@@ -200,9 +251,81 @@ local NEEDS = {
     { key = "hunger", icon = "food",  r = 245, g = 165, b = 36 },
     { key = "thirst", icon = "drop", r = 70,  g = 150, b = 255 },
     { key = "energy", icon = "bolt", r = 168, g = 120, b = 255 },
+    { key = "sanity", icon = "heart", r = 224, g = 98, b = 190 },   -- cordura: baja al matar civiles (rp_needs)
+    { key = "stamina", icon = "run", r = 63, g = 191, b = 106 },   -- solo cliente, no se guarda
 }
-local needValues = { hunger = 100, thirst = 100, energy = 100 }
-local needShown = { hunger = 100, thirst = 100, energy = 100 }   -- valor suavizado para animar
+local needValues = { hunger = 100, thirst = 100, energy = 100, stamina = 100, sanity = 100 }
+local needShown = { hunger = 100, thirst = 100, energy = 100, stamina = 100, sanity = 100 }   -- valor suavizado para animar
+
+-- Estamina: baja corriendo (sprint), sube trotando/caminando/quieto. Al agotarse
+-- se bloquea el sprint hasta recuperar STAMINA_RESUME.
+local STAMINA_DRAIN, STAMINA_REGEN, STAMINA_RESUME = 8, 5, 20   -- puntos/segundo, puntos/segundo, %
+local staminaTick = getTickCount()
+local staminaLocked = false
+local STAMINA_JUMP_COST = 8   -- puntos por salto
+local jumpPressed = false
+
+-- Carga de la mochila en kg (rp_backpacks la publica). 30 kg = -24 % de velocidad y +90 % de gasto al correr.
+local function packKg() return tonumber(getElementData(localPlayer, "rp:packWeight")) or 0 end
+local function packSlowdown() return math.max(0.7, 1 - packKg() * 0.008) end
+local function packDrainFactor() return 1 + packKg() * 0.03 end
+
+-- Tecla de salto (bindKey respeta el rebind del jugador). Solo cuenta si realmente despega.
+bindKey("jump", "down", function()
+    if staminaLocked or isPedInVehicle(localPlayer) or not isPedOnGround(localPlayer) then return end
+    jumpPressed = true
+end)
+
+local function updateStamina()
+    local now = getTickCount()
+    local dt = math.min((now - staminaTick) / 1000, 0.5)
+    staminaTick = now
+    local st = needValues.stamina
+    local meth = getElementData(localPlayer, "rp:meth") == true
+    local state = getPedMoveState(localPlayer)
+    local jumping = state == "jump"
+    if jumpPressed then
+        jumpPressed = false
+        if not meth then st = st - STAMINA_JUMP_COST end   -- saltar gasta estamina (una vez por salto)
+    end
+    if not meth and not isPedInVehicle(localPlayer) and state == "sprint" then
+        st = st - STAMINA_DRAIN * packDrainFactor() * dt
+    elseif not jumping then
+        st = st + STAMINA_REGEN * dt
+    end
+    st = math.max(0, math.min(100, st))
+    needValues.stamina = st
+    if st <= 0 and not staminaLocked then
+        staminaLocked = true
+        toggleControl("sprint", false)
+        toggleControl("jump", false)   -- sin estamina no se salta
+    elseif staminaLocked and (st >= STAMINA_RESUME or meth) and needValues.energy > 0 then   -- energia 0 la bloquea rp_needs
+        staminaLocked = false
+        toggleControl("sprint", true)
+        toggleControl("jump", true)
+    end
+end
+
+-- Metanfetamina: correr mas rapido acelerando las animaciones de trote/sprint.
+local METH_SPEED = 1.5
+local RUN_ANIMS = { "run_player", "run_civi", "run_fat", "run_old", "run_gang1", "run_wuzi",
+                    "sprint_civi", "sprint_panic", "swat_run", "woman_run", "woman_runfast", "woman_runpanic" }
+-- Mochila (rp_backpacks): el peso que lleva a la espalda frena trote y caminata.
+local WALK_ANIMS = { "walk_player", "walk_civi", "walk_fat", "walk_old", "walk_gang1", "walk_gang2", "walk_wuzi", "woman_walknorm" }
+local lastRunSpeed, lastWalkSpeed = 1, 1
+addEventHandler("onClientPreRender", root, function()
+    local meth = getElementData(localPlayer, "rp:meth") == true
+    local slow = packSlowdown()
+    local run = (meth and METH_SPEED or 1) * slow
+    if run ~= 1 or lastRunSpeed ~= 1 then
+        for i = 1, #RUN_ANIMS do setPedAnimationSpeed(localPlayer, RUN_ANIMS[i], run) end
+        lastRunSpeed = run
+    end
+    if slow ~= 1 or lastWalkSpeed ~= 1 then
+        for i = 1, #WALK_ANIMS do setPedAnimationSpeed(localPlayer, WALK_ANIMS[i], slow) end
+        lastWalkSpeed = slow
+    end
+end)
 local statusLines = {}
 local hasNeeds = false   -- false hasta recibir "rp:needs" (no mostrar 100 falsos)
 local worldLabel = nil
@@ -217,6 +340,7 @@ local function refreshNeeds()
             lines[#lines + 1] = { "Sin comida/bebida: pierdes vida", 229, 72, 77 }
         end
         if (n.energy or 100) <= 0 then lines[#lines + 1] = { "Agotado: no puedes correr (/dormir)", 168, 120, 255 } end
+        if (n.sanity or 100) <= 25 then lines[#lines + 1] = { "Tu cordura esta al limite", 224, 98, 190 } end
     end
     statusLines = lines
 end
@@ -227,66 +351,109 @@ local function refreshWorld()
 end
 
 local ICONS = {}
-for _, name in ipairs({ "heart", "shield", "food", "drop", "bolt" }) do
+for _, name in ipairs({ "heart", "shield", "food", "drop", "bolt", "run" }) do
     ICONS[name] = dxCreateTexture("images/icons/" .. name .. ".png", "argb", true, "clamp")
 end
 
-local function drawBars(x, bottom)
+-- Vida y chaleco bajo el minimapa (barras de 138x9 del kit, escaladas al ancho del mapa)
+local function drawBars(x, y, w)
     if not prefs.needs then return end
-    local now = getTickCount()
-    for k, v in pairs(needValues) do needShown[k] = needShown[k] + (v - needShown[k]) * 0.15 end
+    local gap = math.floor(4 * s)
+    local h = math.floor(10 * s)
+    local health, armor = getElementHealth(localPlayer), getPedArmor(localPlayer)
+    local wH = armor > 0 and math.floor((w - gap) * 0.62) or w
+    local pulse = health <= 25 and (150 + (getTickCount() % 600 < 300 and 105 or 0)) or 255
 
-    local armor = getPedArmor(localPlayer)
-    local rows = {
-        { icon = "heart", value = getElementHealth(localPlayer), r = 229, g = 72, b = 77, always = true },
-    }
-    if armor > 0 then rows[#rows + 1] = { icon = "shield", value = armor, r = 200, g = 205, b = 215, always = true, noAlert = true } end
-    for _, need in ipairs(hasNeeds and NEEDS or {}) do
-        rows[#rows + 1] = { icon = need.icon, value = needValues[need.key], shown = needShown[need.key], r = need.r, g = need.g, b = need.b }
+    dxDrawRectangle(x - 1, y - 1, wH + 2, h + 2, tocolor(0, 0, 0, 200))
+    dxDrawRectangle(x, y, wH, h, tocolor(BAR.healthLost[1], BAR.healthLost[2], BAR.healthLost[3], 255))
+    local hc = health <= 25 and BAR.urgent or BAR.health
+    dxDrawRectangle(x, y, wH * math.max(0, math.min(1, health / 100)), h, tocolor(hc[1], hc[2], hc[3], pulse))
+    if armor > 0 then
+        local ax, aw = x + wH + gap, w - wH - gap
+        dxDrawRectangle(ax - 1, y - 1, aw + 2, h + 2, tocolor(0, 0, 0, 200))
+        dxDrawRectangle(ax, y, aw, h, tocolor(BAR.armorLost[1], BAR.armorLost[2], BAR.armorLost[3], 255))
+        dxDrawRectangle(ax, y, aw * math.min(1, armor / 100), h, tocolor(BAR.armor[1], BAR.armor[2], BAR.armor[3], 255))
     end
+end
 
-    local w, pad, rowH = 210 * s, 9 * s, 31 * s
-    local iconS = 26 * s
-    local extraH = (#statusLines + (worldLabel and 1 or 0)) * 17 * s
-    local h = pad * 2 + #rows * rowH + extraH
-    local y = bottom - h
-    dxDrawRectangle(x, y, w, h, COLORS.panel)
-    dxDrawRectangle(x, y, 2, h, COLORS.accent)
+-- Hambre / sed / energia: filas "Progress Bar" del kit (etiqueta + barra de 10 px sobre
+-- degradado). Verde >= 50, ambar >= 20, rojo parpadeante por debajo.
+-- Anillo que se llena en sentido horario desde las 12 (frac 0..1), como tira de triangulos
+local function drawRing(cx, cy, r, thick, frac, color)
+    frac = math.max(0, math.min(1, frac))
+    if frac <= 0.002 then return end
+    local segs = math.max(2, math.ceil(90 * frac))
+    local verts = {}
+    for i = 0, segs do
+        local a = math.rad(-90 + 360 * frac * i / segs)
+        local ca, sa = math.cos(a), math.sin(a)
+        verts[#verts + 1] = { cx + ca * r, cy + sa * r, color }
+        verts[#verts + 1] = { cx + ca * (r - thick), cy + sa * (r - thick), color }
+    end
+    dxDrawPrimitive("trianglestrip", false, unpack(verts))
+end
 
-    for i, row in ipairs(rows) do
-        local ry = y + pad + (i - 1) * rowH
-        local v = math.max(0, math.min(100, row.shown or row.value))
-        local real = row.value
-        local r, g, b, a = row.r, row.g, row.b, 255
-        if not row.noAlert then
-            local critical = real <= (row.always and 25 or 20)
-            local low = real <= (row.always and 40 or 35)
-            if critical then
-                r, g, b = 229, 72, 77
-                a = 150 + (math.sin(now / 170) * 0.5 + 0.5) * 105
-            elseif not row.always and not low then
-                a = 150      -- todo bien: se atenua
-            end
+-- Hambre / sed / energia: iconos compactos; el contorno se vacia segun lo que te queda.
+-- Cada necesidad tiene su color (NEEDS); ambar < 35, rojo parpadeante < 20.
+local function drawNeeds(x, bottom)
+    if not prefs.needs or not hasNeeds then return bottom end
+    updateStamina()
+    for k, v in pairs(needValues) do needShown[k] = needShown[k] + (v - needShown[k]) * 0.12 end
+    local D = math.floor(50 * s)          -- diametro de cada icono
+    local gap = math.floor(10 * s)
+    local thick = math.max(4, math.floor(5 * s))
+    local top = bottom - D - math.floor(14 * s)   -- deja sitio al porcentaje
+    local t = getTickCount()
+    for i, need in ipairs(NEEDS) do
+        local real, shown = needValues[need.key], needShown[need.key]
+        local cx = x + D / 2 + (i - 1) * (D + gap)
+        local cy = top + D / 2
+        local r, g, b = need.r, need.g, need.b
+        local low = real < 20
+        if need.key == "stamina" and getElementData(localPlayer, "rp:meth") == true then
+            r, g, b, low = 255, 196, 40, false   -- dorado: la droga evita que se gaste
+        elseif low then r, g, b = BAR.urgent[1], BAR.urgent[2], BAR.urgent[3]
+        elseif real < 35 then r, g, b = BAR.normal[1], BAR.normal[2], BAR.normal[3] end
+        local pulse = low and (math.sin(t / 170) * 0.5 + 0.5) or 0
+
+        -- resplandor suave cuando esta critico
+        if low then
+            dxDrawCircle(cx, cy, D / 2 + 5 * s, 0, 360, tocolor(r, g, b, 40 + 60 * pulse), tocolor(r, g, b, 0), 40)
         end
-        local col = tocolor(r, g, b, a)
-        local icon = ICONS[row.icon]
-        if icon then dxDrawImage(x + pad + 2, ry + (rowH - iconS) / 2, iconS, iconS, icon, 0, 0, 0, col) end
-        local bx = x + pad + iconS + 10 * s
-        local bw, bh = w - pad * 2 - iconS - 10 * s - 40 * s, 10 * s
-        local by = ry + rowH / 2 - bh / 2
-        dxDrawRectangle(bx, by, bw, bh, tocolor(255, 255, 255, 30))
-        dxDrawRectangle(bx, by, bw * v / 100, bh, col)
-        dxDrawText(tostring(math.floor(real + 0.5)), bx + bw, ry, x + w - pad, ry + rowH,
-            tocolor(255, 255, 255, a < 255 and math.max(a, 190) or 255), 1.1 * s, "default-bold", "right", "center")
+        -- sombra + fondo + cristal
+        dxDrawCircle(cx, cy, D / 2 + 2, 0, 360, tocolor(0, 0, 0, 150), tocolor(0, 0, 0, 150), 48)
+        dxDrawCircle(cx, cy, D / 2, 0, 360, tocolor(14, 16, 24, 225), tocolor(14, 16, 24, 225), 48)
+        -- pista (ring vacio) y progreso
+        drawRing(cx, cy, D / 2, thick, 1, tocolor(255, 255, 255, 30))
+        drawRing(cx, cy, D / 2, thick, shown / 100, tocolor(r, g, b, math.floor(215 + 40 * pulse)))
+        -- disco interior ligeramente teñido con el color de la necesidad
+        dxDrawCircle(cx, cy, D / 2 - thick - 1, 0, 360, tocolor(r, g, b, 38), tocolor(r, g, b, 14), 40)
+        -- icono
+        local isz = math.floor(D * 0.42)
+        local tex = ICONS[need.icon]
+        if tex then
+            dxDrawImage(cx - isz / 2, cy - isz / 2, isz, isz, tex, 0, 0, 0, tocolor(255, 255, 255, 245))
+        end
+        -- porcentaje
+        shadowText(("%d%%"):format(math.floor(shown + 0.5)), cx - D / 2, top + D + 1 * s, cx + D / 2, top + D + 14 * s,
+            low and tocolor(r, g, b, 255) or tocolor(220, 224, 232, 230), 0.75 * s, "default-bold", "center", "center")
     end
+    return top
+end
 
-    local ly = y + pad + #rows * rowH
-    for _, line in ipairs(statusLines) do
-        dxDrawText(line[1], x + pad, ly, x + w - pad, ly + 17 * s, tocolor(line[2], line[3], line[4], 240), 0.85 * s, "default-bold", "left", "center", true)
-        ly = ly + 17 * s
-    end
+-- Avisos de necesidades y clima, encima de las filas
+local function drawStatusText(x, bottom)
+    if not prefs.needs then return end
+    local lh = 18 * s
+    local ly = bottom - lh
     if worldLabel then
-        dxDrawText("Clima: " .. worldLabel, x + pad, ly, x + w - pad, ly + 17 * s, COLORS.muted, 0.85 * s, "default", "left", "center", true)
+        shadowText("Clima: " .. worldLabel, x + 12 * s, ly, x + 280 * s, ly + lh, tocolor(235, 238, 245), 0.9 * s, "default-bold", "left", "center")
+        ly = ly - lh
+    end
+    for i = #statusLines, 1, -1 do
+        local line = statusLines[i]
+        shadowText(line[1], x + 12 * s, ly, x + 340 * s, ly + lh, tocolor(line[2], line[3], line[4], 255), 0.9 * s, "default-bold", "left", "center")
+        ly = ly - lh
     end
 end
 
@@ -299,26 +466,87 @@ local function formatMoney(n)
     return (n < 0 and "-$" or "$") .. digits
 end
 
+local MONEY_FLASH_MS = 2000
+local lastMoney, moneyFlash
+local MONEY_FONT = "pricedown"
+
 local function drawTopRight()
     local hour, minute = getTime()
     local clock = ("%02d:%02d"):format(hour, minute)
     local right, top = screenW - MARGIN, MARGIN
 
-    dxDrawText(clock, 0, top, right + 2, 0, tocolor(0, 0, 0, 160), 2.2 * s, "default-bold", "right", "top")
-    dxDrawText(clock, 0, top, right, 0, COLORS.text, 2.2 * s, "default-bold", "right", "top")
+    local clockH = dxGetFontHeight(1.5 * s, "default-bold")
+    outlineText(clock, 0, top, right, top + clockH, tocolor(255, 255, 255), 1.5 * s, "default-bold", "right", "top")
 
-    local money = formatMoney(getPlayerMoney(localPlayer))
-    local my = top + dxGetFontHeight(2.2 * s, "default-bold") + 2 * s
-    dxDrawText(money, 0, my + 1, right + 1, 0, tocolor(0, 0, 0, 160), 1.5 * s, "default-bold", "right", "top")
-    dxDrawText(money, 0, my, right, 0, COLORS.money, 1.5 * s, "default-bold", "right", "top")
+    -- Dinero (Rockstar Pricedown 48 px, #84e36c con contorno negro); al cambiar muestra la
+    -- diferencia debajo: sube = verde, baja = #f09999
+    local current = getPlayerMoney(localPlayer)
+    local now = getTickCount()
+    if lastMoney and current ~= lastMoney then moneyFlash = { delta = current - lastMoney, t0 = now } end
+    lastMoney = current
+    local k = 0
+    if moneyFlash then
+        k = 1 - (now - moneyFlash.t0) / MONEY_FLASH_MS
+        if k <= 0 then moneyFlash, k = nil, 0 end
+    end
+
+    local mScale = 1.35 * s
+    local mH = dxGetFontHeight(mScale, MONEY_FONT)
+    local my = top + clockH + 4 * s
+    outlineText(formatMoney(current), 0, my, right, my + mH, tocolor(MONEY_UP[1], MONEY_UP[2], MONEY_UP[3]), mScale, MONEY_FONT, "right", "top")
+    local nextY = my + mH + 2 * s
+
+    -- Saldo del banco (elementData "rp:bankMoney" de rp_bank)
+    local bank = tonumber(getElementData(localPlayer, "rp:bankMoney"))
+    if bank then
+        local bScale = 0.95 * s
+        local bH = dxGetFontHeight(bScale, MONEY_FONT)
+        local txt = formatMoney(bank)
+        local tw = dxGetTextWidth(txt, bScale, MONEY_FONT)
+        outlineText(txt, 0, nextY, right, nextY + bH, tocolor(130, 190, 255), bScale, MONEY_FONT, "right", "top")
+        outlineText("BANCO", 0, nextY, right - tw - 8 * s, nextY + bH, tocolor(190, 200, 215), 0.8 * s, "default-bold", "right", "center")
+        nextY = nextY + bH + 2 * s
+    end
+
+    if moneyFlash then
+        local d = moneyFlash.delta
+        local c = d > 0 and MONEY_UP or MONEY_DOWN
+        local dScale = 1.0 * s
+        local dH = dxGetFontHeight(dScale, MONEY_FONT)
+        local txt = (d > 0 and "+" or "-") .. formatMoney(math.abs(d))
+        local black = tocolor(0, 0, 0, 255 * k)
+        for _, o in ipairs(OFFS) do
+            dxDrawText(txt, o[1] * OUT, nextY + o[2] * OUT, right + o[1] * OUT, nextY + dH + o[2] * OUT, black, dScale, MONEY_FONT, "right", "top")
+        end
+        dxDrawText(txt, 0, nextY, right, nextY + dH, tocolor(c[1], c[2], c[3], 255 * k), dScale, MONEY_FONT, "right", "top")
+        nextY = nextY + dH + 2 * s
+    end
 
     local weapon = getPedWeapon(localPlayer)
     if weapon and weapon ~= 0 then
-        local ay = my + dxGetFontHeight(1.5 * s, "default-bold") + 4 * s
         local ammo = ("%s  %d / %d"):format(getWeaponNameFromID(weapon) or "Arma", getPedAmmoInClip(localPlayer), getPedTotalAmmo(localPlayer) - getPedAmmoInClip(localPlayer))
-        dxDrawText(ammo, 0, ay, right, 0, COLORS.text, 1.0 * s, "default-bold", "right", "top")
+        local aH = dxGetFontHeight(1.05 * s, "default-bold")
+        outlineText(ammo, 0, nextY, right, nextY + aH, tocolor(255, 255, 255), 1.05 * s, "default-bold", "right", "top")
+        nextY = nextY + aH + 6 * s
+    end
+
+    -- Nivel (rp_levels): fila con degradado y barra de 10 tramos
+    local level = tonumber(getElementData(localPlayer, "rp:level"))
+    local frac = tonumber(getElementData(localPlayer, "rp:levelFrac"))
+    if level and frac then
+        local rowW, rowH = math.floor(260 * s), math.floor(35 * s)
+        local rx = screenW - rowW
+        local barW, barH = math.floor(144 * s), math.floor(10 * s)
+        drawRowPanel(rx, nextY, rowW, rowH, false)
+        dxDrawText("NIVEL " .. level, rx + 12 * s, nextY, rx + 12 * s + 96 * s, nextY + rowH, tocolor(255, 255, 255), 0.95 * s, "default-bold", "left", "center")
+        local bx, by = rx + 12 * s + 96 * s, nextY + (rowH - barH) / 2
+        local c = BAR.level
+        dxDrawRectangle(bx, by, barW, barH, tocolor(c[1], c[2], c[3], 51))
+        dxDrawRectangle(bx, by, barW * math.max(0, math.min(1, frac)), barH, tocolor(c[1], c[2], c[3], 255))
+        for i = 1, 9 do dxDrawRectangle(bx + barW * i / 10 - 1, by, 2, barH, tocolor(0, 0, 0, 160)) end
     end
 end
+
 
 ----------------------------------------------------------------
 -- Velocimetro y bencina
@@ -400,9 +628,12 @@ end
 ----------------------------------------------------------------
 addEventHandler("onClientRender", root, function()
     if not isActive() then return end
-    local mapX, mapY = MARGIN, screenH - MARGIN - MS
+    local stripY = screenH - MARGIN - STRIP_H + 3 * s
+    local mapX, mapY = MARGIN, screenH - MARGIN - MS - STRIP_H
     if prefs.map then drawMinimap(mapX, mapY) end
-    drawBars(mapX + MS + 12 * s, screenH - MARGIN)
+    drawBars(mapX, stripY, MS)
+    local needsTop = drawNeeds(mapX + MS + 12 * s, screenH - MARGIN)
+    drawStatusText(mapX + MS + 12 * s, needsTop)
     drawTopRight()
     if prefs.speedo then drawSpeedometer() end
 end)

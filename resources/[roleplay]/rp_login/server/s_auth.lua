@@ -277,3 +277,10 @@ end
 function getPlayerAdminLevel(player)
     return sessions[player] and sessions[player].adminLevel or 0
 end
+
+-- Cambia el nivel en la sesion activa (el panel de admin lo usa tras escribir en la BD)
+function setSessionAdminLevel(player, level)
+    if not sessions[player] then return false end
+    sessions[player].adminLevel = math.max(0, math.min(255, math.floor(tonumber(level) or 0)))
+    return true
+end

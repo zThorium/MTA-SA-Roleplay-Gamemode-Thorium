@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Pool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window">
+        <header>
+            <div class="title">
+                <span class="ball">8</span>
+                <div>
+                    <h1>Pool</h1>
+                    <p id="subtitle">Ten Green Bottles</p>
+                </div>
+            </div>
+            <nav>
+                <button id="tab-table" class="tab active">Mesa</button>
+                <button id="tab-wins" class="tab">Más victorias</button>
+                <button id="tab-money" class="tab">Más dinero ganado</button>
+            </nav>
+            <button id="btn-close" class="close" title="Cerrar (Esc)">×</button>
+        </header>
+
+        <section id="view-table" class="view">
+            <div id="table-status" class="status"></div>
+
+            <div id="bet-box" class="bet-box">
+                <h2>Elige la apuesta</h2>
+                <div id="chips" class="chips"></div>
+                <div class="custom">
+                    <label for="bet-input">Otra cantidad</label>
+                    <input id="bet-input" type="text" inputmode="numeric" maxlength="7" placeholder="0">
+                </div>
+                <div class="pot">
+                    <span>Tu dinero: <b id="money">$0</b></span>
+                    <span>Bote: <b id="pot">$0</b></span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="btn-create" class="primary">Crear partida</button>
+                <button id="btn-join" class="primary">Aceptar apuesta y jugar</button>
+                <button id="btn-cancel" class="danger">Cancelar partida</button>
+            </div>
+
+            <ul class="rules">
+                <li>8-ball 1 contra 1. Las dos apuestas quedan en custodia y el ganador se lleva el bote.</li>
+                <li>Ratón para apuntar, <kbd>clic izq.</kbd> mantenido para cargar fuerza, <kbd>C</kbd> cambia la vista.</li>
+                <li>Si abandonas o te desconectas, pierdes la apuesta.</li>
+            </ul>
+        </section>
+
+        <section id="view-wins" class="view hidden">
+            <h2>Jugadores con más victorias</h2>
+            <table class="rank" id="rank-wins">
+                <thead><tr><th>#</th><th>Jugador</th><th>Victorias</th><th>Derrotas</th><th>% Vict.</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="me" id="me-wins"></div>
+        </section>
+
+        <section id="view-money" class="view hidden">
+            <h2>Jugadores que más dinero han ganado en apuestas</h2>
+            <table class="rank" id="rank-money">
+                <thead><tr><th>#</th><th>Jugador</th><th>Dinero ganado</th><th>Victorias</th><th>Partidas</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="me" id="me-money"></div>
+        </section>
+
+        <footer><kbd>Esc</kbd> cerrar</footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

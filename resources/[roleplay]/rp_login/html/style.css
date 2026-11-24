@@ -125,3 +125,7 @@ small { font-size: 11px; color: #6f7888; }
 
 .primary:hover { background: #ffb53d; }
 .primary:disabled { opacity: 0.55; cursor: wait; }
+
+.remember { display: flex; align-items: center; gap: 8px; flex-direction: row; cursor: pointer; }
+.remember input { width: auto; margin: 0; accent-color: var(--accent, #f5a524); }
+.remember span { font-size: 13px; color: var(--muted, #9aa3b2); }

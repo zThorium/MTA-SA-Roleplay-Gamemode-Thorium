@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="social.css">
     <link rel="stylesheet" href="tinder.css">
     <link rel="stylesheet" href="music.css">
+    <link rel="stylesheet" href="gallery.css">
 </head>
 <body>
     <div class="phone" id="phone">
@@ -30,6 +31,8 @@
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
                     <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span>Fotogram</button>
                     <button type="button" class="app" data-open="tinder"><span class="icon tinder">🔥</span>Tinder</button>
+                    <button type="button" class="app" id="app-camera"><span class="icon camera">📸</span>Camara</button>
+                    <button type="button" class="app" data-open="gallery"><span class="icon gallery">🖼️</span>Galeria</button>
                     <button type="button" class="app" data-open="music"><span class="icon music">♫</span>Musica</button>
                     <button type="button" class="app" data-app="vroom"><span class="icon vroom">🚗</span>Vroom</button>
                     <button type="button" class="app" data-open="settings"><span class="icon settings">⚙️</span>Ajustes</button>
@@ -243,6 +246,7 @@
                     <button type="button" class="secondary tinder-discover" id="tinder-discover">🔥 Descubrir personas</button>
                     <div class="tinder-photo" id="tinder-photo"><span>Sin foto</span></div>
                     <button type="button" class="secondary" id="tinder-camera">📷 Tomar foto de perfil</button>
+                    <button type="button" class="secondary" id="tinder-gallery">🖼️ Elegir de la galeria</button>
                     <p class="note" id="tinder-data"></p>
                     <textarea id="tinder-bio" maxlength="200" placeholder="Cuentale algo a la gente (max. 200)..."></textarea>
                     <h2 class="section-title">Me interesan</h2>
@@ -272,6 +276,18 @@
                     <button type="button" class="secondary" id="tinder-match-close">Seguir viendo</button>
                 </div>
             </section>
+            <!-- Galeria (html/gallery.js) -->
+            <section class="view" id="view-gallery">
+                <header><button type="button" class="back">‹ Inicio</button><h1 id="gallery-title">Galeria</h1><button type="button" class="action" id="gallery-new" title="Tomar foto">📸</button></header>
+                <div class="gallery-scroll">
+                    <div class="gallery-grid" id="gallery-grid"></div>
+                    <p class="note" id="gallery-empty" hidden>Aun no tienes fotos. Usa la app Camara para tomar la primera.</p>
+                </div>
+            </section>
+            <section class="view gallery-view" id="view-gallery-photo">
+                <header><button type="button" class="back" data-to="gallery">‹ Galeria</button><h1 id="gallery-photo-date"></h1><button type="button" class="action danger-text" id="gallery-delete" title="Eliminar">🗑</button></header>
+                <div class="gallery-full"><img id="gallery-photo" alt=""></div>
+            </section>
 
             <!-- Musica -->
             <section class="view music" id="view-music">
@@ -293,6 +309,7 @@
                     <h2 class="music-section-title">Explorar</h2>
                     <div class="music-results" id="music-results"></div>
                 </div>
+                <div class="music-dock">
                 <div class="music-player" id="music-player" hidden>
                     <div class="music-cover" id="music-cover">♫</div>
                     <div class="music-player-meta">
@@ -306,6 +323,7 @@
                     <button type="button" id="music-speaker">Altavoz apagado</button>
                     <label>Volumen <input id="music-volume" type="range" min="0" max="100" value="60"></label>
                     <button type="button" id="music-vehicle" hidden>Radio del vehiculo</button>
+                </div>
                 </div>
             </section>
 
@@ -335,7 +353,8 @@
                 <button type="button" class="cam-btn" id="cam-close" title="Volver (Esc)">✕</button>
                 <span class="cam-mode" id="cam-mode">Selfie</span>
                 <span class="cam-top-right">
-                    <button type="button" class="cam-btn" id="cam-timer" title="Temporizador (T)">⏱<small id="cam-timer-label"></small></button>
+                    <button type="button" class="cam-btn" id="cam-gallery" title="Elegir de la galeria">🖼</button>
+                    <button type="button" class="cam-btn" id="cam-timer"title="Temporizador (T)">⏱<small id="cam-timer-label"></small></button>
                     <button type="button" class="cam-btn" id="cam-grid-btn" title="Cuadricula (G)">#</button>
                 </span>
             </div>
@@ -343,7 +362,7 @@
             <div class="cam-bottom">
                 <div class="cam-poses" id="cam-poses"></div>
                 <div class="cam-controls">
-                    <span class="cam-hint">A/D girar · W/S altura · Rueda zoom · Q/E pose</span>
+                    <span class="cam-hint">A/D girar · W/S altura · Clic der. mover (R centrar) · Rueda zoom · Q/E pose</span>
                     <button type="button" class="cam-shutter" id="cam-shutter" title="Disparar (Espacio)"></button>
                     <button type="button" class="cam-btn cam-flip" id="cam-flip" title="Cambiar camara (F)">⟲</button>
                 </div>
@@ -354,5 +373,6 @@
     <script src="social.js"></script>
     <script src="tinder.js"></script>
     <script src="music.js"></script>
+    <script src="gallery.js"></script>
 </body>
 </html>

@@ -88,11 +88,13 @@
         if (!state || !state.trackKey) {
             player.hidden = true;
             modes.hidden = true;
+            $("view-music").classList.remove("playing");
             return;
         }
         var track = findTrack(state.trackKey);
         player.hidden = false;
         modes.hidden = false;
+        $("view-music").classList.add("playing");
         $("music-now-title").textContent = track ? track.title : "Reproduciendo";
         $("music-now-artist").textContent = track ? track.artist : "";
         var cover = $("music-cover");
