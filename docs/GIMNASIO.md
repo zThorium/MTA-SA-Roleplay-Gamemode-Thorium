@@ -169,10 +169,73 @@ Fases de desarrollo una vez resuelta la sección 8:
 4. Entrenadores, pelea de instrucción y estilos.
 5. Revisión de seguridad y sincronización, pruebas, `RECURSOS.md` y `rp_test`.
 
-## 8. Decisiones necesarias antes de la Fase 5
+## 8. Decisiones tomadas e implementación (Fases 5 a 7)
 
-1. **Datos exactos.** ¿Aportas los scripts descompilados (`gymbike.sc`, `gymbench.sc`, `gymtread.sc`, entrenadores) y capturas de la interfaz? Si no, ¿aceptas que los valores de la sección 3 se marquen como adaptación propia, claramente separados de los originales?
-2. **Ganancia por repetición.** GTA Wiki (0,1 a 0,9 % músculo, -0,1 % grasa) y Grand Theft Wiki (1 % y 2,5 %) se contradicen. ¿Cuál se toma?
-3. **Límite de 12 h y 35 % de músculo.** Son de fuente única. ¿Se implementan tal cual?
-4. **Lugares.** ¿Dónde van los tres gimnasios? Los interiores originales están en el mapa de GTA y no tengo sus coordenadas verificadas. Dime si los coloco con un comando de admin en juego o si me das las coordenadas.
-5. **Cuerpo existente.** ¿`rp_gym` pasa a ser el único que escribe grasa y músculo, con migración de las columnas de `rp_characters` a la escala 0-1000?
+Decisiones del proyecto:
+
+1. Los valores sin fuente documentada se implementan como **adaptación propia**, marcada `[A]` en `rp_gym/shared/s_config.lua`.
+2. Pesas: **+0,5 % de músculo y -0,5 % de grasa por repetición** (fijo, sin depender del peso). La indicación original decía "50 %" de músculo; se interpretó como 0,5 %, porque 50 % por repetición llenaría el músculo en dos repeticiones. Se cambia en `GYM.REP_MUSCLE` (unidades de 0 a 1000, 5 = 0,5 %).
+3. Límite de 12 h y 35 % de músculo: implementados tal cual (fuente única, ver sección 2).
+4. Máquinas y entrenadores se colocan con comandos de admin.
+5. `rp_characters` es el único escritor de grasa, músculo y resistencia (`getBodyStats` y `setBodyStats`).
+
+### Valores de adaptación [A] (no son del juego original)
+
+| Dato | Valor | Dónde |
+|---|---|---|
+| Teclas | `A`/`D` alternando (cinta y bici), `Espacio` (pesas), flechas = nivel o peso, `Enter` empezar, `Retroceso` salir | `client/c_machines.lua` |
+| Barra de potencia, cinta y bici | empieza en 50 %; pierde `6 + 2,4 x nivel` % por segundo; cada pulsación alterna da 12 % | `GYM_KINDS` |
+| Velocidad virtual | cinta `3 + nivel` km/h; bici `8 + 1,5 x nivel` km/h | `GYM_KINDS` |
+| Ritmo de stats por nivel | los 4 % / 1 % / -2,5 % cada 14 s son el nivel 10; los demás niveles escalan `nivel / 10` | `GYM.RATE_*` |
+| Pesas | pasos de 20 lb (banca) y 10 lb (mancuernas); cada pulsación da `18 - 10 x peso relativo` %; la barra baja `10 + 25 x peso relativo` % por segundo; una repetición dura 1,5 s; 5 s con la barra vacía suelta el peso | `GYM_KINDS`, `GYM_*` |
+| Repeticiones máximas | sin tope; las limita el límite diario | |
+| "Un día" del límite | ventana de 24 h desde el primer entrenamiento | `GYM.DAY_SECONDS` |
+| Combate | el entrenador gana si el jugador baja de 20 de vida y pierde si él baja de 20; ring de 7 m (3,5 m en Cobra); salir del ring es rendirse | `GYM`, `GYM_STYLES` |
+| Skins de entrenadores | 80 (boxeo), 49 (kung fu), 81 (kickboxing) | `GYM_STYLES` |
+| Modelos de máquinas | 2627 cinta, 2630 bici, 2629 banca, 2913 mancuernas; desplazamiento Z -1,0 | `GYM_KINDS` |
+| Resistencia inicial | 100 (10 %) si el personaje nunca entrenó | `BODY.STAMINA_DEFAULT` |
+
+**Los modelos de máquinas, los IDs de skin y las animaciones no están verificados en juego.** Si una máquina sale con otro objeto, se cambia `model` en `GYM_KINDS`.
+
+### Limitaciones [L] añadidas durante la implementación
+
+- La rueda de la cinta y los pedales de la bici (animaciones `pedals_*`) pertenecen al objeto de la máquina, y MTA no tiene animación de objetos: no se mueven.
+- `setPedAnimationSpeed` no se sincroniza: el ajuste de velocidad por nivel solo lo ve el que entrena.
+- Las stats de récords del juego (`DIST_TREADMILL`, etc.) quedan acotadas a 1000 por el rango de `setPedStat`.
+- El motor de GTA cambia las stats del cliente (correr, nadar); el servidor solo conserva lo que guarda el gimnasio.
+- Grasa y músculo solo se ven en el cuerpo de CJ (skin 0).
+
+### Cambios en otros recursos
+
+- `rp_characters`: columnas `stat_fat`, `stat_muscle`, `stat_stamina` (0-1000, `NULL` = sin entrenar). `applyPlayerLook` usa esos valores si existen. Exports nuevos `getBodyStats` y `setBodyStats`; este último mantiene `body_fat` y `body_muscle` (0-100) sincronizados.
+- `rp_database`: entradas nuevas al final de `schema.lua` (columnas anteriores y tablas `gym_machines`, `gym_trainers`, `character_gym`).
+- `rp_adminpanel`: categoría "Gimnasio" en el catálogo. `mtaserver.conf`: `rp_gym` tras `rp_backpacks`.
+
+### Eventos
+
+| Evento | Sentido | Descripción |
+|---|---|---|
+| `rp:gym:start (machineId, opcion)` | cliente a servidor | Subir a una máquina; `opcion` = índice de peso en pesas |
+| `rp:gym:pulse (lado)` | cliente a servidor | 1 o 2 alternando (cinta, bici); 0 (pesas) |
+| `rp:gym:level (-1 o 1)` | cliente a servidor | Cambiar de nivel |
+| `rp:gym:stop` | cliente a servidor | Bajarse |
+| `rp:gym:trainer (trainerId)` | cliente a servidor | Hablar con un entrenador y confirmar el combate |
+| `rp:gym:near (tipo, id, etiqueta, extra)` | servidor a cliente | Aviso "Pulsa E" |
+| `rp:gym:state (tabla o false)` | servidor a cliente | Estado de la sesión para los medidores |
+
+### Instalación
+
+1. Arrancar el servidor: `rp_database` aplica las entradas nuevas de `schema.lua` al iniciar.
+2. `start rp_gym` (ya está en `mtaserver.conf`). Reiniciar `rp_characters` si estaba en marcha.
+3. Entrar al interior de un gimnasio y, de pie donde debe quedar el personaje y mirando hacia donde mira la máquina, usar `/crearmaquina <cinta|bici|banca|mancuernas>`. Repetir por cada máquina. `/crearentrenador <boxeo|kungfu|kickboxing>` para los entrenadores.
+
+### Lista de pruebas
+
+1. **Cinta:** `E`, alternar `A`/`D`, subir y bajar nivel con las flechas. Dejar de pulsar: la potencia baja y el personaje se cae. Comprobar que sube resistencia y músculo y baja grasa.
+2. **Bici:** igual que la cinta.
+3. **Press y mancuernas:** `E`, elegir peso con las flechas, `Enter`, pulsar `Espacio` hasta llenar la barra: +1 repetición, +0,5 % de músculo y -0,5 % de grasa. Con la barra vacía 5 s se suelta el peso.
+4. **Máquina ocupada:** un segundo jugador no puede subir. Desconectar al primero y comprobar que se libera.
+5. **Distancia:** intentar `rp:gym:start` lejos de la máquina (debe rechazarse).
+6. **Límite diario:** entrenar hasta ganar 20 % de músculo o resistencia (o perder 40 % de grasa): la sesión termina y no se puede volver en 12 h.
+7. **Entrenador:** con menos de 35 % de músculo, rechaza. Con 35 % o más, `E` dos veces, ganar (aprende el estilo y lo usa), perder (sin penalización) y salir del ring (pierde las armas).
+8. **Persistencia:** reconectar y comprobar músculo, grasa, resistencia, estilo y bloqueo.

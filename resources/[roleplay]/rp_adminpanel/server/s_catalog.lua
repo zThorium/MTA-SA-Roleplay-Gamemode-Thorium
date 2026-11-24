@@ -95,4 +95,15 @@ ADMIN_CATALOG = {
             { cmd = "/mercadoajuste", args = "<dz> <rotacion>", desc = "Calibra los puestos del mercadillo: metros que se suben (por si quedan enterrados) y rotacion extra 0/90/180/270 para que miren a la calle. Luego crea otro con /evento market.", res = "rp_events" },
         },
     },
+    {
+        id = "gimnasio", name = "Gimnasio",
+        items = {
+            { cmd = "/crearmaquina", args = "<cinta|bici|banca|mancuernas> [gimnasio]", desc = "Crea una maquina de gimnasio en tu posicion y rumbo (el personaje quedara donde estas).", res = "rp_gym" },
+            { cmd = "/borrarmaquina", args = "<id>", desc = "Elimina una maquina de gimnasio.", res = "rp_gym" },
+            { cmd = "/maquinas", args = "", desc = "Lista las maquinas de gimnasio con id y posicion.", res = "rp_gym" },
+            { cmd = "/crearentrenador", args = "<boxeo|kungfu|kickboxing>", desc = "Crea un entrenador de estilo de combate en tu posicion y rumbo.", res = "rp_gym" },
+            { cmd = "/borrarentrenador", args = "<id>", desc = "Elimina un entrenador de combate.", res = "rp_gym" },
+            { cmd = "/entrenadores", args = "", desc = "Lista los entrenadores de combate con id y posicion.", res = "rp_gym" },
+        },
+    },
 }
