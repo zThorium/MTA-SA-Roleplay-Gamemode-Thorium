@@ -22,6 +22,8 @@ end)
 addEventHandler("rp:gym:state", resourceRoot, function(state)
     gymState = state or nil
     if state then gymSelecting = nil end
+    -- Sin congelar al jugador (congelado no anima): se bloquean los controles del juego mientras entrena
+    toggleAllControls(not state, true, false)
 end)
 
 function gymBusy()
@@ -44,5 +46,5 @@ end)
 
 -- Si el personaje sale, se limpia todo
 addEventHandler("onClientElementDataChange", localPlayer, function(key, _, new)
-    if key == "rp:characterId" and not new then gymNearInfo, gymState, gymSelecting = nil, nil, nil end
+    if key == "rp:characterId" and not new then gymNearInfo, gymState, gymSelecting = nil, nil, nil; toggleAllControls(true, true, false) end
 end)

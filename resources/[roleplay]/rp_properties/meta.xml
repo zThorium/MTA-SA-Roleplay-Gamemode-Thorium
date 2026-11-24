@@ -12,5 +12,7 @@
     <script src="server/s_properties.lua" type="server" />
     <script src="client/c_properties.lua" type="client" cache="false" />
 
+    <export function="getPropertyInfo" type="server" />
+
     <file src="html/index.html" />
 </meta>

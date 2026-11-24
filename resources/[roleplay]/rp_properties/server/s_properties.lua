@@ -22,6 +22,11 @@ addEvent("rp:prop:preview", true)
 addEvent("rp:prop:enter", true)
 addEvent("rp:prop:exit", true)
 addEvent("rp:onDatabaseReady", false)
+-- Eventos para otros recursos (rp_furniture): entrar/salir (source = jugador), vender y borrar (source = root)
+addEvent("rp:prop:entered", false)
+addEvent("rp:prop:left", false)
+addEvent("rp:prop:sold", false)
+addEvent("rp:prop:deleted", false)
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(p, t, k) exports.rp_notify:notify(p, t, k) end
@@ -249,6 +254,7 @@ local function teleportInside(player, id)
         if not isElement(player) then return end
         placePlayer(player, t.interior, dimensionOf(id), t.x, t.y, t.z, t.rot)
         fadeCamera(player, true, 0.8)
+        triggerEvent("rp:prop:entered", player, id)
     end, 600, 1)
 end
 
@@ -268,6 +274,7 @@ local function teleportOutside(player, id)
             setElementDimension(player, 0)
         end
         fadeCamera(player, true, 0.8)
+        triggerEvent("rp:prop:left", player, id)
     end, 600, 1)
 end
 
@@ -411,6 +418,7 @@ addCommandHandler("vendercasa", function(player)
     for _, pl in ipairs(getElementsByType("player")) do
         if getElementDimension(pl) == dimensionOf(id) then teleportOutside(pl, id) end
     end
+    triggerEvent("rp:prop:sold", root, id, characterId)   -- rp_furniture guarda los muebles en la bodega del vendedor
     refresh(id)
 end)
 
@@ -442,6 +450,7 @@ addCommandHandler("borrarcasa", function(player, _, id)
     id = tonumber(id)
     if not id or not props[id] then return notify(player, "Uso: /borrarcasa <id>", "warning") end
     dbExec(db(), "DELETE FROM properties WHERE id = ?", id)
+    triggerEvent("rp:prop:deleted", root, id)
     destroyProperty(id)
     notify(player, ("Propiedad #%d eliminada."):format(id), "success")
 end)
@@ -462,3 +471,19 @@ addEventHandler("onPlayerQuit", root, function()
     end
     near[source] = nil
 end)
+
+----------------------------------------------------------------
+-- API para otros recursos (rp_furniture)
+----------------------------------------------------------------
+-- -> { id, name, type, owner_id, locked, price, interior, x, y, z, rot } | false
+-- (x, y, z = punto de salida dentro del interior)
+function getPropertyInfo(id)
+    local p = props[tonumber(id)]
+    if not p then return false end
+    local t = p.exit
+    return {
+        id = tonumber(p.row.id), name = p.row.name, type = p.row.type,
+        owner_id = tonumber(p.row.owner_id), locked = tonumber(p.row.locked) == 1, price = tonumber(p.row.price),
+        interior = t.interior, x = t.x, y = t.y, z = t.z, rot = t.rot,
+    }
+end

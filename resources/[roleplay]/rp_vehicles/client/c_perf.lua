@@ -3,8 +3,7 @@
     Efectos visibles del rendimiento del tuning (solo vehiculos cercanos):
       - Turbo o motor Stage 3: llamaradas por el escape al soltar el acelerador.
       - Motor o turbo muy desgastado (70%+): humo del motor.
-    Sonidos: silbido del turbo mientras se acelera, soplido (BOV) al soltar,
-    estallido junto a las llamaradas y ruido de herramientas al instalar piezas.
+    Sonidos: soplido (BOV) al soltar el acelerador con turbo, estallido junto a las llamaradas y ruido de herramientas al instalar piezas.
     Los niveles llegan en el element data "rp:perf" = { e = motor, t = turbo, w = desgaste % }.
 ]]
 
@@ -33,29 +32,6 @@ local function play3D(file, vehicle, volume, speed)
     setSoundVolume(snd, volume)
     if speed then setSoundSpeed(snd, speed) end
     attachElements(snd, vehicle)
-end
-
--- Silbido del turbo: un sonido en bucle por vehiculo, solo mientras se acelera
-local function whistle(vehicle, s, on, level, speed)
-    level = math.max(1, math.min(3, level or 1))
-    -- Cada nivel de turbo tiene su propio sonido; si cambia la pieza se recrea
-    if isElement(s.whistle) and (not on or s.whistleLevel ~= level) then
-        destroyElement(s.whistle)
-        s.whistle = nil
-    end
-    if on and not isElement(s.whistle) then
-        local x, y, z = getElementPosition(vehicle)
-        s.whistleLevel = level
-        s.whistle = playSound3D("sounds/tune_turbo_" .. level .. ".wav", x, y, z, true)
-        if s.whistle then
-            setSoundMaxDistance(s.whistle, 35)
-            attachElements(s.whistle, vehicle)
-        end
-    end
-    if on and isElement(s.whistle) then
-        setSoundVolume(s.whistle, math.min(1, 0.2 + 0.15 * level))
-        setSoundSpeed(s.whistle, math.min(1.6, 0.7 + speed / 160))
-    end
 end
 
 local function flames(vehicle, power)
@@ -97,13 +73,9 @@ setTimer(function()
             local turbo = p.t or 0
             if turbo > 0 and throttle and speed > 20 then
                 if not s.throttle then s.pressed = now end
-                whistle(v, s, true, turbo, speed)
-            else
-                whistle(v, s, false)
+            elseif turbo > 0 and s.throttle and speed > 25 and now - (s.pressed or now) > 700 then
                 -- Soplido al soltar el acelerador despues de unos instantes con turbo cargado
-                if turbo > 0 and s.throttle and speed > 25 and now - (s.pressed or now) > 700 then
-                    play3D("tune_bov", v, 0.5 + 0.15 * turbo)
-                end
+                play3D("tune_bov", v, 0.5 + 0.15 * turbo)
             end
             s.throttle = throttle
 
@@ -112,16 +84,11 @@ setTimer(function()
                 s.smoke = now
                 smoke(v)
             end
-        elseif state[v] and isElement(state[v].whistle) then
-            destroyElement(state[v].whistle)
-            state[v].whistle = nil
         end
     end
 end, 120, 0)
 
 local function dropState(v)
-    local s = state[v]
-    if s and isElement(s.whistle) then destroyElement(s.whistle) end
     state[v] = nil
 end
 

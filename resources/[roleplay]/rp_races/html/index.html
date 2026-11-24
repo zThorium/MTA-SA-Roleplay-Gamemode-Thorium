@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Carreras</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window" id="win">
+        <header>
+            <div class="flag">🏁</div>
+            <div>
+                <h1 id="title">Carreras</h1>
+                <p id="subtitle"></p>
+            </div>
+        </header>
+
+        <!-- Menu rapido (RF-02) -->
+        <section id="view-menu" class="hidden">
+            <div class="row">
+                <button class="primary" id="btn-random">Carrera aleatoria</button>
+                <select id="menu-track"></select>
+                <button id="btn-create">Crear sala</button>
+            </div>
+            <h2>Salas abiertas</h2>
+            <div id="lobbies" class="list"></div>
+            <footer><button class="ghost" id="btn-menu-close">Cerrar</button></footer>
+        </section>
+
+        <!-- Sala (RF-03, RF-04) -->
+        <section id="view-lobby" class="hidden">
+            <div class="cols">
+                <div>
+                    <h2>Ajustes <span id="host-tag" class="tag"></span></h2>
+                    <div class="form" id="form">
+                        <label>Pista<select id="s-track"></select></label>
+                        <label>Clase de vehiculo<select id="s-class"></select></label>
+                        <label>Vueltas<select id="s-laps"></select></label>
+                        <label>Hora del dia<select id="s-hour"></select></label>
+                        <label>Clima<select id="s-weather"></select></label>
+                        <label>Colisiones<select id="s-ghost"><option value="false">Estandar</option><option value="true">Sin contacto</option></select></label>
+                        <label>Conductores IA<select id="s-ai"><option value="true">Activados (rellenan la parrilla)</option><option value="false">Desactivados</option></select></label>
+                        <label>Dificultad IA<select id="s-difficulty"></select></label>
+                        <label>Catchup<select id="s-catchup"><option value="true">Activado</option><option value="false">Desactivado</option></select></label>
+                    </div>
+                </div>
+                <div>
+                    <h2>Jugadores <span id="count" class="tag"></span></h2>
+                    <div id="players" class="list small"></div>
+                    <h2 id="inv-title">Invitar</h2>
+                    <div id="invitable" class="chips"></div>
+                </div>
+            </div>
+            <div class="timer">Inicio automatico en <b id="secs">--</b> s</div>
+            <footer>
+                <button class="ghost" id="btn-leave">Salir</button>
+                <button class="primary" id="btn-start">Iniciar ahora</button>
+            </footer>
+        </section>
+
+        <!-- Resultados y votacion (RF-18) -->
+        <section id="view-results" class="hidden">
+            <table id="results">
+                <thead><tr><th>#</th><th>Piloto</th><th>Tiempo</th><th>Mejor vuelta</th><th>Dinero</th><th>XP</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <h2>Siguiente carrera <span class="tag">Votacion <b id="vsecs">--</b> s</span></h2>
+            <div id="votes" class="chips"></div>
+            <footer><button class="ghost" id="btn-exit">Salir</button></footer>
+        </section>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

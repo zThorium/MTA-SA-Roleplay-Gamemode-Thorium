@@ -243,6 +243,18 @@ ITEMS = {
         description = "Balas para subfusil." },
     ammo_rifle = { name = "Municion de fusil", icon = "🔸", weight = 0.025, stack = 90, lot = 30,
         description = "Balas para fusiles y rifles." },
+
+    -- rp_police: equipo reglamentario (se entrega en la armeria y se devuelve al salir de servicio)
+    pol_cuffs = { name = "Esposas", icon = "⛓️", weight = 0.3, stack = 3, police = true,
+        description = "Esposas reglamentarias. Se usan con la tecla K sobre un sospechoso." },
+    pol_taser = { name = "Taser", icon = "⚡", weight = 0.5, stack = 1, police = true, use = { event = "police_equip" },
+        description = "Pistola de descargas. Usala para equiparla; deja al objetivo aturdido unos segundos." },
+    pol_baton = { name = "Porra", icon = "🏏", weight = 0.5, stack = 1, police = true, use = { event = "police_equip" },
+        description = "Porra policial. Usala para equiparla." },
+    pol_vest = { name = "Chaleco policial", icon = "🦺", weight = 1.5, stack = 1, police = true, consumable = true,
+        description = "Chaleco antibalas reglamentario.", use = { armor = 100, message = "Te pones el chaleco policial." } },
+    pol_kit = { name = "Kit de evidencia", icon = "🧪", weight = 0.2, stack = 8, police = true,
+        description = "Bolsas y guantes para recolectar evidencia en la escena." },
 }
 
 --[[

@@ -776,6 +776,21 @@ function getPlayerFaction(player)
     return f.id, f.name, rank and rank.name or "", isLeader(player), f.type
 end
 
+-- Nivel de autoridad del rol (el lider cuenta como el maximo)
+function getPlayerRankLevel(player)
+    local f, m = getFaction(player)
+    if not f then return 0 end
+    if isLeader(player) then return FACTIONS.MAX_LEVEL end
+    local rank = f.ranks[m.rankId]
+    return rank and rank.level or 0
+end
+
+-- rp_police ajusta los roles de la faccion 1 directo en la BD y pide recargar
+function reloadFactions()
+    loadFactions()
+    return true
+end
+
 function hasFactionPermission(player, key)
     return getFaction(player) ~= nil and can(player, key)
 end
@@ -796,6 +811,11 @@ function collectPaydaySalary(player)
     if not f then return false, "none" end
     local rank = f.ranks[m.rankId]
     local salary = rank and rank.salary or 0
+    -- La policia solo cobra el sueldo de su rol estando de servicio (rp_police)
+    if f.type == "policia" then
+        local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
+        if ok and not duty then return false, "offduty", f.name end
+    end
     if salary <= 0 then return false, "nosalary", f.name end
     if not f.state_funded then
         if f.bank < salary then

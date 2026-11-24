@@ -71,6 +71,8 @@ function payPlayer(player)
         amount, label = PAYDAY.BASE_SALARY, "Estado"
         if reason == "nofunds" then
             detail, kind = ("%s no tiene fondos para tu sueldo; el Estado te paga el sueldo base."):format(factionName), "warning"
+        elseif reason == "offduty" then
+            detail, kind = ("No estabas de servicio en %s; recibes el sueldo base del Estado."):format(factionName), "warning"
         elseif reason == "nosalary" then
             detail = ("Tu rol en %s no tiene sueldo; recibes el sueldo base del Estado."):format(factionName)
         else
