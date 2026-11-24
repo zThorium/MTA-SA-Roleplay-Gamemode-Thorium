@@ -52,9 +52,13 @@ if not script_serverside then
 			local x7,y7,z7 = getPedBonePosition(ped,7)
 			tx,ty,tz = (x6+x7)*0.5,(y6+y7)*0.5,(z6+z7)*0.5
 		elseif bone == 3 then
-			local x21,y21,z21 = getPedBonePosition(ped,21)
-			local x31,y31,z31 = getPedBonePosition(ped,31)
-			tx,ty,tz = (x21+x31)*0.5,(y21+y31)*0.5,(z21+z31)*0.5
+			-- [rp] Los huesos 21 y 31 (claviculas) estan en el MISMO punto (base del cuello) en el
+			-- esqueleto de CJ: (t-o) y (f-o) salian iguales, el producto vectorial daba 0 y la
+			-- matriz era NaN en cada frame, asi que nada pegado al hueso 3 se movia nunca.
+			-- Se usan los hombros (22 derecho, 32 izquierdo, a +-0.19 m): arriba = punto medio de los hombros.
+			local x22,y22,z22 = getPedBonePosition(ped,22)
+			local x32,y32,z32 = getPedBonePosition(ped,32)
+			tx,ty,tz = (x22+x32)*0.5,(y22+y32)*0.5,(z22+z32)*0.5
 		else
 			tx,ty,tz = getPedBonePosition(ped,bone_t[bone])
 		end

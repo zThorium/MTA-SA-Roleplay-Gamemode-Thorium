@@ -45,29 +45,67 @@ end
 ----------------------------------------------------------------
 -- Envio al cliente
 ----------------------------------------------------------------
+-- rp_backpacks: el contenido de la mochila equipada forma parte del inventario (slots de otro color)
+local function bpRunning()
+    local res = getResourceFromName("rp_backpacks")
+    return res and getResourceState(res) == "running"
+end
+
+-- Los items-mochila son los que se "usan" con el evento backpack (rp_backpacks)
+local function isPack(itemId)
+    local def = getItemDefinition(itemId)
+    return def ~= nil and def.use ~= nil and def.use.event == "backpack"
+end
+
+local function bpStored(player, itemId)
+    return bpRunning() and exports.rp_backpacks:getStoredAmount(player, itemId) or 0
+end
+
+local function bpFree(player)
+    return bpRunning() and exports.rp_backpacks:getBackpackFree(player) or 0
+end
+
+-- -> lista de items (los de la mochila llevan bp = true), info de la mochila | false
 local function serialize(player)
     local inv = inventories[player]
     local list = {}
+    local info = false
     if inv then
-        for itemId, amount in pairs(inv.items) do
+        info = bpRunning() and exports.rp_backpacks:getBackpackInfo(player) or false
+        local function add(itemId, amount, inBackpack)
             local def = getItemDefinition(itemId)
-            if def then
-                local note = getItemPrivateNote(itemId, inv.characterId)
-                list[#list + 1] = {
-                    id = itemId, name = def.name, icon = def.icon,
-                    description = note and ((def.description or "") .. " " .. note) or def.description,
-                    amount = amount, weight = def.weight, usable = def.use ~= nil,
-                }
-            end
+            if not def then return end
+            local note = getItemPrivateNote(itemId, inv.characterId)
+            list[#list + 1] = {
+                id = itemId, name = def.name, icon = def.icon, iconImg = def.iconImg,
+                description = note and ((def.description or "") .. " " .. note) or def.description,
+                amount = amount, weight = def.weight, usable = def.use ~= nil, bp = inBackpack or nil,
+            }
         end
-        table.sort(list, function(a, b) return a.name < b.name end)
+        for itemId, amount in pairs(inv.items) do add(itemId, amount, false) end
+        if info then
+            for itemId, amount in pairs(info.items) do add(itemId, amount, true) end
+        end
+        table.sort(list, function(a, b)
+            if (a.bp or false) ~= (b.bp or false) then return not a.bp end
+            return a.name < b.name
+        end)
     end
-    return list
+    if info then
+        info = { name = info.name, icon = info.icon, iconImg = info.iconImg, capacity = info.capacity, used = info.used, slots = info.slots }
+    end
+    return list, info
 end
 
 function sendInventory(player)
     if not isElement(player) then return end
-    triggerClientEvent(player, "rp:inv:update", resourceRoot, serialize(player), getInventoryWeight(player), INVENTORY.MAX_WEIGHT)
+    local list, info = serialize(player)
+    triggerClientEvent(player, "rp:inv:update", resourceRoot, list, getInventoryWeight(player), INVENTORY.MAX_WEIGHT, info)
+end
+
+-- Export: rp_backpacks lo llama cuando cambia el contenido de la mochila
+function refreshInventory(player)
+    if inventories[player] then sendInventory(player) end
 end
 
 ----------------------------------------------------------------
@@ -114,17 +152,23 @@ local function validAmount(amount)
     return type(amount) == "number" and amount >= 1 and amount == math.floor(amount)
 end
 
+-- Incluye lo que hay dentro de la mochila equipada (rp_backpacks)
 function getInventory(player)
     local inv = inventories[player]
     if not inv then return false end
     local copy = {}
     for k, v in pairs(inv.items) do copy[k] = v end
+    local info = bpRunning() and exports.rp_backpacks:getBackpackInfo(player)
+    if info then
+        for k, v in pairs(info.items) do copy[k] = (copy[k] or 0) + v end
+    end
     return copy
 end
 
+-- Inventario + mochila
 function getItemAmount(player, itemId)
     local inv = inventories[player]
-    return inv and inv.items[itemId] or 0
+    return inv and ((inv.items[itemId] or 0) + bpStored(player, itemId)) or 0
 end
 
 function hasItem(player, itemId, amount)
@@ -141,44 +185,41 @@ function getInventoryWeight(player)
     return math.floor(total * 100 + 0.5) / 100
 end
 
+-- Un lote cabe en el inventario base, o (si no) en la mochila equipada. Las mochilas no se guardan en mochilas.
+local function fitsBase(player, def, amount)
+    return getInventoryWeight(player) + def.weight * amount <= INVENTORY.MAX_WEIGHT + 1e-6
+end
+
+local function fitsBackpack(player, itemId, def, amount)
+    return not isPack(itemId) and def.weight * amount <= bpFree(player) + 1e-6
+end
+
 function canCarry(player, itemId, amount)
     amount = tonumber(amount) or 1
     local inv, def = inventories[player], getItemDefinition(itemId)
     if not inv or inv.loading then return false, "Tu inventario no esta disponible." end
     if not def then return false, "Item desconocido." end
     if not validAmount(amount) then return false, "Cantidad no valida." end
-    if (inv.items[itemId] or 0) + amount > def.stack then
+    if getItemAmount(player, itemId) + amount > def.stack then
         return false, ("Solo puedes llevar %d de %s."):format(def.stack, def.name)
     end
-    if getInventoryWeight(player) + def.weight * amount > INVENTORY.MAX_WEIGHT + 1e-6 then
+    if not fitsBase(player, def, amount) and not fitsBackpack(player, itemId, def, amount) then
         return false, "No tienes espacio suficiente en tu inventario."
     end
     return true
 end
 
-function giveItem(player, itemId, amount)
-    amount = tonumber(amount) or 1
-    local ok, reason = canCarry(player, itemId, amount)
-    if not ok then return false, reason end
-
-    local inv = inventories[player]
+-- Escritura directa en el inventario base (sin comprobaciones ni refresco)
+local function baseAdd(inv, itemId, amount)
     inv.items[itemId] = (inv.items[itemId] or 0) + amount
     dbExec(db(), [[
         INSERT INTO character_items (character_id, item_id, amount) VALUES (?, ?, ?)
         ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount)
     ]], inv.characterId, itemId, amount)
-    sendInventory(player)
-    return true
 end
 
-function takeItem(player, itemId, amount)
-    amount = tonumber(amount) or 1
-    local inv = inventories[player]
-    if not inv or inv.loading then return false, "Tu inventario no esta disponible." end
-    if not validAmount(amount) then return false, "Cantidad no valida." end
+local function baseRemove(inv, itemId, amount)
     local current = inv.items[itemId] or 0
-    if current < amount then return false, "No tienes suficientes." end
-
     if current == amount then
         inv.items[itemId] = nil
         dbExec(db(), "DELETE FROM character_items WHERE character_id = ? AND item_id = ?", inv.characterId, itemId)
@@ -186,8 +227,73 @@ function takeItem(player, itemId, amount)
         inv.items[itemId] = current - amount
         dbExec(db(), "UPDATE character_items SET amount = amount - ? WHERE character_id = ? AND item_id = ?", amount, inv.characterId, itemId)
     end
+end
+
+-- Va al inventario base; si ya no cabe, a la mochila equipada
+function giveItem(player, itemId, amount)
+    amount = tonumber(amount) or 1
+    local ok, reason = canCarry(player, itemId, amount)
+    if not ok then return false, reason end
+
+    local inv, def = inventories[player], getItemDefinition(itemId)
+    if fitsBase(player, def, amount) then
+        baseAdd(inv, itemId, amount)
+        sendInventory(player)
+        return true
+    end
+    local stored, why = exports.rp_backpacks:storeInBackpack(player, itemId, amount)   -- refresca el inventario
+    if not stored then return false, why end
+    return true
+end
+
+-- Quita primero del inventario base y el resto de la mochila
+function takeItem(player, itemId, amount)
+    amount = tonumber(amount) or 1
+    local inv = inventories[player]
+    if not inv or inv.loading then return false, "Tu inventario no esta disponible." end
+    if not validAmount(amount) then return false, "Cantidad no valida." end
+    local inBase = inv.items[itemId] or 0
+    if inBase + bpStored(player, itemId) < amount then return false, "No tienes suficientes." end
+
+    local fromBase = math.min(inBase, amount)
+    if fromBase > 0 then baseRemove(inv, itemId, fromBase) end
+    local rest = amount - fromBase
+    if rest > 0 then
+        local ok, reason = exports.rp_backpacks:takeFromBackpack(player, itemId, rest)
+        if not ok then
+            if fromBase > 0 then baseAdd(inv, itemId, fromBase) end   -- deshacer
+            return false, reason
+        end
+    end
     sendInventory(player)
     return true
+end
+
+-- Mover un lote entre el inventario base y la mochila (botones de la interfaz)
+local function moveToBackpack(player, itemId, amount)
+    local inv, def = inventories[player], getItemDefinition(itemId)
+    if not inv or inv.loading or not def or not bpRunning() then return end
+    if isPack(itemId) then return notify(player, "Una mochila no se guarda en otra mochila.", "warning") end
+    if (inv.items[itemId] or 0) < amount then return notify(player, "No tienes suficientes en el inventario.", "error") end
+    if def.weight * amount > bpFree(player) + 1e-6 then return notify(player, "No cabe en la mochila.", "warning") end
+    baseRemove(inv, itemId, amount)
+    local ok, reason = exports.rp_backpacks:storeInBackpack(player, itemId, amount)
+    if not ok then
+        baseAdd(inv, itemId, amount)
+        sendInventory(player)
+        return notify(player, reason, "error")
+    end
+end
+
+local function moveFromBackpack(player, itemId, amount)
+    local inv, def = inventories[player], getItemDefinition(itemId)
+    if not inv or inv.loading or not def or not bpRunning() then return end
+    if bpStored(player, itemId) < amount then return notify(player, "No hay tantos en la mochila.", "error") end
+    if not fitsBase(player, def, amount) then return notify(player, "No cabe en tu inventario. Suelta algo primero.", "warning") end
+    local ok, reason = exports.rp_backpacks:takeFromBackpack(player, itemId, amount)
+    if not ok then return notify(player, reason, "error") end
+    baseAdd(inv, itemId, amount)
+    sendInventory(player)
 end
 
 ----------------------------------------------------------------
@@ -319,18 +425,20 @@ local function canAct(player)
 end
 
 -- Export: crea el objeto recogible en el suelo SIN tocar ningun inventario (quien llama ya quito el item).
-function spawnGroundItem(itemId, amount, x, y, z, dimension, interior)
+-- contents (opcional, solo mochilas): { [itemId] = amount } que lleva dentro; no se ve en el suelo, solo la mochila.
+function spawnGroundItem(itemId, amount, x, y, z, dimension, interior, contents)
     local def = getItemDefinition(itemId)
     amount = tonumber(amount)
     if not def or not validAmount(amount) then return false end
+    if type(contents) ~= "table" or not isPack(itemId) or next(contents) == nil then contents = nil end
     local model, scale = getItemGroundModel(itemId)
     local object = createObject(model, x, y, z + 0.1)
     setObjectScale(object, scale)
     setElementCollisionsEnabled(object, false)
     setElementDimension(object, dimension or 0)
     setElementInterior(object, interior or 0)
-    setElementData(object, "rp:ground", { name = def.name, icon = def.icon, amount = amount })
-    ground[object] = { itemId = itemId, amount = amount }
+    setElementData(object, "rp:ground", { id = itemId, name = def.name .. (contents and " (con contenido)" or ""), icon = def.icon, amount = amount })
+    ground[object] = { itemId = itemId, amount = amount, contents = contents }
     setTimer(function()
         if isElement(object) then ground[object] = nil; destroyElement(object) end
     end, GROUND_LIFETIME, 1)
@@ -383,6 +491,20 @@ addEventHandler("rp:inv:pickup", resourceRoot, function(object)
     if not sameWorld(player, object) or distanceTo(player, x, y, z) > PICK_RANGE then return end
 
     local def = getItemDefinition(entry.itemId)
+
+    -- Mochila con contenido: se la equipa con todo lo que lleva dentro (si ya lleva otra, se queda en el suelo)
+    if entry.contents then
+        if not bpRunning() then return end
+        local equipped, why = exports.rp_backpacks:equipFromGround(player, entry.itemId, entry.contents)
+        if not equipped then return notify(player, why or "No puedes recoger esa mochila ahora.", "warning") end
+        ground[object] = nil
+        destroyElement(object)
+        setPedAnimation(player, "CARRY", "liftup", 800, false, false, false, false, 250)
+        setAme(player, ("recoge %s del suelo"):format(def.name:lower()))
+        notify(player, "Recoges la mochila y te la pones con todo lo que llevaba dentro.", "success")
+        return
+    end
+
     local ok, reason = canCarry(player, entry.itemId, entry.amount)
     if not ok then return notify(player, reason, "error") end
 
@@ -421,4 +543,30 @@ addEventHandler("rp:inv:give", resourceRoot, function(itemId, amount, targetId)
     setAme(player, ("entrega %s a %s"):format(def.name:lower(), receiver))
     notify(player, ("Entregaste %d x %s a %s."):format(amount, def.name, receiver), "success")
     notify(target, ("%s te entrego %d x %s."):format(giver, amount, def.name), "success")
+end)
+
+----------------------------------------------------------------
+-- Mochila (rp_backpacks): guardar / sacar y tirarla desde el inventario
+----------------------------------------------------------------
+addEvent("rp:inv:toBackpack", true)
+addEventHandler("rp:inv:toBackpack", resourceRoot, function(itemId, amount)
+    local player = client
+    amount = tonumber(amount)
+    if throttled(player) or type(itemId) ~= "string" or not validAmount(amount) or not canAct(player) then return end
+    moveToBackpack(player, itemId, amount)
+end)
+
+addEvent("rp:inv:fromBackpack", true)
+addEventHandler("rp:inv:fromBackpack", resourceRoot, function(itemId, amount)
+    local player = client
+    amount = tonumber(amount)
+    if throttled(player) or type(itemId) ~= "string" or not validAmount(amount) or not canAct(player) then return end
+    moveFromBackpack(player, itemId, amount)
+end)
+
+addEvent("rp:inv:dropBackpack", true)
+addEventHandler("rp:inv:dropBackpack", resourceRoot, function()
+    local player = client
+    if throttled(player) or not canAct(player) or not bpRunning() then return end
+    exports.rp_backpacks:dropBackpack(player)
 end)

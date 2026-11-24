@@ -74,23 +74,23 @@ ITEMS = {
 
     -- rp_backpacks: al usarlas se equipan en la espalda (capacidad y peso en rp_backpacks/shared/s_config.lua)
     bp_small = {
-        name = "Mochila pequena", icon = "🎒", weight = 0.4, stack = 1,
+        name = "Mochila pequena", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_small, weight = 0.4, stack = 1,
         description = "Mochila compacta. Capacidad 5 kg.", use = { event = "backpack" },
     },
     bp_school = {
-        name = "Mochila escolar", icon = "🎒", weight = 0.6, stack = 1,
+        name = "Mochila escolar", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_school, weight = 0.6, stack = 1,
         description = "Mochila de uso diario. Capacidad 10 kg.", use = { event = "backpack" },
     },
     bp_hiking = {
-        name = "Mochila de senderismo", icon = "🎒", weight = 1.2, stack = 1,
+        name = "Mochila de senderismo", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_hiking, weight = 1.2, stack = 1,
         description = "Mochila grande para excursiones. Capacidad 20 kg.", use = { event = "backpack" },
     },
     bp_tactical = {
-        name = "Mochila tactica", icon = "🎒", weight = 1.8, stack = 1,
+        name = "Mochila tactica", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_tactical, weight = 1.8, stack = 1,
         description = "Mochila reforzada de gran capacidad. Capacidad 30 kg.", use = { event = "backpack" },
     },
     bp_expedition = {
-        name = "Mochila de expedicion", icon = "🎒", weight = 2.5, stack = 1,
+        name = "Mochila de expedicion", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_expedition, weight = 2.5, stack = 1,
         description = "La mochila mas grande. Capacidad 45 kg, pero te frena y te cansa mas.", use = { event = "backpack" },
     },
 

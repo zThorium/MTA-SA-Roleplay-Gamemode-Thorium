@@ -21,10 +21,42 @@ addEvent("rp:inv:ui:drop", false)
 -- Ahora abrir = mostrar la GUI ya cargada, con los datos que el servidor
 -- mantiene sincronizados en segundo plano (rp:inv:update).
 
+-- Posicion de cada item en las casillas: se guarda en un archivo del cliente por personaje
+addEvent("rp:inv:ui:layout", false)
+
+local function layoutFile()
+    local cid = getElementData(localPlayer, "rp:characterId")
+    return cid and ("layout_%d.json"):format(tonumber(cid) or 0) or nil
+end
+
+addEventHandler("rp:inv:ui:layout", root, function(json)
+    local name = layoutFile()
+    if not name or type(json) ~= "string" or #json > 8192 then return end
+    if fileExists(name) then fileDelete(name) end
+    local f = fileCreate(name)
+    if f then
+        fileWrite(f, json)
+        fileClose(f)
+    end
+end)
+
+local function pushLayout()
+    local name = layoutFile()
+    if not (name and fileExists(name) and isElement(browser)) then return end
+    local f = fileOpen(name, true)
+    if not f then return end
+    local json = fileRead(f, math.min(fileGetSize(f), 8192))
+    fileClose(f)
+    if json and json ~= "" then
+        executeBrowserJavascript(browser, ("RP.setLayout(%s[0])"):format(toJSON({ json }, true)))
+    end
+end
+
 local function render()
     if not (isElement(browser) and ready and lastData) then return end
-    executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s)"):format(
-        toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight)))
+    executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s, %s[0])"):format(
+        toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight),
+        toJSON(lastData.bp or false, true)))   -- toJSON ya envuelve el valor en un array: el "[0]" lo desenvuelve
 end
 
 local function isOpen()
@@ -46,6 +78,7 @@ local function createBrowser()
     end)
     addEventHandler("onClientBrowserDocumentReady", browser, function()
         ready = true
+        pushLayout()
         render()
     end)
 end
@@ -75,9 +108,26 @@ local function open()
     if not lastData then triggerServerEvent("rp:inv:request", resourceRoot) end
 end
 
-addEventHandler("rp:inv:update", resourceRoot, function(items, weight, maxWeight)
-    lastData = { items = items or {}, weight = weight or 0, maxWeight = maxWeight or 0 }
+addEventHandler("rp:inv:update", resourceRoot, function(items, weight, maxWeight, bp)
+    -- bp = datos de la mochila equipada (nombre, capacidad, uso, slots) o false; sus items llevan bp = true
+    lastData = { items = items or {}, weight = weight or 0, maxWeight = maxWeight or 0, bp = bp or false }
     render()
+end)
+
+-- Mochila (rp_backpacks): guardar / sacar items y tirarla
+addEvent("rp:inv:ui:toBackpack", false)
+addEvent("rp:inv:ui:fromBackpack", false)
+addEvent("rp:inv:ui:dropBackpack", false)
+addEventHandler("rp:inv:ui:toBackpack", root, function(itemId, amount)
+    amount = tonumber(amount)
+    if type(itemId) == "string" and amount then triggerServerEvent("rp:inv:toBackpack", resourceRoot, itemId, amount) end
+end)
+addEventHandler("rp:inv:ui:fromBackpack", root, function(itemId, amount)
+    amount = tonumber(amount)
+    if type(itemId) == "string" and amount then triggerServerEvent("rp:inv:fromBackpack", resourceRoot, itemId, amount) end
+end)
+addEventHandler("rp:inv:ui:dropBackpack", root, function()
+    triggerServerEvent("rp:inv:dropBackpack", resourceRoot)
 end)
 
 addEventHandler("rp:inv:ui:close", root, close)
