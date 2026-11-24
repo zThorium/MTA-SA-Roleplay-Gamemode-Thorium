@@ -14,8 +14,10 @@ addEvent("rp:phone:contacts", true)
 addEvent("rp:bank:data", true)
 addEvent("rp:phone:callResult", true)
 addEvent("rp:tinder:profile", true)
+addEvent("rp:tinder:deck", true)
+addEvent("rp:tinder:match", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "openApp", "call", "tinderOpen", "tinderSave" }) do
+    "bankOpen", "bankAction", "openApp", "call", "tinderOpen", "tinderSave", "tinderDeck", "tinderSwipe" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -75,6 +77,9 @@ addEventHandler("rp:phone:callResult", resourceRoot, function(number, ok)
 end)
 
 addEventHandler("rp:tinder:profile", resourceRoot, function(profile) callJS(("RP.tinder.setProfile(%s)"):format(json(profile or {}))) end)
+
+addEventHandler("rp:tinder:deck", resourceRoot, function(card) callJS(("RP.tinder.setCard(%s)"):format(card and json(card) or "null")) end)
+addEventHandler("rp:tinder:match", resourceRoot, function(m) callJS(("RP.tinder.matched(%s)"):format(json(m or {}))) end)
 
 addEventHandler("rp:bank:data", root, function(view, data)
     if view == "phone" then callJS(("RP.setBank(%s)"):format(json(data or {}))) end
@@ -138,6 +143,16 @@ end)
 
 -- Tinder
 addEventHandler("rp:phone:ui:tinderOpen", root, function() triggerServerEvent("rp:tinder:profile:get", resourceRoot) end)
+addEventHandler("rp:phone:ui:tinderDeck", root, function(exclude)
+    local list = {}
+    if type(exclude) == "table" then
+        for i = 1, math.min(#exclude, 5) do list[#list + 1] = tonumber(exclude[i]) end
+    end
+    triggerServerEvent("rp:tinder:deck:get", resourceRoot, list)
+end)
+addEventHandler("rp:phone:ui:tinderSwipe", root, function(targetId, liked)
+    triggerServerEvent("rp:tinder:swipe", resourceRoot, tonumber(targetId), liked == true)
+end)
 addEventHandler("rp:phone:ui:tinderSave", root, function(bio, interested, active, photo)
     triggerLatentServerEvent("rp:tinder:profile:save", 200000, false, resourceRoot,
         tostring(bio or ""), tostring(interested or "a"), active == true, type(photo) == "string" and photo or nil)

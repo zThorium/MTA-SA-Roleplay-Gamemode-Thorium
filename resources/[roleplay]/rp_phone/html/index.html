@@ -239,10 +239,11 @@
                 </nav>
             </section>
 
-            <!-- Tinder (parte 1: perfil) -->
+            <!-- Tinder (parte 1: perfil, parte 2: swipe) -->
             <section class="view" id="view-tinder">
                 <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text tinder-logo">tinder</h1><button type="button" class="action" id="tinder-save">Guardar</button></header>
                 <div class="editor">
+                    <button type="button" class="secondary tinder-discover" id="tinder-discover">🔥 Descubrir personas</button>
                     <div class="tinder-photo" id="tinder-photo"><span>Sin foto</span></div>
                     <button type="button" class="secondary" id="tinder-camera">📷 Tomar foto de perfil</button>
                     <button type="button" class="secondary" id="tinder-gallery">🖼️ Elegir de la galeria</button>
@@ -258,6 +259,23 @@
                 </div>
             </section>
 
+            <!-- Tinder: swipe -->
+            <section class="view" id="view-tinder-swipe">
+                <header><button type="button" class="back" data-to="tinder">‹ Perfil</button><h1 class="logo-text tinder-logo">tinder</h1><span></span></header>
+                <div class="tinder-deck">
+                    <div class="tinder-card" id="tinder-card"></div>
+                    <p class="note tinder-msg" id="tinder-msg">Buscando personas...</p>
+                    <div class="tinder-buttons">
+                        <button type="button" class="tinder-nope" id="tinder-nope" aria-label="No me interesa">✕</button>
+                        <button type="button" class="tinder-like" id="tinder-like" aria-label="Me gusta">♥</button>
+                    </div>
+                </div>
+                <div class="tinder-match" id="tinder-match" hidden>
+                    <h2>¡Es un match!</h2>
+                    <p id="tinder-match-text"></p>
+                    <button type="button" class="secondary" id="tinder-match-close">Seguir viendo</button>
+                </div>
+            </section>
             <!-- Galeria (html/gallery.js) -->
             <section class="view" id="view-gallery">
                 <header><button type="button" class="back">‹ Inicio</button><h1 id="gallery-title">Galeria</h1><button type="button" class="action" id="gallery-new" title="Tomar foto">📸</button></header>

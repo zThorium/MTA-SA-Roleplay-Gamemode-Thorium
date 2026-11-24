@@ -902,6 +902,19 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS perf     TEXT  NULL,
         ADD COLUMN IF NOT EXISTS odometer FLOAT NOT NULL DEFAULT 0
     ]],
+    -- rp_phone (Tinder, parte 2): likes y dislikes. Un match es un like mutuo (parte 3 los lista)
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_swipes (
+        swiper_id  INT UNSIGNED NOT NULL,
+        target_id  INT UNSIGNED NOT NULL,
+        liked      TINYINT(1)   NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (swiper_id, target_id),
+        KEY idx_tinder_swipes_target (target_id, liked),
+        CONSTRAINT fk_tinder_swipes_swiper FOREIGN KEY (swiper_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tinder_swipes_target FOREIGN KEY (target_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
     -- rp_levels: experiencia (RP) total por personaje; el nivel se calcula con la curva del recurso
     [[
     CREATE TABLE IF NOT EXISTS character_levels (
