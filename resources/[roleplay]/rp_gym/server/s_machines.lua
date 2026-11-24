@@ -235,7 +235,13 @@ local function completeRep(s, now)
     setTimer(function()
         if sessions[player] == s then playAnim(player, s.cfg.rest, s.kind == "dumbbells", true) end
     end, math.floor(GYM_REP_LOCK_MS * 0.6), 1)
-    if gymApplyDelta(player, 0, GYM.REP_MUSCLE, GYM.REP_FAT, false) then endSession(player, "limit") end
+    -- Ganancia de musculo: mas peso = mas; cuanto mas fuerte ya es el personaje, menos (0,1 % a 0,9 %)
+    local stats = exports.rp_characters:getBodyStats(player)
+    local weight = (s.lb - s.minLb) / (s.maxLb - s.minLb)
+    local strength = 1 - (stats and stats.muscle or 0) / 1000
+    local gain = GYM.REP_MUSCLE_MIN + (GYM.REP_MUSCLE_MAX - GYM.REP_MUSCLE_MIN) * weight * strength
+    gain = math.max(GYM.REP_MUSCLE_MIN, gain * s.cfg.muscleFactor)
+    if gymApplyDelta(player, 0, gain, GYM.REP_FAT, false) then endSession(player, "limit") end
 end
 
 ----------------------------------------------------------------

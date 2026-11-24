@@ -24,8 +24,15 @@ GYM = {
     RATE_MUSCLE = 10,
     RATE_FAT = -25,
 
-    -- Pesas, por repeticion completada. Decision del proyecto: +0,5 % musculo y -0,5 % grasa.
-    REP_MUSCLE = 5,
+    -- Pesas, por repeticion completada.
+    -- Musculo [C, GTA Wiki]: +0,1 % a +0,9 %; mas con mas peso, menos cuanto mas fuerte ya es CJ, y el
+    -- press supera a las mancuernas al mismo nivel de peso. [A] la formula exacta no esta documentada:
+    -- ganancia = MIN + (MAX - MIN) x pesoRelativo x (1 - musculoActual/1000), por el factor de la maquina.
+    -- (El fallo del original por el que la primera mancuerna de 20 lb daba siempre la ganancia completa
+    -- no se reproduce.)
+    REP_MUSCLE_MIN = 1,     -- 0,1 %
+    REP_MUSCLE_MAX = 9,     -- 0,9 %
+    -- Grasa: decision del proyecto -0,5 % por repeticion (el original, segun GTA Wiki, es -0,1 %).
     REP_FAT = -5,
 
     -- Limite diario [C, fuente unica Grand Theft Wiki]: si en un dia se pierde 40 % de grasa o se gana
@@ -72,6 +79,7 @@ GYM_KINDS = {
         weights = { 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 },   -- [C] 40-320 lb, [A] paso de 20
         gainBase = 18, gainHeavy = 10,         -- [A] % por pulsacion = base - heavy * (peso relativo)
         decayBase = 10, decayHeavy = 25,       -- [A] % que baja por segundo = base + heavy * (peso relativo)
+        muscleFactor = 1.0,                    -- [A] el press supera a las mancuernas al mismo peso
         recordStat = 46,                       -- HEAVIEST_WEIGHT_BENCH_PRESS
         geton = { "BENCHPRESS", "gym_bp_geton" }, getoff = { "BENCHPRESS", "gym_bp_getoff" },
         rest = { "BENCHPRESS", "gym_bp_down" }, up = { "BENCHPRESS", "gym_bp_up_smooth" },
@@ -81,6 +89,7 @@ GYM_KINDS = {
         weights = { 20, 30, 40, 50, 60, 70, 80, 90, 100, 110 },   -- [C] 20-110 lb, [A] paso de 10
         gainBase = 18, gainHeavy = 10,
         decayBase = 10, decayHeavy = 25,
+        muscleFactor = 0.8,
         recordStat = 47,                       -- HEAVIEST_WEIGHT_DUMBELLS
         geton = { "FREEWEIGHTS", "gym_free_pickup" }, getoff = { "FREEWEIGHTS", "gym_free_putdown" },
         rest = { "FREEWEIGHTS", "gym_free_loop" }, up = { "FREEWEIGHTS", "gym_free_a" }, up2 = { "FREEWEIGHTS", "gym_free_b" },
