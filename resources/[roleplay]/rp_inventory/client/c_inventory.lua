@@ -253,7 +253,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         triggerServerEvent("rp:inv:request", resourceRoot)
     end
     bindKey("i", "down", function()
-        if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") then open() end
+        if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") and not getElementData(localPlayer, "rp:cuffed") then open() end
     end)
 end)
 

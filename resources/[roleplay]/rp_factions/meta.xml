@@ -20,4 +20,6 @@
     <export function="hasFactionPermission" type="server" />
     <export function="getFactionMembersOnline" type="server" />
     <export function="collectPaydaySalary" type="server" />
+    <export function="getPlayerRankLevel" type="server" />
+    <export function="reloadFactions" type="server" />
 </meta>

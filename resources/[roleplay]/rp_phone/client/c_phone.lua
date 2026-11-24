@@ -175,6 +175,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         if isOpen() then return close() end
         if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
         if getElementData(localPlayer, "rp:downed") then return end   -- abatido (rp_injury)
+        if getElementData(localPlayer, "rp:cuffed") then return end   -- esposado (rp_police)
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
         triggerServerEvent("rp:phone:open", resourceRoot)
     end)

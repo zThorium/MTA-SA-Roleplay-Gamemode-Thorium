@@ -56,6 +56,9 @@ end
 -- en un vehiculo policial. Un policia de civil comete delitos como cualquiera.
 local function isPoliceOnDuty(player)
     if not isWantedPolice(player) then return false end
+    -- Marcado de servicio de rp_police (vestuario)
+    local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
+    if ok and duty then return true end
     if WANTED_POLICE_SKINS[getElementModel(player)] then return true end
     local v = getPedOccupiedVehicle(player)
     return v and WANTED_POLICE_MODELS[getElementModel(v)] or false

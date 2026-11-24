@@ -1217,4 +1217,82 @@ SCHEMA = {
         CONSTRAINT fk_blueprints_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_police: antecedentes (arrestos, multas a personas, notas)
+    [[
+    CREATE TABLE IF NOT EXISTS police_records (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        kind         VARCHAR(8)   NOT NULL,
+        text         VARCHAR(255) NOT NULL,
+        amount       INT NOT NULL DEFAULT 0,
+        minutes      INT NOT NULL DEFAULT 0,
+        paid         TINYINT(1)   NOT NULL DEFAULT 1,
+        officer_name VARCHAR(40)  NOT NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_police_records_char (character_id, id),
+        CONSTRAINT fk_police_records_char FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_police: BOLO (vehiculos o personas) y ordenes de captura (kind person con character_id)
+    [[
+    CREATE TABLE IF NOT EXISTS police_bolos (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        kind         VARCHAR(8)   NOT NULL,
+        subject      VARCHAR(48)  NOT NULL,
+        character_id INT UNSIGNED NULL,
+        plate        VARCHAR(8)   NULL,
+        description  VARCHAR(255) NOT NULL,
+        reward       INT NOT NULL DEFAULT 0,
+        active       TINYINT(1)   NOT NULL DEFAULT 1,
+        officer_name VARCHAR(40)  NOT NULL,
+        closed_by    VARCHAR(40)  NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_police_bolos_active (active, id),
+        KEY idx_police_bolos_char (character_id),
+        KEY idx_police_bolos_plate (plate)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_police: evidencia recolectada y su analisis en el laboratorio
+    [[
+    CREATE TABLE IF NOT EXISTS police_evidence (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        kind         VARCHAR(8)   NOT NULL,
+        detail       VARCHAR(160) NOT NULL,
+        source_char  INT UNSIGNED NULL,
+        serial       VARCHAR(20)  NULL,
+        location     VARCHAR(64)  NOT NULL,
+        collected_by VARCHAR(40)  NOT NULL,
+        analyzed     TINYINT(1)   NOT NULL DEFAULT 0,
+        result       VARCHAR(255) NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_police_evidence_analyzed (analyzed, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_police: items decomisados en un cacheo
+    [[
+    CREATE TABLE IF NOT EXISTS police_seized (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        item         VARCHAR(48)  NOT NULL,
+        amount       INT NOT NULL,
+        officer_name VARCHAR(40)  NOT NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_police_seized_char (character_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_police: puntos movidos por admins (vestuario, armeria, garaje, laboratorio, calabozos, spawn de patrullas)
+    [[
+    CREATE TABLE IF NOT EXISTS police_points (
+        kind VARCHAR(16) NOT NULL,
+        x    FLOAT NOT NULL,
+        y    FLOAT NOT NULL,
+        z    FLOAT NOT NULL,
+        rot  FLOAT NOT NULL DEFAULT 0,
+        PRIMARY KEY (kind)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

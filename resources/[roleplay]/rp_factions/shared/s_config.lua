@@ -18,6 +18,14 @@ FACTION_PERMISSIONS = {
     { key = "bank_withdraw", bit = 128, label = "Retirar fondos",        description = "Retirar dinero de la faccion en efectivo." },
     { key = "log_view",      bit = 256, label = "Ver registro",          description = "Ver el historial de actividad." },
     { key = "edit_motd",     bit = 512, label = "Editar anuncio",        description = "Cambiar el anuncio que ven todos los miembros." },
+    -- Policia (rp_police): solo tienen efecto en la faccion 1 (tipo policia) y estando de servicio
+    { key = "pol_detain",    bit = 1024,  label = "Policia: detener",           description = "Esposar, escoltar, cachear y meter detenidos al vehiculo." },
+    { key = "pol_fine",      bit = 2048,  label = "Policia: multar y arrestar", description = "Multar a personas, registrar arrestos y encarcelar." },
+    { key = "pol_mdt",       bit = 4096,  label = "Policia: MDT",               description = "Consultar ciudadanos, vehiculos y antecedentes en el MDT." },
+    { key = "pol_bolo",      bit = 8192,  label = "Policia: BOLO y ordenes",    description = "Emitir y cancelar BOLO y ordenes de captura." },
+    { key = "pol_armory",    bit = 16384, label = "Policia: armeria",           description = "Usar la armeria (cada articulo pide un nivel de rol minimo)." },
+    { key = "pol_garage",    bit = 32768, label = "Policia: garaje",            description = "Sacar vehiculos policiales (cada modelo pide un nivel de rol minimo)." },
+    { key = "pol_evidence",  bit = 65536, label = "Policia: evidencia",         description = "Recolectar evidencia y usar el laboratorio." },
 }
 
 FACTION_PERMISSION_BIT = {}
