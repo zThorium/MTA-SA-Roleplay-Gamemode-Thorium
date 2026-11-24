@@ -22,8 +22,10 @@ end)
 addEventHandler("rp:gym:state", resourceRoot, function(state)
     gymState = state or nil
     if state then gymSelecting = nil end
-    -- Sin congelar al jugador (congelado no anima): se bloquean los controles del juego mientras entrena
-    toggleAllControls(not state, true, false)
+    -- NO se bloquean los controles: con toggleAllControls(false) el cliente no aplica animaciones nuevas
+    -- (la subida y la bajada sonaban porque se pedian con los controles activos; los bucles no). El personaje
+    -- no se mueve porque las animaciones son no interrumpibles y el servidor lo reancla en cada tick.
+    toggleAllControls(true, true, false)
 end)
 
 function gymBusy()
@@ -42,6 +44,11 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
             triggerServerEvent("rp:gym:start", resourceRoot, gymNearInfo.id, 0)
         end
     end)
+end)
+
+-- Al parar/reiniciar el recurso no se deben quedar los controles bloqueados
+addEventHandler("onClientResourceStop", resourceRoot, function()
+    toggleAllControls(true, true, false)
 end)
 
 -- Si el personaje sale, se limpia todo

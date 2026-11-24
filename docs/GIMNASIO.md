@@ -193,7 +193,7 @@ Decisiones del proyecto:
 | "Un día" del límite | ventana de 24 h desde el primer entrenamiento | `GYM.DAY_SECONDS` |
 | Combate | el entrenador gana si el jugador baja de 20 de vida y pierde si él baja de 20; ring de 7 m (3,5 m en Cobra); salir del ring es rendirse | `GYM`, `GYM_STYLES` |
 | Skins de entrenadores | 80 (boxeo), 49 (kung fu), 81 (kickboxing) | `GYM_STYLES` |
-| Modelos de máquinas | 2627 cinta, 2630 bici, 2629 banca, 2913 mancuernas; desplazamiento Z -1,0 | `GYM_KINDS` |
+| Modelos de máquinas | 2627 cinta, 2630 bici, 2629 banca (+ barra 2913 encima), 2916 y 2915 pesas (mancuernas 3071/3072 en las manos); colocación (`seat`) ajustada en juego | `GYM_KINDS` |
 | Resistencia inicial | 100 (10 %) si el personaje nunca entrenó | `BODY.STAMINA_DEFAULT` |
 
 **Los modelos de máquinas, los IDs de skin y las animaciones no están verificados en juego.** Si una máquina sale con otro objeto, se cambia `model` en `GYM_KINDS`.

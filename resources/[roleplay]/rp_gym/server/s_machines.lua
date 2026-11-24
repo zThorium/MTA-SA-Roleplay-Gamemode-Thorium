@@ -27,6 +27,55 @@ nearTarget = {}        -- [player] = { type, id } (lo comparten maquinas y entre
 
 gymInFight = {}        -- [player] = true durante un combate de entrenamiento (lo rellena s_trainers.lua)
 
+----------------------------------------------------------------
+-- Objetos en las manos (barra del press, mancuernas): pegados al hueso con bone_attach
+----------------------------------------------------------------
+local propObjects = {}   -- [player] = { [i] = objeto }
+
+local function destroyProps(player)
+    for _, obj in pairs(propObjects[player] or {}) do
+        if isElement(obj) then
+            exports.bone_attach:detachElementFromBone(obj)
+            destroyElement(obj)
+        end
+    end
+    propObjects[player] = nil
+end
+
+local function createProps(player, cfg)
+    destroyProps(player)
+    if not cfg.props then return end
+    local list = {}
+    local x, y, z = getElementPosition(player)
+    for i, p in ipairs(cfg.props) do
+        local obj = createObject(p.model, x, y, z)
+        if obj then
+            setElementCollisionsEnabled(obj, false)
+            setElementInterior(obj, getElementInterior(player))
+            setElementDimension(obj, getElementDimension(player))
+            exports.bone_attach:attachElementToBone(obj, player, p.bone, p.off[1], p.off[2], p.off[3], p.off[4], p.off[5], p.off[6])
+            list[i] = obj
+        end
+    end
+    propObjects[player] = list
+end
+
+-- /ajustarprop: cambia el desplazamiento de un objeto de mano (tambien en las sesiones en curso)
+function gymSetProp(kind, index, off)
+    local cfg = GYM_KINDS[kind]
+    local p = cfg and cfg.props and cfg.props[index]
+    if not p then return false end
+    p.off = off
+    for player, list in pairs(propObjects) do
+        local s = gymSessionOf(player)
+        if s and s.kind == kind and isElement(list[index]) then
+            exports.bone_attach:setElementBonePositionOffset(list[index], off[1], off[2], off[3])
+            exports.bone_attach:setElementBoneRotationOffset(list[index], off[4], off[5], off[6])
+        end
+    end
+    return true
+end
+
 function gymNear(player, kind, id, label, extra)
     nearTarget[player] = kind and { kind, id } or nil
     if isElement(player) then triggerClientEvent(player, "rp:gym:near", resourceRoot, kind, id, label, extra) end
@@ -51,11 +100,19 @@ function gymSpawnMachine(row)
     local oy = s[1] * math.sin(a) + s[2] * math.cos(a)
     local obj = createObject(cfg.model, row.x + ox, row.y + oy, row.z + cfg.zOffset + s[3], 0, 0, row.rotation + s[4])
     local col = createColSphere(row.x, row.y, row.z, GYM.TRIGGER_RADIUS)
-    for _, el in ipairs({ obj, col }) do
+    -- Objetos extra (p. ej. la segunda mancuerna del par), desplazados respecto al principal segun el rumbo
+    local extras = {}
+    for _, e in ipairs(cfg.extra or {}) do
+        local ex = (s[1] + (e.dx or 0)) * math.cos(a) - (s[2] + (e.dy or 0)) * math.sin(a)
+        local ey = (s[1] + (e.dx or 0)) * math.sin(a) + (s[2] + (e.dy or 0)) * math.cos(a)
+        extras[#extras + 1] = createObject(e.model, row.x + ex, row.y + ey, row.z + cfg.zOffset + s[3] + (e.dz or 0),
+            e.rx or 0, e.ry or 0, row.rotation + s[4] + (e.rz or 0))
+    end
+    for _, el in ipairs({ obj, col, unpack(extras) }) do
         setElementInterior(el, row.interior)
         setElementDimension(el, row.dimension)
     end
-    machines[row.id] = { row = row, cfg = cfg, object = obj, col = col }
+    machines[row.id] = { row = row, cfg = cfg, object = obj, col = col, extras = extras }
 
     addEventHandler("onColShapeHit", col, function(el, sameDim)
         if getElementType(el) ~= "player" or not sameDim or not gymCharacter(el) then return end
@@ -69,6 +126,31 @@ function gymSpawnMachine(row)
     return true
 end
 
+-- Las pesas del suelo desaparecen mientras se entrena (las lleva el personaje en las manos)
+function setMachineVisible(id, visible)
+    local m = machines[id]
+    if not m or not m.cfg.extra then return end
+    local alpha = visible and 255 or 0
+    if m.cfg.hideMain and isElement(m.object) then setElementAlpha(m.object, alpha) end
+    for _, el in ipairs(m.extras or {}) do if isElement(el) then setElementAlpha(el, alpha) end end
+end
+
+-- /ajustarextra: cambia un objeto extra de todas las maquinas de ese tipo y las redibuja
+function gymSetExtra(kind, index, e)
+    local cfg = GYM_KINDS[kind]
+    if not (cfg and cfg.extra and cfg.extra[index]) then return false end
+    for k, v in pairs(e) do cfg.extra[index][k] = v end
+    local rows = {}
+    for _, m in pairs(machines) do
+        if m.row.kind == kind then rows[#rows + 1] = m.row end
+    end
+    for _, row in ipairs(rows) do
+        gymDestroyMachine(row.id)
+        gymSpawnMachine(row)
+    end
+    return true
+end
+
 function gymDestroyMachine(id)
     local m = machines[id]
     if not m then return false end
@@ -77,6 +159,7 @@ function gymDestroyMachine(id)
         if t[1] == "machine" and t[2] == id then gymNear(player, false) end
     end
     if isElement(m.object) then destroyElement(m.object) end
+    for _, el in ipairs(m.extras or {}) do if isElement(el) then destroyElement(el) end end
     if isElement(m.col) then destroyElement(m.col) end
     machines[id] = nil
     return true
@@ -102,9 +185,10 @@ local function loopAnimFor(s)
     if cfg.levels then
         if s.tired then return { cfg.tired[1], cfg.tired[2] } end
         for _, entry in ipairs(cfg.loops) do
-            if s.level <= entry[1] then return { "GYMNASIUM", entry[2] } end
+            if s.level <= entry[1] then return { entry[3] or "GYMNASIUM", entry[2] } end
         end
-        return { "GYMNASIUM", cfg.loops[#cfg.loops][2] }
+        local last = cfg.loops[#cfg.loops]
+        return { last[3] or "GYMNASIUM", last[2] }
     end
     return cfg.rest
 end
@@ -134,6 +218,8 @@ function endSession(player, reason, silent)
     sessions[player] = nil
     busy[s.id] = nil
     if isTimer(s.timer) then killTimer(s.timer) end
+    destroyProps(player)
+    setMachineVisible(s.id, true)
     local alive = isElement(player)
 
     if not silent and alive then
@@ -155,10 +241,12 @@ function endSession(player, reason, silent)
     end
     if not alive then return end
 
-    triggerClientEvent(player, "rp:gym:state", resourceRoot, false)
+    -- Con el recurso parandose el cliente ya no tiene el evento registrado (el cliente se limpia solo)
+    if reason ~= "stop" then triggerClientEvent(player, "rp:gym:state", resourceRoot, false) end
     if silent then
         setElementFrozen(player, false)
         setPedAnimation(player)
+        removeElementData(player, "rp:gym")
         return
     end
     leaving[player] = true
@@ -168,10 +256,17 @@ function endSession(player, reason, silent)
         if isElement(player) then
             setElementFrozen(player, false)
             setPedAnimation(player)
+            removeElementData(player, "rp:gym")
+            -- Sigue dentro de la zona: el aviso "Pulsa E" no volveria a salir hasta salir y entrar
+            local m = machines[s.id]
+            if m and isElement(m.col) and isElementWithinColShape(player, m.col) then
+                gymNear(player, "machine", s.id, m.cfg.label, m.cfg.weights)
+            end
         end
-    end, GYM.GETOFF_MS, 1)
+    end, s.cfg.getoffMs or GYM.GETOFF_MS, 1)
 end
 function gymEndSession(player, reason, silent) endSession(player, reason, silent) end
+function gymSessionOf(player) return sessions[player] end
 
 for _, event in ipairs({ "onPlayerQuit", "onPlayerWasted", "rp:onCharacterLogout" }) do
     addEventHandler(event, root, function() endSession(source, "quit", true) end)
@@ -183,17 +278,42 @@ end)
 ----------------------------------------------------------------
 -- Bucle de la sesion
 ----------------------------------------------------------------
-local function tick(s)
+local tickInner
+
+-- Los errores de script no llegan a ningun log (scriptdebugloglevel 0): se capturan y van a server.log
+-- OJO: MTA copia las tablas que se pasan a un temporizador, asi que se pasa el jugador y se busca la sesion real
+local function tick(player)
+    local s = sessions[player]
+    if not s then return end
+    local ok, err = pcall(tickInner, s)
+    if not ok then outputServerLog("[rp_gym] ERROR en tick: " .. tostring(err)) end
+end
+
+function tickInner(s)
     local player = s.player
-    if sessions[player] ~= s then return end
     local now = getTickCount()
     local dt = math.min((now - s.last) / 1000, 1)
     s.last = now
 
+    -- Con los controles libres, A/D podrian girar o desplazar al personaje: se reancla a la maquina
+    local ok, err = pcall(function()
+        local px, py, pz = getElementPosition(player)
+        local m = machines[s.id]
+        if m and getDistanceBetweenPoints3D(px, py, pz, m.row.x, m.row.y, m.row.z) > 0.6 then
+            setElementPosition(player, m.row.x, m.row.y, m.row.z)
+        end
+        if m then setElementRotation(player, 0, 0, m.row.rotation) end
+    end)
+    if not ok then outputServerLog("[rp_gym] error al reanclar: " .. tostring(err)) end
+
     if not s.ready then
         if now >= s.readyAt then
             s.ready, s.idleSince = true, now
-            playAnim(player, loopAnimFor(s), s.cfg.levels ~= nil or s.kind == "dumbbells", s.cfg.levels == nil)
+            local anim = loopAnimFor(s)
+            outputServerLog(("[rp_gym] sesion lista: %s %s/%s"):format(getPlayerName(player), tostring(anim[1]), tostring(anim[2])))
+            playAnim(player, anim, s.cfg.levels ~= nil or s.kind == "dumbbells", s.cfg.levels == nil)
+            createProps(player, s.cfg)
+            setMachineVisible(s.id, false)
         end
         return sendState(s)
     end
@@ -256,7 +376,11 @@ addEventHandler("rp:gym:start", resourceRoot, function(machineId, option)
     local player = client
     machineId = tonumber(machineId)
     local m = machineId and machines[machineId]
-    if not m or not gymCharacter(player) or sessions[player] or leaving[player] or gymInFight[player] then return end
+    if not m or not gymCharacter(player) then return end
+    -- Antes se ignoraba en silencio; ahora se avisa de por que no empieza
+    if sessions[player] then return gymNotify(player, "Ya estas entrenando: pulsa Retroceso para bajarte primero.", "warning") end
+    if leaving[player] then return gymNotify(player, "Espera a terminar de bajarte de la maquina.", "warning") end
+    if gymInFight[player] then return end
     if getElementData(player, "rp:downed") or isPedDead(player) or isPedInVehicle(player) then return end
     local p = profiles[player]
     if not p or p.loading then return end
@@ -283,18 +407,21 @@ addEventHandler("rp:gym:start", resourceRoot, function(machineId, option)
     local s = {
         player = player, id = machineId, kind = m.row.kind, cfg = cfg, level = 1, gauge = cfg.levels and GYM_GAUGE_START or 0,
         reps = 0, dist = 0, secs = 0, acc = 0, lb = lb, minLb = cfg.weights and cfg.weights[1], maxLb = cfg.weights and cfg.weights[#cfg.weights],
-        last = now, readyAt = now + GYM.GETON_MS, lockUntil = 0, idleSince = now, lastPulse = 0, lastSide = 0,
+        last = now, readyAt = now + (cfg.getonMs or GYM.GETON_MS), lockUntil = 0, idleSince = now, lastPulse = 0, lastSide = 0,
         lastLevel = 0, ready = false, tired = false, flip = false,
     }
     sessions[player] = s
     busy[machineId] = player
+    -- rp_heads usa un metodo de cabeza mas robusto en poses agachadas o tumbadas (evita que gire 180 grados)
+    setElementData(player, "rp:gym", true)
+    outputServerLog(("[rp_gym] sesion iniciada: %s en %s (%d)"):format(getPlayerName(player), m.row.kind, machineId))
     gymNear(player, false)
 
     setElementPosition(player, m.row.x, m.row.y, m.row.z)
     setElementRotation(player, 0, 0, m.row.rotation)
     -- No congelar: un jugador congelado no reproduce animaciones (el cliente bloquea los controles)
     playAnim(player, cfg.geton, false, true)
-    s.timer = setTimer(tick, GYM.TICK_MS, 0, s)
+    s.timer = setTimer(tick, GYM.TICK_MS, 0, player)
     sendState(s)
 end)
 
@@ -337,6 +464,23 @@ addEventHandler("rp:gym:level", resourceRoot, function(dir)
     playAnim(client, loopAnimFor(s), true, false)
 end)
 
+-- El cliente avisa de que no esta reproduciendo la animacion de la sesion: se repite la que toca
+addEvent("rp:gym:resync", true)
+addEventHandler("rp:gym:resync", resourceRoot, function()
+    local s = sessions[client]
+    if not s then return end
+    local now = getTickCount()
+    if now - (s.lastResync or 0) < 1000 then return end
+    s.lastResync = now
+    if not s.ready then
+        playAnim(client, s.cfg.geton, false, true)
+    elseif s.cfg.levels then
+        playAnim(client, loopAnimFor(s), true, false)
+    else
+        playAnim(client, loopAnimFor(s), s.kind == "dumbbells", true)
+    end
+end)
+
 addEventHandler("rp:gym:stop", resourceRoot, function()
-    if sessions[client] and sessions[client].ready then endSession(client, "stop") end
+    if sessions[client] then endSession(client, "stop_user") end   -- tambien antes de estar "ready": nunca se queda atrapado
 end)

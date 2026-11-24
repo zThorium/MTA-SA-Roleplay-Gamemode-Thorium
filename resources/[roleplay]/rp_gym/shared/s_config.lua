@@ -57,27 +57,34 @@ GYM = {
 -- (dx adelante-derecha, dy adelante segun el rumbo del admin; metros y grados). Tras cambiarlo: restart rp_gym.
 GYM_KINDS = {
     treadmill = {
-        label = "Cinta de correr", alias = "cinta", model = 2627, zOffset = -1.0, seat = { 0, 0, 0, 0 }, levels = 10,
+        label = "Cinta de correr", alias = "cinta", model = 2627, zOffset = -1.0, seat = { 0, 2.0, 0, 0 }, levels = 10,
+        getonMs = 2500, getoffMs = 3400,       -- duracion real de gym_tread_geton / getoff (IFP)   -- seat ajustado en juego
         speedBase = 3, speedStep = 1.0,        -- [A] km/h = base + step * nivel
         drainBase = 6, drainStep = 2.4,        -- [A] % de potencia que se pierde por segundo
         pulseGain = 12,                        -- [A] % de potencia por pulsacion alterna
         distStat = 28, timeStat = 44,          -- stats de GTA: DIST_TREADMILL, LONGEST_TREADMILL_TIME
         geton = { "GYMNASIUM", "gym_tread_geton" }, getoff = { "GYMNASIUM", "gym_tread_getoff" },
         fall = { "GYMNASIUM", "gym_tread_falloff" }, tired = { "GYMNASIUM", "gym_tread_tired" },
-        loops = { { 3, "gym_tread_walk" }, { 7, "gym_tread_jog" }, { 10, "gym_tread_sprint" } },   -- hasta ese nivel
+        -- Las de PED (walk/run) llevan desplazamiento incorporado y el personaje "avanza" de A a B; las gym_tread_*
+        -- estan hechas para correr en el sitio, como en el juego original. { hasta nivel, animacion, bloque }
+        loops = { { 3, "gym_tread_walk", "GYMNASIUM" }, { 7, "gym_tread_jog", "GYMNASIUM" }, { 10, "gym_tread_sprint", "GYMNASIUM" } },
     },
     bike = {
-        label = "Bicicleta estatica", alias = "bici", model = 2630, zOffset = -1.0, seat = { 0, 0, 0, 0 }, levels = 10,
+        label = "Bicicleta estatica", alias = "bici", model = 2630, zOffset = -1.0, seat = { 0.5, 0.5, 0, 180 }, levels = 10,   -- seat ajustado en juego
+        getonMs = 1700, getoffMs = 1700,       -- gym_bike_geton / getoff
         speedBase = 8, speedStep = 1.5,
         drainBase = 6, drainStep = 2.4,
         pulseGain = 12,
         distStat = 29, timeStat = 45,          -- DIST_EXCERSISE_BIKE, LONGEST_EXCERSISE_BIKE_TIME
         geton = { "GYMNASIUM", "gym_bike_geton" }, getoff = { "GYMNASIUM", "gym_bike_getoff" },
-        fall = { "GYMNASIUM", "gym_bike_getoff" }, tired = { "GYMNASIUM", "gym_bike_slow" },
+        fall = { "GYMNASIUM", "gym_bike_falloff" }, tired = { "GYMNASIUM", "gym_bike_slow" },
         loops = { { 3, "gym_bike_slow" }, { 6, "gym_bike_pedal" }, { 8, "gym_bike_fast" }, { 10, "gym_bike_faster" } },
     },
     bench = {
-        label = "Press de banca", alias = "banca", model = 2629, zOffset = -1.0, seat = { 0, 0, 0, 0 },
+        label = "Press de banca", alias = "banca", model = 2629, zOffset = -1.0, seat = { 0, 1.0, 0, 0 },   -- seat ajustado en juego
+        getonMs = 5400, getoffMs = 7000,       -- gym_bp_geton dura 5,3 s; gym_bp_getoff 8,7 s (se recorta a 7)
+        -- Barra apoyada sobre el banco antes de empezar (se oculta al entrenar: pasa a las manos). Posicion a ajustar con /ajustarextra
+        extra = { { model = 2913, dx = -0.40, dy = 0.53, dz = 1.00, rx = 0, ry = 90, rz = 0 } },   -- ajustado en juego
         weights = { 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 },   -- [C] 40-320 lb, [A] paso de 20
         gainBase = 18, gainHeavy = 10,         -- [A] % por pulsacion = base - heavy * (peso relativo)
         decayBase = 10, decayHeavy = 25,       -- [A] % que baja por segundo = base + heavy * (peso relativo)
@@ -85,9 +92,16 @@ GYM_KINDS = {
         recordStat = 46,                       -- HEAVIEST_WEIGHT_BENCH_PRESS
         geton = { "BENCHPRESS", "gym_bp_geton" }, getoff = { "BENCHPRESS", "gym_bp_getoff" },
         rest = { "BENCHPRESS", "gym_bp_down" }, up = { "BENCHPRESS", "gym_bp_up_smooth" },
+        -- Objetos pegados a un hueso del personaje durante la sesion (hueso 12 = mano derecha, 11 = izquierda).
+        -- off = { x, y, z, rx, ry, rz }: son estimaciones, se afinan en juego con /ajustarprop
+        props = { { model = 2913, bone = 12, off = { -0.80, -0.01, 0.09, 90, 90, 0 } } },   -- ajustado en juego; 2913 = kmb_bpress, la barra con discos
     },
     dumbbells = {
-        label = "Mancuernas", alias = "mancuernas", model = 2913, zOffset = -1.0, seat = { 0, 0, 0, 0 },
+        label = "Pesas", alias = "pesas", model = 2916, zOffset = -1.0, seat = { 0, 1.0, 0.1, 0 },   -- seat ajustado en juego
+        -- Segunda mancuerna en el suelo (par): dx/dy en metros respecto a la primera, segun el rumbo. Se oculta mientras se entrena.
+        hideMain = true,   -- al entrenar tambien se oculta la mancuerna principal
+        extra = { { model = 2915, dx = 0.35, dy = 0, dz = 0, rz = 0 } },   -- 2916 = kmb_dumbbell (2913 es kmb_bpress, la barra del press)
+        getonMs = 3200, getoffMs = 3200,       -- gym_free_pickup / putdown
         weights = { 20, 30, 40, 50, 60, 70, 80, 90, 100, 110 },   -- [C] 20-110 lb, [A] paso de 10
         gainBase = 18, gainHeavy = 10,
         decayBase = 10, decayHeavy = 25,
@@ -95,6 +109,7 @@ GYM_KINDS = {
         recordStat = 47,                       -- HEAVIEST_WEIGHT_DUMBELLS
         geton = { "FREEWEIGHTS", "gym_free_pickup" }, getoff = { "FREEWEIGHTS", "gym_free_putdown" },
         rest = { "FREEWEIGHTS", "gym_free_down" }, up = { "FREEWEIGHTS", "gym_free_a" }, up2 = { "FREEWEIGHTS", "gym_free_b" },
+        props = { { model = 3072, bone = 11, off = { 0, 0, 0, 90, 90, 0 } }, { model = 3071, bone = 12, off = { 0, 0, 0, 90, 90, 0 } } },   -- kmb_dumbbell_L / _R
     },
 }
 
