@@ -3,7 +3,7 @@
 -- Cada entrada: { nombre, bloque, animacion, loop, congelarUltimoFrame }
 -- Para agregar una: sumala a una pagina (maximo 8 por pagina). El id es pagina*8+slot.
 
-ANIMS_KEY = "g"
+ANIMS_KEY = "o"   -- la G la usa rp_furniture para interactuar con los muebles
 
 ANIM_PAGES = {
     { title = "Social", list = {

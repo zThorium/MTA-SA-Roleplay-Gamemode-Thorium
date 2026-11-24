@@ -1121,4 +1121,100 @@ SCHEMA = {
         CONSTRAINT fk_gym_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_furniture: muebles colocados en cada propiedad (clave de catalogo, posicion, giro, escala, color, material y estado)
+    [[
+    CREATE TABLE IF NOT EXISTS property_furniture (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        property_id INT UNSIGNED NOT NULL,
+        item_key    VARCHAR(48)  NOT NULL,
+        x           FLOAT NOT NULL,
+        y           FLOAT NOT NULL,
+        z           FLOAT NOT NULL,
+        rx          FLOAT NOT NULL DEFAULT 0,
+        ry          FLOAT NOT NULL DEFAULT 0,
+        rz          FLOAT NOT NULL DEFAULT 0,
+        sx          FLOAT NOT NULL DEFAULT 1,
+        sy          FLOAT NOT NULL DEFAULT 1,
+        sz          FLOAT NOT NULL DEFAULT 1,
+        color       INT UNSIGNED NULL,
+        material    VARCHAR(16)  NULL,
+        state       VARCHAR(255) NULL,
+        placed_by   INT UNSIGNED NULL,
+        placed_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_furniture_property (property_id),
+        CONSTRAINT fk_furniture_property FOREIGN KEY (property_id) REFERENCES properties (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: estilo de la propiedad (objetos originales del interior ocultados, JSON)
+    [[
+    CREATE TABLE IF NOT EXISTS property_style (
+        property_id   INT UNSIGNED NOT NULL,
+        removed_props TEXT NULL,
+        updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (property_id),
+        CONSTRAINT fk_style_property FOREIGN KEY (property_id) REFERENCES properties (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: residentes que pueden construir en una propiedad ajena
+    [[
+    CREATE TABLE IF NOT EXISTS property_members (
+        property_id  INT UNSIGNED NOT NULL,
+        character_id INT UNSIGNED NOT NULL,
+        role         VARCHAR(12)  NOT NULL DEFAULT 'builder',
+        added_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (property_id, character_id),
+        KEY idx_members_character (character_id),
+        CONSTRAINT fk_members_property FOREIGN KEY (property_id) REFERENCES properties (id) ON DELETE CASCADE,
+        CONSTRAINT fk_members_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: bodega personal de muebles (se llevan de una casa a otra)
+    [[
+    CREATE TABLE IF NOT EXISTS character_furniture_stock (
+        character_id INT UNSIGNED NOT NULL,
+        item_key     VARCHAR(48)  NOT NULL,
+        qty          INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id, item_key),
+        CONSTRAINT fk_fstock_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: contenido de neveras, armarios y cajas fuertes
+    [[
+    CREATE TABLE IF NOT EXISTS furniture_storage (
+        furniture_id INT UNSIGNED NOT NULL,
+        item_id      VARCHAR(48)  NOT NULL,
+        amount       INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (furniture_id, item_id),
+        CONSTRAINT fk_fstorage_furniture FOREIGN KEY (furniture_id) REFERENCES property_furniture (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: registro de compras, ventas y cambios (para resolver disputas)
+    [[
+    CREATE TABLE IF NOT EXISTS furniture_log (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        property_id  INT UNSIGNED NOT NULL,
+        character_id INT UNSIGNED NULL,
+        action       VARCHAR(16)  NOT NULL,
+        item_key     VARCHAR(48)  NULL,
+        amount       INT NOT NULL DEFAULT 0,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_flog_property (property_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_furniture: planos (diseños guardados por personaje; posiciones relativas a la salida de la casa)
+    [[
+    CREATE TABLE IF NOT EXISTS property_blueprints (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        name         VARCHAR(40)  NOT NULL,
+        interior     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        data         MEDIUMTEXT   NOT NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_blueprints_character (character_id),
+        CONSTRAINT fk_blueprints_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
