@@ -21,6 +21,37 @@ addEvent("rp:inv:ui:drop", false)
 -- Ahora abrir = mostrar la GUI ya cargada, con los datos que el servidor
 -- mantiene sincronizados en segundo plano (rp:inv:update).
 
+-- Posicion de cada item en las casillas: se guarda en un archivo del cliente por personaje
+addEvent("rp:inv:ui:layout", false)
+
+local function layoutFile()
+    local cid = getElementData(localPlayer, "rp:characterId")
+    return cid and ("layout_%d.json"):format(tonumber(cid) or 0) or nil
+end
+
+addEventHandler("rp:inv:ui:layout", root, function(json)
+    local name = layoutFile()
+    if not name or type(json) ~= "string" or #json > 8192 then return end
+    if fileExists(name) then fileDelete(name) end
+    local f = fileCreate(name)
+    if f then
+        fileWrite(f, json)
+        fileClose(f)
+    end
+end)
+
+local function pushLayout()
+    local name = layoutFile()
+    if not (name and fileExists(name) and isElement(browser)) then return end
+    local f = fileOpen(name, true)
+    if not f then return end
+    local json = fileRead(f, math.min(fileGetSize(f), 8192))
+    fileClose(f)
+    if json and json ~= "" then
+        executeBrowserJavascript(browser, ("RP.setLayout(%s[0])"):format(toJSON({ json }, true)))
+    end
+end
+
 local function render()
     if not (isElement(browser) and ready and lastData) then return end
     executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s, %s[0])"):format(
@@ -47,6 +78,7 @@ local function createBrowser()
     end)
     addEventHandler("onClientBrowserDocumentReady", browser, function()
         ready = true
+        pushLayout()
         render()
     end)
 end

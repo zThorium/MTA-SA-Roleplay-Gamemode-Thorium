@@ -93,7 +93,14 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; fon
 .slot.bp { background: rgba(58, 166, 201, 0.10); border-color: rgba(58, 166, 201, 0.45); }
 .slot.bp:hover { background: rgba(58, 166, 201, 0.20); }
 .slot.bp.selected { border-color: var(--bp); background: rgba(58, 166, 201, 0.22); box-shadow: inset 0 0 0 1px rgba(58, 166, 201, 0.5); }
-.slot.bp.empty { background: rgba(58, 166, 201, 0.05); }
+.slot.bp.empty { background: rgba(58, 166, 201, 0.05); border-style: dashed; }
+.slot .badge { position: absolute; bottom: 2px; right: 5px; font-size: 10px; line-height: 1; opacity: 0.9; }
+.bp-tag { align-self: center; padding: 3px 8px; border: 1px solid rgba(58, 166, 201, 0.55); border-radius: 10px; background: rgba(58, 166, 201, 0.15); color: #9fd3e6; font-size: 11px; }
+.sec-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; padding: 2px 2px 0; font-size: 11px; color: var(--muted); }
+.sec-head strong { color: var(--accent); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.slot.empty.drop-hover { opacity: 1; }
+.slot.drop-hover { outline: 2px dashed var(--accent); outline-offset: -2px; background: rgba(217, 164, 65, 0.14); }
+.slot.bp.drop-hover { outline-color: var(--bp); background: rgba(58, 166, 201, 0.25); }
 .slot.bp.empty:hover { background: rgba(58, 166, 201, 0.05); }
 .slot.bp .name { color: #9fd3e6; }
 .bp-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid rgba(58, 166, 201, 0.45); border-radius: 4px; background: rgba(58, 166, 201, 0.12); }
