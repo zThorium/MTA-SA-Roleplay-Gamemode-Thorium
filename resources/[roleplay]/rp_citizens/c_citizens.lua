@@ -1435,6 +1435,15 @@ function spotOccupied(x, y, radius)
     return false
 end
 
+-- Radio de los conductores IA: rp_radio lee el dato "rp:radio" de cada vehiculo cargado (ids de s_config.lua de rp_radio)
+local CAR_RADIO_CHANCE = 0.35
+local CAR_RADIO_STATIONS = { 1, 1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14 }
+local function giveCarRadio(vehicle)
+    if math.random() < CAR_RADIO_CHANCE then
+        setElementData(vehicle, "rp:radio", CAR_RADIO_STATIONS[math.random(#CAR_RADIO_STATIONS)], false)
+    end
+end
+
 local function spawnCar(px, py)
     local node, x, y, z = aheadSpawnNode(px, py)
     if not node then
@@ -1464,6 +1473,8 @@ local function spawnCar(px, py)
         -- rp_wanted los reconoce como policia (delitos contra ellos, exceso de velocidad)
         setElementData(vehicle, "rp:copCar", true, false)
         setElementData(driver, "rp:cop", true, false)
+    else
+        giveCarRadio(vehicle)
     end
 
     cars[vehicle] = {

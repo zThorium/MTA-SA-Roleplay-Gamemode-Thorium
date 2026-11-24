@@ -54,9 +54,29 @@ local function startSound(vehicle, stationId, own)
     sounds[vehicle] = { sound = sound, station = stationId, own = own }
 end
 
+-- Autos de la poblacion IA (rp_citizens): solo suenan los cercanos y con tope, para no abrir decenas de streams
+local CITIZEN_RADIO_DIST, CITIZEN_RADIO_MAX = 55, 4
+
+local function citizenRadioAllowed(vehicle)
+    local x, y, z = getElementPosition(vehicle)
+    local px, py, pz = getElementPosition(localPlayer)
+    local d = getDistanceBetweenPoints3D(x, y, z, px, py, pz)
+    if sounds[vehicle] then return d < CITIZEN_RADIO_DIST + 10 end   -- histeresis: no parpadea en el borde
+    if d > CITIZEN_RADIO_DIST then return false end
+    local n = 0
+    for v in pairs(sounds) do
+        if v ~= vehicle and isElement(v) and getElementData(v, "rp:citizen") then n = n + 1 end
+    end
+    return n < CITIZEN_RADIO_MAX
+end
+
 local function refreshVehicle(vehicle, mine)
     local stationId = getElementData(vehicle, RADIO_DATA_KEY)
     local info = sounds[vehicle]
+    if not mine and stationId and getElementData(vehicle, "rp:citizen") and not citizenRadioAllowed(vehicle) then
+        stopSound(vehicle)
+        return
+    end
     if not stationId or not RADIO_BY_ID[stationId] then
         stopSound(vehicle)
         return
