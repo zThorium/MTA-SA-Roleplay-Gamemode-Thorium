@@ -37,12 +37,12 @@ POLICE_POINTS = {
     entrance      = { label = "Comisaria LSPD", x = 1554.6, y = -1675.6, z = 16.2, rot = 90, interior = 0, public = true, color = { 255, 255, 255 } },
     exit          = { label = "Salir",          x = 246.4,  y = 62.8,    z = 1003.6, rot = 0, interior = 6, public = true, color = { 255, 255, 255 } },
     -- Dentro del interior 6 (posiciones ajustadas en juego con /pmover)
-    locker        = { label = "Vestuario",    x = 240.2, y = 73.1, z = 1005.0, interior = 6, color = { 59, 111, 224 } },
-    armory        = { label = "Armeria",      x = 254.7, y = 78.8, z = 1003.6, interior = 6, color = { 229, 72, 77 } },
-    lab           = { label = "Laboratorio",  x = 218.4, y = 78.9, z = 1005.0, interior = 6, color = { 163, 91, 255 } },
-    booking       = { label = "Calabozos",    x = 267.8, y = 85.2, z = 1001.0, interior = 6, color = { 245, 165, 36 } },
+    locker        = { label = "Vestuario",    x = 240.2, y = 73.1, z = 1005.0, rot = 190, interior = 6, color = { 59, 111, 224 } },
+    armory        = { label = "Armeria",      x = 254.7, y = 78.8, z = 1003.6, rot = 10, interior = 6, color = { 229, 72, 77 } },
+    lab           = { label = "Laboratorio",  x = 218.4, y = 78.9, z = 1005.0, rot = 100, interior = 6, color = { 163, 91, 255 } },
+    booking       = { label = "Calabozos",    x = 267.8, y = 85.2, z = 1001.0, rot = 180, interior = 6, color = { 245, 165, 36 } },
     -- Fuera, junto a la comisaria
-    garage        = { label = "Garaje",       x = 1558.4, y = -1610.6, z = 13.4, interior = 0, color = { 76, 211, 138 } },
+    garage        = { label = "Garaje",       x = 1558.4, y = -1610.6, z = 13.4, rot = 169, interior = 0, color = { 76, 211, 138 } },
     garage_spawn  = { label = "Salida de patrullas", x = 1535.8, y = -1671.5, z = 13.1, rot = 0, interior = 0, hidden = true },
 }
 
