@@ -73,6 +73,8 @@ ADMIN_CATALOG = {
             { cmd = "/mesaspool", args = "", desc = "Lista en el chat las mesas de pool con id, posicion y estado.", res = "rp_pool" },
             { cmd = "/crearcasa", args = "<tipo> <precio> <nombre>", desc = "Crea una propiedad en venta frente a la puerta (solo en exteriores). Tipos con /tiposcasa.", res = "rp_properties" },
             { cmd = "/borrarcasa", args = "<id>", desc = "Elimina una propiedad.", res = "rp_properties" },
+            { cmd = "/muebleinfo", args = "", desc = "Muestra muebles, capacidad, residentes y sesion de decoracion de la casa en la que estas.", res = "rp_furniture" },
+            { cmd = "/limpiarmuebles", args = "<idCasa>", desc = "Devuelve todos los muebles de una casa a la bodega del dueno (nivel 3).", res = "rp_furniture" },
             { cmd = "/crearropa", args = "<tipo> <nombre>", desc = "Crea una tienda de ropa (Binco, SubUrban, ProLaps, ZIP, Victim, Didier Sachs). Sin argumentos lista los tipos.", res = "rp_clothing" },
             { cmd = "/ropapunto", args = "<id> entrada|interior", desc = "Mueve a tu posicion el punto de entrada o el interior de una tienda de ropa.", res = "rp_clothing" },
             { cmd = "/borrarropa", args = "<id>", desc = "Elimina una tienda de ropa.", res = "rp_clothing" },
