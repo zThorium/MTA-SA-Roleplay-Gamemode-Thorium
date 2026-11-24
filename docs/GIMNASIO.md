@@ -174,7 +174,7 @@ Fases de desarrollo una vez resuelta la sección 8:
 Decisiones del proyecto:
 
 1. Los valores sin fuente documentada se implementan como **adaptación propia**, marcada `[A]` en `rp_gym/shared/s_config.lua`.
-2. Pesas: **+0,5 % de músculo y -0,5 % de grasa por repetición** (fijo, sin depender del peso). La indicación original decía "50 %" de músculo; se interpretó como 0,5 %, porque 50 % por repetición llenaría el músculo en dos repeticiones. Se cambia en `GYM.REP_MUSCLE` (unidades de 0 a 1000, 5 = 0,5 %).
+2. Pesas: músculo con el avance del original (GTA Wiki: de +0,1 % a +0,9 % por repetición, más con más peso y menos cuanto más fuerte ya es el personaje; el press supera a las mancuernas) y **-0,5 % de grasa por repetición** (decisión del proyecto; el original es -0,1 %). Se descartó el valor fijo de 50 % por repetición, que llenaría el músculo en dos repeticiones.
 3. Límite de 12 h y 35 % de músculo: implementados tal cual (fuente única, ver sección 2).
 4. Máquinas y entrenadores se colocan con comandos de admin.
 5. `rp_characters` es el único escritor de grasa, músculo y resistencia (`getBodyStats` y `setBodyStats`).
@@ -187,6 +187,7 @@ Decisiones del proyecto:
 | Barra de potencia, cinta y bici | empieza en 50 %; pierde `6 + 2,4 x nivel` % por segundo; cada pulsación alterna da 12 % | `GYM_KINDS` |
 | Velocidad virtual | cinta `3 + nivel` km/h; bici `8 + 1,5 x nivel` km/h | `GYM_KINDS` |
 | Ritmo de stats por nivel | los 4 % / 1 % / -2,5 % cada 14 s son el nivel 10; los demás niveles escalan `nivel / 10` | `GYM.RATE_*` |
+| Músculo por repetición | `0,1 + 0,8 x pesoRelativo x (1 - músculo/100)` %, con mínimo 0,1 %; mancuernas x0,8. La fórmula exacta no está documentada; el rango y el sentido de las variaciones sí | `GYM.REP_MUSCLE_*`, `muscleFactor` |
 | Pesas | pasos de 20 lb (banca) y 10 lb (mancuernas); cada pulsación da `18 - 10 x peso relativo` %; la barra baja `10 + 25 x peso relativo` % por segundo; una repetición dura 1,5 s; 5 s con la barra vacía suelta el peso | `GYM_KINDS`, `GYM_*` |
 | Repeticiones máximas | sin tope; las limita el límite diario | |
 | "Un día" del límite | ventana de 24 h desde el primer entrenamiento | `GYM.DAY_SECONDS` |
@@ -233,7 +234,7 @@ Decisiones del proyecto:
 
 1. **Cinta:** `E`, alternar `A`/`D`, subir y bajar nivel con las flechas. Dejar de pulsar: la potencia baja y el personaje se cae. Comprobar que sube resistencia y músculo y baja grasa.
 2. **Bici:** igual que la cinta.
-3. **Press y mancuernas:** `E`, elegir peso con las flechas, `Enter`, pulsar `Espacio` hasta llenar la barra: +1 repetición, +0,5 % de músculo y -0,5 % de grasa. Con la barra vacía 5 s se suelta el peso.
+3. **Press y mancuernas:** `E`, elegir peso con las flechas, `Enter`, pulsar `Espacio` hasta llenar la barra: +1 repetición, de +0,1 % a +0,9 % de músculo (más con más peso) y -0,5 % de grasa. Con la barra vacía 5 s se suelta el peso.
 4. **Máquina ocupada:** un segundo jugador no puede subir. Desconectar al primero y comprobar que se libera.
 5. **Distancia:** intentar `rp:gym:start` lejos de la máquina (debe rechazarse).
 6. **Límite diario:** entrenar hasta ganar 20 % de músculo o resistencia (o perder 40 % de grasa): la sesión termina y no se puede volver en 12 h.
