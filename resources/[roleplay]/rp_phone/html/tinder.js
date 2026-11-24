@@ -1,5 +1,5 @@
 /*
- * rp_phone / tinder.js  (parte 1: perfil, parte 2: swipe)
+ * rp_phone / tinder.js  (parte 1: perfil, parte 2: swipe, parte 3: matches)
  * Lua -> RP.tinder.setProfile(perfil)
  * JS  -> mta.triggerEvent("rp:phone:ui:tinderOpen" | "rp:phone:ui:tinderSave", ...)
  * Swipe: Lua -> RP.tinder.setCard(carta|{empty:true}|null) / RP.tinder.matched({name})
@@ -154,5 +154,64 @@
         deck.matchOpen = true;
         $("tinder-match-text").textContent = "Tu y " + (m && m.name ? m.name : "esa persona") + " se gustaron mutuamente.";
         $("tinder-match").hidden = false;
+    };
+
+    // ---------------------------------------------------------------- Matches (parte 3)
+    // Lua -> RP.tinder.setMatches([{id,name,age,bio,online}]|null) / setMatchPhoto(id, base64) / unmatched(id)
+    // JS  -> rp:phone:ui:tinderMatches / tinderMatchPhoto(id) / tinderUnmatch(id)
+    var matches = { list: [], photos: {}, pending: [] };
+
+    function nextMatchPhoto() {
+        var id = matches.pending.shift();
+        if (id) send("rp:phone:ui:tinderMatchPhoto", id);
+    }
+
+    function renderMatches() {
+        var box = $("tinder-matches-list"), msg = $("tinder-matches-msg");
+        box.innerHTML = "";
+        msg.hidden = matches.list.length > 0;
+        msg.textContent = "Aun no tienes matches. Sigue descubriendo personas.";
+        matches.list.forEach(function (m) {
+            var row = document.createElement("div"); row.className = "tinder-match-row";
+            var av = document.createElement("div"); av.className = "tinder-match-avatar"; av.dataset.id = m.id;
+            if (matches.photos[m.id]) { var img = document.createElement("img"); img.src = "data:image/jpeg;base64," + matches.photos[m.id]; av.appendChild(img); }
+            var tx = document.createElement("div"); tx.className = "tinder-match-text";
+            var h = document.createElement("strong"); h.textContent = m.name + (m.age ? ", " + m.age : "");
+            if (m.online) { var d = document.createElement("i"); d.className = "dot"; h.appendChild(d); }
+            var b = document.createElement("span"); b.textContent = m.bio || "";
+            tx.appendChild(h); tx.appendChild(b);
+            var x = document.createElement("button"); x.type = "button"; x.title = "Deshacer match"; x.textContent = "\u2715";
+            x.addEventListener("click", function () {
+                if (window.confirm("¿Deshacer el match con " + m.name + "?")) send("rp:phone:ui:tinderUnmatch", m.id);
+            });
+            row.appendChild(av); row.appendChild(tx); row.appendChild(x);
+            box.appendChild(row);
+        });
+    }
+
+    $("tinder-matches-btn").addEventListener("click", function () {
+        window.RP.show("tinder-matches");
+        $("tinder-matches-msg").hidden = false;
+        $("tinder-matches-msg").textContent = "Cargando...";
+        send("rp:phone:ui:tinderMatches");
+    });
+
+    window.RP.tinder.setMatches = function (list) {
+        if (!list) { $("tinder-matches-msg").hidden = false; $("tinder-matches-msg").textContent = "No se pudieron cargar tus matches."; return; }
+        matches.list = list;
+        matches.pending = list.filter(function (m) { return !matches.photos[m.id]; }).map(function (m) { return m.id; });
+        renderMatches();
+        nextMatchPhoto();
+    };
+    window.RP.tinder.setMatchPhoto = function (id, base64) {
+        matches.photos[id] = base64;
+        var av = document.querySelector('.tinder-match-avatar[data-id="' + id + '"]');
+        if (av && !av.firstChild) { var img = document.createElement("img"); img.src = "data:image/jpeg;base64," + base64; av.appendChild(img); }
+        nextMatchPhoto();
+    };
+    window.RP.tinder.unmatched = function (id) {
+        matches.list = matches.list.filter(function (m) { return m.id !== id; });
+        delete matches.photos[id];
+        renderMatches();
     };
 })();

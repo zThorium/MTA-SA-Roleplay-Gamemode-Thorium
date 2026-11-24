@@ -1,7 +1,7 @@
 --[[
     rp_phone / s_tinder.lua
     App Tinder del telefono. PARTE 1: perfil de citas del personaje. PARTE 2: swipe (like/dislike).
-    (Siguientes partes: matches -> chat.)
+    PARTE 3: lista de matches (like mutuo) y deshacer match. (Siguiente parte: chat.)
 
     Tabla: tinder_profiles (por personaje). Edad y genero salen de characters (datos RP),
     el jugador solo edita foto, descripcion, a quien le interesa y si su perfil es visible.
@@ -14,6 +14,9 @@ addEvent("rp:tinder:profile:get", true)
 addEvent("rp:tinder:profile:save", true)
 addEvent("rp:tinder:deck:get", true)
 addEvent("rp:tinder:swipe", true)
+addEvent("rp:tinder:matches:get", true)
+addEvent("rp:tinder:matches:photo", true)
+addEvent("rp:tinder:unmatch", true)
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(player, text, kind) exports.rp_notify:notify(player, text, kind) end
@@ -203,7 +206,88 @@ addEventHandler("rp:tinder:swipe", resourceRoot, function(targetId, liked)
     ]], liked, targetId, me)
 end)
 
+----------------------------------------------------------------
+-- PARTE 3: matches
+-- Un match es un like mutuo en tinder_swipes. La lista va SIN fotos (pesan) y el cliente las
+-- pide de a una (rp:tinder:matches:photo). Deshacer match = poner mi voto en dislike.
+----------------------------------------------------------------
+local lastMatches, lastPhoto, lastUnmatch = {}, {}, {}
+
+-- Solo cuenta si ambos votos siguen siendo like
+local MUTUAL = [[
+    FROM tinder_swipes a
+    JOIN tinder_swipes b ON b.swiper_id = a.target_id AND b.target_id = a.swiper_id AND b.liked = 1
+    JOIN characters c ON c.id = a.target_id
+    WHERE a.swiper_id = ? AND a.liked = 1
+]]
+
+addEventHandler("rp:tinder:matches:get", resourceRoot, function()
+    local player = client
+    if getElementData(player, "rp:downed") or not hasPhone(player) then return end
+    local now = getTickCount()
+    if lastMatches[player] and now - lastMatches[player] < 800 then return end
+    lastMatches[player] = now
+
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0)
+        if not isElement(player) then return end
+        if not rows then return triggerClientEvent(player, "rp:tinder:matches", resourceRoot, nil) end
+        local list = {}
+        for _, r in ipairs(rows) do
+            list[#list + 1] = {
+                id = tonumber(r.id),
+                name = (tostring(r.name):gsub("_", " ")),
+                age = tonumber(r.age),
+                bio = r.bio or "",
+                online = onlinePlayerOf(tonumber(r.id)) ~= nil,
+            }
+        end
+        triggerClientEvent(player, "rp:tinder:matches", resourceRoot, list)
+    end, db(), "SELECT c.id, c.name, c.age, (SELECT bio FROM tinder_profiles WHERE character_id = c.id) AS bio "
+        .. MUTUAL .. " ORDER BY GREATEST(a.created_at, b.created_at) DESC LIMIT 50", characterOf(player))
+end)
+
+addEventHandler("rp:tinder:matches:photo", resourceRoot, function(targetId)
+    local player = client
+    if getElementData(player, "rp:downed") or not hasPhone(player) then return end
+    targetId = math.floor(tonumber(targetId) or 0)
+    if targetId <= 0 then return end
+    local now = getTickCount()
+    if lastPhoto[player] and now - lastPhoto[player] < 300 then return end
+    lastPhoto[player] = now
+
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0)
+        local r = rows and rows[1]
+        if not r or not r.photo or not isElement(player) then return end
+        triggerLatentClientEvent(player, "rp:tinder:matches:photo", 200000, false, resourceRoot, targetId, r.photo)
+    end, db(), "SELECT (SELECT photo FROM tinder_profiles WHERE character_id = c.id) AS photo " .. MUTUAL .. " AND c.id = ?",
+        characterOf(player), targetId)
+end)
+
+addEventHandler("rp:tinder:unmatch", resourceRoot, function(targetId)
+    local player = client
+    if getElementData(player, "rp:downed") or not hasPhone(player) then return end
+    targetId = math.floor(tonumber(targetId) or 0)
+    if targetId <= 0 then return end
+    local now = getTickCount()
+    if lastUnmatch[player] and now - lastUnmatch[player] < 500 then return end
+    lastUnmatch[player] = now
+
+    dbQuery(function(qh)
+        local _, affected = dbPoll(qh, 0)
+        if not isElement(player) then return end
+        if affected and affected > 0 then
+            notify(player, "Match deshecho.", "success")
+            triggerClientEvent(player, "rp:tinder:unmatched", resourceRoot, targetId)
+        end
+    end, db(), "UPDATE tinder_swipes SET liked = 0 WHERE swiper_id = ? AND target_id = ? AND liked = 1", characterOf(player), targetId)
+end)
+
 addEventHandler("onPlayerQuit", root, function()
+    lastMatches[source] = nil
+    lastPhoto[source] = nil
+    lastUnmatch[source] = nil
     busy[source] = nil
     lastSwipe[source] = nil
     lastDeck[source] = nil

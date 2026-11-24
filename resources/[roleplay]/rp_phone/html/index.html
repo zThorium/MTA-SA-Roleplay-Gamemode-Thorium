@@ -239,11 +239,12 @@
                 </nav>
             </section>
 
-            <!-- Tinder (parte 1: perfil, parte 2: swipe) -->
+            <!-- Tinder (parte 1: perfil, parte 2: swipe, parte 3: matches) -->
             <section class="view" id="view-tinder">
                 <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text tinder-logo">tinder</h1><button type="button" class="action" id="tinder-save">Guardar</button></header>
                 <div class="editor">
                     <button type="button" class="secondary tinder-discover" id="tinder-discover">🔥 Descubrir personas</button>
+                    <button type="button" class="secondary tinder-discover" id="tinder-matches-btn">💬 Mis matches</button>
                     <div class="tinder-photo" id="tinder-photo"><span>Sin foto</span></div>
                     <button type="button" class="secondary" id="tinder-camera">📷 Tomar foto de perfil</button>
                     <button type="button" class="secondary" id="tinder-gallery">🖼️ Elegir de la galeria</button>
@@ -275,6 +276,12 @@
                     <p id="tinder-match-text"></p>
                     <button type="button" class="secondary" id="tinder-match-close">Seguir viendo</button>
                 </div>
+            </section>
+            <!-- Tinder: matches (parte 3) -->
+            <section class="view" id="view-tinder-matches">
+                <header><button type="button" class="back" data-to="tinder">‹ Perfil</button><h1 class="logo-text tinder-logo">matches</h1><span></span></header>
+                <div class="tinder-matches" id="tinder-matches-list"></div>
+                <p class="note tinder-msg" id="tinder-matches-msg">Cargando...</p>
             </section>
             <!-- Galeria (html/gallery.js) -->
             <section class="view" id="view-gallery">
