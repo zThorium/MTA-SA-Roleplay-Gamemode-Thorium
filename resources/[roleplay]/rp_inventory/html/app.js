@@ -233,9 +233,15 @@
         if (item) send("rp:inv:ui:give", item.id, chosenAmount(item), targetId);
     }
 
+    // Con mochila equipada el peso y el maximo suman los de la mochila (inventario 15 kg + capacidad de la mochila)
     function renderWeight(weight, max) {
-        var ratio = max > 0 ? Math.min(1, weight / max) : 0;
-        $("weight-label").textContent = weight.toFixed(1) + " / " + max + " kg";
+        var total = weight + (state.bp ? state.bp.used : 0);
+        var cap = max + (state.bp ? state.bp.capacity : 0);
+        var ratio = cap > 0 ? Math.min(1, total / cap) : 0;
+        $("weight-label").textContent = total.toFixed(1) + " / " + cap + " kg";
+        $("weight-sub").textContent = state.bp
+            ? "Inventario " + max + " kg + mochila " + state.bp.capacity + " kg"
+            : "";
         var bar = $("weight-bar");
         bar.style.width = (ratio * 100) + "%";
         bar.style.background = ratio > 0.9 ? "#e5484d" : ratio > 0.7 ? "#f5a524" : "#4cd38a";

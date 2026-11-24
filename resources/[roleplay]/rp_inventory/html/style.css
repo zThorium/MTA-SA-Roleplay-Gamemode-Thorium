@@ -52,6 +52,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; fon
 .weight { margin-left: auto; width: 220px; font-size: 11px; color: var(--muted); }
 .weight-top { display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px; }
 .bar { height: 5px; margin-top: 6px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+.weight-sub { margin-top: 4px; font-size: 10px; color: #9fd3e6; text-align: right; min-height: 12px; }
 #weight-bar { height: 100%; width: 0; background: var(--success); transition: width 0.3s, background 0.3s; }
 
 .close { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
@@ -62,7 +63,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; fon
 .grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    grid-auto-rows: 92px;
+    grid-auto-rows: auto;
     gap: 8px;
     padding: 18px 22px;
     align-content: start;
@@ -71,6 +72,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; fon
 }
 
 .slot {
+    height: 92px;
     position: relative;
     display: flex;
     flex-direction: column;

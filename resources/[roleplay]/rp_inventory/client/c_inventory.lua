@@ -56,7 +56,7 @@ local function render()
     if not (isElement(browser) and ready and lastData) then return end
     executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s, %s[0])"):format(
         toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight),
-        toJSON({ lastData.bp or false }, true)))
+        toJSON(lastData.bp or false, true)))   -- toJSON ya envuelve el valor en un array: el "[0]" lo desenvuelve
 end
 
 local function isOpen()
