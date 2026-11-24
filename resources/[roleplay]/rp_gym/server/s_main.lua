@@ -70,13 +70,20 @@ end)
 
 addCommandHandler("maquinas", function(player)
     if not gymIsAdmin(player) then return gymNotify(player, NO_PERMISSION, "error") end
-    local n = 0
+    local n, nearId, nearDist = 0, nil, 10
+    local px, py, pz = getElementPosition(player)
     for id, m in pairs(gymMachineList()) do
         n = n + 1
+        local d = getDistanceBetweenPoints3D(px, py, pz, m.row.x, m.row.y, m.row.z)
+        if d < nearDist then nearId, nearDist = id, d end
         outputChatBox(("#%d %s (%s) en %.1f, %.1f, %.1f int %d dim %d"):format(id, m.cfg.label, m.row.gym,
             m.row.x, m.row.y, m.row.z, m.row.interior, m.row.dimension), player, 255, 255, 255)
     end
-    gymNotify(player, n == 0 and "No hay maquinas creadas." or (n .. " maquinas en el chat."), "info")
+    if nearId then
+        gymNotify(player, ("Maquina mas cercana: id %d. Borrala con /borrarmaquina %d"):format(nearId, nearId), "info")
+    else
+        gymNotify(player, n == 0 and "No hay maquinas creadas." or (n .. " maquinas en el chat (ninguna a menos de 10 m)."), "info")
+    end
 end)
 
 addCommandHandler("crearentrenador", function(player, _, styleText)

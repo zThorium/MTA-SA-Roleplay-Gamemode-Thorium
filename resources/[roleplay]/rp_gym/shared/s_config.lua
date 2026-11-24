@@ -53,9 +53,11 @@ GYM = {
 }
 
 -- Maquinas. Los modelos y el desplazamiento Z son [A]: ajustar en juego si la maquina se ve mal colocada.
+-- seat = { dx, dy, dz, giro }: mueve/gira la maquina respecto a donde estaba el admin al crearla
+-- (dx adelante-derecha, dy adelante segun el rumbo del admin; metros y grados). Tras cambiarlo: restart rp_gym.
 GYM_KINDS = {
     treadmill = {
-        label = "Cinta de correr", alias = "cinta", model = 2627, zOffset = -1.0, levels = 10,
+        label = "Cinta de correr", alias = "cinta", model = 2627, zOffset = -1.0, seat = { 0, 0, 0, 0 }, levels = 10,
         speedBase = 3, speedStep = 1.0,        -- [A] km/h = base + step * nivel
         drainBase = 6, drainStep = 2.4,        -- [A] % de potencia que se pierde por segundo
         pulseGain = 12,                        -- [A] % de potencia por pulsacion alterna
@@ -65,7 +67,7 @@ GYM_KINDS = {
         loops = { { 3, "gym_tread_walk" }, { 7, "gym_tread_jog" }, { 10, "gym_tread_sprint" } },   -- hasta ese nivel
     },
     bike = {
-        label = "Bicicleta estatica", alias = "bici", model = 2630, zOffset = -1.0, levels = 10,
+        label = "Bicicleta estatica", alias = "bici", model = 2630, zOffset = -1.0, seat = { 0, 0, 0, 0 }, levels = 10,
         speedBase = 8, speedStep = 1.5,
         drainBase = 6, drainStep = 2.4,
         pulseGain = 12,
@@ -75,7 +77,7 @@ GYM_KINDS = {
         loops = { { 3, "gym_bike_slow" }, { 6, "gym_bike_pedal" }, { 8, "gym_bike_fast" }, { 10, "gym_bike_faster" } },
     },
     bench = {
-        label = "Press de banca", alias = "banca", model = 2629, zOffset = -1.0,
+        label = "Press de banca", alias = "banca", model = 2629, zOffset = -1.0, seat = { 0, 0, 0, 0 },
         weights = { 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320 },   -- [C] 40-320 lb, [A] paso de 20
         gainBase = 18, gainHeavy = 10,         -- [A] % por pulsacion = base - heavy * (peso relativo)
         decayBase = 10, decayHeavy = 25,       -- [A] % que baja por segundo = base + heavy * (peso relativo)
@@ -85,14 +87,14 @@ GYM_KINDS = {
         rest = { "BENCHPRESS", "gym_bp_down" }, up = { "BENCHPRESS", "gym_bp_up_smooth" },
     },
     dumbbells = {
-        label = "Mancuernas", alias = "mancuernas", model = 2913, zOffset = -1.0,
+        label = "Mancuernas", alias = "mancuernas", model = 2913, zOffset = -1.0, seat = { 0, 0, 0, 0 },
         weights = { 20, 30, 40, 50, 60, 70, 80, 90, 100, 110 },   -- [C] 20-110 lb, [A] paso de 10
         gainBase = 18, gainHeavy = 10,
         decayBase = 10, decayHeavy = 25,
         muscleFactor = 0.8,
         recordStat = 47,                       -- HEAVIEST_WEIGHT_DUMBELLS
         geton = { "FREEWEIGHTS", "gym_free_pickup" }, getoff = { "FREEWEIGHTS", "gym_free_putdown" },
-        rest = { "FREEWEIGHTS", "gym_free_loop" }, up = { "FREEWEIGHTS", "gym_free_a" }, up2 = { "FREEWEIGHTS", "gym_free_b" },
+        rest = { "FREEWEIGHTS", "gym_free_down" }, up = { "FREEWEIGHTS", "gym_free_a" }, up2 = { "FREEWEIGHTS", "gym_free_b" },
     },
 }
 

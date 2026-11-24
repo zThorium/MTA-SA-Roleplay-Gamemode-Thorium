@@ -44,7 +44,12 @@ local endSession   -- se define mas abajo
 function gymSpawnMachine(row)
     local cfg = GYM_KINDS[row.kind]
     if not cfg then return false end
-    local obj = createObject(cfg.model, row.x, row.y, row.z + cfg.zOffset, 0, 0, row.rotation)
+    -- seat = { dx, dy, dz, giro }: desplazamiento de la maquina respecto al personaje (ver GYM_KINDS)
+    local s = cfg.seat or { 0, 0, 0, 0 }
+    local a = math.rad(row.rotation)
+    local ox = s[1] * math.cos(a) - s[2] * math.sin(a)
+    local oy = s[1] * math.sin(a) + s[2] * math.cos(a)
+    local obj = createObject(cfg.model, row.x + ox, row.y + oy, row.z + cfg.zOffset + s[3], 0, 0, row.rotation + s[4])
     local col = createColSphere(row.x, row.y, row.z, GYM.TRIGGER_RADIUS)
     for _, el in ipairs({ obj, col }) do
         setElementInterior(el, row.interior)
@@ -287,7 +292,7 @@ addEventHandler("rp:gym:start", resourceRoot, function(machineId, option)
 
     setElementPosition(player, m.row.x, m.row.y, m.row.z)
     setElementRotation(player, 0, 0, m.row.rotation)
-    setElementFrozen(player, true)
+    -- No congelar: un jugador congelado no reproduce animaciones (el cliente bloquea los controles)
     playAnim(player, cfg.geton, false, true)
     s.timer = setTimer(tick, GYM.TICK_MS, 0, s)
     sendState(s)
