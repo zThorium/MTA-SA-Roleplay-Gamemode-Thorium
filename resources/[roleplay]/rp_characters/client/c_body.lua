@@ -104,6 +104,13 @@ function removePedBody(ped)
     destroyEntry(ped)
 end
 
+-- Export: escala de altura que se le esta aplicando a un ped (1 = sin cambio). Lo usan recursos que dibujan
+-- objetos pegados con su propio shader (rp_backpacks) para escalarlos igual.
+function getPedBodyScale(ped)
+    local e = tracked[ped]
+    return e and e.scale or 1
+end
+
 ----------------------------------------------------------------
 -- Cada frame: mover el punto fijo con el ped
 ----------------------------------------------------------------
@@ -128,7 +135,8 @@ setTimer(function()
     for _, obj in ipairs(getElementsByType("object", root, true)) do
         local owner = exports.bone_attach:getElementBoneAttachmentDetails(obj)
         local e = owner and tracked[owner]
-        if e and e.attach and not e.objects[obj] then
+        -- "rp:ownShader": el objeto lleva su propio shader con escala (rp_backpacks): no se le pisa con este
+        if e and e.attach and not e.objects[obj] and not getElementData(obj, "rp:ownShader") then
             engineApplyShaderToWorldTexture(e.attach, "*", obj)
             e.objects[obj] = true
         end

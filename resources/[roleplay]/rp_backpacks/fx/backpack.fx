@@ -13,6 +13,8 @@
 //  - sSheen                    brillo de borde (nylon satinado)
 //  - sReflect                  franjas reflectantes que brillan de lado
 //  - sSeed                     desplaza el camuflaje
+//  - sScale / sPivot           escala de altura del personaje y punto fijo (pies); c_visual.lua los actualiza.
+//                              Hace lo que body.fx hace con lo pegado al personaje, para que la mochila siga su cuerpo.
 //  La luminancia de la textura original se usa solo como detalle (costuras y bordes).
 //
 
@@ -26,6 +28,8 @@ float  sBandW   = 0.0;
 float  sSheen   = 0.2;
 float  sReflect = 0.0;
 float  sSeed    = 0.0;
+float  sScale   = 1.0;                // altura del personaje respecto a la base (1 = sin cambio)
+float3 sPivot   = float3(0, 0, 0);    // punto fijo de esa escala: los pies del personaje (mundo)
 
 #include "mta-helper.fx"
 
@@ -56,6 +60,7 @@ PSInput VertexShaderFunction(VSInput VS)
     PSInput PS = (PSInput)0;
 
     float3 world = MTACalcWorldPosition(VS.Position);
+    world = sPivot + (world - sPivot) * sScale;   // misma escala que el personaje (rp_characters/fx/body.fx)
     PS.Position = mul(float4(world, 1), gViewProjection);
     PS.TexCoord = VS.TexCoord;
     PS.Normal   = MTACalcWorldNormal(VS.Normal);
