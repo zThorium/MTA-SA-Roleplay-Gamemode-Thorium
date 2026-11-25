@@ -6,21 +6,38 @@
     <link rel="stylesheet" href="vending.css">
 </head>
 <body>
-    <!-- Menu de la maquina: elegir producto -->
-    <section id="menu" class="machine hidden">
-        <header>
-            <div class="logo" id="m-logo">🥤</div>
-            <div>
-                <div class="who" id="m-title">Expendedora</div>
-                <div class="speech">Elige un producto</div>
+    <!-- La maquina: vitrina con espirales y codigos, panel con pantalla y teclado, bandeja -->
+    <section id="machine" class="vm hidden">
+        <div class="vm-frame">
+            <div class="vm-head">
+                <span class="vm-brand" id="v-brand">Sprunk</span>
+                <button type="button" class="vm-close" id="v-close" title="Salir (Esc)">×</button>
             </div>
-            <button type="button" class="close" id="m-close" title="Cerrar">×</button>
-        </header>
-        <div class="products" id="m-products"></div>
-        <footer>
-            <small id="m-wallet">Llevas $0 en efectivo.</small>
-            <span class="keys-hint"><kbd>1-9</kbd> elegir · <kbd>Esc</kbd> salir</span>
-        </footer>
+            <div class="vm-body">
+                <div class="vm-window">
+                    <div class="vm-shelves" id="v-shelves"></div>
+                    <div class="vm-glass"></div>
+                </div>
+                <div class="vm-panel">
+                    <div class="vm-lcd"><span id="v-lcd">00</span></div>
+                    <div class="vm-info" id="v-info">MARQUE CÓDIGO</div>
+                    <div class="vm-leds"><i class="led g" id="v-led-g"></i><i class="led r" id="v-led-r"></i></div>
+                    <div class="vm-coin"><span class="vm-slot"></span><span class="vm-coinbtn"></span></div>
+                    <div class="vm-keys" id="v-keys"></div>
+                    <div class="vm-knob"></div>
+                    <div class="vm-arrow" id="v-arrow"></div>
+                    <div class="vm-return"><span></span></div>
+                </div>
+            </div>
+            <div class="vm-tray" id="v-tray">
+                <div class="vm-tray-item" id="v-tray-item"></div>
+                <div class="vm-flap">PUSH</div>
+            </div>
+            <div class="vm-feet"><i></i><i></i></div>
+            <div class="vm-fly" id="v-fly"></div>
+        </div>
+        <div class="vm-hint" id="v-hint">Marca en el teclado el código del producto · <kbd>Esc</kbd> salir</div>
+        <div class="vm-wallet" id="v-wallet"></div>
     </section>
 
     <!-- Pago con datafono (mismo minijuego que la bencinera) -->
@@ -30,7 +47,7 @@
             <p class="hint" id="p-hint">Arrastra tu tarjeta a la ranura del datafono y deslízala hacia la derecha.</p>
             <div id="p-cards" class="cards"></div>
             <button type="button" class="btn cash" id="p-cash">Pagar en efectivo</button>
-            <button type="button" class="btn back" id="p-back">Cancelar <kbd>Esc</kbd></button>
+            <button type="button" class="btn back" id="p-back">Volver a la máquina <kbd>Esc</kbd></button>
         </div>
         <div class="pos" id="pos">
             <div class="printer"><div class="paper" id="p-paper"></div></div>
