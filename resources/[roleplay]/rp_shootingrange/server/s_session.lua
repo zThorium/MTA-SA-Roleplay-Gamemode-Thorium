@@ -1,31 +1,63 @@
 --[[
     rp_shootingrange / s_session.lua  (servidor)
     Una sesion por jugador, aislada en su dimension. Todo lo decide el servidor:
-      - balas: cada disparo descuenta 1 bala real del inventario (takeItem) en el momento;
+      - municion: el arma de entrenamiento tiene balas "infinitas" (TRAINING_AMMO, se rellena) que
+        NO salen del inventario. Es un arma aparte: se retira siempre al terminar la sesion
+        (finishSession) y rp_ammunation no la sincroniza (sus armas estan suspendidas en el campo),
+        asi que nunca se convierte en balas reales;
       - impactos: onPlayerWeaponFire + rayo propio contra las esferas de los blancos, con el reloj del servidor;
-      - habilidad: solo sube en impactos validos (un impacto por blanco), con tope por sesion.
-    shortcut: el punto final del disparo lo reporta el cliente (MTA no lo da de otra forma); el tope de
-    balas, "un impacto por blanco" y el tope de habilidad por sesion acotan el abuso.
+      - habilidad: solo sube en impactos validos (un impacto por blanco), con tope por sesion y por dia;
+      - historial: cada sesion queda en range_sessions y los resultados traen las graficas de progreso.
+    shortcut: el punto final del disparo lo reporta el cliente (MTA no lo da de otra forma); "un impacto
+    por blanco" y los topes de habilidad acotan el abuso.
 ]]
 
-rangePlayers = {}   -- [player] = { characterId, inside, dim, prevItem, last, session }
+rangePlayers = {}   -- [player] = { characterId, inside, dim, prevItem, last, session, dailyGain }
 
 local floor, sqrt, abs, min, max = math.floor, math.sqrt, math.abs, math.min, math.max
+
+local function db() return exports.rp_database:getConnection() end
 
 local function send(p, ev, ...)
     if isElement(p) then triggerClientEvent(p, ev, resourceRoot, ...) end
 end
 
+----------------------------------------------------------------
+-- Tope diario de habilidad (ventana de 24 h, todas las armas)
+----------------------------------------------------------------
+function rangeLoadDailyGain(p, characterId)
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0) or {}
+        local ps = rangePlayers[p]
+        if ps and ps.characterId == characterId then ps.dailyGain = tonumber(rows[1] and rows[1].g) or 0 end
+    end, db(), [[SELECT COALESCE(SUM(GREATEST(CAST(skill_after AS SIGNED) - CAST(skill_before AS SIGNED), 0)), 0) AS g
+                 FROM range_sessions WHERE character_id = ? AND created_at >= NOW() - INTERVAL 1 DAY]], characterId)
+end
+
+local function dailyRoom(ps)
+    if (RANGE.SKILL_MAX_PER_DAY or 0) <= 0 then return math.huge end
+    return max(0, RANGE.SKILL_MAX_PER_DAY - (ps.dailyGain or 0))
+end
+
+-- Para el cliente: math.huge no cabe en JSON; -1 = sin tope diario
+local function clientRoom(ps)
+    local r = dailyRoom(ps)
+    return r == math.huge and -1 or r
+end
+
+----------------------------------------------------------------
+-- Menu y HUD
+----------------------------------------------------------------
 -- Armas del jugador que se pueden entrenar (solo las que tiene en el inventario)
 function rangeWeaponList(p)
     local list = {}
+    local ps = rangePlayers[p]
     for itemId, w in pairs(RANGE.WEAPONS) do
         local def = exports.rp_inventory:getItemDefinition(itemId)
         if def and def.weapon and exports.rp_inventory:hasItem(p, itemId, 1) then
             local cat = RANGE.CATEGORIES[w.category]
             list[#list + 1] = {
                 item = itemId, name = def.name, category = w.category, categoryName = cat.name,
-                ammo = exports.rp_inventory:getItemAmount(p, def.ammo), maxAmmo = cat.ammo,
                 skill = skillInfo(getPedStat(p, w.stat) or 0),
             }
         end
@@ -34,12 +66,12 @@ function rangeWeaponList(p)
         if a.category ~= b.category then return a.category < b.category end
         return a.name < b.name
     end)
-    return list
+    return list, ps and dailyRoom(ps) or 0
 end
 
 local function hudData(s)
     return {
-        shots = s.shots, hits = s.hits, score = s.score, ammo = max(0, s.budget - s.shots),
+        shots = s.shots, hits = s.hits, score = s.score, ammo = "∞",
         accuracy = s.shots > 0 and floor(s.hits / s.shots * 100 + 0.5) or 0,
         skill = skillInfo(s.skill), round = s.round,
     }
@@ -54,6 +86,53 @@ local function sendRound(p, s)
     send(p, "rp:range:round", s.round, #RANGE.ROUNDS, round.kind, s.targets, RANGE.ROUND_DELAY_MS, round.time * 1000)
 end
 
+----------------------------------------------------------------
+-- Historial: guardar la sesion y leer el progreso para las graficas
+----------------------------------------------------------------
+local function loadHistory(characterId, stat, cb)
+    dbQuery(function(qh)
+        local rows = dbPoll(qh, 0) or {}
+        dbQuery(function(qh2)
+            local agg = (dbPoll(qh2, 0) or {})[1] or {}
+            -- Las filas vienen de la mas nueva a la mas vieja; las graficas van de izquierda (vieja) a derecha
+            local history = {}
+            for i = #rows, 1, -1 do
+                local r = rows[i]
+                history[#history + 1] = {
+                    accuracy = tonumber(r.accuracy) or 0, score = tonumber(r.score) or 0,
+                    skill = tonumber(r.skill_after) or 0, shots = tonumber(r.shots) or 0,
+                    hits = tonumber(r.hits) or 0, date = tostring(r.d or ""),
+                }
+            end
+            local shots, hits = tonumber(agg.shots) or 0, tonumber(agg.hits) or 0
+            cb(history, {
+                sessions = tonumber(agg.n) or 0, shots = shots, hits = hits,
+                accuracy = shots > 0 and floor(hits / shots * 100 + 0.5) or 0,
+                bestScore = tonumber(agg.best_score) or 0, bestAccuracy = tonumber(agg.best_acc) or 0,
+            })
+        end, db(), [[SELECT COUNT(*) AS n, COALESCE(SUM(shots), 0) AS shots, COALESCE(SUM(hits), 0) AS hits,
+                            COALESCE(MAX(score), 0) AS best_score, COALESCE(MAX(accuracy), 0) AS best_acc
+                     FROM range_sessions WHERE character_id = ? AND stat_id = ?]], characterId, stat)
+    end, db(), [[SELECT shots, hits, score, accuracy, skill_after, DATE_FORMAT(created_at, '%d/%m %H:%i') AS d
+                 FROM range_sessions WHERE character_id = ? AND stat_id = ? ORDER BY id DESC LIMIT ?]],
+        characterId, stat, RANGE.HISTORY_SESSIONS or 15)
+end
+
+local function saveSession(characterId, s, final, reason, cb)
+    local accuracy = s.shots > 0 and floor(s.hits / s.shots * 100 + 0.5) or 0
+    if s.shots < 1 then return cb() end   -- sesiones sin disparos no ensucian el historial
+    dbQuery(function(qh)
+        dbPoll(qh, 0)
+        cb()
+    end, db(), [[INSERT INTO range_sessions (character_id, stat_id, item_id, shots, hits, score, accuracy, skill_before, skill_after, reason)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]],
+        characterId, s.stat, s.itemId, min(s.shots, 65535), min(s.hits, 65535), s.score, accuracy,
+        floor(s.skill0), final, reason)
+end
+
+----------------------------------------------------------------
+-- Fin de la sesion (siempre retira el arma de entrenamiento)
+----------------------------------------------------------------
 function finishSession(p, reason, silent)
     local ps = rangePlayers[p]
     local s = ps and ps.session
@@ -61,22 +140,32 @@ function finishSession(p, reason, silent)
     ps.session = nil
     s.finished = true
     if isTimer(s.timer) then killTimer(s.timer) end
-    if isTimer(s.endTimer) then killTimer(s.endTimer) end
     if not isElement(p) then return end
 
-    takeWeapon(p, s.weapon)
+    takeWeapon(p, s.weapon)                 -- el arma de entrenamiento nunca sale del campo
     local final = floor(s.skill)
     setPedStat(p, s.stat, final)            -- sin los puntos nativos que dan los disparos fallados
-    if s.gain > 0 then skillSave(ps.characterId, s.stat, final) end
+    if s.gain > 0 then
+        skillSave(ps.characterId, s.stat, final)
+        ps.dailyGain = (ps.dailyGain or 0) + s.gain
+    end
 
-    if silent then return end
-    local before, after = skillInfo(s.skill0), skillInfo(final)
-    send(p, "rp:range:results", {
-        reason = reason, weapon = s.def.name,
-        shots = s.shots, hits = s.hits, misses = s.shots - s.hits,
-        accuracy = s.shots > 0 and floor(s.hits / s.shots * 100 + 0.5) or 0,
-        score = s.score, before = before, after = after, gained = final - floor(s.skill0),
-    })
+    local characterId = ps.characterId
+    saveSession(characterId, s, final, reason, function()
+        if silent or not isElement(p) then return end
+        loadHistory(characterId, s.stat, function(history, totals)
+            if not isElement(p) or (rangePlayers[p] and rangePlayers[p].session) then return end
+            local before, after = skillInfo(s.skill0), skillInfo(final)
+            send(p, "rp:range:results", {
+                reason = reason, weapon = s.def.name,
+                shots = s.shots, hits = s.hits, misses = s.shots - s.hits,
+                accuracy = s.shots > 0 and floor(s.hits / s.shots * 100 + 0.5) or 0,
+                score = s.score, before = before, after = after, gained = final - floor(s.skill0),
+                capped = s.capped == true, dailyRoom = clientRoom(rangePlayers[p] or {}),
+                history = history, totals = totals, levels = RANGE.LEVELS, skillMax = RANGE.SKILL_MAX,
+            })
+        end)
+    end)
 end
 
 local function nextRound(p, s)
@@ -110,24 +199,24 @@ function startSession(p, itemId)
     local def = w and exports.rp_inventory:getItemDefinition(itemId)
     if not ps or not ps.inside or ps.session or not def or not def.weapon then return false, "No puedes entrenar ahora." end
     if not exports.rp_inventory:hasItem(p, itemId, 1) then return false, "No tienes esa arma." end
-    local cat = RANGE.CATEGORIES[w.category]
-    local budget = min(exports.rp_inventory:getItemAmount(p, def.ammo), cat.ammo)
-    if budget < 1 then return false, "No tienes municion para esa arma. Comprala en Ammu-Nation." end
     if getPedWeapon(p, getSlotFromWeapon(def.weapon)) ~= 0 then return false, "Guarda el arma que llevas encima antes de entrenar." end
 
     local stat0 = getPedStat(p, w.stat) or 0
-    giveWeapon(p, def.weapon, budget, true)
+    giveWeapon(p, def.weapon, RANGE.TRAINING_AMMO, true)
     local s = {
-        itemId = itemId, def = def, weapon = def.weapon, stat = w.stat, category = w.category, budget = budget,
+        itemId = itemId, def = def, weapon = def.weapon, stat = w.stat, category = w.category,
         shots = 0, hits = 0, score = 0, skill0 = stat0, skill = stat0, gain = 0, round = 0, t0 = 0, t1 = 0, targets = {},
     }
     ps.session = s
-    send(p, "rp:range:start", { weapon = def.name, budget = budget, rounds = #RANGE.ROUNDS, hud = hudData(s) })
+    send(p, "rp:range:start", { weapon = def.name, rounds = #RANGE.ROUNDS, hud = hudData(s), dailyRoom = clientRoom(ps) })
     s.timer = setTimer(tick, 200, 0, p)
     nextRound(p, s)
     return true
 end
 
+----------------------------------------------------------------
+-- Disparos
+----------------------------------------------------------------
 -- Rayo del disparo contra las esferas de zona de cada blanco vivo. Devuelve el mas cercano.
 local function findHit(s, sx, sy, sz, ex, ey, ez, now)
     local dx, dy, dz = ex - sx, ey - sy, ez - sz
@@ -169,9 +258,9 @@ addEventHandler("onPlayerWeaponFire", root, function(weapon, ex, ey, ez, _, sx, 
     if not s or s.finished or weapon ~= s.weapon then return end
 
     s.shots = s.shots + 1
-    if not exports.rp_inventory:takeItem(p, s.def.ammo, 1) then
-        takeWeapon(p, s.weapon)
-        return finishSession(p, "ammo")
+    -- Municion de entrenamiento: se rellena, nunca se toca el inventario
+    if (getPedTotalAmmo(p, getSlotFromWeapon(s.weapon)) or 0) < RANGE.REFILL_BELOW then
+        setWeaponAmmo(p, s.weapon, RANGE.TRAINING_AMMO)
     end
     setPedStat(p, s.stat, floor(s.skill))   -- los fallos no dan habilidad nativa
 
@@ -184,15 +273,13 @@ addEventHandler("onPlayerWeaponFire", root, function(weapon, ex, ey, ez, _, sx, 
             if hit.t.rearm > 0 then hit.t.blocked = now + hit.t.rearm else hit.t.dead = true end
             s.hits = s.hits + 1
             s.score = s.score + z.points
-            local gain = max(0, min(z.gain, RANGE.SKILL_MAX_PER_SESSION - s.gain, RANGE.SKILL_MAX - s.skill))
+            local room = min(RANGE.SKILL_MAX_PER_SESSION - s.gain, RANGE.SKILL_MAX - s.skill, dailyRoom(ps) - s.gain)
+            local gain = max(0, min(z.gain, room))
+            if gain < z.gain then s.capped = true end
             s.skill = s.skill + gain
             s.gain = s.gain + gain
             send(p, "rp:range:hit", hit.t.id, z.key, z.name, z.points, hit.t.rearm)
         end
     end
     send(p, "rp:range:hud", hudData(s))
-
-    if s.shots >= s.budget and not isTimer(s.endTimer) then
-        s.endTimer = setTimer(finishSession, 1500, 1, p, "ammo")
-    end
 end)

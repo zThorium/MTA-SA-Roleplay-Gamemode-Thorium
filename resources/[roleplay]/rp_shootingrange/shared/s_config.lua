@@ -50,13 +50,19 @@ RANGE = {
             { d = 14, amp = 4, period = 5, rearm = 0.6 } } },
     },
 
-    -- Categorias de arma: escala de distancia de los blancos y balas maximas por sesion
+    -- Categorias de arma: escala de distancia de los blancos
     CATEGORIES = {
-        pistol  = { name = "Pistolas",   dist = 1.0, ammo = 36 },
-        smg     = { name = "Subfusiles", dist = 1.0, ammo = 60 },
-        shotgun = { name = "Escopetas",  dist = 0.6, ammo = 18 },
-        rifle   = { name = "Fusiles",    dist = 1.3, ammo = 60 },
+        pistol  = { name = "Pistolas",   dist = 1.0 },
+        smg     = { name = "Subfusiles", dist = 1.0 },
+        shotgun = { name = "Escopetas",  dist = 0.6 },
+        rifle   = { name = "Fusiles",    dist = 1.3 },
     },
+
+    -- Municion de entrenamiento: dentro del campo el arma tiene balas "infinitas" que NO salen del
+    -- inventario. Es un arma aparte que se retira al terminar la sesion; al salir, rp_ammunation
+    -- devuelve el arma equipada con las balas reales del inventario (nunca se suman balas).
+    TRAINING_AMMO = 9999,
+    REFILL_BELOW = 300,            -- si baja de esto, se rellena hasta TRAINING_AMMO
     -- Armas entrenables: item de rp_inventory -> stat nativa (69-79) y categoria.
     -- El id de arma GTA y la municion salen de la definicion del item en rp_inventory.
     WEAPONS = {
@@ -77,6 +83,10 @@ RANGE = {
     },
     SKILL_MAX = 1000,
     SKILL_MAX_PER_SESSION = 120,   -- tope de puntos de habilidad por sesion (contra el farmeo)
+    -- Tope de habilidad en 24 h (todas las armas). Antes las balas costaban dinero y eso frenaba el
+    -- farmeo; con municion gratis el limite es este. 0 = sin tope.
+    SKILL_MAX_PER_DAY = 300,
+    HISTORY_SESSIONS = 15,         -- sesiones que se ven en las graficas de los resultados
 
     UI = { title = "Campo de tiro", hint_exit = "F2: salir del entrenamiento" },
 }

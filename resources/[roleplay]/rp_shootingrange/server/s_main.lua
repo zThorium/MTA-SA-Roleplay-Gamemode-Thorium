@@ -54,9 +54,11 @@ local function takeCooldown(ps)
 end
 
 local function sendMenu(p, ps)
+    local weapons, dailyRoom = rangeWeaponList(p)
     triggerClientEvent(p, "rp:range:menu", resourceRoot, {
-        inside = ps.inside, player = exports.rp_characters:getPlayerCharacterName(p) or "", location = ps.loc and ps.loc.name or "", weapons = rangeWeaponList(p),
+        inside = ps.inside, player = exports.rp_characters:getPlayerCharacterName(p) or "", location = ps.loc and ps.loc.name or "", weapons = weapons,
         categories = RANGE.CATEGORIES, rounds = #RANGE.ROUNDS,
+        dailyRoom = dailyRoom ~= math.huge and dailyRoom or -1,   -- -1 = sin tope diario
     })
 end
 
@@ -156,7 +158,10 @@ end)
 ----------------------------------------------------------------
 -- Ciclo de vida
 ----------------------------------------------------------------
-local function load(p, characterId) rangePlayers[p] = { characterId = characterId } end
+local function load(p, characterId)
+    rangePlayers[p] = { characterId = characterId, dailyGain = 0 }
+    rangeLoadDailyGain(p, characterId)
+end
 
 local function unload(p)
     exitRange(p)

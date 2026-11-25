@@ -1348,4 +1348,24 @@ SCHEMA = {
         CONSTRAINT fk_weapon_skills_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_shootingrange: historial de sesiones del campo de tiro (graficas de progreso en los resultados)
+    [[
+    CREATE TABLE IF NOT EXISTS range_sessions (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        stat_id      SMALLINT UNSIGNED NOT NULL,
+        item_id      VARCHAR(32)  NOT NULL,
+        shots        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        hits         SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        score        INT UNSIGNED NOT NULL DEFAULT 0,
+        accuracy     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        skill_before SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        skill_after  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        reason       VARCHAR(12)  NOT NULL DEFAULT '',
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_range_sessions_char (character_id, stat_id, created_at),
+        CONSTRAINT fk_range_sessions_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -36,6 +36,17 @@
             <div class="track"><div id="res-bar" class="fill"></div><div id="res-bar-new" class="fill new"></div></div>
             <p id="res-gain" class="muted"></p>
         </div>
+        <!-- Progreso historico con esta arma -->
+        <div class="history">
+            <h2 id="hist-title">Tu progreso</h2>
+            <div class="kpis" id="hist-kpis"></div>
+            <div class="charts">
+                <figure class="chart" id="chart-acc"><figcaption>Precisión por sesión <small>%</small></figcaption><div class="plot"></div></figure>
+                <figure class="chart" id="chart-score"><figcaption>Puntuación por sesión</figcaption><div class="plot"></div></figure>
+                <figure class="chart" id="chart-skill"><figcaption>Habilidad con el arma <small>0-1000</small></figcaption><div class="plot"></div></figure>
+            </div>
+            <p id="hist-note" class="muted"></p>
+        </div>
         <div class="actions">
             <button id="res-again" class="btn primary">Volver a entrenar</button>
             <button id="res-exit" class="btn">Salir</button>
