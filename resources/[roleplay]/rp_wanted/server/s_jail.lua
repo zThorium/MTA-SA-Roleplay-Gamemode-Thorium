@@ -152,23 +152,34 @@ addEventHandler("rp:onCharacterSpawn", root, function(characterId)
 end)
 
 -- Admin
+-- "Nombre Apellido (ID 3)" para los mensajes
+local function label(p)
+    local name = exports.rp_characters:getPlayerCharacterName(p) or getPlayerName(p)
+    return ("%s (ID %s)"):format((tostring(name):gsub("_", " ")), tostring(exports.rp_ids:getPlayerId(p) or "?"))
+end
+
 addCommandHandler("liberar", function(admin, _, query)
-    if not isAdmin(admin) then return end
-    local target = query and exports.rp_ids:findPlayer(query)
-    if not target or not jailed[target] then return notify(admin, "Uso: /liberar <jugador en la carcel>", "info") end
-    release(target, "Un administrador te libero.")
-    notify(admin, "Jugador liberado.", "success")
+    if not isAdmin(admin) then return notify(admin, "No tienes permiso para usar este comando.", "error") end
+    if not query then return notify(admin, "Uso: /liberar <id o nombre>", "warning") end
+    local target = exports.rp_ids:findPlayer(query)
+    if not target then return notify(admin, "No se encontró un único jugador con ese nombre o ID.", "warning") end
+    local j = jailed[target]
+    if not j then return notify(admin, label(target) .. " no está en la cárcel.", "info") end
+    local left = math.max(0, math.ceil(j.left))
+    release(target, "Un administrador te liberó.")
+    notify(admin, ("Liberaste a %s (le quedaban %d:%02d)."):format(label(target), math.floor(left / 60), left % 60), "success")
 end)
 
 addCommandHandler("encarcelar", function(admin, _, query, minutes)
-    if not isAdmin(admin) then return end
+    if not isAdmin(admin) then return notify(admin, "No tienes permiso para usar este comando.", "error") end
+    local usage = "Uso: /encarcelar <id o nombre> <minutos 1-600>"
     local target = query and exports.rp_ids:findPlayer(query)
     minutes = tonumber(minutes)
-    if not target or not minutes or minutes <= 0 or minutes > 600 then
-        return notify(admin, "Uso: /encarcelar <jugador> <minutos>", "info")
-    end
-    jailPlayer(target, math.floor(minutes * 60), math.floor(minutes * WANTED.JAIL_BAIL_PER_STAR / 1.5), 0)
-    notify(admin, "Jugador encarcelado.", "success")
+    if not query or not minutes or minutes <= 0 or minutes > 600 then return notify(admin, usage, "warning") end
+    if not target then return notify(admin, "No se encontró un único jugador con ese nombre o ID.", "warning") end
+    local bail = math.floor(minutes * WANTED.JAIL_BAIL_PER_STAR / 1.5)
+    jailPlayer(target, math.floor(minutes * 60), bail, 0)
+    notify(admin, ("Encarcelaste a %s durante %s min (fianza $%d)."):format(label(target), tostring(minutes), bail), "success")
 end)
 
 addEventHandler("onResourceStop", resourceRoot, function()

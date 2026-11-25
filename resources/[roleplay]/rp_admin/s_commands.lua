@@ -167,16 +167,22 @@ addCommandHandler("tp", function(player, _, x, y, z, interior, dimension)
     interior = tonumber(interior) or getElementInterior(player)
     dimension = tonumber(dimension) or getElementDimension(player)
     moveTo(player, x, y, z, interior, dimension)
-    notify(player, ("Teletransportado a %.1f, %.1f, %.1f."):format(x, y, z), "success")
+    notify(player, ("Teletransportado a %.2f, %.2f, %.2f (interior %d, dimensión %d)."):format(x, y, z, interior, dimension), "success")
     logAction(player, "tp", nil, ("%.2f %.2f %.2f int %d dim %d"):format(x, y, z, interior, dimension))
 end)
 
+-- /pos: posicion ordenada en varias lineas (la del vehiculo si lo conduces). La linea de
+-- coordenadas se puede copiar tal cual en /tp.
 addCommandHandler("pos", function(player)
     if not guard(player) then return end
-    local x, y, z = getElementPosition(player)
-    local _, _, rot = getElementRotation(player)
-    outputChatBox(("Posicion: %.3f, %.3f, %.3f  rot %.1f  int %d  dim %d"):format(x, y, z, rot,
-        getElementInterior(player), getElementDimension(player)), player, 245, 165, 36)
+    local veh = getPedOccupiedVehicle(player)
+    local el = (veh and getVehicleController(veh) == player) and veh or player
+    local x, y, z = getElementPosition(el)
+    local rx, ry, rz = getElementRotation(el)
+    outputChatBox(el == veh and "Tu posición (vehículo):" or "Tu posición:", player, 245, 165, 36)
+    outputChatBox(("  x, y, z: %.3f, %.3f, %.3f  |  Rotación: %.1f, %.1f, %.1f"):format(x, y, z, rx, ry, rz), player, 255, 255, 255)
+    outputChatBox(("  Interior: %d"):format(getElementInterior(el)), player, 255, 255, 255)
+    outputChatBox(("  Dimensión: %d"):format(getElementDimension(el)), player, 255, 255, 255)
 end)
 
 ----------------------------------------------------------------
@@ -260,7 +266,8 @@ addCommandHandler("kick", function(player, _, query, ...)
         logAction(player, "kick_fallido", t, "sin permiso ACL")
         return notify(player, "No se pudo expulsar: agrega resource.rp_admin al grupo Admin en acl.xml.", "error")
     end
-    outputChatBox(("%s fue expulsado por un administrador. Motivo: %s"):format(who, reason), root, 255, 120, 120)
+    outputChatBox(("[Admin] %s fue expulsado del servidor. Motivo: %s"):format(who, reason), root, 255, 120, 120)
+    notify(player, ("Expulsaste a %s. Motivo: %s"):format(who, reason), "success")
 end)
 
 addCommandHandler("ban", function(player, _, query, hours, ...)
@@ -278,8 +285,9 @@ addCommandHandler("ban", function(player, _, query, hours, ...)
         logAction(player, "ban_fallido", t, "sin permiso ACL")
         return notify(player, "No se pudo banear: agrega resource.rp_admin al grupo Admin en acl.xml.", "error")
     end
-    outputChatBox(("%s fue baneado %s. Motivo: %s"):format(who,
-        hours == 0 and "permanentemente" or ("por " .. hours .. " h"), reason), root, 255, 120, 120)
+    local length = hours == 0 and "permanentemente" or ("por %s h"):format(hours)
+    outputChatBox(("[Admin] %s fue baneado %s. Motivo: %s"):format(who, length, reason), root, 255, 120, 120)
+    notify(player, ("Baneaste a %s %s. Motivo: %s"):format(who, length, reason), "success")
 end)
 
 ----------------------------------------------------------------
