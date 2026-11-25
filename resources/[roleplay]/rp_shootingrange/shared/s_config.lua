@@ -49,6 +49,13 @@ RANGE = {
     -- recortan a esto en rangeBuildRound: un blanco fuera del carril queda dentro de la pared de la
     -- cabina, no se puede acertar y la ronda espera el tiempo entero.
     LANE_HALF_WIDTH = 1.2,
+    -- Desde la cabina se ve como por un embudo: cerca solo el centro del carril, lejos mas ancho.
+    -- Desvio lateral maximo = distancia * VIEW_CONE (y nunca mas que LANE_HALF_WIDTH): a 6 m caben
+    -- 0,45 m, a 16 m ya los 1,2 m. Ningun blanco mas cerca de MIN_TARGET_DIST (las paredes de la
+    -- cabina lo tapan; la escopeta acerca los blancos al 60 %).
+    VIEW_CONE = 0.075,
+    MIN_TARGET_DIST = 6.0,
+    MAX_TARGET_DIST = 24.0,     -- fondo del campo (ningun blanco dentro de la pared del fondo; el fusil escala x1,3)
     ROUNDS = {
         { kind = "static", time = 25, targets = {
             { d = 6, l = -1.0 }, { d = 9, l = 0.8 }, { d = 12, l = -0.4 }, { d = 15, l = 1.0 }, { d = 18, l = 0 } } },

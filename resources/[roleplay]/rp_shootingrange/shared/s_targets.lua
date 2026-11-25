@@ -37,17 +37,27 @@ end
 function rangeBuildRound(index, category)
     local round = RANGE.ROUNDS[index]
     local scale = RANGE.CATEGORIES[category].dist
-    local half = RANGE.LANE_HALF_WIDTH or 1.2
-    local function lane(v) return math.max(-half, math.min(half, v or 0)) end   -- nunca fuera del carril
+    local half, cone = RANGE.LANE_HALF_WIDTH or 1.2, RANGE.VIEW_CONE or 0.075
+    local minD = RANGE.MIN_TARGET_DIST or 6
+    local maxD = RANGE.MAX_TARGET_DIST or 24
+    local function dist(v) return math.max(minD, math.min(maxD, v)) end
+    -- Desvio lateral visible desde la cabina a la distancia d (embudo) y nunca fuera del carril
+    local function lane(v, d)
+        local m = math.min(half, d * cone)
+        return math.max(-m, math.min(m, v or 0))
+    end
     local out = {}
     for i, def in ipairs(round.targets) do
-        local t = { id = i, kind = round.kind, l = lane(def.l), at = math.floor((def.at or 0) * 1000), rearm = math.floor((def.rearm or 0) * 1000) }
+        local t = { id = i, kind = round.kind, at = math.floor((def.at or 0) * 1000), rearm = math.floor((def.rearm or 0) * 1000) }
         if round.kind == "advance" then
-            t.d0, t.d1, t.life = def.d0 * scale, def.d1 * scale, math.floor(def.dur * 1000)
+            t.d0, t.d1, t.life = dist(def.d0 * scale), dist(def.d1 * scale), math.floor(def.dur * 1000)
+            t.l = lane(def.l, math.min(t.d0, t.d1))          -- el punto mas cercano es el que decide
         elseif round.kind == "lateral" then
-            t.d, t.amp, t.period, t.life = def.d * scale, math.min(math.abs(def.amp or 0), half), def.period, round.time * 1000
+            t.d, t.period, t.life = dist(def.d * scale), def.period, round.time * 1000
+            t.l, t.amp = 0, math.min(math.abs(def.amp or 0), half, t.d * cone)
         else
-            t.d, t.life = def.d * scale, round.time * 1000 - t.at
+            t.d, t.life = dist(def.d * scale), round.time * 1000 - t.at
+            t.l = lane(def.l, t.d)
         end
         out[i] = t
     end
