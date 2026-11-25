@@ -1,151 +1,198 @@
 ---
 name: crear-recurso
-description: Crear un recurso rp_* nuevo del gamemode Thorium (estructura, meta.xml, servidor, cliente, registro en mtaserver.conf y documentación). Úsala siempre que haya que añadir un sistema o recurso nuevo al servidor MTA.
+description: Crear un recurso rp_* nuevo del gamemode Thorium (MTA:SA 1.6) o añadir un sistema grande a uno existente - diseño, integración con los sistemas de la GM (personaje, dinero, inventario, facciones, búsqueda, HUD, niveles), estructura, meta.xml, servidor, cliente, pruebas, registro en mtaserver.conf y documentación. Úsala SIEMPRE que haya que añadir un sistema, trabajo, actividad, tienda, minijuego o recurso nuevo al servidor.
 ---
 
-# Crear un recurso nuevo
+# Crear un recurso nuevo en Thorium
 
-Estándar con el que se hicieron `rp_shops`, `rp_payday`, `rp_factions` y el resto. Sigue los pasos
-en orden y copia el estilo del recurso existente más parecido.
+Thorium es un roleplay **por personaje**: casi todo cuelga de `characters.id`, no de la cuenta ni del
+jugador. Un recurso nuevo no es una isla: se engancha al ciclo de vida de la GM y **reutiliza** los
+sistemas que ya existen (dinero, inventario, avisos, facciones, búsqueda, HUD...). Esta skill es el
+mapa para hacerlo bien a la primera.
 
-## 0. Antes de escribir
+Archivos de apoyo (léelos cuando la fase lo pida, no todos de golpe):
 
-- Mira `docs/PLAN_MVP.md` y los PR abiertos: puede que el sistema ya esté planeado o en curso.
-- Decide el nombre: `rp_<sistema>` en minúsculas y en español o inglés corto (`rp_bank`, `rp_rides`).
-- Lista dependencias (casi siempre `rp_database`, `rp_notify`, `rp_login`, `rp_characters`; `rp_ids` si
-  buscas jugadores por ID; `rp_inventory` si das items).
+| Archivo | Qué tiene |
+|---|---|
+| [`referencia/API.md`](referencia/API.md) | Exports reales de cada recurso con firma y retorno, y eventos del ciclo de vida |
+| [`referencia/REGISTROS.md`](referencia/REGISTROS.md) | Lo que está "ocupado": dimensiones, teclas, elementData, blips, niveles de admin, orden de arranque |
+| [`plantillas/`](plantillas/) | `meta.xml`, `s_config.lua`, `s_main.lua`, `c_main.lua` y prueba de `rp_test` listos para copiar |
 
-## 1. Estructura
+Skills hermanas: **migracion-bd** (tablas), **interfaz-cef** (paneles HTML), **comando-admin**
+(cualquier `/comando` y elementos que colocan los admins), **crear-mision** (todo lo de `rp_missions`).
+
+---
+
+## Fase 0 · ¿Hace falta un recurso nuevo?
+
+1. Lee `RECURSOS.md` y `docs/PLAN_MVP.md`, y revisa los PR abiertos (`gh pr list`). Muchas ideas ya
+   existen a medias o encajan como ampliación:
+   - ¿Un trabajo civil? → va en `rp_jobs` (API en `docs/TRABAJOS.md`), no en un recurso nuevo.
+   - ¿Una tienda que vende items? → `rp_shops` (o `addTempShop` para puestos temporales).
+   - ¿Una misión o cinemática? → `rp_missions` con la skill **crear-mision**.
+   - ¿Un evento del mundo (accidente, fiesta)? → `exports.rp_events:registerEvent`.
+   - ¿Un item nuevo con efecto? → catálogo de `rp_inventory` + `rp:onItemUse`.
+2. Crea recurso nuevo solo si es un **sistema** con estado y reglas propias (gimnasio, pool, carreras).
+3. Si dudas entre ampliar y crear, pregunta a Fabián con la recomendación.
+
+## Fase 1 · Diseño corto (antes de escribir código)
+
+Escribe (en la conversación, o en `docs/<SISTEMA>.md` si es grande) estas respuestas. Son las que
+luego deciden la estructura:
+
+| Pregunta | Por qué importa |
+|---|---|
+| ¿Qué hace el jugador, paso a paso, y qué ve? | Define cliente, teclas y UI |
+| ¿Qué persiste entre reinicios y qué es solo memoria? | Tablas (migracion-bd) vs. tablas Lua |
+| ¿De quién es cada dato: personaje, propiedad, facción, global? | Columna `character_id` + `ON DELETE CASCADE` |
+| ¿Cuesta o paga dinero? ¿Efectivo, banco o tarjeta? | Patrón de cobro (abajo) |
+| ¿Da o quita items? ¿Cuáles nuevos hacen falta? | Catálogo de `rp_inventory` |
+| ¿Quién puede usarlo: todos, una facción/permiso, admins? | `hasFactionPermission`, nivel admin |
+| ¿Ocurre en un interior o instancia propia? | Dimensión libre (ver `REGISTROS.md`) |
+| ¿Es ilegal? ¿Lo ve la policía? | `rp_wanted:reportCrime`, `rp_police:dispatchAlert` |
+| ¿Qué pasa si el jugador sale, cambia de personaje, queda abatido o se reinicia el recurso a mitad? | Limpieza y rehidratación |
+| ¿Qué teclas, comandos y blips usa? | Comprobar que no chocan (`REGISTROS.md`) |
+| ¿Da XP o progreso? | `rp_levels:giveXP` |
+
+## Fase 2 · Nombre, dependencias y estructura
+
+- Nombre `rp_<sistema>` en minúsculas, corto (`rp_gym`, `rp_pool`). Prefijo de eventos `rp:<sistema>:`
+  y de elementData `rp:<algo>`.
+- Dependencias: incluye **solo** los recursos cuyos exports llamas (casi siempre `rp_database`,
+  `rp_notify`, `rp_login`, `rp_characters`; mira `API.md` para el resto). `<include>` garantiza que
+  arrancan antes.
 
 ```
 resources/[roleplay]/rp_<sistema>/
   meta.xml
-  shared/s_config.lua      tabla de config en MAYÚSCULAS (precios, coords, tiempos)
-  server/s_<sistema>.lua   lógica y validación
-  client/c_<sistema>.lua   solo si hay UI, teclas o dx
-  html/                    solo si hay UI CEF (ver skill interfaz-cef)
+  shared/s_config.lua        CONFIG en MAYÚSCULAS: precios, coords, tiempos, textos ajustables
+  server/s_config.lua        config que el cliente NO debe ver (premios, probabilidades, posiciones de botín)
+  server/s_<sistema>.lua     estado, validación, BD, exports
+  server/s_admin.lua         comandos de admin (si los hay; skill comando-admin)
+  client/c_<sistema>.lua     teclas, dx, efectos (solo si hace falta)
+  html/                      solo si hay CEF (skill interfaz-cef)
 ```
 
-Si el recurso es solo servidor y pequeño, los `.lua` pueden ir en la raíz (`rp_payday/s_payday.lua`).
+Recursos pequeños y solo servidor pueden tener los `.lua` en la raíz. Si un archivo pasa de ~600
+líneas, pártelo por responsabilidad (`s_machines.lua`, `s_trainers.lua` como en `rp_gym`).
 
-## 2. meta.xml
+Copia las plantillas de [`plantillas/`](plantillas/) y renombra `sistema`/`SISTEMA`.
 
-```xml
-<meta>
-    <info author="Thorium" name="RP Sistema" description="Qué hace en una frase" version="1.0.0" type="script" />
-    <min_mta_version server="1.6.0" client="1.6.0" />
+## Fase 3 · Base de datos
 
-    <include resource="rp_database" />
-    <include resource="rp_notify" />
-    <include resource="rp_login" />
-    <include resource="rp_characters" />
+Si algo persiste → skill **migracion-bd** (entrada nueva **al final** de `rp_database/schema.lua`,
+idempotente, nunca editar las anteriores). Recuerda:
 
-    <script src="shared/s_config.lua" type="shared" />
-    <script src="server/s_sistema.lua" type="server" />
-    <script src="client/c_sistema.lua" type="client" cache="false" />
+- Datos del personaje: tabla con `character_id INT NOT NULL` + `FOREIGN KEY ... REFERENCES characters(id) ON DELETE CASCADE`.
+- Puntos que colocan los admins (`/crear...`): tabla con `x, y, z, rot, interior, dimension`.
+- Carga al arrancar esperando a la BD; escribe en el momento de la acción (no solo al salir: el servidor puede caerse).
+- `dbPoll(qh, -1)` está prohibido en flujo normal. Única excepción tolerada: un **export** que debe
+  devolver un valor a otro recurso (los exports no aceptan callbacks), como `rp_bank:chargeAccount`.
+  Si lo haces, documéntalo en el comentario del export.
 
-    <file src="html/index.html" />
-    <file src="html/style.css" />
-    <file src="html/app.js" />
+## Fase 4 · Servidor
 
-    <export function="algoPublico" type="server" />
-</meta>
-```
+Parte de [`plantillas/s_main.lua`](plantillas/s_main.lua). Lo que **siempre** debe tener:
 
-- `cache="false"` en todo script de cliente.
-- Config con datos sensibles (o que el cliente no debe ver) va como `type="server"`, no `shared`.
-- Solo exporta lo que otro recurso necesita; los exports no pueden recibir ni devolver funciones.
+1. **Arranque**: espera a la BD (`isReady()` o `rp:onDatabaseReady`) y **rehidrata a los jugadores
+   que ya están dentro** (reiniciar el recurso en caliente es lo normal en desarrollo).
+2. **Ciclo de vida** (`API.md` › Eventos):
+   - `rp:onCharacterSpawn` (source = jugador, args `characterId, name`) → cargar estado del personaje.
+   - `rp:onCharacterLogout` (args `characterId`) **y** `onPlayerQuit` → guardar y limpiar.
+   - `rp:onPlayerDowned` → cortar lo que el jugador esté haciendo si no tiene sentido estando abatido.
+   - `onResourceStop` → destruir lo creado fuera de `resourceRoot`, devolver controles, cerrar sesiones.
+3. **Identidad**: `exports.rp_characters:getPlayerCharacterId(p)`; si es `nil`, no hay personaje y no se hace nada.
+4. **Eventos remotos**: `addEvent(nombre, true)` solo para lo que el cliente dispara. En el handler
+   el jugador es **`client`**, nunca `source`. Revalidar: tipo, rango, cooldown, personaje,
+   cercanía (posición + interior + dimensión), item, dinero, permiso, estado (abatido, esposado, en misión).
+5. **Dinero** (elige uno, nunca inventes otro):
+   - Efectivo: `if getPlayerMoney(p) < n then ... end; takePlayerMoney(p, n); exports.rp_characters:saveCharacter(p)`.
+     Pagar: `givePlayerMoney` + `saveCharacter`.
+   - Banco: `UPDATE characters SET bank_money = bank_money - ? WHERE id = ? AND bank_money >= ?`
+     y entregar solo si `affectedRows > 0` (o `exports.rp_bank:chargeAccount(charId, n, "Concepto")`).
+   - Tarjeta de débito con PIN (datafono): `exports.rp_bank:payWithCard(p, ownerId, pin, n, concepto)`.
+   - Ingreso al banco: `exports.rp_bank:deposit` no sirve (exige efectivo); haz `UPDATE ... + ?` y
+     registra en `bank_transactions` como hace `rp_payday`.
+   - **Orden**: primero cobrar (y comprobar), después entregar. Si la entrega falla, devolver el dinero.
+6. **Items**: `local ok, why = exports.rp_inventory:canCarry(p, id, n)` antes de cobrar; luego
+   `giveItem`/`takeItem` (devuelven `true` o `false, motivo`). Items nuevos van en
+   `rp_inventory/shared/s_items.lua`; con `use = { event = true }` se gestionan en tu recurso con `rp:onItemUse`.
+7. **Avisos**: `exports.rp_notify:notify(p, texto, "success"|"error"|"warning"|"info")`, `popup` para
+   avisos importantes, `bubble` para globos sobre un ped. Nada de `outputChatBox` para feedback de acciones.
+8. **Logs**: `outputDebugString("[rp_sistema] ...")` (nivel 1 error, 2 aviso, 3 info). Acciones de
+   admin y movimientos grandes de dinero: también a la BD si hay que auditarlos.
 
-## 3. Servidor: plantilla
+## Fase 5 · Cliente
 
-```lua
---[[
-    rp_sistema / s_sistema.lua
+Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
 
-    Qué hace el recurso, en 2-4 líneas.
+- Teclas con `bindKey` en `onClientResourceStart`; ignorar si
+  `isCursorShowing() or isChatBoxInputActive() or isConsoleActive()`, si el jugador está abatido
+  (`exports.rp_injury:isLocalPlayerDowned()`) o con el HUD suprimido (cinemática).
+- **E** es la tecla universal de interacción y la usan 15 recursos: solo actúa si estás junto a
+  **tu** punto, y nunca consumas la tecla fuera de él. Antes de usar otra tecla, mira `REGISTROS.md`.
+- Aviso "Pulsa E para..." con dx, como `rp_shops/client/c_shops.lua`, solo en la dimensión/interior correcta.
+- Ocultar HUD / silenciar radio: **solo** `exports.rp_hud:setHudSuppressed("rp_sistema", true/false)` y
+  `exports.rp_radio:setRadioSuppressed("rp_sistema", true/false)`. Nunca toques `rp:hudHidden` ni la
+  radio nativa. Libera siempre la supresión en `onClientResourceStop`.
+- Blips: `rp_hud` solo dibuja los iconos de su lista `KNOWN_BLIP_ICON_IDS`. Usa uno existente
+  (`REGISTROS.md`) o añade el icono y su PNG en `rp_hud/images/blips/` en el mismo PR.
+- `onClientRender` lo más barato posible: precalcula, cachea texturas y fuentes, y no recorras
+  `getElementsByType` cada frame si puedes mantener una lista.
+- Panel HTML → skill **interfaz-cef**.
 
-    Comandos:
-        /comando <arg>          qué hace
-        /comandoadmin <arg>     (admin) qué hace
-]]
+## Fase 6 · Integración con el resto de la GM
 
-local state = {}      -- [player] = {...}
-local cooldown = {}   -- [player] = tick
+Repasa esta lista; cada "sí" es una línea de código que falta:
 
-addEvent("rp:onDatabaseReady", false)
-addEvent("rp:onCharacterSpawn", false)
-addEvent("rp:onCharacterLogout", false)
-addEvent("rp:sistema:accion", true)       -- solo los que el cliente puede disparar llevan true
+- [ ] ¿Es delito? → `exports.rp_wanted:reportCrime(p, clave, victima, dontCare, witnessed)` o `setWantedLevel`.
+- [ ] ¿Debe enterarse la policía? → `exports.rp_police:dispatchAlert(clave, x, y, z, extra, jugador)`
+      (claves de `POLICE_CODES` en `rp_police`; si necesitas una nueva, añádela allí).
+- [ ] ¿Requiere licencia/DNI? → `rp_driving:hasDriverLicense`, `rp_agency:hasPlayerDNI`.
+- [ ] ¿Solo para una facción o rol? → `rp_factions:getPlayerFaction` / `hasFactionPermission(p, "clave")`.
+- [ ] ¿Afecta a hambre/sed/energía? → `rp_needs:addNeed(p, "hunger"|"thirst"|"energy", n)`.
+- [ ] ¿Da progreso? → `rp_levels:giveXP(p, n, "motivo")`.
+- [ ] ¿Usa un vehículo? → los personales son de `rp_vehicles` (llaves, combustible); los temporales
+      los creas tú, con dueño en una tabla Lua, y los destruyes al terminar/salir.
+- [ ] ¿Choca con estar abatido, esposado (`rp_police:isCuffed`), en misión (`rp_missions:getPlayerMission`),
+      en carrera (`rp_races:getPlayerRace`) o en un robo (`rp_robbery:isPlayerRobbing`)? → bloquéalo.
+- [ ] ¿Tiene comandos de admin? → skill **comando-admin** + entrada en `rp_adminpanel/server/s_catalog.lua`.
+- [ ] ¿Tiene teclas o comandos de jugador? → añádelos al panel de ayuda (`rp_help/shared/s_config.lua`).
 
-local function db() return exports.rp_database:getConnection() end
-local function notify(p, t, k, d) exports.rp_notify:notify(p, t, k, d) end
-local function characterOf(p) return exports.rp_characters:getPlayerCharacterId(p) end
-local function isAdmin(p) return (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 end
+## Fase 7 · Pruebas
 
-local function load()
-    dbQuery(function(qh)
-        local rows = dbPoll(qh, 0) or {}
-        -- crear elementos del mundo, llenar caches...
-        outputDebugString(("[rp_sistema] %d filas cargadas"):format(#rows))
-    end, db(), "SELECT * FROM tabla")
-end
+- Servidor: añade pruebas en `resources/[test]/rp_test/server/` (ver
+  [`plantillas/s_tests_sistema.lua`](plantillas/s_tests_sistema.lua)) que reproduzcan las consultas
+  del recurso contra la BD real, sobre todo cobros, tablas nuevas y exports. Ejecuta `scripts/test.sh`
+  (Docker) o `start rp_test` / `rptest` en la consola; debe terminar en `FIN OK`.
+- Arranque limpio: `refresh` → `restart rp_sistema` sin errores en consola.
+- Reinicio en caliente con un personaje dentro: el estado se rehidrata y no quedan elementos huérfanos.
+- Cliente: **no hay tests**. Di explícitamente a Fabián qué probar en juego (flujo feliz + errores:
+  sin dinero, lejos, sin permiso, abatido, salir a mitad) con `/debugscript 3` limpio.
 
-addEventHandler("onResourceStart", resourceRoot, function()
-    if exports.rp_database:isReady() then load() else addEventHandler("rp:onDatabaseReady", root, load) end
-end)
+## Fase 8 · Registrar y documentar (mismo PR)
 
-addEventHandler("rp:onCharacterSpawn", root, function() --[[ source = jugador ]] end)
-addEventHandler("rp:onCharacterLogout", root, function() state[source] = nil end)
-addEventHandler("onPlayerQuit", root, function() state[source], cooldown[source] = nil, nil end)
+1. `mtaserver.conf`: `<resource src="rp_sistema" startup="1" protected="0" />` **después** de todas
+   sus dependencias (orden actual en `REGISTROS.md`).
+2. `RECURSOS.md`: fila con qué hace, teclas, exports, eventos, tablas, comandos de jugador y de admin.
+3. `CLAUDE.md` › "Recursos actuales": añadir el recurso en su categoría.
+4. `README.md` si es visible para jugadores; `docs/PLAN_MVP.md` si cierra un punto; `docs/<SISTEMA>.md`
+   si tiene reglas de diseño que no caben en una fila.
+5. Si ocupas dimensión, tecla, elementData o blip nuevos, **actualiza `referencia/REGISTROS.md`** de esta skill.
+6. Si exportas algo, añádelo a `referencia/API.md`.
 
-addEventHandler("rp:sistema:accion", resourceRoot, function(id, cantidad)
-    local player = client                                   -- nunca source
-    local now = getTickCount()
-    if cooldown[player] and now - cooldown[player] < 400 then return end
-    cooldown[player] = now
+## Checklist final antes del PR
 
-    id, cantidad = tonumber(id), tonumber(cantidad)
-    if not id or not cantidad or cantidad < 1 or cantidad ~= math.floor(cantidad) then return end
-    if not characterOf(player) then return end
-    -- revalidar distancia / interior / dimensión / item / permisos aquí
-    -- ...
-    notify(player, "Hecho.", "success")
-end)
-```
+- [ ] Rama `feat/rp-sistema` desde `main` actualizado; commits y PR en español contando qué cambia en el juego.
+- [ ] Ningún `dbConnect`, ningún SQL concatenado, ningún `dbPoll(qh, -1)` fuera de un export justificado.
+- [ ] Todo evento remoto usa `client`, convierte y acota argumentos, tiene cooldown y revalida cercanía/estado.
+- [ ] Cobro antes de entregar, atómico en banco, `saveCharacter` tras tocar efectivo.
+- [ ] Sin globales sueltas (solo la config compartida y las funciones exportadas).
+- [ ] Timers, colshapes, peds, vehículos, binds y supresiones de HUD/radio se limpian al salir, al
+      cambiar de personaje, al quedar abatido y en `onResourceStop`.
+- [ ] Dimensión, teclas y blips sin choques (`REGISTROS.md`).
+- [ ] `scripts/test.sh` en `FIN OK`; consola limpia en `restart`.
+- [ ] Docs actualizadas (fase 8) y aviso a Fabián de lo que debe probar en el cliente.
+- [ ] Sin secretos, IPs, emails ni material de Rockstar en el repo.
 
-Reglas:
-- **`client`** es el jugador en eventos remotos; ignora lo que diga el cliente sobre quién es.
-- Convierte (`tonumber`, `type(x) == "string"`), acota rangos y longitudes, y aplica cooldown en acciones repetibles.
-- Comprueba cercanía con interior + dimensión + distancia, igual que `isNear` en `rp_shops`.
-- Dinero del banco: cobro atómico `UPDATE characters SET bank_money = bank_money - ? WHERE id = ? AND bank_money >= ?`
-  y entrega solo si `affected > 0`. Dinero en mano: `getPlayerMoney` + `takePlayerMoney` + `exports.rp_characters:saveCharacter(player)`.
-- Limpia timers, colshapes y estado por jugador al salir o cambiar de personaje.
-- Logs con `outputDebugString("[rp_sistema] ...", nivel)`.
-
-## 4. Base de datos
-
-Si necesitas tablas o columnas, usa la skill **migracion-bd**.
-
-## 5. Cliente / interfaz
-
-- UI con HTML: skill **interfaz-cef**.
-- Comandos de admin o elementos colocados en el mundo por admins: skill **comando-admin**.
-- Teclas con `bindKey` dentro de `onClientResourceStart`, y no actuar si
-  `isCursorShowing() or isChatBoxInputActive() or isConsoleActive()`.
-- Avisos "Pulsa E para..." con dx como en `rp_shops/client/c_shops.lua`.
-
-## 6. Registrar y documentar
-
-1. `mtaserver.conf`: `<resource src="rp_sistema" startup="1" protected="0" />` **después** de sus dependencias.
-2. `RECURSOS.md`: fila nueva en la tabla (qué hace, tecla, exports, comandos de jugador y de admin).
-3. `README.md` si es una feature visible para jugadores; `docs/PLAN_MVP.md` si cierra un punto del plan.
-4. `CLAUDE.md`: añadir el recurso a la lista de "Recursos actuales" si es un sistema nuevo.
-
-## 7. Checklist antes del PR
-
-- [ ] Arranca sin errores en la consola del servidor (`refresh`, `start rp_sistema`).
-- [ ] `/debugscript 3` limpio en el cliente.
-- [ ] Reiniciar el recurso con jugadores dentro no deja estado roto.
-- [ ] Probado el flujo completo en juego con un personaje, y el caso de error (sin dinero, lejos, sin permiso).
-- [ ] Ningún SQL concatenado; ninguna credencial en el código.
-- [ ] Rama `feat/rp-sistema`, PR a `main` describiendo qué cambia en el juego y cómo probarlo.
+Si al crear un recurso descubres una forma mejor de hacer algo, **actualiza esta skill en el mismo PR**.

@@ -47,8 +47,12 @@ tools/trafico/out/
 CLAUDE.md
 
 # Material de Rockstar extraido del juego (mocap de cinematicas): no se sube
-resources/[roleplay]/rp_animlab/anims/*.ifp
-resources/[roleplay]/rp_mocap/anims/*.ifp
-resources/[roleplay]/rp_animlab/anims/*.cut.txt
-resources/[roleplay]/rp_missions/audio/*.mp3
-resources/[roleplay]/rp_missions/audio/*.wav
+# (los corchetes van escapados: sin "\" git los lee como comodin y la regla no aplica)
+resources/\[roleplay\]/rp_animlab/anims/*.ifp
+resources/\[roleplay\]/rp_mocap/anims/*.ifp
+resources/\[roleplay\]/rp_animlab/anims/*.cut.txt
+resources/\[roleplay\]/rp_missions/audio/*.mp3
+resources/\[roleplay\]/rp_missions/audio/*.wav
+
+# Worktrees locales de Claude Code
+.claude/worktrees/
