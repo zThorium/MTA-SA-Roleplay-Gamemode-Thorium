@@ -22,6 +22,7 @@ local machines = {}   -- [id] = { row = {...}, col = colshape, obj = object }
 local near = {}       -- [player] = machineId
 local sessions = {}   -- [player] = { machineId, stage, product }
 local cooldown = {}   -- [player] = tick de la ultima accion
+local finishPurchase  -- se define mas abajo
 
 addEvent("rp:onDatabaseReady", false)
 addEvent("rp:onCharacterLogout", false)
@@ -30,6 +31,7 @@ addEvent("rp:vending:open", true)
 addEvent("rp:vending:choose", true)
 addEvent("rp:vending:pay", true)
 addEvent("rp:vending:cancel", true)
+addEvent("rp:vending:back", true)
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(p, text, kind) exports.rp_notify:notify(p, text, kind or "info") end
@@ -86,9 +88,28 @@ local function blockedReason(p)
     return nil
 end
 
-local function productList(kind)
+--[[
+    Espirales de la vitrina: cada producto ocupa "slots" espirales seguidas (como una maquina real).
+    Codigo de cada espiral = fila * 10 + columna (11, 12, 13, 21...). Devuelve
+    slots = { { code, product = indice } } y byCode = { [code] = indice }.
+]]
+local layoutCache = {}
+local function layout(kind)
+    if layoutCache[kind] then return layoutCache[kind] end
     local t = VENDING.TYPES[kind]
-    return t and t.products or {}
+    local cols = VENDING.COLUMNS
+    local slots, byCode, n = {}, {}, 0
+    for i, prod in ipairs(t.products) do
+        for _ = 1, math.max(1, tonumber(prod.slots) or 1) do
+            local row, col = math.floor(n / cols) + 1, n % cols + 1
+            local code = row * 10 + col
+            slots[#slots + 1] = { code = code, product = i }
+            byCode[code] = i
+            n = n + 1
+        end
+    end
+    layoutCache[kind] = { slots = slots, byCode = byCode }
+    return layoutCache[kind]
 end
 
 addEventHandler("rp:vending:open", resourceRoot, function()
@@ -104,36 +125,39 @@ addEventHandler("rp:vending:open", resourceRoot, function()
     local list = {}
     for i, prod in ipairs(t.products) do
         local def = exports.rp_inventory:getItemDefinition(prod.item)
-        if def then
-            local ok, reason = exports.rp_inventory:canCarry(p, prod.item, 1)
-            list[#list + 1] = {
-                index = i, name = def.name, icon = def.icon, description = def.description or "",
-                price = prod.price, canCarry = ok and true or false, reason = reason or "",
-            }
-        end
+        local ok, reason = false, "Producto no disponible."
+        if def then ok, reason = exports.rp_inventory:canCarry(p, prod.item, 1) end
+        list[i] = {
+            index = i, name = def and def.name or prod.item, description = def and def.description or "",
+            price = prod.price, look = prod.look or "can", color = prod.color or "#888888", tag = prod.tag or "",
+            canCarry = ok and true or false, reason = reason or "",
+        }
     end
     sessions[p] = { machineId = id, stage = "menu" }
     triggerClientEvent(p, "rp:vending:menu", resourceRoot, {
-        title = t.name, kind = m.row.kind, products = list,
+        title = t.name, brand = t.brand or t.name, kind = m.row.kind, products = list,
+        slots = layout(m.row.kind).slots, columns = VENDING.COLUMNS,
         cash = getPlayerMoney(p), cards = #(exports.rp_bank:getPlayerCards(p) or {}),
     })
 end)
 
-addEventHandler("rp:vending:choose", resourceRoot, function(index)
+-- El jugador marca el codigo de una espiral en el teclado de la maquina
+addEventHandler("rp:vending:choose", resourceRoot, function(code)
     local p = client
     local s = sessions[p]
     if not s or s.stage ~= "menu" then return end
     local m = machines[s.machineId]
     if not isNear(p, m) then return closeSession(p) end
 
-    index = tonumber(index)
-    local prod = index and productList(m.row.kind)[index]
+    code = tonumber(code)
+    local index = code and layout(m.row.kind).byCode[code]
+    local prod = index and VENDING.TYPES[m.row.kind].products[index]
     local def = prod and exports.rp_inventory:getItemDefinition(prod.item)
     if not def then return end
     local ok, reason = exports.rp_inventory:canCarry(p, prod.item, 1)
     if not ok then return notify(p, reason or "No te cabe en el inventario.", "error") end
 
-    s.stage, s.product = "pay", { item = prod.item, price = prod.price, name = def.name }
+    s.stage, s.product = "pay", { item = prod.item, price = prod.price, name = def.name, code = code }
     triggerClientEvent(p, "rp:vending:pos", resourceRoot, {
         station = VENDING.TYPES[m.row.kind].name, product = def.name, amount = prod.price,
         cards = exports.rp_bank:getPlayerCards(p) or {}, cash = getPlayerMoney(p),
@@ -196,19 +220,36 @@ addEventHandler("rp:vending:pay", resourceRoot, function(method, ownerId, pin)
         return closeSession(p, (why or "No se pudo entregar el producto.") .. " Se te devolvio el dinero.", "error")
     end
     s.stage = "paid"
-    -- El producto ya está en el inventario; el timer solo deja ver la boleta antes de cerrar
+    -- El producto ya está en el inventario. La máquina hace caer el producto y el jugador lo
+    -- recoge de la bandeja (rp:vending:cancel); si no lo hace, el timer cierra solo.
     s.timer = setTimer(function()
         s.timer = nil
-        if not isElement(p) or sessions[p] ~= s then return end
-        closeSession(p, ("Compraste %s por $%d. Está en tu inventario."):format(prod.name, prod.price), "success")
-        if not isPedInVehicle(p) then setPedAnimation(p, "VENDING", "VEND_Use", 1600, false, false, false, false) end
-    end, VENDING.CLOSE_AFTER_PAY_MS, 1)
+        finishPurchase(p, s)
+    end, VENDING.TAKE_TIMEOUT_MS, 1)
 end)
 
+-- Cierra una compra ya pagada: aviso y animacion de sacar el producto de la maquina
+finishPurchase = function(p, s)
+    if not isElement(p) or sessions[p] ~= s or s.stage ~= "paid" then return end
+    local prod = s.product
+    closeSession(p, ("Compraste %s por $%d. Está en tu inventario."):format(prod.name, prod.price), "success")
+    if not isPedInVehicle(p) then setPedAnimation(p, "VENDING", "VEND_Use", 1600, false, false, false, false) end
+end
+
+-- Esc / recoger de la bandeja. Pagada: termina la compra. Si no: cierra sin cobrar.
 addEventHandler("rp:vending:cancel", resourceRoot, function()
     local p = client
     local s = sessions[p]
-    if s and s.stage ~= "paid" and not s.paying then closeSession(p) end
+    if not s or s.paying then return end
+    if s.stage == "paid" then return finishPurchase(p, s) end
+    closeSession(p)
+end)
+
+-- "Cancelar" en el datafono: vuelve a la máquina para elegir otro código
+addEventHandler("rp:vending:back", resourceRoot, function()
+    local p = client
+    local s = sessions[p]
+    if s and s.stage == "pay" and not s.paying then s.stage, s.product = "menu", nil end
 end)
 
 ----------------------------------------------------------------

@@ -1,8 +1,9 @@
 --[[
     rp_vending / c_vending.lua  (cliente)
 
-    Aviso "Pulsa E" junto a una maquina, menu de productos y datafono (html/vending.*,
-    mismo minijuego de tarjeta que la bencinera de rp_vehicles). El cliente solo reenvia
+    Aviso "Pulsa E" junto a una maquina y la maquina dibujada en HTML (html/vending.*): vitrina
+    con codigos, teclado, datafono (mismo minijuego de tarjeta que la bencinera de rp_vehicles)
+    y caida del producto a la bandeja. El cliente solo reenvia
     lo que elige el jugador; el servidor decide producto, precio y cobro.
 ]]
 
@@ -14,6 +15,7 @@ addEvent("rp:vending:close", true)
 addEvent("rp:vending:ui:choose", false)
 addEvent("rp:vending:ui:pay", false)
 addEvent("rp:vending:ui:cancel", false)
+addEvent("rp:vending:ui:back", false)
 addEvent("rp:vending:ui:sound", false)
 
 local W, H = guiGetScreenSize()
@@ -114,9 +116,15 @@ addEventHandler("rp:vending:menu", resourceRoot, function(data)
     showUI(true)
 end)
 
-addEventHandler("rp:vending:ui:choose", root, function(index)
+-- Codigo de la espiral marcado en el teclado de la maquina (11, 12, 13, 21...)
+addEventHandler("rp:vending:ui:choose", root, function(code)
     if not open then return end
-    triggerServerEvent("rp:vending:choose", resourceRoot, tonumber(index))
+    triggerServerEvent("rp:vending:choose", resourceRoot, tonumber(code))
+end)
+
+-- "Cancelar" en el datafono: se vuelve a la maquina
+addEventHandler("rp:vending:ui:back", root, function()
+    if open then triggerServerEvent("rp:vending:back", resourceRoot) end
 end)
 
 addEventHandler("rp:vending:pos", resourceRoot, function(data)
