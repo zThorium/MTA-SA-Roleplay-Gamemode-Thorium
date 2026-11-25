@@ -16,6 +16,8 @@ VENDING = {
     COOLDOWN_MS = 1200,        -- entre acciones del mismo jugador (lo aplica el servidor)
     TAKE_TIMEOUT_MS = 12000,   -- tras pagar, se cierra solo si no recoges el producto de la bandeja
     COLUMNS = 3,               -- espirales por estante en la vitrina
+    NEARBY_RADIUS = 50,        -- radio por defecto de /nearbyexpendedoras (m)
+    DELETE_NEAR_RADIUS = 5,    -- /borrarexpendedora sin id borra la mas cercana dentro de este radio (m)
 
     -- Colocacion con /crearexpendedora: distancia delante del admin y altura sobre el suelo.
     -- Si el modelo queda enterrado o flotando, ajusta zOffset del tipo.

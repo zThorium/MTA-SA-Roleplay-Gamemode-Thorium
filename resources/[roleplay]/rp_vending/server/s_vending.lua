@@ -332,13 +332,52 @@ addCommandHandler("crearexpendedora", function(p, _, word)
         kind, mx, my, mz, mrot, interior, dimension)
 end)
 
+-- Maquinas del mismo interior y dimension que el jugador, de la mas cercana a la mas lejana
+local function machinesNear(p, radius)
+    local px, py, pz = getElementPosition(p)
+    local out = {}
+    for id, m in pairs(machines) do
+        if sameWorld(p, m) then
+            local d = getDistanceBetweenPoints3D(px, py, pz, m.row.x, m.row.y, m.row.z + 1)
+            if d <= radius then out[#out + 1] = { id = id, m = m, dist = d } end
+        end
+    end
+    table.sort(out, function(a, b) return a.dist < b.dist end)
+    return out
+end
+
+-- Sin id borra la mas cercana (a menos de DELETE_NEAR_RADIUS metros)
 addCommandHandler("borrarexpendedora", function(p, _, id)
     if not isAdmin(p) then return notify(p, "No tienes permiso para usar este comando.", "error") end
+    if id == nil then
+        local nearest = machinesNear(p, VENDING.DELETE_NEAR_RADIUS)[1]
+        if not nearest then
+            return notify(p, ("No hay ninguna expendedora a menos de %d m. Uso: /borrarexpendedora [id]"):format(VENDING.DELETE_NEAR_RADIUS), "warning")
+        end
+        id = nearest.id
+    end
     id = tonumber(id)
-    if not id or not machines[id] then return notify(p, "Uso: /borrarexpendedora <id>", "warning") end
+    if not id or not machines[id] then return notify(p, "Uso: /borrarexpendedora [id] (sin id, la más cercana)", "warning") end
     destroyMachine(id)
     dbExec(db(), "DELETE FROM vending_machines WHERE id = ?", id)
     notify(p, ("Expendedora #%d eliminada."):format(id), "success")
+end)
+
+addCommandHandler("nearbyexpendedoras", function(p, _, radius)
+    if not isAdmin(p) then return notify(p, "No tienes permiso para usar este comando.", "error") end
+    radius = tonumber(radius) or VENDING.NEARBY_RADIUS
+    if radius < 1 or radius > 3000 then return notify(p, "Uso: /nearbyexpendedoras [radio en metros, 1-3000]", "warning") end
+    local list = machinesNear(p, radius)
+    if #list == 0 then return notify(p, ("No hay expendedoras a menos de %d m."):format(radius), "info") end
+    outputChatBox(("Expendedoras a menos de %d m (%d):"):format(radius, #list), p, 255, 200, 60)
+    for i, e in ipairs(list) do
+        if i > 15 then
+            outputChatBox(("  ... y %d más. Reduce el radio."):format(#list - 15), p, 180, 180, 180)
+            break
+        end
+        outputChatBox(("  #%d  %s  a %.1f m"):format(e.id, VENDING.TYPES[e.m.row.kind].name, e.dist), p, 230, 230, 230)
+    end
+    notify(p, ("%d expendedoras cerca (detalle en el chat). Borra con /borrarexpendedora <id>."):format(#list), "info")
 end)
 
 addCommandHandler("expendedoras", function(p)
