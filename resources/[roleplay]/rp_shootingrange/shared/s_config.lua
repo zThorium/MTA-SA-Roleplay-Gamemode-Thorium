@@ -40,14 +40,18 @@ RANGE = {
 
     -- Pantalla de rondas (como el original: 1 estaticos, 2 avanzan, 3 lateral)
     ROUND_DELAY_MS = 3000,
+    -- Medio ancho del carril de tiro (m). Todo desvio lateral (l) y la amplitud del blanco lateral se
+    -- recortan a esto en rangeBuildRound: un blanco fuera del carril queda dentro de la pared de la
+    -- cabina, no se puede acertar y la ronda espera el tiempo entero.
+    LANE_HALF_WIDTH = 1.2,
     ROUNDS = {
         { kind = "static", time = 25, targets = {
-            { d = 6, l = -3 }, { d = 9, l = 2 }, { d = 12, l = -1 }, { d = 15, l = 3.5 }, { d = 18, l = 0 } } },
+            { d = 6, l = -1.0 }, { d = 9, l = 0.8 }, { d = 12, l = -0.4 }, { d = 15, l = 1.0 }, { d = 18, l = 0 } } },
         { kind = "advance", time = 24, targets = {
-            { d0 = 24, d1 = 5, l = -2, at = 0, dur = 8 }, { d0 = 24, d1 = 5, l = 2, at = 3, dur = 8 },
-            { d0 = 24, d1 = 5, l = 0, at = 6, dur = 8 }, { d0 = 24, d1 = 5, l = -1, at = 9, dur = 8 } } },
+            { d0 = 24, d1 = 5, l = -0.8, at = 0, dur = 8 }, { d0 = 24, d1 = 5, l = 0.8, at = 3, dur = 8 },
+            { d0 = 24, d1 = 5, l = 0, at = 6, dur = 8 }, { d0 = 24, d1 = 5, l = -0.4, at = 9, dur = 8 } } },
         { kind = "lateral", time = 15, targets = {
-            { d = 14, amp = 4, period = 5, rearm = 0.6 } } },
+            { d = 14, amp = 1.2, period = 4, rearm = 0.6 } } },
     },
 
     -- Categorias de arma: escala de distancia de los blancos

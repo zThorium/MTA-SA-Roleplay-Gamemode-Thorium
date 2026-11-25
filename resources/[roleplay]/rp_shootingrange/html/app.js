@@ -91,7 +91,8 @@
             $("hud-time").textContent = "--";
             return;
         }
-        if ($("hud-banner").textContent.indexOf("Prepárate") === 0) $("hud-banner").textContent = "¡Fuego!";
+        // El texto empieza por "¡": antes se buscaba "Prepárate" en la posicion 0 y nunca cambiaba a "¡Fuego!"
+        if ($("hud-banner").textContent.indexOf("Prepárate") !== -1) $("hud-banner").textContent = "¡Fuego!";
         $("hud-time").textContent = Math.max(0, Math.ceil((roundEnd - now) / 1000)) + "s";
     }
 
