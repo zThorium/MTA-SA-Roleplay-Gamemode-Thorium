@@ -45,6 +45,16 @@ MISSIONS = {
         { at = 850, name = "Leyenda",   partyCap = 4, discount = 0.15 },
     },
 
+    -- Identidad visual (estilo GTA SA). Texto de objetivo con etiquetas ~y~ ~r~ ~b~ ~g~ ~w~; si un texto no lleva etiquetas
+    -- se colorea solo con TAGWORDS (la etiqueta explicita siempre manda).
+    TAGS = { y = "#E1B02C", r = "#B4191D", b = "#2C599D", g = "#36682C", w = "#FFFFFF" },
+    TAGWORDS = {
+        r = { "Ballas", "ladrones", "Guardia Nacional", "guardia", "enemigos", "Vagos", "Matones", "matones", "vigías" },
+        y = { "farmacia", "Idlewood", "Jefferson", "puerto", "panadería", "Willowfield", "taller", "callejón", "Grove Street", "arsenal", "alturas", "casa de Cesar" },
+        b = { "Greenwood", "Blade", "Sentinel", "scooter", "camión", "furgoneta", "vehículo", "coche" },
+        g = { "Sweet", "Ryder", "Cesar", "pastel", "rifle", "cargas", "cajita azul", "cajas" },
+    },
+
     -- Contactos del "modo historia" (color del nombre en dialogos y llamadas)
     CONTACTS = {
         sweet = { name = "Sweet",  color = { 87, 190, 99 },  blip = 0 },

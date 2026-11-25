@@ -41,6 +41,10 @@ Plantilla comentada: `../templates/mision-plantilla.lua`. Ejemplos reales: `grov
 | `boardNpc = { "npc", "vehiculo" }` | Sube al NPC a un asiento libre del vehículo |
 | `snap = {x,y,z,rot}` | Punto de reaparición a partir de esta etapa |
 | `cutscene = {...}` | Cinemática (ver `cinematicas.md`) |
+| `timeLimit = ms` | Límite de tiempo de la etapa: cuenta atrás en el HUD (roja y parpadeante con < 30 s), aviso a los 30 s y misión fallida al agotarse |
+
+**Texto de objetivo con color** (`text`): etiquetas `~y~` amarillo (destinos), `~r~` rojo (enemigos), `~b~` azul (vehículos), `~g~` verde (Grove / recogibles), `~w~` blanco. Si no lleva etiquetas se colorea solo con `MISSIONS.TAGWORDS` (`shared/s_config.lua`); añade ahí las palabras nuevas. Blips y marcadores siguen la misma convención (amarillo destino, rojo enemigos, azul vehículos).
+**Enemigos atascados**: si quedan ≤ 3 sin moverse ni recibir daño 75 s, el servidor los retira. **Vehículo abandonado**: el destino se oculta y aparece una flecha 3D azul sobre el vehículo.
 
 Etapa de solo texto/radio se completa en el primer ciclo. Los vehículos y props creados en una etapa siguen existiendo en las siguientes.
 

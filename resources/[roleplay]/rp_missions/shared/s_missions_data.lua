@@ -387,6 +387,7 @@ MISSION_DEFS = {
                 text = "Ve a la farmacia de Idlewood",
                 pos = P(1960.0, -1776.0, 13.5),
                 goto = { 1960.0, -1776.0, 13.5, 16, vehicle = true },
+                timeLimit = 150000,   -- Kendl llega en minutos: cuenta atras visible en el HUD
                 radio = {
                     { who = "cesar", text = "¿Ya vas en camino? ¡Kendl me escribió que sale ahora mismo!" },
                     { who = "cesar", text = "Si el farmacéutico pregunta, tú eres mi sobrino y es para mi abuelo. Mi abuelo tiene... muchos años." },
@@ -416,6 +417,7 @@ MISSION_DEFS = {
             },
             {
                 text = "Vuelve con Cesar antes de que llegue Kendl",
+                timeLimit = 180000,
                 pos = P(2176.0, -1738.0, 13.5),
                 deliver = {
                     vehicle = "moto", x = 2176.0, y = -1738.0, z = 13.5, r = 12, minHealth = 250,
@@ -606,8 +608,8 @@ MISSION_DEFS = {
             },
             {
                 text = "Conduce hasta las alturas de Jefferson",
-                pos = P(2105.0, -1262.0, 23.9),
-                goto = { 2105.0, -1262.0, 23.9, 18, vehicle = true },
+                pos = P(2161.5, -1259.0, 23.9),
+                goto = { 2161.5, -1259.0, 23.9, 18, vehicle = true },
                 boardNpc = { "cesar", "blade" },
                 radio = {
                     { who = "cesar", text = "Apaga las luces cuando estemos cerca. Los morados no son tontos... bueno, no todos." },
@@ -616,14 +618,14 @@ MISSION_DEFS = {
             },
             {
                 text = "Vigila el intercambio sin que te vean",
-                pos = P(2124.0, -1268.0, 23.9),
+                pos = P(2150.0, -1259.0, 23.9),
                 interact = {
                     time = 6000, text = "Vigilando el intercambio",
                     anim = { "BOMBER", "BOM_Plant_Loop" },
-                    points = { { 2124.0, -1268.0, 23.9, "vigia" } },
+                    points = { { 2150.0, -1259.0, 23.9, "vigia" } },
                 },
                 waves = {
-                    { skins = { 102, 103 }, weapon = 22, ammo = 150, x = 2112.0, y = -1255.0, z = 23.9, radius = 8, count = 2, per = 1, label = "Vigías Ballas" },
+                    { skins = { 102, 103 }, weapon = 22, ammo = 150, x = 2172.0, y = -1252.0, z = 23.9, radius = 8, count = 2, per = 1, label = "Vigías Ballas" },
                 },
                 radio = { { who = "cesar", text = "Ahí está la camioneta. Es la de Ryder... y está hablando con alguien de morado." } },
             },
@@ -631,7 +633,7 @@ MISSION_DEFS = {
                 text = "Observa a Ryder",
                 cutscene = {
                     letterbox = true,
-                    shots = TalkShots("cesar", { from = P(2113.0, -1262.0, 27.0), to = P(2116.0, -1264.0, 26.6), look = P(2138.0, -1262.0, 24.8), dur = 3800, fov = 52, shake = 1.5 }),
+                    shots = TalkShots("cesar", { from = P(2141.0, -1256.0, 27.0), to = P(2144.0, -1258.0, 26.6), look = P(2158.0, -1259.0, 24.8), dur = 3800, fov = 52, shake = 1.5 }),
                     lines = {
                         { who = "cesar", text = "Mira nada más... es él. Ryder, con los morados, repartiendo cajas como si fuera Navidad." },
                         { who = "me",    text = "Esas cajas llevan el sello del ejército." },
@@ -639,22 +641,22 @@ MISSION_DEFS = {
                         { who = "me",    text = "Hay que decírselo a Sweet." },
                         { who = "cesar", text = "Sí, pero antes salgamos de aquí. Creo que nos vieron.", overlap = 200 },
                     },
-                    place = { 2124.0, -1268.0, 23.9, 270, spread = 1.4 },
+                    place = { 2150.0, -1259.0, 23.9, 270, spread = 1.4 },
                     npcs = {
                         { key = "cesar", contact = "cesar", skin = 292, rel = 2.6, ally = true, weapon = { 22, 200 } },
-                        { key = "ryder", contact = "ryder", skin = 271, x = 2138.0, y = -1262.0, z = 23.9, rot = 270 },
+                        { key = "ryder", contact = "ryder", skin = 271, x = 2158.0, y = -1259.0, z = 23.9, rot = 270 },
                     },
                 },
             },
             {
                 text = "¡Te vieron! Elimina a los Ballas",
-                pos = P(2124.0, -1268.0, 23.9),
+                pos = P(2150.0, -1259.0, 23.9),
                 waves = {
-                    { skins = { 102, 103, 104 }, weapon = 28, ammo = 300, x = 2132.0, y = -1262.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas" },
-                    { skins = { 102, 103, 104 }, weapon = 30, ammo = 300, x = 2110.0, y = -1245.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas con rifles" },
+                    { skins = { 102, 103, 104 }, weapon = 28, ammo = 300, x = 2172.0, y = -1252.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas" },
+                    { skins = { 102, 103, 104 }, weapon = 30, ammo = 300, x = 2148.0, y = -1262.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas con rifles" },
                 },
                 radio = { { who = "cesar", text = "¡Nos vieron! ¡Agáchense y disparen!" } },
-                snap = { 2115.0, -1262.0, 23.9, 270 },
+                snap = { 2145.0, -1259.0, 23.9, 270 },
             },
             {
                 text = "Vuelve a Grove Street con la noticia",
@@ -850,8 +852,8 @@ MISSION_DEFS = {
             },
             {
                 text = "Conduce hasta la casa de Jefferson",
-                pos = P(2150.0, -1280.0, 23.9),
-                goto = { 2150.0, -1280.0, 23.9, 18, vehicle = true },
+                pos = P(2161.5, -1259.0, 23.9),
+                goto = { 2161.5, -1259.0, 23.9, 18, vehicle = true },
                 boardNpc = { "ryder", "car" },
                 radio = {
                     { who = "ryder", text = "Voy a estar con ustedes hasta el final. Quiero que lo sepan." },
@@ -860,23 +862,23 @@ MISSION_DEFS = {
             },
             {
                 text = "Limpia la calle de la casa",
-                pos = P(2150.0, -1280.0, 23.9),
+                pos = P(2161.5, -1259.0, 23.9),
                 waves = {
-                    { skins = { 102, 103, 104 }, weapon = 28, ammo = 300, x = 2140.0, y = -1285.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas" },
-                    { skins = { 102, 103, 104 }, weapon = 30, ammo = 300, x = 2160.0, y = -1272.0, z = 23.9, radius = 10, count = 4, per = 2, label = "Ballas con rifles" },
-                    { skins = { 102, 103 }, weapon = 25, ammo = 100, x = 2150.0, y = -1295.0, z = 23.9, radius = 8, count = 3, per = 2, label = "Guardia del arsenal" },
+                    { skins = { 102, 103, 104 }, weapon = 28, ammo = 300, x = 2148.0, y = -1262.0, z = 23.9, radius = 10, count = 3, per = 2, label = "Ballas" },
+                    { skins = { 102, 103, 104 }, weapon = 30, ammo = 300, x = 2172.0, y = -1252.0, z = 23.9, radius = 10, count = 4, per = 2, label = "Ballas con rifles" },
+                    { skins = { 102, 103 }, weapon = 25, ammo = 100, x = 2160.0, y = -1258.0, z = 23.9, radius = 8, count = 3, per = 2, label = "Guardia del arsenal" },
                 },
                 radio = { { who = "ryder", text = "¡A la derecha! ¡Dos por la ventana! ¡Yo me encargo, ustedes avancen!" } },
-                snap = { 2158.0, -1262.0, 23.9, 180 },
+                snap = { 2158.0, -1259.0, 23.9, 180 },
             },
             {
                 text = "Coloca las cargas en el arsenal",
-                pos = P(2150.0, -1285.0, 23.9),
+                pos = P(2161.5, -1259.0, 23.9),
                 interact = {
                     time = 4500, text = "Colocando la carga",
                     anim = { "BOMBER", "BOM_Plant_Loop" },
                     points = {
-                        { 2146.0, -1284.0, 23.9, "c1" }, { 2152.0, -1288.0, 23.9, "c2" }, { 2155.0, -1280.0, 23.9, "c3" },
+                        { 2156.0, -1257.0, 23.9, "c1" }, { 2162.0, -1262.0, 23.9, "c2" }, { 2166.0, -1255.0, 23.9, "c3" },
                     },
                 },
                 radio = {
@@ -890,8 +892,8 @@ MISSION_DEFS = {
                 deliver = {
                     vehicle = "car", x = 2455.0, y = -1690.0, z = 13.5, r = 14, minHealth = 400,
                     ambush = {
-                        { at = P(2250.0, -1380.0, 23.9), group = { skins = { 102, 103, 104 }, weapon = 30, ammo = 250, x = 2255.0, y = -1375.0, z = 23.9, radius = 10, count = 3, per = 2 } },
-                        { at = P(2380.0, -1580.0, 13.5), group = { skins = { 102, 103, 104 }, weapon = 28, ammo = 250, x = 2385.0, y = -1575.0, z = 13.5, radius = 10, count = 3, per = 1 } },
+                        { at = P(2300.0, -1700.0, 13.5), group = { skins = { 102, 103, 104 }, weapon = 30, ammo = 250, x = 2305.0, y = -1695.0, z = 13.5, radius = 10, count = 3, per = 2 } },
+                        { at = P(2400.0, -1680.0, 13.5), group = { skins = { 102, 103, 104 }, weapon = 28, ammo = 250, x = 2405.0, y = -1675.0, z = 13.5, radius = 10, count = 3, per = 1 } },
                     },
                 },
                 radio = { { who = "ryder", text = "¡Corre! ¡Cuenta hasta diez y se acabó el arsenal!" } },

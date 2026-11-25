@@ -26,10 +26,101 @@ local function panel(x, y, w, h, accent)
     if accent then dxDrawRectangle(x, y, 4 * C.sc, h, accent) end
 end
 
-local function shadowText(text, x1, y1, x2, y2, color, scale, font, ax, ay, clip, wrap)
-    dxDrawText(text, x1 + 1, y1 + 1, x2 + 1, y2 + 1, tocolor(0, 0, 0, 220), scale, font, ax, ay, clip, wrap)
+----------------------------------------------------------------
+-- Identidad visual (estilo GTA SA): contorno negro en todo texto sobre el mundo, etiquetas de color, barras planas
+-- con borde negro, fuentes nativas de MTA (diploma, pricedown, bankgothic), caja de ayuda arriba a la izquierda y
+-- titulo de mision abajo a la derecha. Todo plano y rectangular (sin degradados ni bordes redondeados).
+----------------------------------------------------------------
+local OUT8 = { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 }, { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } }
+
+local function alphaOf(color) return math.floor(color / 16777216) % 256 end
+
+-- Las fuentes decorativas de GTA no garantizan acentos: se quitan solo ahi
+local function deaccent(s)
+    local map = { ["á"] = "a", ["é"] = "e", ["í"] = "i", ["ó"] = "o", ["ú"] = "u", ["ñ"] = "n", ["Á"] = "A", ["É"] = "E", ["Í"] = "I", ["Ó"] = "O", ["Ú"] = "U", ["Ñ"] = "N", ["¡"] = "", ["¿"] = "" }
+    return (s:gsub("[%z\1-\127\194-\244][\128-\191]*", function(ch) return map[ch] end) or s)
+end
+
+local function shadowText(text, x1, y1, x2, y2, color, scale, font, ax, ay, clip, wrap, thick)
+    local k = thick or 1
+    local blk = tocolor(0, 0, 0, math.min(235, alphaOf(color)))
+    for _, o in ipairs(OUT8) do
+        dxDrawText(text, x1 + o[1] * k, y1 + o[2] * k, x2 + o[1] * k, y2 + o[2] * k, blk, scale, font, ax, ay, clip, wrap)
+    end
     dxDrawText(text, x1, y1, x2, y2, color, scale, font, ax, ay, clip, wrap)
 end
+
+-- Texto con etiquetas ~y~ ~r~ ~b~ ~g~ ~w~ (si no trae ninguna se colorea solo con MISSIONS.TAGWORDS)
+local function autoTag(text)
+    if text:find("~", 1, true) then return text end
+    local spans = {}
+    for tag, list in pairs(MISSIONS.TAGWORDS or {}) do
+        for _, w in ipairs(list) do
+            local init = 1
+            while true do
+                local s, e = text:find(w, init, true)
+                if not s then break end
+                spans[#spans + 1] = { s = s, e = e, tag = tag, len = e - s }
+                init = e + 1
+            end
+        end
+    end
+    table.sort(spans, function(a, b) if a.s ~= b.s then return a.s < b.s end return a.len > b.len end)
+    local out, pos = {}, 1
+    for _, sp in ipairs(spans) do
+        if sp.s >= pos then
+            out[#out + 1] = text:sub(pos, sp.s - 1)
+            out[#out + 1] = "~" .. sp.tag .. "~" .. text:sub(sp.s, sp.e) .. "~w~"
+            pos = sp.e + 1
+        end
+    end
+    out[#out + 1] = text:sub(pos)
+    return table.concat(out)
+end
+
+local function codedText(text)
+    local tags = MISSIONS.TAGS or {}
+    return (autoTag(text or ""):gsub("~(%a)~", function(c) return tags[c] or "#FFFFFF" end))
+end
+
+local function drawTagged(text, x1, y1, x2, y2, scale, font, ax, ay, clip, wrap, alpha)
+    alpha = alpha or 255
+    local coded = codedText(text)
+    local plain = (coded:gsub("#%x%x%x%x%x%x", ""))
+    local blk = tocolor(0, 0, 0, math.min(235, alpha))
+    for _, o in ipairs(OUT8) do dxDrawText(plain, x1 + o[1], y1 + o[2], x2 + o[1], y2 + o[2], blk, scale, font, ax, ay, clip, wrap) end
+    dxDrawText(coded, x1, y1, x2, y2, tocolor(255, 255, 255, alpha), scale, font, ax, ay, clip, wrap, false, true)
+end
+
+-- Barra plana: borde negro de 2 px, fondo del mismo color al 30 % y relleno solido que se reduce de derecha a izquierda
+local function flatBar(x, y, w, h, f, r, g, b, a)
+    a = a or 255
+    dxDrawRectangle(x - 2, y - 2, w + 4, h + 4, tocolor(0, 0, 0, a))
+    dxDrawRectangle(x, y, w, h, tocolor(r, g, b, math.floor(77 * a / 255)))
+    if f > 0 then dxDrawRectangle(x, y, w * math.min(1, f), h, tocolor(r, g, b, a)) end
+end
+
+-- Flecha 3D flotante (invertida, con vaiven) sobre un objetivo
+local function arrow3D(x, y, z, r, g, b, now)
+    local sx, sy = getScreenFromWorldPosition(x, y, z + math.sin(now / 260) * 0.25)
+    if not sx then return end
+    local cx, cy, cz = getCameraMatrix()
+    local d = getDistanceBetweenPoints3D(cx, cy, cz, x, y, z)
+    local s = math.max(9, math.min(30, 520 / math.max(d, 8))) * C.sc
+    local black, col = tocolor(0, 0, 0, 240), tocolor(r, g, b, 255)
+    dxDrawPrimitive("trianglefan", false, { sx, sy + 3, black }, { sx - s * 0.8 - 3, sy - s * 1.4 - 3, black }, { sx + s * 0.8 + 3, sy - s * 1.4 - 3, black })
+    dxDrawPrimitive("trianglefan", false, { sx, sy, col }, { sx - s * 0.8, sy - s * 1.4, col }, { sx + s * 0.8, sy - s * 1.4, col })
+end
+
+-- Caja de ayuda (arriba a la izquierda): rectangulo negro al 75 %, texto blanco pequeno, 5-8 s, con "bip"
+local helpBox = nil
+local function showHelp(text, ms)
+    helpBox = { text = text, start = getTickCount(), dur = ms or 7000 }
+    playSoundFrontEnd(5)
+end
+
+local titleCard, titleShown = nil, false
+local wasInVeh = false
 
 ----------------------------------------------------------------
 -- Eventos del servidor
@@ -37,12 +128,14 @@ end
 C.onEnter = function(info)
     hud, banner, doneFlash, toasts, diedBanner, results = nil, nil, nil, {}, nil, nil
     invulnUntil, progress, holdIndex = 0, nil, nil
+    helpBox, titleCard, titleShown, wasInVeh = nil, nil, false, false
 end
 
 local prevLeft = C.onLeft
 C.onLeft = function()
     if prevLeft then prevLeft() end
     hud, banner, doneFlash, toasts, diedBanner, results, progress, holdIndex = nil, nil, nil, {}, nil, nil, nil, nil
+    helpBox, titleCard, titleShown, wasInVeh = nil, nil, false, false
     specTargets, specIdx = {}, 0
     vignette = 0
 end
@@ -52,6 +145,19 @@ addEventHandler("rp:missions:hud", resourceRoot, function(d) hud = d end)
 addEventHandler("rp:missions:stage", resourceRoot, function(idx, total, text)
     banner = { text = text, idx = idx, total = total, start = getTickCount() }
     playSoundFrontEnd(11)
+    -- Caja de ayuda de la mecanica de la etapa (arriba a la izquierda)
+    local st = C.def and C.def.stages and C.def.stages[idx]
+    if st and not st.cutscene then
+        if st.interact then
+            showHelp(("Mantén [E] cerca del punto marcado para %s."):format((st.interact.text or "interactuar"):lower()))
+        elseif st.getin then
+            showHelp("Sube al vehículo de la misión. Lo verás marcado en azul en el radar y con una flecha.")
+        elseif st.timeLimit then
+            showHelp(("Tienes %s para completar este objetivo."):format(C.fmtTime(st.timeLimit)))
+        elseif st.deliver then
+            showHelp("Lleva el vehículo al destino sin destruirlo. Si lo abandonas, el destino se oculta.")
+        end
+    end
 end)
 
 addEventHandler("rp:missions:stageDone", resourceRoot, function()
@@ -174,8 +280,9 @@ local function drawResults(now)
         -- fase de camara de victoria: titulo grande
         local a = C.ease(el / 700)
         local s = 3.1 * sc * (1 + (1 - a) * 0.4)
-        shadowText("MISION COMPLETADA", 0, sh * 0.70, sw, sh * 0.70 + 80 * sc, tocolor(245, 205, 90, 255 * a), s, "default-bold", "center")
-        shadowText(r.title, 0, sh * 0.70 + 56 * sc, sw, sh * 0.70 + 100 * sc, tocolor(230, 234, 242, 255 * a), 1.5 * sc, "default-bold", "center")
+        -- Centro de pantalla reservado a los anuncios criticos: Diploma amarilla (#E1B02C) con borde negro grueso
+        shadowText("MISION SUPERADA", 0, sh * 0.62, sw, sh * 0.62 + 90 * sc, tocolor(225, 176, 44, 255 * a), s * 0.85, "diploma", "center", "top", false, false, 3)
+        shadowText(deaccent(r.title):upper(), 0, sh * 0.62 + 84 * sc, sw, sh * 0.62 + 124 * sc, tocolor(255, 255, 255, 255 * a), 1.0 * sc, "bankgothic", "center", "top", false, false, 2)
         return
     end
     local t = el - victoryTime
@@ -183,11 +290,12 @@ local function drawResults(now)
     dxDrawRectangle(0, 0, sw, sh, tocolor(0, 0, 0, 150 * a))
     local w, h = 760 * sc, 440 * sc
     local x, y = sw / 2 - w / 2, sh / 2 - h / 2 + (1 - a) * 60 * sc
-    local accent = r.success and tocolor(245, 165, 36, 255 * a) or tocolor(229, 72, 77, 255 * a)
+    local accent = r.success and tocolor(225, 176, 44, 255 * a) or tocolor(180, 25, 29, 255 * a)
     dxDrawRectangle(x, y, w, h, tocolor(14, 16, 22, 240 * a))
     dxDrawRectangle(x, y, w, 4 * sc, accent)
-    shadowText(r.success and "MISION COMPLETADA" or "MISION FALLIDA", x, y + 18 * sc, x + w, y + 70 * sc,
-        r.success and tocolor(245, 205, 90, 255 * a) or tocolor(240, 100, 100, 255 * a), 2.3 * sc, "default-bold", "center")
+    -- Diploma: amarilla #E1B02C en exito, roja #B4191D en fracaso
+    shadowText(r.success and "MISION SUPERADA" or "MISION FRACASADA", x, y + 14 * sc, x + w, y + 70 * sc,
+        r.success and tocolor(225, 176, 44, 255 * a) or tocolor(180, 25, 29, 255 * a), 2.0 * sc, "diploma", "center", "top", false, false, 3)
     dxDrawText(r.title .. "  -  " .. r.contactName, x, y + 66 * sc, x + w, y + 90 * sc, tocolor(220, 224, 232, 255 * a), 1.15 * sc, "default-bold", "center")
     if r.reason and not r.success then
         dxDrawText(r.reason, x, y + 90 * sc, x + w, y + 112 * sc, tocolor(240, 130, 130, 255 * a), 1.05 * sc, "default-bold", "center")
@@ -214,8 +322,14 @@ local function drawResults(now)
         }
         for ci, c in ipairs(cols) do dxDrawText(vals[ci], x + w * c[2] + 8 * sc, ry, x + w - 8 * sc, ry + 30 * sc, col, 1.0 * sc, "default-bold", "left", "center", true) end
     end
-    -- respeto del jugador local
+    -- recompensas del jugador local en Pricedown (relleno blanco / verde #36682C y contorno negro)
     for _, row in ipairs(r.rows) do
+        if row.name == r.you and r.success then
+            shadowText(("+$%d"):format(math.floor(row.cash * count)), x, y + h - 112 * sc, x + w / 2, y + h - 66 * sc, tocolor(54, 150, 60, 255 * a), 1.5 * sc, "pricedown", "center", "top", false, false, 2)
+            if row.respect > 0 then
+                shadowText(("RESPECT +%d"):format(math.floor(row.respect * count)), x + w / 2, y + h - 112 * sc, x + w, y + h - 66 * sc, tocolor(255, 255, 255, 255 * a), 1.5 * sc, "pricedown", "center", "top", false, false, 2)
+            end
+        end
         if row.name == r.you and row.respect > 0 then
             dxDrawText(("Respeto con %s: +%d"):format(r.contactName, math.floor(row.respect * count)), x, y + h - 62 * sc, x + w, y + h - 40 * sc,
                 C.contactColor(r.contact, 255 * a), 1.15 * sc, "default-bold", "center")
@@ -251,20 +365,31 @@ local function drawHud(now)
     local y = sh * 0.30
     local lines = #hud.counters
     local members = #hud.members
-    local h = (96 + lines * 32 + members * 26 + 46) * sc
+    local h = (96 + lines * 32 + members * 26 + 46 + (hud.timeLeft and 30 or 0)) * sc
     panel(x, y, w, h, C.contactColor(C.def and C.def.contact or "enemy"))
     dxDrawText(("%s"):format(C.def and C.def.title or "Mision"):upper(), x + 16 * sc, y + 8 * sc, x + w - 10 * sc, y + 28 * sc, tocolor(245, 165, 36), 0.95 * sc, "default-bold", "left", "top", true)
     local dc = C.info and C.info.diffColor or { 245, 165, 36 }
     dxDrawText(("%s  |  %s"):format(hud.diffLabel or "", C.fmtTime(hud.elapsed + (now - (hud.syncedAt or now)))), x + 16 * sc, y + 8 * sc, x + w - 12 * sc, y + 28 * sc, tocolor(dc[1], dc[2], dc[3]), 0.95 * sc, "default-bold", "right")
-    dxDrawText(hud.text or "", x + 16 * sc, y + 30 * sc, x + w - 12 * sc, y + 80 * sc, WHITE, 1.2 * sc, "default-bold", "left", "top", true, true)
+    drawTagged(hud.text or "", x + 16 * sc, y + 30 * sc, x + w - 12 * sc, y + 80 * sc, 1.15 * sc, "default-bold", "left", "top", true, true)
     local cy = y + 86 * sc
+    -- Temporizador (Bank Gothic, mayusculas): se vuelve rojo y parpadea con menos de 30 s
+    if hud.timeLeft then
+        local left = math.max(0, hud.timeLeft - (now - (hud.syncedAt or now)))
+        local urgent = left < 30000
+        local col = urgent and tocolor(220, 40, 45, 170 + 85 * math.abs(math.sin(now / 200))) or WHITE
+        shadowText("TIEMPO", x + 16 * sc, cy, x + w, cy + 26 * sc, MUTED, 0.85 * sc, "bankgothic", "left", "top")
+        shadowText(C.fmtTime(left), x, cy - 2 * sc, x + w - 14 * sc, cy + 28 * sc, col, 1.15 * sc, "bankgothic", "right", "top", false, false, 1)
+        cy = cy + 30 * sc
+    end
     for _, c in ipairs(hud.counters) do
-        dxDrawText(c.label, x + 16 * sc, cy, x + w, cy + 16 * sc, MUTED, 0.9 * sc, "default-bold")
+        shadowText(c.label:upper(), x + 16 * sc, cy, x + w, cy + 16 * sc, MUTED, 0.72 * sc, "bankgothic", "left", "top")
         dxDrawText(c.pct and (c.a .. "%") or (c.a .. " / " .. c.b), x, cy, x + w - 14 * sc, cy + 16 * sc, WHITE, 0.95 * sc, "default-bold", "right")
         local f = math.max(0, math.min(1, c.a / math.max(1, c.b)))
-        dxDrawRectangle(x + 16 * sc, cy + 18 * sc, w - 32 * sc, 6 * sc, tocolor(255, 255, 255, 25))
-        local col = c.pct and (f > 0.5 and tocolor(76, 211, 138) or f > 0.25 and tocolor(245, 165, 36) or tocolor(229, 72, 77)) or tocolor(245, 165, 36)
-        dxDrawRectangle(x + 16 * sc, cy + 18 * sc, (w - 32 * sc) * f, 6 * sc, col)
+        local r, g, b = 225, 176, 44
+        if c.pct then
+            if f > 0.5 then r, g, b = 76, 211, 138 elseif f > 0.25 then r, g, b = 225, 176, 44 else r, g, b = 180, 25, 29 end
+        end
+        flatBar(x + 16 * sc, cy + 19 * sc, w - 32 * sc, 6 * sc, f, r, g, b)
         cy = cy + 32 * sc
     end
     -- vidas compartidas
@@ -288,8 +413,8 @@ local function drawHud(now)
         local hp = (isElement(p) and not isPedDead(p)) and math.max(0, math.min(100, getElementHealth(p))) or 0
         local col = m.spec and tocolor(110, 114, 124) or WHITE
         dxDrawText(m.name .. (m.spec and "  (espectador)" or ""), x + 16 * sc, cy, x + w - 100 * sc, cy + 22 * sc, col, 0.95 * sc, "default-bold", "left", "center", true)
-        dxDrawRectangle(x + w - 96 * sc, cy + 8 * sc, 80 * sc, 6 * sc, tocolor(255, 255, 255, 25))
-        dxDrawRectangle(x + w - 96 * sc, cy + 8 * sc, 80 * sc * hp / 100, 6 * sc, hp > 40 and tocolor(76, 211, 138) or tocolor(229, 72, 77))
+        if hp > 40 then flatBar(x + w - 96 * sc, cy + 8 * sc, 80 * sc, 6 * sc, hp / 100, 76, 211, 138)
+        else flatBar(x + w - 96 * sc, cy + 8 * sc, 80 * sc, 6 * sc, hp / 100, 180, 25, 29) end
         cy = cy + 26 * sc
     end
 end
@@ -297,13 +422,51 @@ end
 local function drawBanner(now)
     if not banner then return end
     local el = now - banner.start
-    if el > 4200 then banner = nil return end
+    if el > 6200 then banner = nil return end
     local sc = C.sc
-    local a = math.min(1, el / 350, (4200 - el) / 450)
-    local slide = (1 - C.ease(el / 450)) * 80 * sc
-    local y = sh * 0.16 + slide
-    shadowText(("OBJETIVO %d/%d"):format(banner.idx, banner.total), 0, y, sw, y + 20 * sc, tocolor(245, 165, 36, 255 * a), 1.0 * sc, "default-bold", "center")
-    shadowText(banner.text or "", sw * 0.2, y + 18 * sc, sw * 0.8, y + 70 * sc, tocolor(250, 250, 252, 255 * a), 1.9 * sc, "default-bold", "center", "top", true, true)
+    local a = math.min(1, el / 350, (6200 - el) / 600)
+    -- Subtitulo/objetivo: zona inferior central (8-10 % sobre el borde), etiquetas de color y contorno negro
+    local y = sh * 0.865 - (1 - C.ease(el / 400)) * -20 * sc
+    shadowText(("OBJETIVO %d/%d"):format(banner.idx, banner.total), 0, y - 24 * sc, sw, y, tocolor(225, 176, 44, 255 * a), 0.8 * sc, "bankgothic", "center")
+    drawTagged(banner.text or "", sw * 0.15, y, sw * 0.85, y + 70 * sc, 1.45 * sc, "default-bold", "center", "top", true, true, math.floor(255 * a))
+end
+
+-- Caja de ayuda: arriba a la izquierda, rectangulo negro al 75 %
+local function drawHelp(now)
+    if not helpBox then return end
+    local el = now - helpBox.start
+    if el > helpBox.dur then helpBox = nil return end
+    local sc = C.sc
+    local a = math.min(1, el / 200, (helpBox.dur - el) / 400)
+    local w = 330 * sc
+    local lines = math.ceil(#helpBox.text / 42)
+    local h = (16 + lines * 18) * sc
+    local x, y = 22 * sc, sh * 0.06
+    dxDrawRectangle(x, y, w, h, tocolor(0, 0, 0, 191 * a))
+    dxDrawText(helpBox.text, x + 10 * sc, y + 8 * sc, x + w - 10 * sc, y + h - 4 * sc, tocolor(255, 255, 255, 255 * a), 0.95 * sc, "default-bold", "left", "top", true, true)
+end
+
+-- Titulo de la mision: abajo a la derecha, Diploma amarilla con borde negro, 4-5 s con fundido
+local function drawTitleCard(now)
+    if not titleCard then return end
+    local el = now - titleCard.start
+    if el > 4800 then titleCard = nil return end
+    local sc = C.sc
+    local a = math.min(1, el / 700, (4800 - el) / 800)
+    shadowText(deaccent(C.def and C.def.title or ""), sw * 0.35, sh * 0.80, sw - 36 * sc, sh * 0.80 + 80 * sc, tocolor(225, 176, 44, 255 * a), 1.7 * sc, "diploma", "right", "top", false, false, 3)
+end
+
+-- Vehiculo de mision fuera de uso: flecha 3D azul sobre el vehiculo (y aviso la primera vez que se baja)
+local function drawVehicleHint(now)
+    local v = hud and hud.veh
+    if not v or not isElement(v) or C.cutscene then wasInVeh = false return end
+    if getPedOccupiedVehicle(localPlayer) == v then wasInVeh = true return end
+    if wasInVeh then
+        wasInVeh = false
+        showHelp("Dejaste el vehículo de la misión: vuelve a subir. Lo marca la flecha azul y el radar.", 6000)
+    end
+    local x, y, z = getElementPosition(v)
+    arrow3D(x, y, z + 1.9, 44, 89, 157, now)
 end
 
 local function drawDoneFlash(now)
@@ -390,7 +553,11 @@ addEventHandler("onClientRender", root, function()
         return
     end
     if C.cutscene then return end
+    if hud and not titleShown then titleShown = true titleCard = { start = now } end   -- el titulo sale al primer fotograma jugable
     drawHud(now)
+    drawVehicleHint(now)
+    drawHelp(now)
+    drawTitleCard(now)
     drawBanner(now)
     drawDoneFlash(now)
     drawToasts(now)
@@ -567,6 +734,20 @@ end)
 addEvent("rp:missions:validate", true)
 addEventHandler("rp:missions:validate", resourceRoot, function(token, gx, gy, gz, cands)
     local ok = {}
+    -- La altura z del diseno puede ser aproximada: se busca el suelo real bajo el punto central (techos excluidos al
+    -- quedarse con el impacto mas bajo cercano a la altura esperada) y se usa como referencia
+    local realZ
+    do
+        local bestD
+        for _, off in ipairs({ { 0, 0 }, { 1.5, 0 }, { -1.5, 0 }, { 0, 1.5 }, { 0, -1.5 } }) do
+            local hit, _, _, hz = processLineOfSight(gx + off[1], gy + off[2], gz + 25, gx + off[1], gy + off[2], gz - 25, true, false, false, true, false, false, false, false, localPlayer)
+            if hit then
+                local d = math.abs(hz - gz)
+                if not bestD or d < bestD then bestD, realZ = d, hz end
+            end
+        end
+    end
+    if realZ then gz = realZ end
     for _, c in ipairs(cands or {}) do
         local x, y = c[1], c[2]
         -- primer impacto desde arriba: si es un tejado/techo, queda muy por encima del suelo esperado
@@ -577,5 +758,5 @@ addEventHandler("rp:missions:validate", resourceRoot, function(token, gx, gy, gz
             end
         end
     end
-    triggerServerEvent("rp:missions:validated", resourceRoot, token, ok)
+    triggerServerEvent("rp:missions:validated", resourceRoot, token, ok, realZ)
 end)

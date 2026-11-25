@@ -66,6 +66,10 @@ end
 
 local ACCENT = { 245, 165, 36 }
 local DANGER = { 229, 72, 77 }
+-- Colores estandar de blips y marcadores (identidad visual): amarillo = destino, rojo = enemigos, azul = vehiculos y aliados
+local DEST = { 225, 176, 44 }
+local FOE = { 180, 25, 29 }
+local ALLYC = { 44, 89, 157 }
 
 ----------------------------------------------------------------
 -- Enemigos
@@ -97,10 +101,12 @@ local function createEnemy(inst, g, x, y, z)
     return ped
 end
 
-local function finishSpawn(token, valid)
+local function finishSpawn(token, valid, realZ)
     local sp = pendingSpawns[token]
     if not sp or sp.done then return end
     sp.done = true
+    -- altura del suelo medida por el cliente (la z del diseno puede ser aproximada); solo se acepta si es plausible
+    local baseZ = (type(realZ) == "number" and math.abs(realZ - sp.g.z) <= 30) and realZ or sp.g.z
     pendingSpawns[token] = nil
     local inst, rt, g = sp.inst, sp.rt, sp.g
     if inst.destroyed or inst.rt ~= rt then return end
@@ -113,25 +119,27 @@ local function finishSpawn(token, valid)
     -- si faltan, junto al punto central del grupo (que es un lugar abierto elegido en el diseno)
     while created < sp.count do
         local a, r = math.random() * math.pi * 2, math.random() * 2.5
-        if createEnemy(inst, g, g.x + cos(a) * r, g.y + sin(a) * r, g.z + 0.8) then created = created + 1 else break end
+        if createEnemy(inst, g, g.x + cos(a) * r, g.y + sin(a) * r, baseZ + 0.8) then created = created + 1 else break end
     end
     rt.aliveEnemies = max(0, (rt.aliveEnemies or 0) - (sp.count - created))   -- ajusta la reserva
     if not sp.counted then rt.enemyTotal = (rt.enemyTotal or 0) + created end
     M.syncHud(inst)
 end
 
-addEventHandler("rp:missions:validated", resourceRoot, function(token, list)
+addEventHandler("rp:missions:validated", resourceRoot, function(token, list, realZ)
     local sp = pendingSpawns[token]
     if not sp or client ~= sp.validator or type(list) ~= "table" then return end
+    realZ = tonumber(realZ)
+    local refZ = (realZ and math.abs(realZ - sp.g.z) <= 30) and realZ or sp.g.z
     local valid = {}
     for _, v in ipairs(list) do
         if type(v) == "table" and #valid < sp.count * 4 then
             local x, y, z = tonumber(v[1]), tonumber(v[2]), tonumber(v[3])
             -- el servidor no confia en el cliente: debe estar cerca del punto del grupo
-            if x and y and z and dist(x, y, z, sp.g.x, sp.g.y, sp.g.z) <= (sp.g.radius or 8) + 6 then valid[#valid + 1] = { x, y, z } end
+            if x and y and z and dist(x, y, z, sp.g.x, sp.g.y, refZ) <= (sp.g.radius or 8) + 6 then valid[#valid + 1] = { x, y, z } end
         end
     end
-    finishSpawn(token, valid)
+    finishSpawn(token, valid, realZ)
 end)
 
 local function spawnEnemies(inst, g, count)
@@ -420,10 +428,14 @@ local function scheduleTalk(inst, rt, cutscene)
         for _ in pairs(actorsChar) do n = n + 1 end
         outputServerLog(("[rp_missions] cinematica etapa %d: rp_mocap=%s actores con mocap=%d"):format(inst.stage or 0, tostring(mocapOn() and true or false), n))
     end
-    later(150, function()
-        if inst.destroyed or inst.rt ~= rt then return end
-        for ped, c in pairs(actorsChar) do if isElement(ped) then mocapIdle(inst, ped, c) end end
-    end)
+    -- Se reaplica el idle varias veces: un actor recien creado (o jugadores recien teletransportados) puede no estar
+    -- aun cargado en el cliente en el primer intento y se quedaria en T-pose
+    for _, ms in ipairs({ 150, 600 }) do   -- antes del primer gesto (>= 1200 ms) para no cortarlo
+        later(ms, function()
+            if inst.destroyed or inst.rt ~= rt then return end
+            for ped, c in pairs(actorsChar) do if isElement(ped) then mocapIdle(inst, ped, c) end end
+        end)
+    end
 
     for i, line in ipairs(cutscene.lines or {}) do
         local speaker = speakerElement(inst, line.who)
@@ -500,6 +512,8 @@ function M.hudData(inst)
         diffLabel = inst.diff and inst.diff.label, elapsed = inst.startedAt and (now() - inst.startedAt) or 0,
         members = members, points = points, holdTime = st and st.interact and st.interact.time,
         holdText = st and st.interact and st.interact.text, cutscene = rt and rt.cutscene and true or false,
+        veh = (rt and isElement(rt.vehicle)) and rt.vehicle or nil,
+        timeLeft = (rt and rt.deadline) and max(0, rt.deadline - now()) or nil,
     }
 end
 
@@ -553,7 +567,7 @@ function M.startStage(inst, idx)
             setElementData(veh, "rp:mission", inst.id)
             inst.entities.vehicles[#inst.entities.vehicles + 1] = veh
             inst.vehicleByKey[v.key] = veh
-            local bl = createBlipAttachedTo(veh, 0, 2, ACCENT[1], ACCENT[2], ACCENT[3], 255, 0, 9999)
+            local bl = createBlipAttachedTo(veh, 0, 2, ALLYC[1], ALLYC[2], ALLYC[3], 255, 0, 9999)
             setElementDimension(bl, inst.dim)
             setElementData(bl, "rp:radarEdge", true)
             showOnlyTo(inst, bl)
@@ -634,17 +648,29 @@ function M.startStage(inst, idx)
     end
     -- Objetivos de la etapa
     local gt = st.goto
-    if gt then addTarget(inst, gt[1], gt[2], gt[3], gt[4] or 6, ACCENT, "goto") end
-    if st.getin and inst.vehicleByKey[st.getin] then rt.vehicle = inst.vehicleByKey[st.getin] end
+    if gt then addTarget(inst, gt[1], gt[2], gt[3], gt[4] or 6, DEST, "goto") end
+    if st.getin and inst.vehicleByKey[st.getin] then rt.vehicle = inst.vehicleByKey[st.getin] inst.lastVehicle = rt.vehicle end
+    if gt and gt.vehicle and not rt.vehicle and isElement(inst.lastVehicle) then rt.vehicle = inst.lastVehicle end   -- para la flecha y para ocultar el destino
+    if st.timeLimit then rt.deadline = now() + st.timeLimit end
     if st.deliver then
         local d = st.deliver
         rt.vehicle = inst.vehicleByKey[d.vehicle]
-        addTarget(inst, d.x, d.y, d.z, d.r or 8, ACCENT, "deliver")
+        if isElement(rt.vehicle) then
+            inst.lastVehicle = rt.vehicle
+            if not rt.targets["veh_" .. d.vehicle] then
+                local vb = createBlipAttachedTo(rt.vehicle, 0, 2, ALLYC[1], ALLYC[2], ALLYC[3], 255, 0, 9999)
+                setElementDimension(vb, inst.dim)
+                setElementData(vb, "rp:radarEdge", true)
+                showOnlyTo(inst, vb)
+                rt.targets["veh_" .. d.vehicle] = { vb }
+            end
+        end
+        addTarget(inst, d.x, d.y, d.z, d.r or 8, DEST, "deliver")
         rt.ambushDone = {}
     end
     if st.interact then
         rt.points = st.interact.points
-        for i, pt in ipairs(st.interact.points) do addTarget(inst, pt[1], pt[2], pt[3], 1.3, ACCENT, "pt" .. i) end
+        for i, pt in ipairs(st.interact.points) do addTarget(inst, pt[1], pt[2], pt[3], 1.3, DEST, "pt" .. i) end
     end
     if st.enemies then
         rt.enemyTotalExpected = 0
@@ -653,7 +679,7 @@ function M.startStage(inst, idx)
         rt.countedGroup = true
         if not st.goto then
             local g = st.enemies[1]
-            addTarget(inst, g.x, g.y, g.z, 8, DANGER, "foes")
+            addTarget(inst, g.x, g.y, g.z, 8, FOE, "foes")
         end
     end
     if st.waves then
@@ -806,6 +832,29 @@ local function tickDeliver(inst, rt, st)
     return false
 end
 
+-- Enemigos atascados (dentro de una casa, enterrados, sin camino): si quedan pocos, no se mueven y no reciben dano durante
+-- STUCK_MS, se retiran para que la etapa no quede interminable
+local STUCK_MS = 75000
+function M.rescueStuck(inst, rt)
+    if (rt.aliveEnemies or 0) > 3 then rt.watch = nil return end
+    rt.watch = rt.watch or {}
+    local t = now()
+    for _, ped in ipairs(inst.entities.peds) do
+        if isElement(ped) and getElementData(ped, "rp:mEnemy") == inst.id and not isPedDead(ped) then
+            local x, y, z = getElementPosition(ped)
+            local hp = getElementHealth(ped) + getPedArmor(ped)
+            local w = rt.watch[ped]
+            if not w or dist(x, y, z, w.x, w.y, w.z) > 2 or hp ~= w.hp then
+                rt.watch[ped] = { x = x, y = y, z = z, hp = hp, t = t }
+            elseif t - w.t > STUCK_MS then
+                rt.watch[ped] = nil
+                setElementHealth(ped, 0)   -- cuenta como baja sin credito (dispara onPedWasted)
+                M.sendAll(inst, "rp:missions:flash", "Un enemigo atascado fue retirado", "info")
+            end
+        end
+    end
+end
+
 function M.tick(inst)
     if inst.destroyed or inst.state ~= "IN_PROGRESS" then return end
     local rt = inst.rt
@@ -813,6 +862,35 @@ function M.tick(inst)
     local st = rt.st
 
     if rt.lastHud == nil or now() - rt.lastHud > 1500 then rt.lastHud = now(); M.syncHud(inst) end
+
+    -- Limite de tiempo de la etapa
+    if rt.deadline then
+        local left = rt.deadline - now()
+        if left <= 0 then M.finish(inst, false, "Se acabó el tiempo.") return end
+        if left < 30000 and not rt.timeWarned then
+            rt.timeWarned = true
+            M.sendAll(inst, "rp:missions:flash", "¡Quedan 30 segundos!", "warn")
+        end
+    end
+    -- Vehiculo obligatorio: si todos lo abandonan, el destino se oculta y solo queda el indicador sobre el vehiculo
+    if isElement(rt.vehicle) and (st.deliver or (st.goto and st.goto.vehicle)) then
+        local occupied = false
+        for _, m in ipairs(M.alive(inst)) do if getPedOccupiedVehicle(m) == rt.vehicle then occupied = true break end end
+        if rt.vehOccupied ~= occupied then
+            rt.vehOccupied = occupied
+            for _, key in ipairs({ "goto", "deliver" }) do
+                local tg = rt.targets and rt.targets[key]
+                if tg then
+                    for _, el in ipairs(tg) do
+                        if isElement(el) then
+                            for _, m in ipairs(inst.members) do if isElement(m) then setElementVisibleTo(el, m, occupied) end end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    if st.enemies or st.waves then M.rescueStuck(inst, rt) end
 
     local ok = true
     if st.goto then
