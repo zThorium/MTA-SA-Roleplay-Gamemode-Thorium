@@ -11,6 +11,8 @@
     <script src="c_hud.lua" type="client" />
     <!-- Estrellas de busqueda (nivel en el elementData "rp:wanted" que pone rp_wanted) -->
     <script src="c_wanted.lua" type="client" />
+    <export function="setHudSuppressed" type="client" />
+    <export function="isHudSuppressed" type="client" />
     <file src="images/map.png" />
     <file src="images/icons/heart.png" />
     <file src="images/icons/shield.png" />

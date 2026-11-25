@@ -48,6 +48,9 @@ addEventHandler("rp:radio:set", resourceRoot, function(id)
     local now = getTickCount()
     if cooldown[player] and now - cooldown[player] < 400 then return end
     cooldown[player] = now
+    -- Dentro de una mision (rp_missions) la radio no funciona: se solapa con los dialogos
+    local okM, inMission = pcall(function() return exports.rp_missions:getPlayerMission(player) end)
+    if okM and inMission then return notify(player, "La radio no funciona durante las misiones.", "warning") end
 
     local vehicle = getPedOccupiedVehicle(player)
     if not canControl(player, vehicle) then

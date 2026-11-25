@@ -1,0 +1,53 @@
+{
+    "sweet":  {
+                  "modo":  "zero-shot",
+                  "titulo":  "GTA SA - Sweet (espanol latino)",
+                  "muestras":  [
+                                   "muestras/sweet_es/sweet_es_001.wav",
+                                   "muestras/sweet_es/sweet_es_005.wav",
+                                   "muestras/sweet_es/sweet_es_008.wav",
+                                   "muestras/sweet_es/sweet_es_010.wav",
+                                   "muestras/sweet_es/sweet_es_013.wav",
+                                   "muestras/sweet_es/sweet_es_015.wav",
+                                   "muestras/sweet_es/sweet_es_024.wav",
+                                   "muestras/sweet_es/sweet_es_025.wav",
+                                   "muestras/sweet_es/sweet_es_027.wav",
+                                   "muestras/sweet_es/sweet_es_047.wav"
+                               ]
+              },
+    "sweet_en":  {
+                     "modo":  "zero-shot",
+                     "titulo":  "GTA SA - Sweet (ingles)",
+                     "muestras":  [
+                                      "muestras/sweet_gta/sweet_005.wav",
+                                      "muestras/sweet_gta/sweet_008.wav",
+                                      "muestras/sweet_gta/sweet_010.wav",
+                                      "muestras/sweet_gta/sweet_013.wav",
+                                      "muestras/sweet_gta/sweet_015.wav",
+                                      "muestras/sweet_gta/sweet_024.wav",
+                                      "muestras/sweet_gta/sweet_025.wav",
+                                      "muestras/sweet_gta/sweet_027.wav"
+                                  ]
+                 },
+    "ryder":  {
+                  "modo":  "zero-shot",
+                  "titulo":  "GTA SA - Ryder (espanol latino)",
+                  "muestras":  [
+                                   "muestras/ryder/ryder_305_001.wav",
+                                   "muestras/ryder/ryder_305_003.wav",
+                                   "muestras/ryder/ryder_305_019.wav",
+                                   "muestras/ryder/ryder_305_039.wav",
+                                   "muestras/ryder/ryder_305_045.wav",
+                                   "muestras/ryder/ryder_305_060.wav",
+                                   "muestras/ryder/ryder_306_016.wav",
+                                   "muestras/ryder/ryder_306_059.wav",
+                                   "muestras/ryder/ryder_306_075.wav",
+                                   "muestras/ryder/ryder_306_078.wav"
+                               ]
+              },
+    "cesar":  {
+                  "modo":  "biblioteca",
+                  "titulo":  "PROVISIONAL - Fish biblioteca \u0027Chico\u0027 (espanol latino joven). Sustituir por clon del doblaje de Cesar",
+                  "id":  "76919aa82fe04381b44e3473326e2a08"
+              }
+}

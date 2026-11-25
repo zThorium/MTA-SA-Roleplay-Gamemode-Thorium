@@ -184,7 +184,8 @@ addEventHandler("rp:gym:trainer", resourceRoot, function(trainerId)
     setElementFrozen(t.ped, false)
     gymNear(player, false)
     gymNotify(player, "Combate de instruccion: derrota al entrenador.", "info")
-    f.timer = setTimer(fightTick, 100, 0, f)
+    -- MTA copia las tablas pasadas a un temporizador: se pasa el jugador y se busca el combate real
+    f.timer = setTimer(function(p) if fights[p] then fightTick(fights[p]) end end, 100, 0, player)
 end)
 
 ----------------------------------------------------------------

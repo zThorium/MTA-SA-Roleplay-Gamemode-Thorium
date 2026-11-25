@@ -29,6 +29,8 @@
     <export function="getWantedChaos" type="server" />
     <export function="setWantedLevel" type="server" />
     <export function="clearWanted" type="server" />
+    <export function="setWantedSuspended" type="server" />
+    <export function="isWantedSuspended" type="server" />
     <export function="reportCrime" type="server" />
     <export function="isWantedPolice" type="server" />
     <export function="isPlayerJailed" type="server" />

@@ -1,27 +1,19 @@
 --[[
     rp_gym / c_animations.lua
-    Las animaciones las pone el servidor con setPedAnimation (asi las ven todos). Aqui solo se
-    ajusta, en el cliente del que entrena, la velocidad del bucle segun el nivel de la cinta o la bici
-    (setPedAnimationSpeed no se sincroniza: los demas jugadores lo ven a velocidad normal).
+    Las animaciones las pone el servidor con setPedAnimation (asi las ven todos). Aqui solo hay un
+    vigilante: si durante la sesion el personaje no tiene ninguna animacion, pide al servidor que la repita.
+    (Se quito setPedAnimationSpeed: el cliente de MTA se cerraba con una violacion de acceso en gta_sa.exe
+    al cambiar la velocidad de animaciones.)
 ]]
 
-local lastSpeed, lastKind = 1, nil
+local lastResync = 0
 
-local function setLoopSpeed(kind, speed)
-    local cfg = GYM_KINDS[kind]
-    if not cfg or not cfg.loops then return end
-    for _, entry in ipairs(cfg.loops) do setPedAnimationSpeed(localPlayer, entry[2], speed) end
-end
-
-addEventHandler("onClientPreRender", root, function()
-    local s = gymState
-    local speed = 1
-    if s and s.ready and s.levels and not s.tired then
-        speed = 0.6 + 0.06 * s.level   -- el limite de 1.0 de la wiki se supera con cuidado: maximo 1.2
+setTimer(function()
+    if not gymState then return end
+    if getPedAnimation(localPlayer) then return end
+    local now = getTickCount()
+    if now - lastResync > 1200 then
+        lastResync = now
+        triggerServerEvent("rp:gym:resync", resourceRoot)
     end
-    if speed == lastSpeed then return end
-    lastSpeed = speed
-    local kind = s and s.kind or lastKind
-    if kind then setLoopSpeed(kind, speed) end
-    lastKind = s and s.kind or nil
-end)
+end, 300, 0)

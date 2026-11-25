@@ -152,7 +152,11 @@ local function setLost(player, s, lost)
     setElementData(player, "rp:wantedLost", lost)
 end
 
+-- Suspension (rp_missions): mientras dura no se acumulan estrellas ni caos
+local suspended = {}
+
 local function applyChaos(player, chaos)
+    if suspended[player] then chaos = 0 end
     local s = state(player)
     s.chaos = math.max(0, math.min(WANTED.MAX_CHAOS, math.floor(chaos)))
     local cap = maxLevelOf(player)
@@ -196,6 +200,7 @@ function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
     if not isElement(player) or getElementType(player) ~= "player" then return false end
     local crime = WANTED_CRIMES[crimeKey]
     if not crime then return false end
+    if suspended[player] then return false end
     if isPlayerJailed and isPlayerJailed(player) then return false end
     if not characterOf(player) then
         outputServerLog(("[rp_wanted] %s: %s ignorado (sin personaje activo)"):format(getPlayerName(player), crimeKey))
@@ -648,3 +653,19 @@ addEventHandler("onResourceStop", resourceRoot, function()
         setElementData(p, "rp:wantedLost", false)
     end
 end)
+
+----------------------------------------------------------------
+-- Suspension de la busqueda (misiones, instancias aisladas)
+--   exports.rp_wanted:setWantedSuspended(player, true)  -> pone las estrellas en 0 y bloquea nuevos delitos
+--   exports.rp_wanted:setWantedSuspended(player, false) -> vuelve a la normalidad (empieza sin estrellas)
+----------------------------------------------------------------
+function setWantedSuspended(player, on)
+    if not isElement(player) or getElementType(player) ~= "player" then return false end
+    suspended[player] = on and true or nil
+    if on then setWantedLevel(player, 0) end
+    return true
+end
+
+function isWantedSuspended(player) return suspended[player] == true end
+
+addEventHandler("onPlayerQuit", root, function() suspended[source] = nil end)

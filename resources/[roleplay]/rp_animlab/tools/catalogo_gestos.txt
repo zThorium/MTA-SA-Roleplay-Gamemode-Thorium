@@ -1,0 +1,324 @@
+##### cesar1a
+== cscesar  (dur 34,2s, actividad media de brazos 3,17 rad/s)  GESTO=0 CAMINAR=30 IDLE=0
+== cskendl  (dur 34,2s, actividad media de brazos 2,75 rad/s)  GESTO=0 CAMINAR=26 IDLE=0
+== csplay  (dur 34,2s, actividad media de brazos 3,06 rad/s)  GESTO=0 CAMINAR=32 IDLE=0
+##### grove1a
+== csplay  (dur 73,3s, actividad media de brazos 2,38 rad/s)  GESTO=4 CAMINAR=27 IDLE=34
+   GESTO  inicio  37,0s  dur 3s  brazos 3,30  columna 0,89  desplaz 0,05 m
+   GESTO  inicio  57,0s  dur 3s  brazos 4,87  columna 0,76  desplaz 0,11 m
+   IDLE   inicio  18,0s  dur 3s  brazos 0,00
+   IDLE   inicio  19,0s  dur 3s  brazos 0,00
+== csslut  (dur 73,3s, actividad media de brazos 4,65 rad/s)  GESTO=0 CAMINAR=40 IDLE=18
+   IDLE   inicio  68,0s  dur 3s  brazos 0,00
+   IDLE   inicio  69,0s  dur 3s  brazos 0,00
+== cssweet  (dur 73,3s, actividad media de brazos 4,15 rad/s)  GESTO=2 CAMINAR=31 IDLE=16
+   GESTO  inicio   8,0s  dur 3s  brazos 5,30  columna 1,04  desplaz 0,01 m
+   GESTO  inicio  42,0s  dur 3s  brazos 6,16  columna 0,94  desplaz 0,04 m
+   IDLE   inicio  61,0s  dur 3s  brazos 1,22
+   IDLE   inicio  70,0s  dur 3s  brazos 0,04
+##### grove1b
+== csdope  (dur 56,0s, actividad media de brazos 4,27 rad/s)  GESTO=0 CAMINAR=52 IDLE=0
+== csplay  (dur 56,0s, actividad media de brazos 3,89 rad/s)  GESTO=1 CAMINAR=36 IDLE=10
+   GESTO  inicio  39,0s  dur 3s  brazos 6,03  columna 0,91  desplaz 0,09 m
+   IDLE   inicio  22,0s  dur 3s  brazos 1,14
+   IDLE   inicio  45,0s  dur 3s  brazos 1,08
+== cssweet  (dur 56,0s, actividad media de brazos 5,34 rad/s)  GESTO=1 CAMINAR=43 IDLE=6
+   GESTO  inicio  34,0s  dur 3s  brazos 6,93  columna 0,64  desplaz 0,11 m
+   IDLE   inicio  45,0s  dur 3s  brazos 1,64
+   IDLE   inicio  46,0s  dur 3s  brazos 1,71
+##### grove1c
+== csbdup  (dur 57,4s, actividad media de brazos 5,56 rad/s)  GESTO=0 CAMINAR=33 IDLE=21
+   IDLE   inicio  46,0s  dur 3s  brazos 1,03
+   IDLE   inicio  53,0s  dur 3s  brazos 0,99
+== csbigbearthin  (dur 57,4s, actividad media de brazos 3,46 rad/s)  GESTO=2 CAMINAR=33 IDLE=19
+   GESTO  inicio  48,0s  dur 3s  brazos 7,40  columna 0,87  desplaz 0,08 m
+   IDLE   inicio   2,0s  dur 3s  brazos 0,96
+   IDLE   inicio  10,0s  dur 3s  brazos 0,99
+== csplay  (dur 57,4s, actividad media de brazos 2,86 rad/s)  GESTO=0 CAMINAR=39 IDLE=4
+   IDLE   inicio  11,0s  dur 3s  brazos 1,29
+   IDLE   inicio  37,0s  dur 3s  brazos 1,34
+== cssweet  (dur 57,4s, actividad media de brazos 4,17 rad/s)  GESTO=1 CAMINAR=33 IDLE=12
+   GESTO  inicio  49,0s  dur 3s  brazos 6,25  columna 0,56  desplaz 0,05 m
+   IDLE   inicio  17,0s  dur 3s  brazos 1,24
+   IDLE   inicio  44,0s  dur 3s  brazos 1,30
+##### grove2
+== csgrove1  (dur 76,7s, actividad media de brazos 1,04 rad/s)  GESTO=10 CAMINAR=7 IDLE=51
+   GESTO  inicio   6,0s  dur 3s  brazos 1,57  columna 0,55  desplaz 0,13 m
+   GESTO  inicio  11,0s  dur 3s  brazos 5,91  columna 0,28  desplaz 0,03 m
+   GESTO  inicio  22,0s  dur 3s  brazos 1,53  columna 0,40  desplaz 0,01 m
+   GESTO  inicio  26,0s  dur 3s  brazos 2,05  columna 0,58  desplaz 0,00 m
+   IDLE   inicio  54,0s  dur 3s  brazos 0,00
+   IDLE   inicio  55,0s  dur 3s  brazos 0,00
+== csplay  (dur 76,7s, actividad media de brazos 3,48 rad/s)  GESTO=1 CAMINAR=40 IDLE=25
+   GESTO  inicio  24,0s  dur 3s  brazos 4,81  columna 0,70  desplaz 0,04 m
+   IDLE   inicio   2,0s  dur 3s  brazos 0,00
+   IDLE   inicio   3,0s  dur 3s  brazos 0,00
+== csslut  (dur 76,7s, actividad media de brazos 0,68 rad/s)  GESTO=15 CAMINAR=4 IDLE=50
+   GESTO  inicio   7,0s  dur 3s  brazos 1,22  columna 0,85  desplaz 0,00 m
+   GESTO  inicio  10,0s  dur 3s  brazos 1,27  columna 0,89  desplaz 0,00 m
+   GESTO  inicio  20,0s  dur 3s  brazos 1,80  columna 0,46  desplaz 0,00 m
+   GESTO  inicio  27,0s  dur 3s  brazos 3,25  columna 0,99  desplaz 0,01 m
+   IDLE   inicio  50,0s  dur 3s  brazos 0,00
+   IDLE   inicio  51,0s  dur 3s  brazos 0,00
+== cssweet  (dur 76,7s, actividad media de brazos 5,37 rad/s)  GESTO=2 CAMINAR=41 IDLE=10
+   GESTO  inicio  42,0s  dur 3s  brazos 7,14  columna 0,87  desplaz 0,06 m
+   GESTO  inicio  60,0s  dur 3s  brazos 9,65  columna 1,03  desplaz 0,05 m
+   IDLE   inicio  23,0s  dur 3s  brazos 1,22
+   IDLE   inicio  45,0s  dur 3s  brazos 1,14
+##### ryder1a
+== csplay  (dur 60,5s, actividad media de brazos 4,30 rad/s)  GESTO=0 CAMINAR=58 IDLE=0
+== csryder  (dur 60,5s, actividad media de brazos 7,93 rad/s)  GESTO=0 CAMINAR=58 IDLE=0
+##### ryder2a
+== csplay  (dur 74,4s, actividad media de brazos 5,40 rad/s)  GESTO=0 CAMINAR=61 IDLE=7
+   IDLE   inicio   1,0s  dur 3s  brazos 0,83
+   IDLE   inicio  51,0s  dur 3s  brazos 1,12
+== csryder  (dur 74,4s, actividad media de brazos 4,76 rad/s)  GESTO=0 CAMINAR=59 IDLE=6
+   IDLE   inicio  21,0s  dur 3s  brazos 1,51
+   IDLE   inicio  22,0s  dur 3s  brazos 1,18
+##### ryder3a
+== cshernandez  (dur 86,0s, actividad media de brazos 1,85 rad/s)  GESTO=6 CAMINAR=23 IDLE=45
+   GESTO  inicio  45,0s  dur 3s  brazos 9,54  columna 0,66  desplaz 0,01 m
+   GESTO  inicio  60,0s  dur 3s  brazos 2,72  columna 0,27  desplaz 0,13 m
+   IDLE   inicio  12,0s  dur 3s  brazos 0,00
+   IDLE   inicio  13,0s  dur 3s  brazos 0,00
+== csplay  (dur 86,0s, actividad media de brazos 2,32 rad/s)  GESTO=0 CAMINAR=32 IDLE=44
+   IDLE   inicio  38,0s  dur 3s  brazos 0,00
+   IDLE   inicio  74,0s  dur 3s  brazos 0,00
+== CsPulaski  (dur 86,0s, actividad media de brazos 1,73 rad/s)  GESTO=0 CAMINAR=28 IDLE=38
+   IDLE   inicio  52,0s  dur 3s  brazos 0,00
+   IDLE   inicio  53,0s  dur 3s  brazos 0,00
+== csryder  (dur 86,0s, actividad media de brazos 4,63 rad/s)  GESTO=2 CAMINAR=55 IDLE=12
+   GESTO  inicio  13,0s  dur 3s  brazos 6,57  columna 0,50  desplaz 0,05 m
+   GESTO  inicio  31,0s  dur 3s  brazos 6,33  columna 0,57  desplaz 0,11 m
+   IDLE   inicio  73,0s  dur 3s  brazos 0,81
+   IDLE   inicio  74,0s  dur 3s  brazos 0,81
+== cstenpenny  (dur 86,0s, actividad media de brazos 2,20 rad/s)  GESTO=4 CAMINAR=56 IDLE=15
+   GESTO  inicio  24,0s  dur 3s  brazos 2,88  columna 0,56  desplaz 0,09 m
+   GESTO  inicio  37,0s  dur 3s  brazos 3,06  columna 0,37  desplaz 0,09 m
+   GESTO  inicio  43,0s  dur 3s  brazos 3,49  columna 0,43  desplaz 0,08 m
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+   IDLE   inicio   6,0s  dur 3s  brazos 0,00
+##### smoke1a
+== csplay  (dur 29,0s, actividad media de brazos 8,26 rad/s)  GESTO=0 CAMINAR=27 IDLE=0
+== cssmoke  (dur 29,0s, actividad media de brazos 6,54 rad/s)  GESTO=0 CAMINAR=25 IDLE=2
+   IDLE   inicio   3,0s  dur 3s  brazos 0,00
+   IDLE   inicio   4,0s  dur 3s  brazos 0,60
+== cssweet  (dur 29,0s, actividad media de brazos 5,36 rad/s)  GESTO=0 CAMINAR=25 IDLE=2
+   IDLE   inicio   3,0s  dur 3s  brazos 0,00
+   IDLE   inicio   4,0s  dur 3s  brazos 1,17
+##### smoke1b
+== csogloc  (dur 53,3s, actividad media de brazos 5,84 rad/s)  GESTO=0 CAMINAR=42 IDLE=8
+   IDLE   inicio   0,0s  dur 3s  brazos 0,23
+   IDLE   inicio   1,0s  dur 3s  brazos 0,19
+== csplay  (dur 53,3s, actividad media de brazos 3,52 rad/s)  GESTO=0 CAMINAR=36 IDLE=8
+   IDLE   inicio  37,0s  dur 3s  brazos 0,88
+   IDLE   inicio  46,0s  dur 3s  brazos 1,12
+== cssmoke  (dur 53,3s, actividad media de brazos 5,12 rad/s)  GESTO=2 CAMINAR=39 IDLE=8
+   GESTO  inicio  23,0s  dur 3s  brazos 9,26  columna 0,55  desplaz 0,04 m
+   IDLE   inicio  36,0s  dur 3s  brazos 1,53
+   IDLE   inicio  37,0s  dur 3s  brazos 1,50
+== cssweet  (dur 53,3s, actividad media de brazos 2,54 rad/s)  GESTO=4 CAMINAR=29 IDLE=12
+   GESTO  inicio  39,0s  dur 3s  brazos 5,69  columna 0,79  desplaz 0,01 m
+   IDLE   inicio   0,0s  dur 3s  brazos 1,02
+   IDLE   inicio  23,0s  dur 3s  brazos 0,98
+##### smoke2a
+== csplay  (dur 41,5s, actividad media de brazos 3,51 rad/s)  GESTO=0 CAMINAR=39 IDLE=0
+== cspulaski  (dur 41,5s, actividad media de brazos 3,63 rad/s)  GESTO=0 CAMINAR=16 IDLE=23
+   IDLE   inicio  30,0s  dur 3s  brazos 0,00
+   IDLE   inicio  31,0s  dur 3s  brazos 0,00
+== cssmoke  (dur 41,5s, actividad media de brazos 5,65 rad/s)  GESTO=0 CAMINAR=39 IDLE=0
+== CsTenpenny  (dur 41,5s, actividad media de brazos 2,04 rad/s)  GESTO=0 CAMINAR=16 IDLE=23
+   IDLE   inicio  30,0s  dur 3s  brazos 0,00
+   IDLE   inicio  31,0s  dur 3s  brazos 0,00
+##### smoke2b
+== csplay  (dur 57,7s, actividad media de brazos 3,64 rad/s)  GESTO=0 CAMINAR=24 IDLE=13
+   IDLE   inicio  22,0s  dur 3s  brazos 1,15
+   IDLE   inicio  23,0s  dur 3s  brazos 1,20
+== cssmoke  (dur 57,7s, actividad media de brazos 6,01 rad/s)  GESTO=2 CAMINAR=26 IDLE=11
+   GESTO  inicio  24,0s  dur 3s  brazos 9,72  columna 2,49  desplaz 0,01 m
+   IDLE   inicio  17,0s  dur 3s  brazos 2,28
+   IDLE   inicio  18,0s  dur 3s  brazos 2,32
+##### smoke3a
+== CSplay  (dur 49,0s, actividad media de brazos 3,21 rad/s)  GESTO=0 CAMINAR=39 IDLE=7
+   IDLE   inicio   1,0s  dur 3s  brazos 0,25
+   IDLE   inicio  43,0s  dur 3s  brazos 1,05
+== CsPulaski  (dur 49,0s, actividad media de brazos 1,60 rad/s)  GESTO=2 CAMINAR=26 IDLE=19
+   GESTO  inicio  17,0s  dur 3s  brazos 2,35  columna 0,34  desplaz 0,03 m
+   IDLE   inicio  39,0s  dur 3s  brazos 0,00
+   IDLE   inicio  40,0s  dur 3s  brazos 0,00
+== CSsmoke  (dur 49,0s, actividad media de brazos 5,47 rad/s)  GESTO=11 CAMINAR=25 IDLE=11
+   GESTO  inicio  34,0s  dur 3s  brazos 9,94  columna 0,91  desplaz 0,03 m
+   GESTO  inicio  39,0s  dur 3s  brazos 10,65  columna 0,95  desplaz 0,03 m
+   GESTO  inicio  43,0s  dur 3s  brazos 10,08  columna 0,92  desplaz 0,17 m
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+   IDLE   inicio  13,0s  dur 3s  brazos 0,58
+== CsTenpenny  (dur 49,0s, actividad media de brazos 1,94 rad/s)  GESTO=0 CAMINAR=28 IDLE=19
+   IDLE   inicio  39,0s  dur 3s  brazos 0,00
+   IDLE   inicio  40,0s  dur 3s  brazos 0,00
+##### smoke4a
+== csplay  (dur 23,3s, actividad media de brazos 6,97 rad/s)  GESTO=0 CAMINAR=21 IDLE=0
+== cssmoke  (dur 23,3s, actividad media de brazos 4,78 rad/s)  GESTO=0 CAMINAR=18 IDLE=3
+   IDLE   inicio   0,0s  dur 3s  brazos 0,54
+   IDLE   inicio   1,0s  dur 3s  brazos 0,08
+##### sweet1a
+== CSplay  (dur 33,2s, actividad media de brazos 2,21 rad/s)  GESTO=0 CAMINAR=28 IDLE=3
+   IDLE   inicio   0,0s  dur 3s  brazos 0,02
+   IDLE   inicio   1,0s  dur 3s  brazos 0,12
+== CSsmoke  (dur 33,2s, actividad media de brazos 7,73 rad/s)  GESTO=0 CAMINAR=29 IDLE=2
+   IDLE   inicio   6,0s  dur 3s  brazos 1,46
+   IDLE   inicio  11,0s  dur 3s  brazos 0,98
+== CSsweet  (dur 33,2s, actividad media de brazos 7,54 rad/s)  GESTO=0 CAMINAR=31 IDLE=0
+##### sweet1b
+== csplay  (dur 60,4s, actividad media de brazos 3,18 rad/s)  GESTO=0 CAMINAR=31 IDLE=26
+   IDLE   inicio   7,0s  dur 3s  brazos 0,00
+   IDLE   inicio   8,0s  dur 3s  brazos 0,00
+== csryder  (dur 60,4s, actividad media de brazos 1,87 rad/s)  GESTO=3 CAMINAR=24 IDLE=30
+   GESTO  inicio  13,0s  dur 3s  brazos 3,94  columna 0,95  desplaz 0,00 m
+   GESTO  inicio  50,0s  dur 3s  brazos 4,01  columna 0,55  desplaz 0,03 m
+   IDLE   inicio   8,0s  dur 3s  brazos 0,00
+   IDLE   inicio  36,0s  dur 3s  brazos 0,00
+== cssmoke  (dur 60,4s, actividad media de brazos 3,02 rad/s)  GESTO=12 CAMINAR=24 IDLE=19
+   GESTO  inicio   1,0s  dur 3s  brazos 4,89  columna 0,75  desplaz 0,00 m
+   GESTO  inicio   4,0s  dur 3s  brazos 4,48  columna 0,57  desplaz 0,00 m
+   GESTO  inicio  17,0s  dur 3s  brazos 4,06  columna 0,73  desplaz 0,00 m
+   GESTO  inicio  41,0s  dur 3s  brazos 5,89  columna 0,79  desplaz 0,05 m
+   IDLE   inicio  50,0s  dur 3s  brazos 0,00
+   IDLE   inicio  51,0s  dur 3s  brazos 0,00
+== cssweet  (dur 60,4s, actividad media de brazos 4,86 rad/s)  GESTO=1 CAMINAR=40 IDLE=15
+   GESTO  inicio  35,0s  dur 3s  brazos 8,48  columna 0,71  desplaz 0,13 m
+   IDLE   inicio  47,0s  dur 3s  brazos 1,08
+   IDLE   inicio  57,0s  dur 3s  brazos 1,10
+##### sweet1c
+== CSbdup  (dur 82,7s, actividad media de brazos 2,94 rad/s)  GESTO=7 CAMINAR=28 IDLE=28
+   GESTO  inicio  22,0s  dur 3s  brazos 7,97  columna 0,85  desplaz 0,02 m
+   GESTO  inicio  29,0s  dur 3s  brazos 6,13  columna 0,59  desplaz 0,05 m
+   GESTO  inicio  56,0s  dur 3s  brazos 3,90  columna 0,59  desplaz 0,11 m
+   IDLE   inicio  72,0s  dur 3s  brazos 0,00
+   IDLE   inicio  73,0s  dur 3s  brazos 0,00
+== csbigbearthin  (dur 82,7s, actividad media de brazos 1,23 rad/s)  GESTO=4 CAMINAR=22 IDLE=53
+   GESTO  inicio  47,0s  dur 3s  brazos 2,44  columna 0,67  desplaz 0,07 m
+   GESTO  inicio  53,0s  dur 3s  brazos 1,98  columna 0,50  desplaz 0,06 m
+   IDLE   inicio  29,0s  dur 3s  brazos 0,00
+   IDLE   inicio  30,0s  dur 3s  brazos 0,00
+== csplay  (dur 82,7s, actividad media de brazos 3,45 rad/s)  GESTO=2 CAMINAR=56 IDLE=16
+   GESTO  inicio   8,0s  dur 3s  brazos 5,01  columna 0,72  desplaz 0,12 m
+   GESTO  inicio  14,0s  dur 3s  brazos 5,22  columna 0,68  desplaz 0,08 m
+   IDLE   inicio  59,0s  dur 3s  brazos 0,85
+   IDLE   inicio  60,0s  dur 3s  brazos 0,94
+== csryder  (dur 82,7s, actividad media de brazos 2,34 rad/s)  GESTO=3 CAMINAR=52 IDLE=15
+   GESTO  inicio  37,0s  dur 3s  brazos 3,60  columna 0,67  desplaz 0,11 m
+   GESTO  inicio  53,0s  dur 3s  brazos 3,08  columna 1,35  desplaz 0,08 m
+   IDLE   inicio  45,0s  dur 3s  brazos 0,00
+   IDLE   inicio  47,0s  dur 3s  brazos 0,00
+##### sweet2a
+== CSplay  (dur 31,3s, actividad media de brazos 6,57 rad/s)  GESTO=0 CAMINAR=29 IDLE=0
+== csryder  (dur 31,3s, actividad media de brazos 10,93 rad/s)  GESTO=0 CAMINAR=29 IDLE=0
+== cssmoke  (dur 31,3s, actividad media de brazos 10,39 rad/s)  GESTO=0 CAMINAR=29 IDLE=0
+== CSsweet  (dur 31,3s, actividad media de brazos 4,34 rad/s)  GESTO=0 CAMINAR=29 IDLE=0
+##### sweet2b
+== csplay  (dur 83,2s, actividad media de brazos 1,73 rad/s)  GESTO=15 CAMINAR=16 IDLE=30
+   GESTO  inicio  29,0s  dur 3s  brazos 4,17  columna 0,68  desplaz 0,02 m
+   GESTO  inicio  33,0s  dur 3s  brazos 3,53  columna 0,73  desplaz 0,04 m
+   GESTO  inicio  37,0s  dur 3s  brazos 3,24  columna 0,61  desplaz 0,02 m
+   GESTO  inicio  73,0s  dur 3s  brazos 3,31  columna 0,73  desplaz 0,00 m
+   IDLE   inicio   4,0s  dur 3s  brazos 0,00
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+== csryder  (dur 83,2s, actividad media de brazos 2,07 rad/s)  GESTO=14 CAMINAR=17 IDLE=21
+   GESTO  inicio  14,0s  dur 3s  brazos 5,08  columna 0,69  desplaz 0,00 m
+   GESTO  inicio  33,0s  dur 3s  brazos 4,08  columna 0,64  desplaz 0,04 m
+   GESTO  inicio  70,0s  dur 3s  brazos 3,87  columna 0,65  desplaz 0,01 m
+   GESTO  inicio  73,0s  dur 3s  brazos 3,01  columna 0,54  desplaz 0,10 m
+   IDLE   inicio   4,0s  dur 3s  brazos 0,00
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+== cssmoke  (dur 83,2s, actividad media de brazos 2,09 rad/s)  GESTO=27 CAMINAR=10 IDLE=16
+   GESTO  inicio  21,0s  dur 3s  brazos 3,85  columna 0,56  desplaz 0,00 m
+   GESTO  inicio  31,0s  dur 3s  brazos 4,13  columna 0,73  desplaz 0,01 m
+   GESTO  inicio  46,0s  dur 3s  brazos 5,74  columna 0,70  desplaz 0,01 m
+   GESTO  inicio  72,0s  dur 3s  brazos 3,87  columna 0,61  desplaz 0,01 m
+   IDLE   inicio   4,0s  dur 3s  brazos 0,00
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+== cssweet  (dur 83,2s, actividad media de brazos 1,40 rad/s)  GESTO=12 CAMINAR=10 IDLE=22
+   GESTO  inicio  44,0s  dur 3s  brazos 4,15  columna 0,41  desplaz 0,02 m
+   GESTO  inicio  59,0s  dur 3s  brazos 2,84  columna 0,52  desplaz 0,00 m
+   GESTO  inicio  76,0s  dur 3s  brazos 3,46  columna 0,59  desplaz 0,03 m
+   GESTO  inicio  80,0s  dur 3s  brazos 7,27  columna 0,78  desplaz 0,03 m
+   IDLE   inicio   4,0s  dur 3s  brazos 0,00
+   IDLE   inicio   5,0s  dur 3s  brazos 0,00
+##### sweet3a
+== CSplay  (dur 50,5s, actividad media de brazos 3,35 rad/s)  GESTO=5 CAMINAR=23 IDLE=12
+   GESTO  inicio  18,0s  dur 3s  brazos 5,00  columna 0,75  desplaz 0,05 m
+   GESTO  inicio  23,0s  dur 3s  brazos 7,05  columna 0,71  desplaz 0,19 m
+   GESTO  inicio  26,0s  dur 3s  brazos 4,60  columna 0,62  desplaz 0,12 m
+   IDLE   inicio   6,0s  dur 3s  brazos 0,00
+   IDLE   inicio  29,0s  dur 3s  brazos 0,00
+== csryder  (dur 50,5s, actividad media de brazos 2,91 rad/s)  GESTO=9 CAMINAR=10 IDLE=19
+   GESTO  inicio   7,0s  dur 3s  brazos 5,39  columna 1,11  desplaz 0,01 m
+   GESTO  inicio  18,0s  dur 3s  brazos 4,43  columna 0,99  desplaz 0,01 m
+   GESTO  inicio  24,0s  dur 3s  brazos 8,73  columna 1,32  desplaz 0,03 m
+   IDLE   inicio  41,0s  dur 3s  brazos 0,00
+   IDLE   inicio  42,0s  dur 3s  brazos 0,00
+== cssmoke  (dur 50,5s, actividad media de brazos 3,35 rad/s)  GESTO=5 CAMINAR=11 IDLE=8
+   GESTO  inicio   3,0s  dur 3s  brazos 6,05  columna 0,79  desplaz 0,05 m
+   GESTO  inicio  11,0s  dur 3s  brazos 7,62  columna 1,01  desplaz 0,00 m
+   IDLE   inicio   6,0s  dur 3s  brazos 0,00
+   IDLE   inicio   7,0s  dur 3s  brazos 0,21
+== CSsweet  (dur 50,5s, actividad media de brazos 1,70 rad/s)  GESTO=10 CAMINAR=7 IDLE=21
+   GESTO  inicio   3,0s  dur 3s  brazos 2,66  columna 0,69  desplaz 0,00 m
+   GESTO  inicio  10,0s  dur 3s  brazos 4,49  columna 0,50  desplaz 0,01 m
+   GESTO  inicio  30,0s  dur 3s  brazos 3,74  columna 0,42  desplaz 0,01 m
+   GESTO  inicio  36,0s  dur 3s  brazos 2,74  columna 0,41  desplaz 0,01 m
+   IDLE   inicio  39,0s  dur 3s  brazos 0,00
+   IDLE   inicio  40,0s  dur 3s  brazos 0,03
+##### sweet3b
+== csemmet  (dur 38,8s, actividad media de brazos 5,64 rad/s)  GESTO=0 CAMINAR=36 IDLE=0
+== csplay  (dur 38,8s, actividad media de brazos 6,19 rad/s)  GESTO=0 CAMINAR=36 IDLE=0
+== cssmoke  (dur 38,8s, actividad media de brazos 5,28 rad/s)  GESTO=0 CAMINAR=36 IDLE=0
+##### sweet4a
+== CSplay  (dur 39,3s, actividad media de brazos 6,74 rad/s)  GESTO=0 CAMINAR=33 IDLE=4
+   IDLE   inicio  33,0s  dur 3s  brazos 1,36
+   IDLE   inicio  34,0s  dur 3s  brazos 1,51
+== csryder  (dur 39,3s, actividad media de brazos 12,20 rad/s)  GESTO=0 CAMINAR=37 IDLE=0
+== CSsweet  (dur 39,3s, actividad media de brazos 5,31 rad/s)  GESTO=0 CAMINAR=33 IDLE=3
+   IDLE   inicio  33,0s  dur 3s  brazos 1,60
+   IDLE   inicio  34,0s  dur 3s  brazos 1,34
+##### sweet5a
+== csplay  (dur 21,2s, actividad media de brazos 8,03 rad/s)  GESTO=0 CAMINAR=19 IDLE=0
+##### sweet6a
+== CsKendl  (dur 57,3s, actividad media de brazos 8,56 rad/s)  GESTO=0 CAMINAR=49 IDLE=6
+   IDLE   inicio  52,0s  dur 3s  brazos 0,00
+   IDLE   inicio  53,0s  dur 3s  brazos 0,00
+== CsPlay  (dur 57,3s, actividad media de brazos 1,97 rad/s)  GESTO=0 CAMINAR=27 IDLE=26
+   IDLE   inicio  15,0s  dur 3s  brazos 0,00
+   IDLE   inicio  16,0s  dur 3s  brazos 0,00
+== CsSweet  (dur 57,3s, actividad media de brazos 4,63 rad/s)  GESTO=1 CAMINAR=45 IDLE=4
+   GESTO  inicio  48,0s  dur 3s  brazos 6,04  columna 0,79  desplaz 0,09 m
+   IDLE   inicio  11,0s  dur 3s  brazos 1,57
+   IDLE   inicio  12,0s  dur 3s  brazos 2,18
+##### sweet6b
+== cscesar  (dur 117,8s, actividad media de brazos 3,99 rad/s)  GESTO=1 CAMINAR=77 IDLE=26
+   GESTO  inicio  90,0s  dur 3s  brazos 7,72  columna 0,62  desplaz 0,15 m
+   IDLE   inicio   3,0s  dur 3s  brazos 0,00
+   IDLE   inicio   6,0s  dur 3s  brazos 0,00
+== csjose  (dur 117,8s, actividad media de brazos 3,04 rad/s)  GESTO=13 CAMINAR=39 IDLE=59
+   GESTO  inicio  38,0s  dur 3s  brazos 8,69  columna 0,52  desplaz 0,24 m
+   GESTO  inicio  41,0s  dur 3s  brazos 12,21  columna 0,46  desplaz 0,16 m
+   GESTO  inicio  53,0s  dur 3s  brazos 5,96  columna 0,56  desplaz 0,11 m
+   GESTO  inicio  56,0s  dur 3s  brazos 6,58  columna 0,50  desplaz 0,13 m
+   IDLE   inicio  93,0s  dur 3s  brazos 0,00
+   IDLE   inicio  94,0s  dur 3s  brazos 0,00
+== CsKendl  (dur 117,8s, actividad media de brazos 4,03 rad/s)  GESTO=0 CAMINAR=58 IDLE=53
+   IDLE   inicio  96,0s  dur 3s  brazos 0,00
+   IDLE   inicio  97,0s  dur 3s  brazos 0,00
+== CsPlay  (dur 117,8s, actividad media de brazos 3,55 rad/s)  GESTO=5 CAMINAR=68 IDLE=38
+   GESTO  inicio 101,0s  dur 3s  brazos 5,53  columna 0,51  desplaz 0,08 m
+   GESTO  inicio 104,0s  dur 3s  brazos 5,01  columna 0,53  desplaz 0,03 m
+   IDLE   inicio  37,0s  dur 3s  brazos 0,00
+   IDLE   inicio  38,0s  dur 3s  brazos 0,00
+##### sweet7a
+== csgrove1  (dur 33,2s, actividad media de brazos 2,72 rad/s)  GESTO=0 CAMINAR=13 IDLE=18
+   IDLE   inicio  11,0s  dur 3s  brazos 0,00
+   IDLE   inicio  12,0s  dur 3s  brazos 0,00
+== CsPlay  (dur 33,2s, actividad media de brazos 5,06 rad/s)  GESTO=0 CAMINAR=27 IDLE=4
+   IDLE   inicio   5,0s  dur 3s  brazos 1,76
+   IDLE   inicio   6,0s  dur 3s  brazos 1,83
+== CSsweet  (dur 33,2s, actividad media de brazos 5,03 rad/s)  GESTO=0 CAMINAR=30 IDLE=0

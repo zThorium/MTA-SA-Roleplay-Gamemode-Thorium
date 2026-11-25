@@ -183,7 +183,8 @@ local function drawMinimap(x, y)
                 -- Solo se muestran blips conocidos. Los puntos normales (0) esperan
                 -- a estar cerca; 41 pertenece a la navegacion activa y siempre es visible.
                 local known = KNOWN_BLIP_ICON_IDS[iconId]
-                local always = iconId == 41
+                -- elementData "rp:radarEdge" = true: punto de objetivo (p. ej. misiones) que se fija al borde del radar y se ve siempre
+                local always = iconId == 41 or getElementData(blip, "rp:radarEdge") == true
                 local visibleDistance = math.min(getBlipVisibleDistance(blip) or 99999, BLIP_MAX_DISTANCE)
                 if known and (always or worldDist <= visibleDistance) then
                     local dx, dy = (bx - px) * unitPx, -(by - py) * unitPx
@@ -701,3 +702,28 @@ addCommandHandler("hud", function(_, what)
     exports.rp_notify:notify(("%s: %s"):format(what:lower(), prefs[key] and "visible" or "oculto"), "info")
 end)
 bindKey("F7", "down", function() executeCommandHandler("hud") end)
+
+----------------------------------------------------------------
+-- API para otros recursos (cinematicas, misiones, minijuegos a pantalla completa)
+--   exports.rp_hud:setHudSuppressed("mi_recurso:motivo", true)   oculta HUD propio, HUD nativo, chat y toasts
+--   exports.rp_hud:setHudSuppressed("mi_recurso:motivo", false)  lo devuelve cuando ya no queda ningun motivo activo
+-- Varios recursos pueden pedirlo a la vez: solo se muestra de nuevo al quitar el ultimo motivo.
+----------------------------------------------------------------
+local suppressed = {}
+
+function setHudSuppressed(reason, on)
+    suppressed[tostring(reason or "?")] = on and true or nil
+    local hidden = next(suppressed) ~= nil
+    setElementData(localPlayer, "rp:hudHidden", hidden, false)
+    showChat(not hidden)
+    pcall(function() exports.rp_notify:setNotificationsMuted(hidden) end)
+    if hidden then
+        setPlayerHudComponentVisible("all", false)
+        setPlayerHudComponentVisible("crosshair", false)
+    else
+        hideGtaHud()
+    end
+    return true
+end
+
+function isHudSuppressed() return next(suppressed) ~= nil end

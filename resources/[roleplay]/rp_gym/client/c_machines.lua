@@ -55,7 +55,8 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         if gymBusy() then return end
         if gymSelecting then
             gymSelecting = nil
-        elseif gymState then
+        else
+            -- No depende de gymState: aunque el cliente no tenga el estado, el servidor decide si hay sesion
             triggerServerEvent("rp:gym:stop", resourceRoot)
         end
     end)
