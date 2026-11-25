@@ -151,6 +151,15 @@ local function playerCanDo(p, def)
     if w then return w end
     if M.levelOf(p) < (def.minLevel or 1) then return ("Nivel %d"):format(def.minLevel) end
     if M.totalRespect(p) < (def.minRespect or 0) then return ("Respeto %d"):format(def.minRespect) end
+    -- Historia: `requires` = claves de misiones que hay que haber completado antes
+    for _, key in ipairs(def.requires or {}) do
+        local pr = (M.progress[p] or {})[key]
+        if not pr or (pr.n or 0) < 1 then
+            local title = key
+            for _, d in ipairs(MISSION_DEFS) do if d.key == key then title = d.title break end end
+            return ("Completa: %s"):format(title)
+        end
+    end
 end
 
 local function leaderCap(p) return respectRank(M.totalRespect(p)).partyCap end
