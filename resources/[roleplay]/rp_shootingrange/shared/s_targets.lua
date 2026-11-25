@@ -24,11 +24,13 @@ function rangeTargetState(t, el)
     return true, t.d, t.l
 end
 
--- Posicion del suelo (x, y, z) del blanco en el mundo
+-- Posicion del suelo (x, y, z) del blanco en el mundo. FIRE.z es la altura de un jugador de pie
+-- (~1 m sobre el suelo): antes se usaba tal cual como suelo y los blancos salian 1 m mas arriba,
+-- enterrados en el techo, y las zonas de impacto del servidor quedaban igual de desplazadas.
 function rangeWorldPos(d, l)
     local fx, fy, rx, ry = rangeAxes()
     local F = RANGE.FIRE
-    return F.x + fx * d + rx * l, F.y + fy * d + ry * l, F.z
+    return F.x + fx * d + rx * l, F.y + fy * d + ry * l, F.z - (RANGE.FEET_OFFSET or 1.0)
 end
 
 -- Construye los blancos de una ronda para una categoria de arma

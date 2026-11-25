@@ -1,11 +1,10 @@
 --[[
     rp_shootingrange / s_config.lua  (compartido)
 
-    VERIFICAR EN JUEGO (no se pudieron comprobar contra los IPL/IDE del juego):
-      - RANGE.INTERIOR, FIRE (posicion de tiro) y FIRE.rot: la sala del campo en el interior 7
-        (Ammu-Nation 5 de la wiki de MTA). Si los blancos salen en la pared o al reves, ajusta
-        FIRE.x/y/z y FIRE.rot (la linea de blancos sale en la direccion a la que mira FIRE.rot).
-      - DESK: mostrador del campo dentro de la tienda (interior 4). Esta entre la puerta y el vendedor.
+    FIRE (posicion de tiro, interior 7) y DESK (marcador de entrada, interior 4) tomados en juego
+    con /pos el 2026-11-25 en el Ammu-Nation Market. Son posiciones de JUGADOR: su z esta ~1 m
+    sobre el suelo (FEET_OFFSET lo descuenta para los blancos). La linea de blancos sale en la
+    direccion a la que mira FIRE.rot.
     Para otra armeria con campo: anadir una fila a LOCATIONS (id = el de rp_ammunation).
 ]]
 RANGE = {
@@ -17,8 +16,9 @@ RANGE = {
     STORE_INTERIOR = 4,
 
     INTERIOR = 7,
-    FIRE = { x = 298.5, y = -141.6, z = 1004.05, rot = 90 },
-    DESK = { x = 289.0, y = -84.5, z = 1001.52 },
+    FIRE = { x = 303.750, y = -142.170, z = 1004.062, rot = 88.0 },
+    DESK = { x = 301.859, y = -76.954, z = 1001.516 },
+    FEET_OFFSET = 1.0,          -- z de un jugador - z de sus pies (MTA): el suelo de los blancos es FIRE.z - esto
 
     LOCATIONS = {
         { id = 1, name = "Ammu-Nation Market" },
