@@ -1,0 +1,6 @@
+<meta>
+    <info author="Thorium" name="RP Wasted" description="Pantalla de muerte estilo GTA: camara lenta, tinte rojo con vineta y texto wasted" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <script src="client/c_wasted.lua" type="client" cache="false" />
+</meta>
