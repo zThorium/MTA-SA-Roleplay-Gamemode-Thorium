@@ -127,7 +127,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 `rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
 `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
 `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
-`rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:wanted:`.
+`rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:vending:`, `rp:wanted:`.
 
 Usa uno nuevo y único, igual al nombre del recurso sin `rp_`: `rp:<sistema>:<accion>` (y
 `rp:<sistema>:ui:<accion>` para lo que viene del CEF). Los `rp:on<Algo>` son hooks globales del ciclo
