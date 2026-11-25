@@ -59,14 +59,15 @@ Cesar: *"Con esto ya eres de la familia"*.
 
 ## Acto II
 
-### Misión 4 · `cesar_viagra` · "Una emergencia delicada" (Cesar) · 7 etapas · *misión cómica*
+### Misión 4 · `cesar_viagra` · "Una emergencia delicada" (Cesar) · 8 etapas · *misión cómica*
 **Requiere**: `cesar_cargo`.
-Etapas: (1) cinemática de Cesar · (2) subir a la scooter · (3) ir a la farmacia de Idlewood · (4) echar a los ladrones · (5) buscar "la cajita azul" · (6) volver antes de que llegue Kendl · (7) cinemática de cierre.
+Etapas: (1) cinemática de Cesar · (2) subir a la scooter · (3) ir a la farmacia de Idlewood · (4) echar a los ladrones · (5) buscar "la cajita azul" · (6) volver antes de que llegue Kendl · (7) cinemática cómica de cierre (Kendl entra y la comedia termina) · (8) cinemática seria: Cesar se queda afuera y suelta la pista sobre Ryder.
 
 **Narrativa**: Cesar, sudando y avergonzado, confiesa con rodeos que *el amigo no se le paró*, y justo hoy llega Kendl. Pide al protagonista
 ir de urgencia a la farmacia. Allí hay unos ladrones, y por la radio Cesar entra en pánico en cada paso. Al volver, Cesar se toma la pastilla,
-tarda en leer la caja ("si dura más de cuatro horas, llame a un médico") y, ya con Kendl en la puerta, suelta la pista que importa:
-*vio la camioneta de Ryder del lado de los morados, y Ryder le dijo que estaba en casa.*
+tarda en leer la caja ("si dura más de cuatro horas, llame a un médico") y Kendl entra: la comedia termina ahí. **Después, con la sonrisa borrada**,
+Cesar se queda afuera y suelta la pista que importa: *vio la camioneta de Ryder del lado de los morados, y Ryder le dijo que estaba en casa.*
+(Se separó a propósito el remate cómico de la pista, para que esta no se pierda entre las risas.)
 **Conexión**: el chiste recurrente ("nada de pastillas") reaparece en las misiones 6, 9 y 10. La pista sobre Ryder arranca la subtrama de traición.
 
 ### Misión 5 · `humo_grove` · "Humo en Grove" (Sweet) · 5 etapas
@@ -108,31 +109,38 @@ Etapas: (1) Ryder propone el plan · (2) subir al Sentinel · (3) ir a Jefferson
 (6) huir en el coche con emboscadas · (7) cinemática de cierre.
 
 **Narrativa**: Ryder sabe dónde guardan el resto de los rifles. Volar el arsenal deja a los Ballas desarmados. Ryder cubre al protagonista y esta vez cumple.
-Al final pide perdón y el protagonista lo invita a la fiesta de Kendl.
-**Conexión**: cierra la subtrama de la traición y lleva a todos a la fiesta de la misión 9.
+Al final pide perdón y reconoce que Sweet no lo quiere ver y que no es bienvenido en la fiesta de Kendl: *"si me necesitan, ahí estaré"*.
+**Conexión**: Ryder repara el daño pero **no es perdonado todavía**; su verdadera redención llega en la misión 10.
 
 ### Misión 9 · `pastel_kendl` · "Pastel para Kendl" (Cesar) · 6 etapas · *misión cómica*
 **Requiere**: `redencion`.
 Etapas: (1) Cesar explica · (2) subir al Blade · (3) ir a la panadería de Willowfield · (4) cargar el pastel · (5) llevarlo sin dañar el coche, con emboscadas · (6) cinemática de cierre.
 
-**Narrativa**: es el cumpleaños de Kendl y falta el pastel (*"esta vez es de pasteles, no de pastillas"*). Ryder y Sweet llegan a la fiesta y se saludan sin matarse.
-En plena fiesta, Sweet llama por teléfono (su línea suena sobre la cinemática): *los Ballas vienen a Grove con todo lo que tienen.*
+**Narrativa**: es el cumpleaños de Kendl y falta el pastel (*"esta vez es de pasteles, no de pastillas"*). A la fiesta llega Sweet, y **Ryder no está invitado**: *"hizo lo correcto ayer, pero no lo quiero cerca de mi hermana todavía"*.
+En plena fiesta suena el teléfono de Sweet: *los Ballas vienen a Grove con todo lo que tienen.*
 **Conexión**: la calma antes de la tormenta; el gancho de la misión 10.
 
 ---
 
 ## Acto V
 
-### Misión 10 · `grove_siempre` · "Grove Street, para siempre" (Sweet) · 4 etapas
+### Misión 10 · `grove_siempre` · "Grove Street, para siempre" (Sweet) · 5 etapas
 **Requiere**: `pastel_kendl`.
-Etapas: (1) Sweet reúne a Sweet, Ryder y Cesar · (2) ocupar posiciones · (3) cinco oleadas de Ballas desde norte, oeste y sur · (4) cinemática final.
+Etapas: (1) Sweet reúne a Sweet y Cesar (Ryder no está) · (2) ocupar posiciones · (3) tres oleadas de Ballas desde norte, oeste y sur · (4) **resistir el último asalto: Ryder aparece por sorpresa** y lucha de aliado · (5) cinemática final.
 
-**Narrativa**: defensa final del barrio. Ryder demuestra que no se esconde; Cesar cuida el flanco derecho. Tras la última oleada, Sweet dice que los Ballas no pisarán
-Grove por mucho tiempo. Ryder agradece que no lo hayan matado; Sweet responde que aún puede cambiar de opinión. Cesar ofrece el último trozo de pastel,
-el protagonista cierra el chiste (*"Y nada de pastillas"*) y Sweet remata: ***"Grove Street, hermanos. Para siempre."***
+**Narrativa**: defensa final del barrio. Sweet avisa que no cuenten con Ryder; Cesar cuida el flanco derecho. Cuando parece que los Ballas los van a pasar por encima,
+**Ryder llega y se gana su lugar en la batalla**. Tras la última oleada, Sweet reconoce que "llegaste cuando importaba... todavía te falta mucho, pero cuenta".
+Cesar ofrece el último trozo de pastel; el protagonista (mudo) niega con la cabeza y mira de reojo, y Sweet remata la broma (*"mientras no tenga pastillas azules, pásalo"*)
+antes del cierre: ***"Grove Street, hermanos. Para siempre."***
 **Conexión**: cierra todos los hilos (Ballas, Ryder, el almacén, Kendl) y devuelve el lema de la misión 1.
 
 ---
+
+## Principios de dirección (de la revisión de guion)
+- **Consecuencias**: una traición grave no se perdona en una misión. Ryder repara, pero solo se gana su lugar en el final.
+- **Protagonista mudo**: sus líneas son cortas y secas; las bromas y decisiones las dicen Sweet, Cesar o Ryder, y la reacción de `me` va como acotación.
+- **Comedia y suspenso separados**: el remate cómico termina antes de la pista importante.
+- **Pendiente (decisión abierta)**: un villano con nombre (teniente de los Ballas, p. ej. "Kane") con skin propia en las misiones 5, 7 y 10. Si habla, necesita voz.
 
 ## Posibles continuaciones (ideas, aún no escritas)
 - Consecuencias para Ryder frente a su familia y los Ballas que le prestaron el dinero.
