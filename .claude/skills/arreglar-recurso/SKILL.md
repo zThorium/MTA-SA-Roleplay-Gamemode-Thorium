@@ -53,7 +53,11 @@ No cambies código hasta poder **explicar** el fallo. Fuentes, de más a menos d
    - interior/dimensión no comprobados (el punto "funciona" desde otra dimensión);
    - `dbPoll(qh, 0)` sobre una consulta que aún no terminó (falta el callback);
    - choque de tecla E o de dimensión con otro recurso (INT-05/06);
-   - cliente que oculta HUD o congela controles y no los devuelve (CIC-05).
+   - cliente que oculta HUD o congela controles y no los devuelve (CIC-05);
+   - `attempt to index ... (a nil value)` sobre la config en un script de cliente: copió una global
+     de un `shared` cacheado al cargar y se ejecutó antes que él (CLI-04);
+   - funciones de MTA que devuelven `false` en casos raros y rompen un `dxDrawText`/concatenación
+     (`getVehiclePlateText` en vehículos sin placa, `getPlayerName` de un elemento destruido...).
 4. **Reproducción**: en el servidor, con `restart rp_x` y comandos; si hace falta el cliente, pide a
    Fabián los pasos exactos o añade un `outputDebugString("[rp_x] ...")` temporal **que luego se quita**.
 

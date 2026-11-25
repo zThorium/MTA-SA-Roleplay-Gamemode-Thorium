@@ -9,7 +9,9 @@
         orientado con su normal (como los "shadows" del mod EmergencyLight).
 ]]
 
-local C = BALIZAS
+-- La config (BALIZAS, shared/s_config.lua) se lee en onClientResourceStart: al cargar este archivo
+-- puede no estar ejecutada todavía en el cliente (los scripts cache="false" pueden correr antes).
+local C
 local glowTex
 local cache = {}   -- [veh] = { t = tick, hits = { {x,y,z,nx,ny,nz,dist,side}, ... } }
 local lights = {}  -- [veh] = { L = light, R = light }
@@ -110,6 +112,7 @@ local function isActive(veh)
 end
 
 addEventHandler("onClientPreRender", root, function()
+    if not C or not glowTex then return end
     local cx, cy, cz = getCameraMatrix()
     local now = getTickCount()
     local near = {}
@@ -195,4 +198,8 @@ addEventHandler("onClientElementDestroy", root, function()
     if getElementType(source) == "vehicle" then destroyLights(source) cache[source] = nil end
 end)
 
-addEventHandler("onClientResourceStart", resourceRoot, function() glowTex = makeGlow() end)
+addEventHandler("onClientResourceStart", resourceRoot, function()
+    C = BALIZAS
+    if not C then return outputDebugString("[rp_balizas] falta BALIZAS (shared/s_config.lua)", 1) end
+    glowTex = makeGlow()
+end)

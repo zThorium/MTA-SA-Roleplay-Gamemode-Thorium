@@ -341,6 +341,23 @@ rend=$(lgrep "$TMP/client" -nE 'onClientRender' >/dev/null && tr '\n' '\0' < "$T
     inr && indent($0) == ind && /^[ \t]*end\)/ { inr = 0 }' 2>/dev/null | strip | cap)
 [ -z "$rend" ] && res OK R CLI-02 "onClientRender sin trabajo pesado por frame" || res AVISO R CLI-02 "onClientRender sin trabajo pesado por frame" "$rend"
 
+# CLI-04: un script de cliente cache="false" puede ejecutarse ANTES que un script shared cacheado
+# (sin cache="false"). Si al cargar copia una global de ese archivo (local C = CONFIG), queda nil.
+grep -oE '<script[^>]*>' "$META" | grep -E 'type="shared"' | grep -v 'cache="false"' | sed -n 's/.*src="\([^"]*\)".*/\1/p' > "$TMP/sharedcached"
+cli4=""
+if [ -s "$TMP/sharedcached" ]; then
+    while IFS= read -r s; do [ -f "$SRC/$s" ] && grep -ohE '^[A-Z][A-Z0-9_]+[[:space:]]*=' "$SRC/$s" | sed 's/[[:space:]]*=//'; done < "$TMP/sharedcached" | sort -u > "$TMP/cachedglobals"
+    grep -oE '<script[^>]*>' "$META" | grep -E 'type="client"' | grep 'cache="false"' | sed -n 's/.*src="\([^"]*\)".*/\1/p' | while IFS= read -r c; do
+        [ -f "$SRC/$c" ] || continue
+        while IFS= read -r g; do
+            grep -nE "^local[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*$g([^A-Za-z0-9_]|\$)" "$SRC/$c" | sed "s#^#$SRC/$c:#"
+        done < "$TMP/cachedglobals"
+    done | strip | cut -c1-120 > "$TMP/cli4"
+    cli4=$(cap < "$TMP/cli4")
+fi
+[ -z "$cli4" ] && res OK I CLI-04 "El cliente no copia config compartida al cargar" \
+               || res FALLA I CLI-04 "El cliente no copia config compartida al cargar" "$cli4 (léela en onClientResourceStart o marca el shared con cache=\"false\")"
+
 # ===================================================================== DOC
 grep -q "\`$NAME\`" "$RECURSOS" && res OK B DOC-01 "Fila en RECURSOS.md" || res FALLA B DOC-01 "Fila en RECURSOS.md" "no aparece \`$NAME\`"
 

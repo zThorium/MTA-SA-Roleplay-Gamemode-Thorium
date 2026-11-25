@@ -276,6 +276,7 @@ addEventHandler("onClientRender", root, function()
     dxDrawText(("%d km/h"):format(radar.speed), x + 12, y + 18, x + 150, y + h, tocolor(255, 255, 255, 255), 1.6, "default-bold", "left", "center")
     local d = radar.data
     local line = d and d.plate or radar.plate
+    if type(line) ~= "string" or line == "" then line = "Sin matrícula" end   -- getVehiclePlateText da false en vehículos sin placa
     dxDrawText(line, x + 150, y + 6, x + w - 8, y + 26, tocolor(255, 255, 255, 255), 1.0, "default-bold", "right", "center")
     local flag, color = "Sin novedades", tocolor(120, 220, 150, 255)
     if d and d.bolo then flag, color = "BOLO: " .. d.bolo:sub(1, 28), tocolor(255, 90, 90, 255)

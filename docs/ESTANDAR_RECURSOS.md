@@ -107,6 +107,7 @@ queda visible y buscable (`grep -rn "estandar:"`). Sin motivo no vale.
 | CLI-01 | I | auto | Las teclas no actúan con el chat, la consola o el cursor activos (y tampoco abatido o en cinemática). |
 | CLI-02 | R | auto | `onClientRender` sin trabajo pesado por frame (`getElementsByType`, crear texturas o fuentes, leer archivos): se precalcula o se hace con un timer. |
 | CLI-03 | I | manual | Interfaces HTML con la skill `interfaz-cef` (patrón, paleta, Esc cierra). |
+| CLI-04 | I | auto | Un script de cliente con `cache="false"` puede ejecutarse **antes** que un `shared` cacheado: no copies su config al cargar (`local C = CONFIG` queda `nil`). Léela dentro de funciones o en `onClientResourceStart`, o declara ese shared también con `cache="false"`. (Caso real: `rp_balizas`, 2026-11-25.) |
 
 ## DOC · Documentación
 

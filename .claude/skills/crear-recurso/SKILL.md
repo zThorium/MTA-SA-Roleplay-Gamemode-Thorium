@@ -131,6 +131,8 @@ Parte de [`plantillas/s_main.lua`](plantillas/s_main.lua). Lo que **siempre** de
 
 Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
 
+- La config compartida (`SISTEMA`) se lee **dentro de funciones**, nunca copiándola al cargar
+  (`local C = SISTEMA` en la cabecera queda `nil`: CLI-04).
 - Teclas con `bindKey` en `onClientResourceStart`; ignorar si
   `isCursorShowing() or isChatBoxInputActive() or isConsoleActive()`, si el jugador está abatido
   (`exports.rp_injury:isLocalPlayerDowned()`) o con el HUD suprimido (cinemática).
