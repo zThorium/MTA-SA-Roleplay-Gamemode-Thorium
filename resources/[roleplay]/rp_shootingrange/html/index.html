@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Campo de tiro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Menu: armas del jugador -->
+    <section id="menu" class="window hidden">
+        <header class="bar">
+            <div>
+                <h1 id="menu-title">Campo de tiro</h1>
+                <p id="menu-sub" class="muted"></p>
+            </div>
+            <button id="menu-close" class="icon-btn" title="Cerrar (Esc)">&times;</button>
+        </header>
+        <div id="menu-player" class="player"></div>
+        <nav id="tabs" class="tabs"></nav>
+        <div id="cards" class="cards"></div>
+        <p id="empty" class="empty hidden">No tienes armas compatibles. Compra armas y munici&oacute;n en Ammu-Nation.</p>
+        <footer class="foot muted" id="menu-foot"></footer>
+    </section>
+
+    <!-- Resultados -->
+    <section id="results" class="window hidden">
+        <header class="bar">
+            <div>
+                <h1>Resultados</h1>
+                <p id="res-sub" class="muted"></p>
+            </div>
+        </header>
+        <div class="stats" id="res-stats"></div>
+        <div class="skill-box">
+            <div class="skill-row"><span id="res-before"></span><span id="res-after"></span></div>
+            <div class="track"><div id="res-bar" class="fill"></div><div id="res-bar-new" class="fill new"></div></div>
+            <p id="res-gain" class="muted"></p>
+        </div>
+        <div class="actions">
+            <button id="res-again" class="btn primary">Volver a entrenar</button>
+            <button id="res-exit" class="btn">Salir</button>
+        </div>
+    </section>
+
+    <!-- HUD de entrenamiento (esquina) -->
+    <aside id="hud" class="hud hidden">
+        <div class="hud-top"><strong id="hud-weapon"></strong><span id="hud-round" class="muted"></span></div>
+        <div id="hud-banner" class="banner"></div>
+        <div class="hud-grid">
+            <div><small>Balas</small><b id="hud-ammo">0</b></div>
+            <div><small>Tiempo</small><b id="hud-time">0</b></div>
+            <div><small>Puntos</small><b id="hud-score">0</b></div>
+            <div><small>Precisi&oacute;n</small><b id="hud-acc">0%</b></div>
+        </div>
+        <div class="hud-skill"><span id="hud-level"></span><div class="track small"><div id="hud-bar" class="fill"></div></div></div>
+        <small class="muted" id="hud-hint"></small>
+    </aside>
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

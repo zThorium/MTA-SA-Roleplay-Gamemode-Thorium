@@ -1338,4 +1338,14 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_shootingrange: habilidad de armas (stats nativas 69-79, escala 0-1000) entrenada en el campo de tiro
+    [[
+    CREATE TABLE IF NOT EXISTS weapon_skills (
+        character_id INT UNSIGNED NOT NULL,
+        stat_id      SMALLINT UNSIGNED NOT NULL,
+        value        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id, stat_id),
+        CONSTRAINT fk_weapon_skills_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
