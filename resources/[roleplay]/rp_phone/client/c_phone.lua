@@ -16,8 +16,12 @@ addEvent("rp:phone:callResult", true)
 addEvent("rp:tinder:profile", true)
 addEvent("rp:tinder:deck", true)
 addEvent("rp:tinder:match", true)
+addEvent("rp:tinder:matches", true)
+addEvent("rp:tinder:matches:photo", true)
+addEvent("rp:tinder:unmatched", true)
 for _, name in ipairs({ "close", "noteSave", "noteDelete", "contactAdd", "contactDelete", "nearby", "contactAddPlayer",
-    "bankOpen", "bankAction", "openApp", "call", "tinderOpen", "tinderSave", "tinderDeck", "tinderSwipe" }) do
+    "bankOpen", "bankAction", "openApp", "call", "tinderOpen", "tinderSave", "tinderDeck", "tinderSwipe",
+    "tinderMatches", "tinderMatchPhoto", "tinderUnmatch" }) do
     addEvent("rp:phone:ui:" .. name, false)
 end
 
@@ -80,6 +84,13 @@ addEventHandler("rp:tinder:profile", resourceRoot, function(profile) callJS(("RP
 
 addEventHandler("rp:tinder:deck", resourceRoot, function(card) callJS(("RP.tinder.setCard(%s)"):format(card and json(card) or "null")) end)
 addEventHandler("rp:tinder:match", resourceRoot, function(m) callJS(("RP.tinder.matched(%s)"):format(json(m or {}))) end)
+addEventHandler("rp:tinder:matches", resourceRoot, function(list) callJS(("RP.tinder.setMatches(%s)"):format(list and json(list) or "null")) end)
+addEventHandler("rp:tinder:matches:photo", resourceRoot, function(id, photo)
+    if type(photo) == "string" and photo:match("^[%w%+/=]+$") then
+        callJS(("RP.tinder.setMatchPhoto(%d, %s)"):format(tonumber(id) or 0, jsString(photo)))
+    end
+end)
+addEventHandler("rp:tinder:unmatched", resourceRoot, function(id) callJS(("RP.tinder.unmatched(%d)"):format(tonumber(id) or 0)) end)
 
 addEventHandler("rp:bank:data", root, function(view, data)
     if view == "phone" then callJS(("RP.setBank(%s)"):format(json(data or {}))) end
@@ -153,6 +164,9 @@ end)
 addEventHandler("rp:phone:ui:tinderSwipe", root, function(targetId, liked)
     triggerServerEvent("rp:tinder:swipe", resourceRoot, tonumber(targetId), liked == true)
 end)
+addEventHandler("rp:phone:ui:tinderMatches", root, function() triggerServerEvent("rp:tinder:matches:get", resourceRoot) end)
+addEventHandler("rp:phone:ui:tinderMatchPhoto", root, function(id) triggerServerEvent("rp:tinder:matches:photo", resourceRoot, tonumber(id)) end)
+addEventHandler("rp:phone:ui:tinderUnmatch", root, function(id) triggerServerEvent("rp:tinder:unmatch", resourceRoot, tonumber(id)) end)
 addEventHandler("rp:phone:ui:tinderSave", root, function(bio, interested, active, photo)
     triggerLatentServerEvent("rp:tinder:profile:save", 200000, false, resourceRoot,
         tostring(bio or ""), tostring(interested or "a"), active == true, type(photo) == "string" and photo or nil)
