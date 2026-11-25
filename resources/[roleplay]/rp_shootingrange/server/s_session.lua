@@ -79,6 +79,7 @@ end
 
 local function sendRound(p, s)
     s.targets = rangeBuildRound(s.round, s.category)
+    s.pending = {}   -- impactos sin casar de la ronda anterior no cuentan en esta
     local round = RANGE.ROUNDS[s.round]
     local now = getTickCount()
     s.t0 = now + RANGE.ROUND_DELAY_MS
@@ -205,7 +206,7 @@ function startSession(p, itemId)
     giveWeapon(p, def.weapon, RANGE.TRAINING_AMMO, true)
     local s = {
         itemId = itemId, def = def, weapon = def.weapon, stat = w.stat, category = w.category,
-        shots = 0, hits = 0, score = 0, skill0 = stat0, skill = stat0, gain = 0, round = 0, t0 = 0, t1 = 0, targets = {},
+        shots = 0, hits = 0, score = 0, skill0 = stat0, skill = stat0, gain = 0, round = 0, t0 = 0, t1 = 0, targets = {}, shotLog = {}, pending = {},
     }
     ps.session = s
     send(p, "rp:range:start", { weapon = def.name, rounds = #RANGE.ROUNDS, hud = hudData(s), dailyRoom = clientRoom(ps) })
@@ -215,40 +216,87 @@ function startSession(p, itemId)
 end
 
 ----------------------------------------------------------------
--- Disparos
+-- Disparos e impactos
+--   La parte del cuerpo la decide GTA en el cliente (onClientPedDamage del blanco local: 9 = cabeza,
+--   3/4/5/6 = torso y brazos, 7/8 = piernas), que es donde llego la bala de verdad. El servidor no se
+--   lo cree sin mas: cada impacto tiene que casar con un disparo real registrado aqui (uno por
+--   disparo, de hace menos de HIT_WINDOW_MS) cuya trayectoria pase a menos de HIT_MAX_MISS m del
+--   cuerpo del blanco, y el blanco tiene que estar vivo y activo.
+--   Antes se usaban esferas con la cabeza primero y radio inflado en blancos moviles: casi cualquier
+--   disparo al pecho contaba como headshot.
 ----------------------------------------------------------------
--- Rayo del disparo contra las esferas de zona de cada blanco vivo. Devuelve el mas cercano.
-local function findHit(s, sx, sy, sz, ex, ey, ez, now)
-    local dx, dy, dz = ex - sx, ey - sy, ez - sz
+addEvent("rp:range:hitReport", true)
+
+local ZONE_INDEX = {}
+for i, z in ipairs(RANGE.ZONES) do ZONE_INDEX[z.key] = i end
+
+-- Distancia minima entre la trayectoria del disparo y el cuerpo (segmento vertical) del blanco
+local function rayToBody(shot, bx, by, bz)
+    local dx, dy, dz = shot.ex - shot.sx, shot.ey - shot.sy, shot.ez - shot.sz
     local len = sqrt(dx * dx + dy * dy + dz * dz)
-    if len < 1 then return end
+    if len < 0.5 then return math.huge end
     local ux, uy, uz = dx / len, dy / len, dz / len
-    local el = now - s.t0
-    local best
-    for _, t in ipairs(s.targets) do
-        if not t.dead and now >= (t.blocked or 0) then
-            local active, d, l = rangeTargetState(t, el)
-            if active then
-                local speed = 0
-                if t.kind == "advance" then speed = abs(t.d1 - t.d0) / (t.life / 1000)
-                elseif t.kind == "lateral" then speed = t.amp * 2 * math.pi / t.period end
-                local pad = speed * RANGE.LAG_S
-                local bx, by, bz = rangeWorldPos(d, l)
-                for zi, z in ipairs(RANGE.ZONES) do
-                    local px, py, pz = bx - sx, by - sy, (bz + z.z) - sz
-                    local proj = px * ux + py * uy + pz * uz
-                    if proj > 0 and len >= proj - 1.5 then
-                        local qx, qy, qz = px - ux * proj, py - uy * proj, pz - uz * proj
-                        if sqrt(qx * qx + qy * qy + qz * qz) <= z.r + pad then
-                            if not best or proj < best.proj then best = { t = t, zone = zi, proj = proj } end
-                            break
-                        end
-                    end
-                end
-            end
+    local best = math.huge
+    for h = 0.2, 1.8, 0.2 do
+        local px, py, pz = bx - shot.sx, by - shot.sy, (bz + h) - shot.sz
+        local proj = px * ux + py * uy + pz * uz
+        if proj > 0 and proj <= len + 1.0 then
+            local qx, qy, qz = px - ux * proj, py - uy * proj, pz - uz * proj
+            best = min(best, sqrt(qx * qx + qy * qy + qz * qz))
         end
     end
     return best
+end
+
+-- ¿Este disparo pudo dar a este blanco? (posicion del blanco en el momento del disparo, con holgura de latencia)
+local function shotReaches(s, shot, t)
+    local el = shot.tick - s.t0
+    for _, back in ipairs({ 0, RANGE.LAG_S * 1000, RANGE.LAG_S * 2000 }) do
+        local active, d, l = rangeTargetState(t, el - back)
+        if active then
+            local bx, by, bz = rangeWorldPos(d, l)
+            if rayToBody(shot, bx, by, bz) <= RANGE.HIT_MAX_MISS then return true end
+        end
+    end
+    return false
+end
+
+local function applyHit(p, ps, s, t, zoneKey, now)
+    local zi = ZONE_INDEX[zoneKey]
+    local z = zi and RANGE.ZONES[zi]
+    if not z then return end
+    if t.rearm > 0 then t.blocked = now + t.rearm else t.dead = true end
+    s.hits = s.hits + 1
+    s.score = s.score + z.points
+    local room = min(RANGE.SKILL_MAX_PER_SESSION - s.gain, RANGE.SKILL_MAX - s.skill, dailyRoom(ps) - s.gain)
+    local gain = max(0, min(z.gain, room))
+    if gain < z.gain then s.capped = true end
+    s.skill = s.skill + gain
+    s.gain = s.gain + gain
+    send(p, "rp:range:hit", t.id, z.key, z.name, z.points, t.rearm)
+    send(p, "rp:range:hud", hudData(s))
+end
+
+-- Intenta casar un impacto informado con un disparo real sin usar. Devuelve true si se resolvio.
+local function resolveReport(p, ps, s, report, now)
+    local t = s.targets[report.id]
+    if not t or t.dead or now < (t.blocked or 0) then return true end      -- ya no cuenta: se descarta
+    for _, shot in ipairs(s.shotLog) do
+        if not shot.claimed and now - shot.tick <= RANGE.HIT_WINDOW_MS and shotReaches(s, shot, t) then
+            shot.claimed = true
+            applyHit(p, ps, s, t, report.zone, now)
+            return true
+        end
+    end
+    return false
+end
+
+local function resolvePending(p, ps, s, now)
+    local keep = {}
+    for _, r in ipairs(s.pending) do
+        if not resolveReport(p, ps, s, r, now) and now - r.tick <= RANGE.HIT_WINDOW_MS then keep[#keep + 1] = r end
+    end
+    s.pending = keep
 end
 
 addEventHandler("onPlayerWeaponFire", root, function(weapon, ex, ey, ez, _, sx, sy, sz)
@@ -267,19 +315,27 @@ addEventHandler("onPlayerWeaponFire", root, function(weapon, ex, ey, ez, _, sx, 
     local now = getTickCount()
     local px, py, pz = getElementPosition(p)
     if now >= s.t0 and now <= s.t1 and getDistanceBetweenPoints3D(px, py, pz, sx, sy, sz) <= RANGE.SHOT_MAX_FROM_PLAYER then
-        local hit = findHit(s, sx, sy, sz, ex, ey, ez, now)
-        if hit then
-            local z = RANGE.ZONES[hit.zone]
-            if hit.t.rearm > 0 then hit.t.blocked = now + hit.t.rearm else hit.t.dead = true end
-            s.hits = s.hits + 1
-            s.score = s.score + z.points
-            local room = min(RANGE.SKILL_MAX_PER_SESSION - s.gain, RANGE.SKILL_MAX - s.skill, dailyRoom(ps) - s.gain)
-            local gain = max(0, min(z.gain, room))
-            if gain < z.gain then s.capped = true end
-            s.skill = s.skill + gain
-            s.gain = s.gain + gain
-            send(p, "rp:range:hit", hit.t.id, z.key, z.name, z.points, hit.t.rearm)
-        end
+        -- Se guarda el disparo para casarlo con el impacto que informe el cliente (ultimos 12)
+        table.insert(s.shotLog, 1, { tick = now, sx = sx, sy = sy, sz = sz, ex = ex, ey = ey, ez = ez })
+        s.shotLog[13] = nil
+        resolvePending(p, ps, s, now)        -- el aviso del cliente puede llegar antes que el disparo
     end
     send(p, "rp:range:hud", hudData(s))
+end)
+
+-- El cliente informa que su bala toco el blanco `id` en la parte `bodypart` (segun GTA)
+addEventHandler("rp:range:hitReport", resourceRoot, function(id, bodypart)
+    local p = client
+    local ps = rangePlayers[p]
+    local s = ps and ps.session
+    if not s or s.finished then return end
+    id, bodypart = tonumber(id), tonumber(bodypart)
+    local zone = bodypart and RANGE.BODYPART_ZONE[bodypart]
+    if not id or not zone or not s.targets[id] then return end
+    local now = getTickCount()
+    if now < s.t0 or now > s.t1 + RANGE.HIT_WINDOW_MS then return end
+    local report = { id = id, zone = zone, tick = now }
+    if not resolveReport(p, ps, s, report, now) and #s.pending < 8 then
+        s.pending[#s.pending + 1] = report
+    end
 end)

@@ -32,7 +32,12 @@ RANGE = {
     TARGET_SKINS = { 102, 103, 104, 108, 109, 110, 114, 115, 116 },
     LAG_S = 0.15,               -- holgura por latencia en los blancos que se mueven
     SHOT_MAX_FROM_PLAYER = 6.0, -- el origen del disparo debe estar cerca del jugador
-    ZONES = {                   -- orden = prioridad
+    -- Impactos: la parte del cuerpo la da GTA (onClientPedDamage del blanco) y el servidor la valida
+    -- contra un disparo real (ver s_session.lua). bodypart de MTA -> zona.
+    BODYPART_ZONE = { [9] = "head", [3] = "torso", [4] = "torso", [5] = "torso", [6] = "torso", [7] = "legs", [8] = "legs" },
+    HIT_WINDOW_MS = 600,        -- el impacto y su disparo deben llegar con menos de esto de diferencia
+    HIT_MAX_MISS = 0.8,         -- la trayectoria del disparo debe pasar a menos de esto (m) del cuerpo
+    ZONES = {                   -- puntos y habilidad por zona (z/r ya no deciden el impacto)
         { key = "head",  name = "Cabeza", z = 1.58, r = 0.17, points = 100, gain = 6 },
         { key = "torso", name = "Torso",  z = 1.10, r = 0.30, points = 50,  gain = 4 },
         { key = "legs",  name = "Piernas", z = 0.50, r = 0.28, points = 25, gain = 2 },

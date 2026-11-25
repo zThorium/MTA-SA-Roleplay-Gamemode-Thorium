@@ -1,9 +1,10 @@
 --[[
     rp_shootingrange / c_targets.lua  (cliente)
-    Blancos de la ronda: peds locales (solo los ve este jugador). Solo dibujan; los impactos los
-    decide el servidor (rp:range:hit). La posicion sale de rangeTargetState, igual que en el servidor.
+    Blancos de la ronda: peds locales (solo los ve este jugador). Cuando una bala del jugador toca un
+    blanco, GTA dice en que parte del cuerpo (onClientPedDamage) y se informa al servidor, que lo valida
+    contra un disparo real y decide (rp:range:hit). La posicion sale de rangeTargetState, igual que en el servidor.
 ]]
-local entries = {}      -- [id] = { ped, def, visible, dead, hiddenUntil }
+local entries = {}      -- [id] = { ped, def, visible, dead, hiddenUntil, lastReport }
 local roundStart = nil  -- getTickCount() en el que empieza la ronda (ya incluye la cuenta atras)
 
 function rangeTargetsClear()
@@ -24,8 +25,17 @@ function rangeTargetsStart(targets, delayMs)
             setElementFrozen(ped, true)
             setElementAlpha(ped, 0)
             setElementCollisionsEnabled(ped, false)
-            addEventHandler("onClientPedDamage", ped, function() cancelEvent() end)
-            entries[t.id] = { ped = ped, def = t, visible = false }
+            local entry = { ped = ped, def = t, visible = false }
+            addEventHandler("onClientPedDamage", ped, function(attacker, _, bodypart)
+                cancelEvent()
+                if attacker ~= localPlayer or not entry.visible or entry.dead then return end
+                -- Una escopeta da varios perdigones al mismo blanco: un aviso por disparo como mucho
+                local now = getTickCount()
+                if entry.lastReport and now - entry.lastReport < 120 then return end
+                entry.lastReport = now
+                triggerServerEvent("rp:range:hitReport", resourceRoot, t.id, bodypart)
+            end)
+            entries[t.id] = entry
         end
     end
     roundStart = getTickCount() + delayMs

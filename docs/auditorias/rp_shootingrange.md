@@ -1,5 +1,17 @@
 # Auditoría de rp_shootingrange
 
+## 2026-11-25 · arreglar · puntería
+- **Motivo** (probado en juego por Fabián): salían headshots sin haber dado ni cerca de la cabeza; el aviso se quedaba en "¡Prepárate! 1" y la siguiente oleada tardaba.
+- **Causas**:
+  - Los impactos se decidían en el servidor con esferas imaginarias, revisando la cabeza primero y con el radio inflado por latencia en blancos móviles (~0,5 m en la cabeza): cubría el pecho.
+  - `indexOf("Prepárate") === 0` sobre un texto que empieza por "¡".
+  - Blancos hasta 3,5 m a los lados: en el carril real quedaban dentro de las paredes y la ronda esperaba el tiempo entero.
+- **Nota**: 100 → 100.
+- **Cambios**:
+  - La parte del cuerpo la da GTA (`onClientPedDamage` del blanco local, bodypart 9 = cabeza, 3-6 = torso, 7/8 = piernas). El servidor la acepta solo si casa con un disparo real registrado (uno por disparo, ventana `HIT_WINDOW_MS`) cuya trayectoria pase a menos de `HIT_MAX_MISS` m del cuerpo del blanco, vivo y activo (SEG-02). Si el aviso llega antes que el disparo, espera en una cola acotada.
+  - "¡Fuego!" aparece al empezar la ronda; desvíos laterales recortados a `LANE_HALF_WIDTH`.
+- **Probar en juego**: disparar al pecho (debe dar Torso), a la cabeza (Cabeza), a las piernas y fallar a propósito al lado de la cabeza (no debe contar).
+
 ## 2026-11-25 · mejorar · foco: munición infinita segura e historial con gráficas
 - **Motivo**: que entrenar no gaste balas reales y que los resultados muestren el progreso histórico.
 - **Nota**: 100 → 100.
