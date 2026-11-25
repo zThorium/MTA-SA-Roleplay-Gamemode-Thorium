@@ -43,9 +43,6 @@ docker/logs/
 **/rp_citizens/telemetry/
 tools/trafico/out/
 
-# Contexto local de Claude (no se sube)
-CLAUDE.md
-
 # Material de Rockstar extraido del juego (mocap de cinematicas): no se sube
 # (los corchetes van escapados: sin "\" git los lee como comodin y la regla no aplica)
 resources/\[roleplay\]/rp_animlab/anims/*.ifp
