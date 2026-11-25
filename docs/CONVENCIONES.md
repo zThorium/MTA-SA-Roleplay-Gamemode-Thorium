@@ -58,7 +58,7 @@ y se comprueban con `scripts/auditar-recurso.sh <recurso>`.
 - Nunca se edita una sentencia ya publicada en `main`; para cambiar una columna se añade otro `ALTER`.
 - Si una falla, se registra en consola y se sigue con la siguiente: revisa la consola tras cambiarlo.
 
-Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank_transactions`, `atms`,
+Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank_transactions`, `atms`, `vending_machines`,
 `phone_notes`, `phone_contacts`, `ride_drivers`, `rides`, `social_posts`, `social_likes`, `properties`,
 `path_nodes`, `path_links`, `clothing_stores`, `character_toys`, `vehicles`, `shops`, `shop_items`,
 `factions`, `faction_ranks`, `faction_members`, `faction_log`, `robbery_stores`,

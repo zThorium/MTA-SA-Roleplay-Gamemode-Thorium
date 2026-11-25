@@ -1324,4 +1324,18 @@ SCHEMA = {
         PRIMARY KEY (contact)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_vending: maquinas expendedoras de bebidas y comida colocadas por admins
+    [[
+    CREATE TABLE IF NOT EXISTS vending_machines (
+        id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        kind      VARCHAR(8)   NOT NULL,
+        x         FLOAT NOT NULL,
+        y         FLOAT NOT NULL,
+        z         FLOAT NOT NULL,
+        rot       FLOAT NOT NULL DEFAULT 0,
+        interior  TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+        dimension SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
