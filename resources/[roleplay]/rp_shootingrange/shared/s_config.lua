@@ -44,19 +44,22 @@ RANGE = {
     },
 
     ROUND_DELAY_MS = 3000,
-    -- Franja donde aparecen los blancos (medida en juego con /pos): `from` = limite izquierdo del
-    -- campo, `to` = limite derecho (~19,1 m). halfWidth = metros de fondo hacia delante/atras de la linea.
-    -- Ningun blanco sale de la franja (margen de 1 m a cada pared).
-    LANE = {
-        from = { x = 292.493, y = -134.273, z = 1004.062 },
-        to   = { x = 273.393, y = -134.473, z = 1004.062 },
-        halfWidth = 1.0,
-    },
+    -- Campo de tiro (rectangulo medido en juego con /pos, posiciones de jugador): profundidad sobre X
+    -- del frente (x 292,49) al fondo (x 273,39) = 19,1 m; ancho sobre Y de la pared izquierda
+    -- (y -144,34) a la derecha (y -126,05) = 18,3 m, vistas desde la cabina. margin = distancia minima
+    -- a las paredes.
+    AREA = { front = 292.493, back = 273.393, left = -144.336, right = -126.051, z = 1004.062, margin = 1.0 },
+    -- Desde la cabina solo se ve lo que cae dentro de este angulo a cada lado de FIRE.rot; un blanco
+    -- que caeria fuera se empuja hacia el fondo (vista mas ancha) y, si hace falta, hacia el centro.
+    VIEW_HALF_ANGLE = 35,
+    MIN_TARGET_DIST = 8.0,      -- ningun blanco mas cerca del tirador que esto
     -- Rondas. Las posiciones las genera rangeBuildRound con ruido Perlin (semilla por sesion): cada
-    -- partida es distinta. La franja se reparte en `count` tramos (sin amontonar ni dejar huecos).
+    -- partida es distinta. El ancho se reparte en `count` tramos (de pared a pared) y la profundidad
+    -- tambien sale del ruido: dispersos en todo el campo, nunca en fila.
     --   static:  `count` blancos quietos
-    --   advance: `count` blancos que cruzan la franja de lado a lado en `dur` s, uno cada `every` s
-    --   lateral: un blanco que va y viene `amp` m cada `period` s; reaparece a los `rearm` s de acertarle
+    --   advance: `count` blancos, cada uno a una profundidad distinta, que cruzan el campo de pared a
+    --            pared en `dur` s, uno cada `every` s
+    --   lateral: un blanco que va y viene `amp` m a lo ancho cada `period` s; reaparece a los `rearm` s
     ROUNDS = {
         { kind = "static",  time = 25, count = 5 },
         { kind = "advance", time = 24, count = 4, dur = 8, every = 3 },

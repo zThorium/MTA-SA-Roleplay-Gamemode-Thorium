@@ -3,12 +3,13 @@
     Geometria de los blancos. El servidor genera las posiciones (rangeBuildRound) y se las manda al
     cliente, que solo las dibuja; el servidor valida los impactos con las mismas funciones.
 
-    La franja de tiro RANGE.LANE va del limite izquierdo (`from`) al derecho (`to`) del campo (medidos
-    en juego con /pos). Un blanco se define con:
-        d = metros desde el limite izquierdo hacia el derecho (0 .. ancho de la franja)
-        l = metros de fondo respecto a la linea (positivo = mas lejos del tirador, recortado a halfWidth)
-    Las posiciones salen de ruido Perlin 1D con una semilla por sesion: cada partida es distinta, pero
-    la franja se divide en tantos tramos como blancos para que no se amontonen ni dejen huecos.
+    El campo es el rectangulo RANGE.AREA (medido en juego con /pos): profundidad del frente al fondo
+    y ancho de la pared izquierda a la derecha (vistas desde la cabina). Un blanco se define con:
+        d = metros desde el frente hacia el fondo   (0 .. profundidad)
+        l = metros desde la pared izquierda          (0 .. ancho)
+    Posiciones con ruido Perlin y semilla por sesion: cada blanco tiene su propio tramo del ancho
+    (repartidos de pared a pared) y una profundidad propia. Si desde la cabina no se veria (fuera del
+    angulo VIEW_HALF_ANGLE), se empuja al fondo, donde la vista es mas ancha, y si hace falta hacia el centro.
 ]]
 
 ----------------------------------------------------------------
@@ -53,42 +54,78 @@ function Perlin:at(x)
 end
 
 ----------------------------------------------------------------
--- Geometria de la franja
+-- Geometria del campo
 ----------------------------------------------------------------
-local laneCache
-function rangeLane()
-    if laneCache then return laneCache end
-    local A, B = RANGE.LANE.from, RANGE.LANE.to
-    local dx, dy = B.x - A.x, B.y - A.y
-    local len = math.sqrt(dx * dx + dy * dy)
-    local ux, uy = dx / len, dy / len
-    -- Normal de la linea que se aleja del tirador (para el "fondo" l)
-    local nx, ny = uy, -ux
+local areaCache
+function rangeArea()
+    if areaCache then return areaCache end
+    local A = RANGE.AREA
     local F = RANGE.FIRE
-    if (A.x - F.x) * nx + (A.y - F.y) * ny < 0 then nx, ny = -nx, -ny end
-    laneCache = { ax = A.x, ay = A.y, ux = ux, uy = uy, nx = nx, ny = ny, len = len, az = A.z, bz = B.z }
-    return laneCache
+    local r = math.rad(F.rot)
+    areaCache = {
+        depth = math.abs(A.back - A.front), width = math.abs(A.right - A.left),
+        sd = A.back >= A.front and 1 or -1, sl = A.right >= A.left and 1 or -1,
+        fx = -math.sin(r), fy = math.cos(r),                         -- hacia donde mira el tirador
+        cosView = math.cos(math.rad(RANGE.VIEW_HALF_ANGLE or 35)),
+        margin = A.margin or 1.0,
+    }
+    return areaCache
+end
+
+-- Posicion del suelo (x, y, z). Profundidad sobre X y ancho sobre Y (la sala esta alineada con los ejes).
+function rangeWorldPos(d, l)
+    local A, G = RANGE.AREA, rangeArea()
+    return A.front + G.sd * d, A.left + G.sl * l, A.z - (RANGE.FEET_OFFSET or 1.0)
+end
+
+-- ¿Se ve desde la cabina? (dentro del angulo de vision y no demasiado cerca)
+function rangeVisible(d, l)
+    local G, F = rangeArea(), RANGE.FIRE
+    local x, y = rangeWorldPos(d, l)
+    local vx, vy = x - F.x, y - F.y
+    local dist = math.sqrt(vx * vx + vy * vy)
+    if dist < (RANGE.MIN_TARGET_DIST or 8) then return false end
+    return (vx * G.fx + vy * G.fy) / dist >= G.cosView
+end
+
+-- Tramo [l1, l2] del ancho que se ve a la profundidad d (o nil si no se ve nada)
+local function visibleSpan(d)
+    local G = rangeArea()
+    local l1, l2
+    for l = G.margin, G.width - G.margin, 0.25 do
+        if rangeVisible(d, l) then l1 = l1 or l; l2 = l end
+    end
+    return l1, l2
+end
+
+-- Ajusta (d, l) hasta que se vea: primero mas al fondo, despues hacia el tramo visible
+local function makeVisible(d, l)
+    local G = rangeArea()
+    local maxD = G.depth - G.margin
+    for _ = 1, 40 do
+        if rangeVisible(d, l) then return d, l end
+        if d < maxD then
+            d = math.min(maxD, d + 0.5)
+        else
+            local l1, l2 = visibleSpan(d)
+            if not l1 then return d, l end
+            return d, math.max(l1, math.min(l2, l))
+        end
+    end
+    return d, l
 end
 
 -- Estado del blanco `t` tras `el` ms desde el inicio de la ronda.
 -- Devuelve activo(bool), d, l. t.at y t.life en ms.
 function rangeTargetState(t, el)
     if el < t.at or el > t.at + t.life then return false end
-    if t.kind == "advance" then                         -- cruza la franja de un lado a otro
+    if t.kind == "advance" then                         -- cruza el campo de pared a pared
         local k = (el - t.at) / t.life
-        return true, t.d0 + (t.d1 - t.d0) * k, t.l
-    elseif t.kind == "lateral" then                     -- oscila a lo largo de la franja
-        return true, t.d + t.amp * math.sin(2 * math.pi * el / (t.period * 1000)), t.l
+        return true, t.d, t.l0 + (t.l1 - t.l0) * k
+    elseif t.kind == "lateral" then                     -- va y viene a lo ancho
+        return true, t.d, t.l + t.amp * math.sin(2 * math.pi * el / (t.period * 1000))
     end
     return true, t.d, t.l
-end
-
--- Posicion del suelo (x, y, z). Los puntos de la franja son posiciones de jugador (~1 m sobre los pies).
-function rangeWorldPos(d, l)
-    local L = rangeLane()
-    local k = L.len > 0 and d / L.len or 0
-    local z = L.az + (L.bz - L.az) * k - (RANGE.FEET_OFFSET or 1.0)
-    return L.ax + L.ux * d + L.nx * l, L.ay + L.uy * d + L.ny * l, z
 end
 
 -- Rotacion Z (MTA) para que un blanco en (x, y) mire hacia la posicion de tiro
@@ -103,47 +140,70 @@ end
 -- noise = rangeNewNoise(semilla de la sesion). Cada ronda lee otra zona del ruido.
 function rangeBuildRound(index, noise)
     local round = RANGE.ROUNDS[index]
-    local L = rangeLane()
-    local len, half = L.len, RANGE.LANE.halfWidth or 1.0
-    local margin = math.min(1.0, len * 0.05)            -- que nadie quede pegado a las paredes
-    local usable = len - margin * 2
-    local base = index * 37.3                           -- zona del ruido de esta ronda
+    local G = rangeArea()
+    local m = G.margin
+    local base = index * 37.3
     local n = math.max(1, round.count or 1)
+    local function u(i, salt) return 0.5 + 0.5 * noise:at(base + i * 1.618 + salt) end   -- [0, 1]
+    local function depthAt(i, salt) return m + (G.depth - 2 * m) * u(i, salt) end
     local out = {}
 
-    -- Tramo i de n: centro del tramo + ruido (hasta un 40 % del tramo a cada lado)
-    local function spread(i, salt)
-        local slot = usable / n
-        return margin + slot * (i - 0.5) + slot * 0.4 * noise:at(base + i * 1.618 + salt)
-    end
-    local function depth(i) return half * noise:at(base + i * 2.71 + 101.7) end
-
-    -- El orden de los tramos se baraja con el ruido: no siempre aparecen de izquierda a derecha
+    -- Orden de aparicion barajado por el ruido
     local order = {}
     for i = 1, n do order[i] = { i = i, k = noise:at(base + i * 3.33 + 55.5) } end
     table.sort(order, function(a, b) return a.k < b.k end)
+
+    -- Hipercubo latino: el tramo de ancho i recibe un tramo de profundidad distinto (barajado por el
+    -- ruido), asi siempre hay blancos cerca, a media distancia y al fondo, y nunca dos en fila.
+    local dRank, ranked = {}, {}
+    for i = 1, n do ranked[i] = { i = i, k = noise:at(base + i * 5.17 + 88.8) } end
+    table.sort(ranked, function(a, b) return a.k < b.k end)
+    for r, e in ipairs(ranked) do dRank[e.i] = r end
+    local function stratifiedDepth(i)
+        local slot = (G.depth - 2 * m) / n
+        return m + slot * (dRank[i] - 0.5) + slot * 0.35 * noise:at(base + i * 2.9 + 21.9)
+    end
 
     for idx, o in ipairs(order) do
         local i = o.i
         local t = { id = idx, kind = round.kind, at = 0, rearm = math.floor((round.rearm or 0) * 1000) }
         if round.kind == "advance" then
-            -- Cruza toda la franja; sentido alterno y salida escalonada
+            -- Cada uno a una profundidad distinta; cruza todo el tramo visible a esa profundidad
+            local d = makeVisible(m + (G.depth - 2 * m) * ((i - 0.5) / n + 0.35 / n * noise:at(base + i * 2.2 + 3.1)), G.width / 2)
+            local l1, l2 = visibleSpan(d)
+            l1, l2 = l1 or G.width / 2, l2 or G.width / 2
             local leftToRight = noise:at(base + i * 4.4 + 9.9) >= 0
-            local a, b = margin + usable * 0.05, len - margin - usable * 0.05
-            t.d0, t.d1 = leftToRight and a or b, leftToRight and b or a
-            t.l = depth(i)
+            t.d, t.l0, t.l1 = d, leftToRight and l1 or l2, leftToRight and l2 or l1
             t.at = math.floor((idx - 1) * (round.every or 3) * 1000)
             t.life = math.floor((round.dur or 8) * 1000)
         elseif round.kind == "lateral" then
-            local amp = math.min(round.amp or 4, usable / 2 - 0.5)
-            t.d = math.max(margin + amp, math.min(len - margin - amp, spread(i, 7.7)))
-            t.amp, t.period, t.l = amp, round.period or 4, depth(i)
+            local d = makeVisible(depthAt(i, 7.7), G.width / 2)
+            local l1, l2 = visibleSpan(d)
+            l1, l2 = l1 or G.width / 2, l2 or G.width / 2
+            local amp = math.min(round.amp or 4, (l2 - l1) / 2)
+            t.d, t.amp, t.period = d, amp, round.period or 4
+            t.l = l1 + amp + (l2 - l1 - 2 * amp) * u(i, 12.3)
             t.life = round.time * 1000
         else
-            t.d, t.l = spread(i, 0), depth(i)
+            -- Tramo propio del ancho (de pared a pared) + profundidad propia
+            local slot = (G.width - 2 * m) / n
+            local l = m + slot * (i - 0.5) + slot * 0.4 * noise:at(base + i * 1.618)
+            t.d, t.l = makeVisible(stratifiedDepth(i), l)
             t.life = round.time * 1000
         end
         out[idx] = t
+    end
+
+    -- Que dos blancos fijos no queden pegados (uno tapando al otro): se separan en profundidad
+    if round.kind == "static" then
+        for a = 1, #out do
+            for b = a + 1, #out do
+                local A, B = out[a], out[b]
+                if math.abs(A.l - B.l) < 1.5 and math.abs(A.d - B.d) < 2 then
+                    B.d = math.min(G.depth - m, A.d + 2.5)
+                end
+            end
+        end
     end
     return out
 end
