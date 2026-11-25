@@ -2,6 +2,9 @@
 
 Patrones que ya usa el gamemode. Copia el estilo del recurso más parecido antes de inventar uno nuevo.
 
+Las reglas exigibles (con ID, gravedad y verificación) están en [`ESTANDAR_RECURSOS.md`](ESTANDAR_RECURSOS.md)
+y se comprueban con `scripts/auditar-recurso.sh <recurso>`.
+
 ## Recurso nuevo
 
 1. Carpeta `resources/[roleplay]/rp_<sistema>/` con `server/`, `client/`, `shared/`, `html/` según haga falta.

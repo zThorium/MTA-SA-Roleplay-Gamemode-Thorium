@@ -18,8 +18,13 @@ Archivos de apoyo (léelos cuando la fase lo pida, no todos de golpe):
 | [`referencia/REGISTROS.md`](referencia/REGISTROS.md) | Lo que está "ocupado": dimensiones, teclas, elementData, blips, niveles de admin, orden de arranque |
 | [`plantillas/`](plantillas/) | `meta.xml`, `s_config.lua`, `s_main.lua`, `c_main.lua` y prueba de `rp_test` listos para copiar |
 
-Skills hermanas: **migracion-bd** (tablas), **interfaz-cef** (paneles HTML), **comando-admin**
-(cualquier `/comando` y elementos que colocan los admins), **crear-mision** (todo lo de `rp_missions`).
+**Estándar**: todo recurso cumple [`docs/ESTANDAR_RECURSOS.md`](../../../docs/ESTANDAR_RECURSOS.md)
+(reglas con ID: `SEG-01`, `BD-02`...) y se comprueba con `scripts/auditar-recurso.sh rp_x`. Esta skill
+dice **cómo** cumplirlo al crear; el estándar dice **qué** se exige.
+
+Skills hermanas: **mejorar-recurso** y **arreglar-recurso** (recursos que ya existen),
+**migracion-bd** (tablas), **interfaz-cef** (paneles HTML), **comando-admin** (cualquier `/comando`
+y elementos que colocan los admins), **crear-mision** (todo lo de `rp_missions`).
 
 ---
 
@@ -180,9 +185,13 @@ Repasa esta lista; cada "sí" es una línea de código que falta:
    si tiene reglas de diseño que no caben en una fila.
 5. Si ocupas dimensión, tecla, elementData o blip nuevos, **actualiza `referencia/REGISTROS.md`** de esta skill.
 6. Si exportas algo, añádelo a `referencia/API.md`.
+7. **Auditoría**: `scripts/auditar-recurso.sh rp_sistema` con **0 FALLA [B]** y revisión de las reglas
+   manuales; crea `docs/auditorias/rp_sistema.md` con la entrada de tipo `crear` (formato en el
+   estándar) y el informe `--md` dentro de `<details>`.
 
 ## Checklist final antes del PR
 
+- [ ] `scripts/auditar-recurso.sh rp_sistema` sin FALLA [B]; reglas manuales B (SEG-02, SEG-04, BD-06, PRU-02) revisadas.
 - [ ] Rama `feat/rp-sistema` desde `main` actualizado; commits y PR en español contando qué cambia en el juego.
 - [ ] Ningún `dbConnect`, ningún SQL concatenado, ningún `dbPoll(qh, -1)` fuera de un export justificado.
 - [ ] Todo evento remoto usa `client`, convierte y acota argumentos, tiene cooldown y revalida cercanía/estado.
