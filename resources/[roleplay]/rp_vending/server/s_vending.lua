@@ -216,7 +216,7 @@ end)
 ----------------------------------------------------------------
 local function spawnMachine(row)
     local t = VENDING.TYPES[row.kind]
-    local obj = createObject(t.model, row.x, row.y, row.z + t.zOffset, 0, 0, row.rot)
+    local obj = createObject(t.model, row.x, row.y, row.z + t.zOffset, 0, 0, (row.rot + (t.rotOffset or 0)) % 360)
     setElementInterior(obj, row.interior)
     setElementDimension(obj, row.dimension)
     setElementFrozen(obj, true)
