@@ -123,3 +123,36 @@ h1::after { content: ""; display: block; width: 38px; height: 3px; margin-top: 4
 }
 .toast.show { animation: pop .8s ease-out; }
 @keyframes pop { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -28px); } }
+
+/* ---------------- Resultados: progreso historico (graficas SVG) ----------------
+   Paleta de datos (dataviz, modo oscuro): una serie por grafica, sin leyenda; azul #338ced,
+   cuadricula #303030, eje #474747, texto #efefef / #9c9c9c, sube #53c556, baja #eb6263. */
+#results { width: min(980px, 96vw); height: min(740px, 94vh); overflow-y: auto; }
+#results::-webkit-scrollbar { width: 6px; }
+#results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.history { display: flex; flex-direction: column; gap: 10px; }
+.history h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kpi { padding: 10px 12px; border-radius: 10px; background: var(--surface); }
+.kpi small { display: block; color: #9c9c9c; font-size: 12px; }
+.kpi b { font-size: 20px; color: #efefef; }
+.kpi .delta { font-size: 12px; font-weight: 700; margin-left: 6px; }
+.kpi .delta.up { color: #53c556; } .kpi .delta.down { color: #eb6263; } .kpi .delta.flat { color: #9c9c9c; }
+.charts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.chart { position: relative; margin: 0; padding: 10px 10px 6px; border-radius: 10px; background: rgba(25, 25, 25, .85); border: 1px solid rgba(255, 255, 255, .08); }
+.chart figcaption { font-size: 12px; font-weight: 600; color: #efefef; margin-bottom: 4px; }
+.chart figcaption small { color: #9c9c9c; font-weight: 400; margin-left: 4px; }
+.chart .plot { position: relative; height: 150px; }
+.chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.chart .axis-text { fill: #9c9c9c; font-size: 10px; font-family: "Segoe UI", Arial, sans-serif; }
+.chart .value-text { fill: #efefef; font-size: 11px; font-weight: 700; font-family: "Segoe UI", Arial, sans-serif; }
+.chart .empty-text { fill: #9c9c9c; font-size: 11px; font-family: "Segoe UI", Arial, sans-serif; }
+.chart .hit { fill: transparent; cursor: default; }
+.tip {
+    position: absolute; z-index: 5; pointer-events: none; padding: 6px 8px; border-radius: 6px; white-space: nowrap;
+    background: #0b0b0b; border: 1px solid rgba(255, 255, 255, .12); color: #efefef; font-size: 11px; line-height: 1.4;
+    transform: translate(-50%, -110%); opacity: 0; transition: opacity .08s;
+}
+.tip.show { opacity: 1; }
+.tip b { color: #fff; }
+#hist-note { font-size: 12px; }
