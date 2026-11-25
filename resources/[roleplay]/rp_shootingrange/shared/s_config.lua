@@ -43,33 +43,32 @@ RANGE = {
         { key = "legs",  name = "Piernas", z = 0.50, r = 0.28, points = 25, gain = 2 },
     },
 
-    -- Pantalla de rondas (como el original: 1 estaticos, 2 avanzan, 3 lateral)
     ROUND_DELAY_MS = 3000,
-    -- Carril de los blancos (medido en juego con /pos, posiciones de jugador en el centro del carril):
-    -- `from` = donde empiezan (lo mas cerca del tirador), `to` = fondo de la sala (~19,1 m).
-    -- Ningun blanco sale del carril: d se recorta a [0, largo] y l a [-halfWidth, halfWidth].
+    -- Franja donde aparecen los blancos (medida en juego con /pos): `from` = limite izquierdo del
+    -- campo, `to` = limite derecho (~19,1 m). halfWidth = metros de fondo hacia delante/atras de la linea.
+    -- Ningun blanco sale de la franja (margen de 1 m a cada pared).
     LANE = {
         from = { x = 292.493, y = -134.273, z = 1004.062 },
         to   = { x = 273.393, y = -134.473, z = 1004.062 },
         halfWidth = 1.0,
     },
-    -- Rondas: d = metros desde el inicio del carril hacia el fondo; l = metros a la derecha del centro.
+    -- Rondas. Las posiciones las genera rangeBuildRound con ruido Perlin (semilla por sesion): cada
+    -- partida es distinta. La franja se reparte en `count` tramos (sin amontonar ni dejar huecos).
+    --   static:  `count` blancos quietos
+    --   advance: `count` blancos que cruzan la franja de lado a lado en `dur` s, uno cada `every` s
+    --   lateral: un blanco que va y viene `amp` m cada `period` s; reaparece a los `rearm` s de acertarle
     ROUNDS = {
-        { kind = "static", time = 25, targets = {
-            { d = 1, l = -0.5 }, { d = 5, l = 0.6 }, { d = 9, l = -0.3 }, { d = 13, l = 0.7 }, { d = 17, l = 0 } } },
-        { kind = "advance", time = 24, targets = {
-            { d0 = 19, d1 = 1, l = -0.6, at = 0, dur = 8 }, { d0 = 19, d1 = 1, l = 0.6, at = 3, dur = 8 },
-            { d0 = 19, d1 = 1, l = 0, at = 6, dur = 8 }, { d0 = 19, d1 = 1, l = -0.3, at = 9, dur = 8 } } },
-        { kind = "lateral", time = 15, targets = {
-            { d = 10, amp = 1.0, period = 4, rearm = 0.6 } } },
+        { kind = "static",  time = 25, count = 5 },
+        { kind = "advance", time = 24, count = 4, dur = 8, every = 3 },
+        { kind = "lateral", time = 15, count = 1, amp = 4, period = 4, rearm = 0.6 },
     },
 
-    -- Categorias de arma: escala de la distancia en el carril (escopeta mas cerca del inicio, fusil mas al fondo)
+    -- Categorias de arma (nombre en el menu)
     CATEGORIES = {
-        pistol  = { name = "Pistolas",   dist = 1.0 },
-        smg     = { name = "Subfusiles", dist = 1.0 },
-        shotgun = { name = "Escopetas",  dist = 0.6 },
-        rifle   = { name = "Fusiles",    dist = 1.3 },
+        pistol  = { name = "Pistolas" },
+        smg     = { name = "Subfusiles" },
+        shotgun = { name = "Escopetas" },
+        rifle   = { name = "Fusiles" },
     },
 
     -- Municion de entrenamiento: dentro del campo el arma tiene balas "infinitas" que NO salen del

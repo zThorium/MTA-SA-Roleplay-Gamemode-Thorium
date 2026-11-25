@@ -7,7 +7,7 @@
     "use strict";
     var $ = function (id) { return document.getElementById(id); };
     var data = null, filter = "all", roundEnd = 0, roundStart = 0, timer = null, kindNames = {
-        static: "Blancos fijos", advance: "Blancos que avanzan", lateral: "Blanco lateral"
+        static: "Blancos fijos", advance: "Blancos que cruzan", lateral: "Blanco en movimiento"
     };
 
     function send() {

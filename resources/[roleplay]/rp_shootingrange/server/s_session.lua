@@ -78,7 +78,7 @@ local function hudData(s)
 end
 
 local function sendRound(p, s)
-    s.targets = rangeBuildRound(s.round, s.category)
+    s.targets = rangeBuildRound(s.round, s.noise)   -- posiciones con ruido Perlin de la sesion
     s.pending = {}   -- impactos sin casar de la ronda anterior no cuentan en esta
     local round = RANGE.ROUNDS[s.round]
     local now = getTickCount()
@@ -207,6 +207,7 @@ function startSession(p, itemId)
     local s = {
         itemId = itemId, def = def, weapon = def.weapon, stat = w.stat, category = w.category,
         shots = 0, hits = 0, score = 0, skill0 = stat0, skill = stat0, gain = 0, round = 0, t0 = 0, t1 = 0, targets = {}, shotLog = {}, pending = {},
+        noise = rangeNewNoise(math.random(1, 1000000) + getTickCount()),   -- semilla propia: cada sesion es distinta
     }
     ps.session = s
     send(p, "rp:range:start", { weapon = def.name, rounds = #RANGE.ROUNDS, hud = hudData(s), dailyRoom = clientRoom(ps) })
