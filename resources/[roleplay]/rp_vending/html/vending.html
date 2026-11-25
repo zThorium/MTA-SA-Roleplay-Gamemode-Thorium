@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Expendedora</title>
+    <link rel="stylesheet" href="vending.css">
+</head>
+<body>
+    <!-- Menu de la maquina: elegir producto -->
+    <section id="menu" class="machine hidden">
+        <header>
+            <div class="logo" id="m-logo">🥤</div>
+            <div>
+                <div class="who" id="m-title">Expendedora</div>
+                <div class="speech">Elige un producto</div>
+            </div>
+            <button type="button" class="close" id="m-close" title="Cerrar">×</button>
+        </header>
+        <div class="products" id="m-products"></div>
+        <footer>
+            <small id="m-wallet">Llevas $0 en efectivo.</small>
+            <span class="keys-hint"><kbd>1-9</kbd> elegir · <kbd>Esc</kbd> salir</span>
+        </footer>
+    </section>
+
+    <!-- Pago con datafono (mismo minijuego que la bencinera) -->
+    <section id="pay" class="pay hidden">
+        <div class="wallet">
+            <h2>Tu billetera</h2>
+            <p class="hint" id="p-hint">Arrastra tu tarjeta a la ranura del datafono y deslízala hacia la derecha.</p>
+            <div id="p-cards" class="cards"></div>
+            <button type="button" class="btn cash" id="p-cash">Pagar en efectivo</button>
+            <button type="button" class="btn back" id="p-back">Cancelar <kbd>Esc</kbd></button>
+        </div>
+        <div class="pos" id="pos">
+            <div class="printer"><div class="paper" id="p-paper"></div></div>
+            <div class="groove" id="p-groove"><span>⟶ DESLICE</span></div>
+            <div class="brand">THORIUM<b>PAY</b></div>
+            <div class="screen">
+                <div class="line small" id="p-station">EXPENDEDORA</div>
+                <div class="line big" id="p-amount">$0</div>
+                <div class="line" id="p-status">DESLICE LA TARJETA</div>
+                <div class="line pin" id="p-pin"></div>
+            </div>
+            <div class="keys" id="p-keys"></div>
+        </div>
+    </section>
+
+    <script src="vending.js"></script>
+</body>
+</html>

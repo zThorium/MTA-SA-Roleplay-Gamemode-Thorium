@@ -42,6 +42,37 @@ ITEMS = {
         description = "Cafe cargado. Quita el cansancio.",
         use = { energy = 35, thirst = 5, message = "Te tomas el cafe y te despejas." },
     },
+    -- Expendedoras (rp_vending)
+    soda_sprunk = {
+        name = "Lata de Sprunk", icon = "🥤", weight = 0.35, stack = 10, consumable = true,
+        description = "Refresco de lima-limon bien frio. Quita la sed.",
+        use = { thirst = 30, message = "Abres la lata de Sprunk y te la tomas." },
+    },
+    soda_ecola = {
+        name = "Lata de eCola", icon = "🥤", weight = 0.35, stack = 10, consumable = true,
+        description = "Cola con mucha azucar. Quita la sed y despierta un poco.",
+        use = { thirst = 28, energy = 5, message = "Te tomas la eCola de un trago." },
+    },
+    energy_drink = {
+        name = "Bebida energetica", icon = "⚡", weight = 0.35, stack = 6, consumable = true,
+        description = "Lata de energetica. Quita el cansancio y algo de sed.",
+        use = { energy = 30, thirst = 12, message = "Te tomas la energetica y se te pasa el sueno." },
+    },
+    snack_chips = {
+        name = "Papas fritas", icon = "🥔", weight = 0.15, stack = 10, consumable = true,
+        description = "Bolsa de papas fritas. Quita algo de hambre (y da sed).",
+        use = { hunger = 22, thirst = -4, message = "Te comes la bolsa de papas fritas." },
+    },
+    snack_chocolate = {
+        name = "Barra de chocolate", icon = "🍫", weight = 0.1, stack = 10, consumable = true,
+        description = "Chocolate con mani. Quita algo de hambre y da energia.",
+        use = { hunger = 15, energy = 8, message = "Te comes la barra de chocolate." },
+    },
+    snack_cookies = {
+        name = "Galletas", icon = "🍪", weight = 0.2, stack = 10, consumable = true,
+        description = "Paquete de galletas. Quita el hambre.",
+        use = { hunger = 28, thirst = -3, message = "Te comes el paquete de galletas." },
+    },
     medkit = {
         name = "Botiquin", icon = "🩹", weight = 1.0, stack = 3, consumable = true,
         description = "Kit de primeros auxilios. Restaura toda la salud.",

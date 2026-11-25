@@ -41,7 +41,7 @@ ADMIN_CATALOG = {
             { cmd = "/darxptrabajo", args = "<id o nombre> <xp>", desc = "Suma experiencia al jugador en su trabajo actual (sube de nivel y de pago).", res = "rp_jobs" },
             { cmd = "/crearatm", args = "", desc = "Coloca un cajero automatico 1 m delante de ti, en tu interior y dimension.", res = "rp_bank" },
             { cmd = "/borraratm", args = "<id>", desc = "Elimina un cajero automatico.", res = "rp_bank" },
-            { cmd = "/crearexpendedora", args = "<bebida|comida>", desc = "Marca una maquina expendedora en tu posicion (parado frente a ella): bebida sube sed, comida sube hambre.", res = "rp_vending" },
+            { cmd = "/crearexpendedora", args = "<bebida|comida>", desc = "Coloca una maquina expendedora delante de ti, mirandote: bebida (Sprunk) o comida (snacks). Vende productos que van al inventario.", res = "rp_vending" },
             { cmd = "/borrarexpendedora", args = "<id>", desc = "Elimina una expendedora.", res = "rp_vending" },
             { cmd = "/expendedoras", args = "", desc = "Lista las expendedoras con id, tipo y posicion.", res = "rp_vending" },
         },
