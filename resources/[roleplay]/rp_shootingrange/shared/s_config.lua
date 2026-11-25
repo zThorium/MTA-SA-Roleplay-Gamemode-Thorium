@@ -27,7 +27,9 @@ RANGE = {
     MARKER = { r = 245, g = 165, b = 36, a = 120, size = 1.0 },
 
     -- Blancos: peds locales de cada jugador (skin) con zonas de impacto (esferas, alturas desde los pies)
-    TARGET_SKIN = 0,
+    -- Skins de los blancos (al azar): pandilleros Ballas, Vagos y Aztecas. El 0 es el cuerpo de CJ
+    -- sin ropa y se veia negro. Solo es visual: los impactos usan RANGE.ZONES.
+    TARGET_SKINS = { 102, 103, 104, 108, 109, 110, 114, 115, 116 },
     LAG_S = 0.15,               -- holgura por latencia en los blancos que se mueven
     SHOT_MAX_FROM_PLAYER = 6.0, -- el origen del disparo debe estar cerca del jugador
     ZONES = {                   -- orden = prioridad

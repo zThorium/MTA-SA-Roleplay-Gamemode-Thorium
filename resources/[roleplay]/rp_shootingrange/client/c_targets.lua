@@ -16,7 +16,8 @@ function rangeTargetsStart(targets, delayMs)
     local dim, int = getElementDimension(localPlayer), getElementInterior(localPlayer)
     for _, t in ipairs(targets) do
         local x, y, z = rangeWorldPos(t.d or t.d0, t.l or 0)
-        local ped = createPed(RANGE.TARGET_SKIN, x, y, z + 1.0, RANGE.FIRE.rot + 180)
+        local skins = RANGE.TARGET_SKINS
+        local ped = createPed(skins[math.random(#skins)], x, y, z + 1.0, RANGE.FIRE.rot + 180)
         if ped then
             setElementDimension(ped, dim)
             setElementInterior(ped, int)

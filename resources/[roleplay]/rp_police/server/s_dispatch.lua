@@ -121,6 +121,8 @@ addEventHandler("rp:pol:shot", resourceRoot, function(weapon)
     weapon = tonumber(weapon)
     if not weapon or weapon < 22 or weapon > 38 or weapon == 23 or not charOf(p) then return end
     if getPedWeapon(p) ~= weapon or isOnDuty(p) then return end
+    -- Busqueda suspendida (campo de tiro, mision): disparos que no son delito, sin aviso ni casquillos
+    if exports.rp_wanted:isWantedSuspended(p) then return end
     local x, y, z = getElementPosition(p)
     addCasing(p, weapon, x, y, z)
     local now = getTickCount()

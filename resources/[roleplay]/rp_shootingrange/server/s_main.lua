@@ -72,9 +72,11 @@ local function exitRange(p)
         setElementInterior(p, RANGE.STORE_INTERIOR, D.x, D.y, D.z)
         setElementDimension(p, storeDim(loc))
         exports.rp_ammunation:resumeWeapons(p, ps.prevItem)
+        -- Solo se reactiva la busqueda si la suspendimos nosotros (no pisar la de una mision)
+        if ps.wantedSuspended then exports.rp_wanted:setWantedSuspended(p, false) end
         triggerClientEvent(p, "rp:range:close", resourceRoot)
     end
-    ps.prevItem = nil
+    ps.prevItem, ps.wantedSuspended = nil, nil
 end
 
 local function enterRange(p, ps, loc)
@@ -86,6 +88,11 @@ local function enterRange(p, ps, loc)
     usedDims[slot] = true
     ps.dim, ps.loc, ps.inside = slot, loc, true
     ps.prevItem = exports.rp_ammunation:suspendWeapons(p)
+    -- Disparar a los blancos (peds) no es delito: sin estrellas ni aviso de disparos a la policia
+    if not exports.rp_wanted:isWantedSuspended(p) then
+        exports.rp_wanted:setWantedSuspended(p, true)
+        ps.wantedSuspended = true
+    end
     local F = RANGE.FIRE
     setElementInterior(p, RANGE.INTERIOR, F.x, F.y, F.z)
     setElementDimension(p, slot)

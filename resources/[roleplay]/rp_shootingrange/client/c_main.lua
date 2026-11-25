@@ -68,7 +68,9 @@ addEventHandler("rp:range:menu", resourceRoot, function(data)
 end)
 
 addEventHandler("rp:range:start", resourceRoot, function(info)
-    training = true
+    -- La sesion solo empieza dentro del campo: sin esto "Salir" en los resultados solo cerraba la
+    -- ventana (inside seguia en false desde el menu del mostrador) y el jugador quedaba dentro.
+    inside, training = true, true
     interactiveUI(false)
     callJS(("RP.start(%s)"):format(json(info)))
 end)

@@ -153,6 +153,9 @@ Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
 Repasa esta lista; cada "sí" es una línea de código que falta:
 
 - [ ] ¿Es delito? → `exports.rp_wanted:reportCrime(p, clave, victima, dontCare, witnessed)` o `setWantedLevel`.
+- [ ] ¿Se dispara o pelea **sin** que sea delito (campo de tiro, minijuego, instancia)? → `exports.rp_wanted:setWantedSuspended(p, true)`
+      al entrar y `false` al salir **solo si la suspendiste tú** (no pises la de una misión). Con eso
+      tampoco hay aviso de disparos de `rp_police`. (Caso real: `rp_shootingrange`.)
 - [ ] ¿Debe enterarse la policía? → `exports.rp_police:dispatchAlert(clave, x, y, z, extra, jugador)`
       (claves de `POLICE_CODES` en `rp_police`; si necesitas una nueva, añádela allí).
 - [ ] ¿Requiere licencia/DNI? → `rp_driving:hasDriverLicense`, `rp_agency:hasPlayerDNI`.
