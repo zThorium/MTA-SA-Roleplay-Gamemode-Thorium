@@ -18,7 +18,7 @@ function rangeTargetsStart(targets, delayMs)
     for _, t in ipairs(targets) do
         local x, y, z = rangeWorldPos(t.d or t.d0, t.l or 0)
         local skins = RANGE.TARGET_SKINS
-        local ped = createPed(skins[math.random(#skins)], x, y, z + 1.0, RANGE.FIRE.rot + 180)
+        local ped = createPed(skins[math.random(#skins)], x, y, z + 1.0, rangeFacing(x, y))
         if ped then
             setElementDimension(ped, dim)
             setElementInterior(ped, int)
@@ -58,6 +58,7 @@ addEventHandler("onClientRender", root, function()
             if active then
                 local x, y, z = rangeWorldPos(d, l)
                 setElementPosition(e.ped, x, y, z + 1.0)
+                setElementRotation(e.ped, 0, 0, rangeFacing(x, y), "default", true)   -- siempre mirando al tirador
             end
             if active ~= e.visible then
                 e.visible = active

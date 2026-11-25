@@ -3,8 +3,8 @@
 
     FIRE (posicion de tiro, interior 7) y DESK (marcador de entrada, interior 4) tomados en juego
     con /pos el 2026-11-25 en el Ammu-Nation Market. Son posiciones de JUGADOR: su z esta ~1 m
-    sobre el suelo (FEET_OFFSET lo descuenta para los blancos). La linea de blancos sale en la
-    direccion a la que mira FIRE.rot.
+    sobre el suelo (FEET_OFFSET lo descuenta para los blancos). Los blancos van por el carril LANE
+    (tambien medido en juego) y miran hacia FIRE; FIRE.rot solo orienta al jugador al entrar.
     Para otra armeria con campo: anadir una fila a LOCATIONS (id = el de rp_ammunation).
 ]]
 RANGE = {
@@ -45,28 +45,26 @@ RANGE = {
 
     -- Pantalla de rondas (como el original: 1 estaticos, 2 avanzan, 3 lateral)
     ROUND_DELAY_MS = 3000,
-    -- Medio ancho del carril de tiro (m). Todo desvio lateral (l) y la amplitud del blanco lateral se
-    -- recortan a esto en rangeBuildRound: un blanco fuera del carril queda dentro de la pared de la
-    -- cabina, no se puede acertar y la ronda espera el tiempo entero.
-    LANE_HALF_WIDTH = 1.2,
-    -- Desde la cabina se ve como por un embudo: cerca solo el centro del carril, lejos mas ancho.
-    -- Desvio lateral maximo = distancia * VIEW_CONE (y nunca mas que LANE_HALF_WIDTH): a 6 m caben
-    -- 0,45 m, a 16 m ya los 1,2 m. Ningun blanco mas cerca de MIN_TARGET_DIST (las paredes de la
-    -- cabina lo tapan; la escopeta acerca los blancos al 60 %).
-    VIEW_CONE = 0.075,
-    MIN_TARGET_DIST = 6.0,
-    MAX_TARGET_DIST = 24.0,     -- fondo del campo (ningun blanco dentro de la pared del fondo; el fusil escala x1,3)
+    -- Carril de los blancos (medido en juego con /pos, posiciones de jugador en el centro del carril):
+    -- `from` = donde empiezan (lo mas cerca del tirador), `to` = fondo de la sala (~19,1 m).
+    -- Ningun blanco sale del carril: d se recorta a [0, largo] y l a [-halfWidth, halfWidth].
+    LANE = {
+        from = { x = 292.493, y = -134.273, z = 1004.062 },
+        to   = { x = 273.393, y = -134.473, z = 1004.062 },
+        halfWidth = 1.0,
+    },
+    -- Rondas: d = metros desde el inicio del carril hacia el fondo; l = metros a la derecha del centro.
     ROUNDS = {
         { kind = "static", time = 25, targets = {
-            { d = 6, l = -1.0 }, { d = 9, l = 0.8 }, { d = 12, l = -0.4 }, { d = 15, l = 1.0 }, { d = 18, l = 0 } } },
+            { d = 1, l = -0.5 }, { d = 5, l = 0.6 }, { d = 9, l = -0.3 }, { d = 13, l = 0.7 }, { d = 17, l = 0 } } },
         { kind = "advance", time = 24, targets = {
-            { d0 = 24, d1 = 5, l = -0.8, at = 0, dur = 8 }, { d0 = 24, d1 = 5, l = 0.8, at = 3, dur = 8 },
-            { d0 = 24, d1 = 5, l = 0, at = 6, dur = 8 }, { d0 = 24, d1 = 5, l = -0.4, at = 9, dur = 8 } } },
+            { d0 = 19, d1 = 1, l = -0.6, at = 0, dur = 8 }, { d0 = 19, d1 = 1, l = 0.6, at = 3, dur = 8 },
+            { d0 = 19, d1 = 1, l = 0, at = 6, dur = 8 }, { d0 = 19, d1 = 1, l = -0.3, at = 9, dur = 8 } } },
         { kind = "lateral", time = 15, targets = {
-            { d = 14, amp = 1.2, period = 4, rearm = 0.6 } } },
+            { d = 10, amp = 1.0, period = 4, rearm = 0.6 } } },
     },
 
-    -- Categorias de arma: escala de distancia de los blancos
+    -- Categorias de arma: escala de la distancia en el carril (escopeta mas cerca del inicio, fusil mas al fondo)
     CATEGORIES = {
         pistol  = { name = "Pistolas",   dist = 1.0 },
         smg     = { name = "Subfusiles", dist = 1.0 },
