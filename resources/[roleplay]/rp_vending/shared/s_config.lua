@@ -19,7 +19,7 @@ VENDING = {
 
     TYPES = {
         drink = {
-            label = "bebida", name = "Expendedora Sprunk", model = 955, zOffset = 0.6, rotOffset = 180,
+            label = "bebida", name = "Expendedora Sprunk", model = 955, zOffset = 0.4, rotOffset = 180,
             products = {
                 { item = "soda_sprunk",  price = 3 },
                 { item = "soda_ecola",   price = 3 },
@@ -28,7 +28,7 @@ VENDING = {
             },
         },
         food = {
-            label = "comida", name = "Expendedora de snacks", model = 956, zOffset = 0.6, rotOffset = 180,
+            label = "comida", name = "Expendedora de snacks", model = 956, zOffset = 0.4, rotOffset = 180,
             products = {
                 { item = "snack_chips",     price = 4 },
                 { item = "snack_chocolate", price = 4 },
