@@ -619,17 +619,24 @@ end)
 -- Admin
 ----------------------------------------------------------------
 addCommandHandler("busqueda", function(admin, _, query, level)
-    if not isAdmin(admin) then return end
-    local target = query and exports.rp_ids:findPlayer(query)
-    if not target then return notify(admin, "Uso: /busqueda <jugador> [0-6]", "info") end
+    if not isAdmin(admin) then return notify(admin, "No tienes permiso para usar este comando.", "error") end
+    if not query then return notify(admin, "Uso: /busqueda <id o nombre> [0-6] (sin nivel: ver; 0: quitar estrellas)", "warning") end
+    local target = exports.rp_ids:findPlayer(query)
+    if not target then return notify(admin, "No se encontró un único jugador con ese nombre o ID.", "warning") end
+    local who = ("%s (ID %s)"):format(displayName(target), tostring(exports.rp_ids:getPlayerId(target) or "?"))
+    local before = getWantedLevel(target)
     if not level then
-        return outputChatBox(("%s: %d estrellas, %d puntos de caos."):format(displayName(target), getWantedLevel(target), getWantedChaos(target)), admin, 245, 165, 36)
+        outputChatBox(("Búsqueda de %s:"):format(who), admin, 245, 165, 36)
+        outputChatBox(("  Estrellas: %d de 6  |  Caos: %d"):format(before, getWantedChaos(target)), admin, 255, 255, 255)
+        return
     end
-    if not characterOf(target) then return notify(admin, "Ese jugador no tiene un personaje activo.", "error") end
+    if not characterOf(target) then return notify(admin, who .. " no tiene un personaje activo.", "error") end
     level = tonumber(level)
-    if not level or level < 0 or level > WANTED.MAX_LEVEL then return notify(admin, "Nivel de 0 a 6.", "error") end
+    if not level or level < 0 or level > WANTED.MAX_LEVEL or level ~= math.floor(level) then
+        return notify(admin, "El nivel va de 0 a 6. Usa 0 para quitar las estrellas.", "warning")
+    end
     setWantedLevel(target, level)
-    notify(admin, ("%s ahora tiene %d estrellas."):format(displayName(target), level), "success")
+    notify(admin, ("%s: %d → %d estrellas."):format(who, before, level), "success")
 end)
 
 -- Diagnostico para cualquier jugador: estrellas, caos y si cuenta como policia de servicio
