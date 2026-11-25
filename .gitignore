@@ -45,3 +45,10 @@ tools/trafico/out/
 
 # Contexto local de Claude (no se sube)
 CLAUDE.md
+
+# Material de Rockstar extraido del juego (mocap de cinematicas): no se sube
+resources/[roleplay]/rp_animlab/anims/*.ifp
+resources/[roleplay]/rp_mocap/anims/*.ifp
+resources/[roleplay]/rp_animlab/anims/*.cut.txt
+resources/[roleplay]/rp_missions/audio/*.mp3
+resources/[roleplay]/rp_missions/audio/*.wav

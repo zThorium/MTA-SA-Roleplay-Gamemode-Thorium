@@ -65,7 +65,7 @@ function putAttachedElementsOnBones()
 				-- siendo una rotacion valida).
 				-- Mientras se entrena en el gimnasio (rp:gym) se omite: tumbado en el banco o sobre la bici el eje X
 				-- cambia de sentido de forma legitima y esta correccion era la que daba vuelta la cabeza.
-				if bone == 2 and xx == xx and xy == xy and xz == xz and getElementData(ped,"rp:gym") ~= true then
+				if bone == 2 and xx == xx and xy == xy and xz == xz and getElementData(ped,"rp:gym") ~= true and getElementData(ped,"rp:noNeckFix") ~= true then
 					local _,_,prz = getElementRotation(ped)
 						local d = xx*math.cos(math.rad(prz)) + xy*math.sin(math.rad(prz))
 						if neckSign == nil and not isPedDucked(ped) and getPedMoveState(ped) == "stand" and getPedTask(ped,"secondary",0) ~= "TASK_SIMPLE_USE_GUN" and math.abs(d) > 0.5 then

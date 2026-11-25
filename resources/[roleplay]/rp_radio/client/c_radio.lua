@@ -19,6 +19,7 @@ local pendingJS = {}
 local volume = 0.6          -- volumen local (0..1)
 local sounds = {}           -- [vehicle] = { sound = elemento, station = id, own = bool }
 local failedUntil = {}      -- [vehicle] = tick hasta el que no se reintenta
+local suppressed = {}       -- motivos activos que silencian toda la radio (ver setRadioSuppressed)
 
 ----------------------------------------------------------------
 -- Reproduccion
@@ -71,6 +72,7 @@ local function citizenRadioAllowed(vehicle)
 end
 
 local function refreshVehicle(vehicle, mine)
+    if next(suppressed) then stopSound(vehicle) return end
     local stationId = getElementData(vehicle, RADIO_DATA_KEY)
     local info = sounds[vehicle]
     if not mine and stationId and getElementData(vehicle, "rp:citizen") and not citizenRadioAllowed(vehicle) then
@@ -155,6 +157,7 @@ local function pushState()
 end
 
 local function openPanel()
+    if next(suppressed) then exports.rp_notify:notify("La radio no funciona durante las misiones.", "warning") return end
     if isElement(browserGui) then return end
     if not canControl() then return end
     browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
@@ -206,6 +209,7 @@ addEventHandler("onClientPlayerVehicleExit", localPlayer, closePanel)
 -- Cambio rapido con las teclas de radio de GTA
 ----------------------------------------------------------------
 local function cycle(dir)
+    if next(suppressed) then return end
     if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
     if not canControl() then return end
     local cur = currentStation()
@@ -238,7 +242,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("radio_previous", "down", function() cycle(-1) end)
     setTimer(reconcile, 750, 0)
     setTimer(function()
-        if getPedOccupiedVehicle(localPlayer) then setRadioChannel(0) end
+        if getPedOccupiedVehicle(localPlayer) or next(suppressed) then setRadioChannel(0) end
     end, 1000, 0)
 end)
 
@@ -262,3 +266,22 @@ addEventHandler("onClientElementDestroy", root, function()
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, closePanel)
+
+----------------------------------------------------------------
+-- API: silenciar toda la radio (misiones, cinematicas...)
+--   exports.rp_radio:setRadioSuppressed("mi_recurso:motivo", true)   corta emisoras de internet y radio nativa
+--   exports.rp_radio:setRadioSuppressed("mi_recurso:motivo", false)  vuelve cuando no queda ningun motivo
+----------------------------------------------------------------
+function setRadioSuppressed(reason, on)
+    suppressed[tostring(reason or "?")] = on and true or nil
+    if next(suppressed) then
+        closePanel()
+        for v in pairs(sounds) do stopSound(v) end
+        setRadioChannel(0)
+    else
+        reconcile()
+    end
+    return true
+end
+
+function isRadioSuppressed() return next(suppressed) ~= nil end

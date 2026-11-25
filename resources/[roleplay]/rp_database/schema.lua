@@ -1295,4 +1295,33 @@ SCHEMA = {
         PRIMARY KEY (kind)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_missions: respeto por contacto, progreso por mision y puntos de inicio movidos por admins
+    [[
+    CREATE TABLE IF NOT EXISTS character_respect (
+        character_id INT UNSIGNED NOT NULL,
+        contact      VARCHAR(16)  NOT NULL,
+        respect      INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id, contact),
+        CONSTRAINT fk_character_respect_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS mission_progress (
+        character_id INT UNSIGNED NOT NULL,
+        mission_key  VARCHAR(32)  NOT NULL,
+        completions  INT UNSIGNED NOT NULL DEFAULT 0,
+        best_ms      INT UNSIGNED NULL,
+        PRIMARY KEY (character_id, mission_key),
+        CONSTRAINT fk_mission_progress_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS mission_points (
+        contact VARCHAR(16) NOT NULL,
+        x FLOAT NOT NULL,
+        y FLOAT NOT NULL,
+        z FLOAT NOT NULL,
+        PRIMARY KEY (contact)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -1,0 +1,32 @@
+{
+    "sweet":  {
+                  "modo":  "zero-shot",
+                  "titulo":  "GTA SA - Sweet (espanol latino)",
+                  "muestras":  [
+                                   "muestras/sweet_es/sweet_es_001.wav",
+                                   "muestras/sweet_es/sweet_es_005.wav",
+                                   "muestras/sweet_es/sweet_es_008.wav",
+                                   "muestras/sweet_es/sweet_es_010.wav",
+                                   "muestras/sweet_es/sweet_es_013.wav",
+                                   "muestras/sweet_es/sweet_es_015.wav",
+                                   "muestras/sweet_es/sweet_es_024.wav",
+                                   "muestras/sweet_es/sweet_es_025.wav",
+                                   "muestras/sweet_es/sweet_es_027.wav",
+                                   "muestras/sweet_es/sweet_es_047.wav"
+                               ]
+              },
+    "sweet_en":  {
+                     "modo":  "zero-shot",
+                     "titulo":  "GTA SA - Sweet (ingles)",
+                     "muestras":  [
+                                      "muestras/sweet_gta/sweet_005.wav",
+                                      "muestras/sweet_gta/sweet_008.wav",
+                                      "muestras/sweet_gta/sweet_010.wav",
+                                      "muestras/sweet_gta/sweet_013.wav",
+                                      "muestras/sweet_gta/sweet_015.wav",
+                                      "muestras/sweet_gta/sweet_024.wav",
+                                      "muestras/sweet_gta/sweet_025.wav",
+                                      "muestras/sweet_gta/sweet_027.wav"
+                                  ]
+                 }
+}

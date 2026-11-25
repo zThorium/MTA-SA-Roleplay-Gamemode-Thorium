@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Misiones</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window" id="win">
+        <header>
+            <div class="badge" id="badge">M</div>
+            <div class="head-text">
+                <h1 id="title">Misiones</h1>
+                <p id="subtitle"></p>
+            </div>
+            <div class="rank" id="rank"></div>
+        </header>
+
+        <!-- Menu de contacto -->
+        <section id="view-menu" class="hidden">
+            <div class="cols menu-cols">
+                <div>
+                    <h2>Trabajos disponibles</h2>
+                    <div id="missions" class="list tall"></div>
+                </div>
+                <div>
+                    <h2>Detalle</h2>
+                    <div id="detail" class="detail"></div>
+                    <h2>Salas abiertas</h2>
+                    <div id="lobbies" class="list small"></div>
+                </div>
+            </div>
+            <footer><button class="ghost" id="btn-menu-close">Cerrar</button></footer>
+        </section>
+
+        <!-- Sala -->
+        <section id="view-lobby" class="hidden">
+            <p class="desc" id="l-desc"></p>
+            <div class="cols">
+                <div>
+                    <h2>Grupo <span class="tag" id="l-count"></span></h2>
+                    <div id="members" class="list"></div>
+
+                    <h2>Tu rol</h2>
+                    <div id="roles" class="chips"></div>
+                    <p class="hint" id="role-hint"></p>
+                </div>
+                <div>
+                    <h2>Dificultad (voto)</h2>
+                    <div id="diffs" class="diffs"></div>
+
+                    <h2>Recompensa base</h2>
+                    <div class="rewards">
+                        <div><b id="r-xp">0</b><span>XP</span></div>
+                        <div><b id="r-cash">$0</b><span>Dinero</span></div>
+                        <div><b id="r-resp">0</b><span>Respeto</span></div>
+                    </div>
+
+                    <div id="leader-box">
+                        <h2>Invitar <label class="switch"><input type="checkbox" id="chk-public"> Sala abierta</label></h2>
+                        <div id="nearby" class="list small"></div>
+                        <div class="row">
+                            <input type="text" id="inv-name" placeholder="ID o nombre del jugador" maxlength="32">
+                            <button id="btn-invite">Invitar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer>
+                <button class="ghost danger" id="btn-leave">Salir</button>
+                <button class="primary" id="btn-start">Iniciar mision</button>
+            </footer>
+        </section>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

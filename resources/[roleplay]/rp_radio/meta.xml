@@ -14,4 +14,6 @@
 
     <export function="getVehicleStation" type="server" />
     <export function="setVehicleStation" type="server" />
+    <export function="setRadioSuppressed" type="client" />
+    <export function="isRadioSuppressed" type="client" />
 </meta>

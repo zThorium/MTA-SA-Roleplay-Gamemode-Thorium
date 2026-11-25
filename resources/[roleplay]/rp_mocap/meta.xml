@@ -1,0 +1,30 @@
+<meta>
+    <info author="Thorium" name="RP Mocap" description="Biblioteca de mocap de personajes de GTA SA (gestos e idles) para cinematicas y misiones. NO REINICIAR en desarrollo: descargar un IFP al parar el recurso cierra el cliente de MTA" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <script src="shared/mocap_catalog.lua" type="shared" />
+    <script src="server/s_mocap.lua" type="server" />
+    <script src="client/c_mocap.lua" type="client" cache="false" />
+
+    <!-- Material de Rockstar generado con tools/build-library.ps1 (no se sube al repo) -->
+
+    <file src="anims/mocap_bdup.ifp" />
+    <file src="anims/mocap_bigbear.ifp" />
+    <file src="anims/mocap_cesar.ifp" />
+    <file src="anims/mocap_cj.ifp" />
+    <file src="anims/mocap_grove1.ifp" />
+    <file src="anims/mocap_hernandez.ifp" />
+    <file src="anims/mocap_jose.ifp" />
+    <file src="anims/mocap_ryder.ifp" />
+    <file src="anims/mocap_smoke.ifp" />
+    <file src="anims/mocap_sweet.ifp" />
+    <file src="anims/mocap_tenpenny.ifp" />
+
+    <export function="hasCharacter" type="server" />
+    <export function="getClipCount" type="server" />
+    <export function="pickClip" type="server" />
+    <export function="play" type="server" />
+    <export function="stop" type="server" />
+    <export function="playClip" type="client" />
+    <export function="stopClip" type="client" />
+</meta>

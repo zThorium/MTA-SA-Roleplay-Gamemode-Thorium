@@ -86,7 +86,7 @@ local function drawBar(x, y, frac, a, flash)
 end
 
 addEventHandler("onClientRender", root, function()
-    if not anim then return end
+    if not anim or getElementData(localPlayer, "rp:hudHidden") then return end
     local t = getTickCount() - anim.t0
 
     local tFill = T.SLIDE
