@@ -21,6 +21,7 @@ grep -rhoE 'setElementData\([^,]+, *"rp:[^"]+"' --include=*.lua "resources/[role
 | 21000 + id | `rp_robbery` | tiendas 24/7 |
 | 21000 + slot | `rp_driving` | pistas de autoescuela ⚠️ **choca con `rp_robbery`** (pendiente de mover) |
 | 22000 + id | `rp_ammunation` | armerías |
+| 23000 + n | `rp_shootingrange` | una por jugador dentro del campo de tiro (`DIM_BASE + 1..500`) |
 | 30001 | `rp_agency` | agencia de empleo |
 
 Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `23000 + id`, `24000 + n`...) en
@@ -47,7 +48,7 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `23000 + id`, `24
 | F1 | ayuda · F3 facciones · F4 decorar · F5 carreras · F6 MDT policial · F7 mostrar/ocultar HUD (`rp_hud`) · F9 recursos · F10 panel admin |
 | F11 / F12 / Tab / T | reservadas por MTA/GTA (mapa, captura, lista, chat) |
 
-Libre hoy para un sistema nuevo: **F2** (F8 es la consola de MTA: no usar). Muchas letras ya se usan
+F2 la usa `rp_shootingrange` (abandonar entrenamiento, solo mientras entrenas). Libre hoy: ninguna tecla F fiable (F8 es la consola de MTA: no usar). Muchas letras ya se usan
 dentro de minijuegos (Z, 1-4, Enter...), así que antes de usar una compruébala con el `grep` de arriba.
 Casi siempre es mejor **E contextual** + comando. Si el sistema se usa poco, prefiere un comando o un elemento en el
 teléfono antes que gastar una tecla global.
@@ -111,7 +112,7 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → object_preview → rp_vehicles → rp_radio → rp_dealership → rp_nametags → rp_chat → rp_scoreboard
 → rp_hud → rp_citizens → rp_npcrel → rp_admin → rp_resmanager → rp_factions → rp_wanted → rp_pickups
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
-→ rp_injury → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
+→ rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
 → rp_missions
 ```
