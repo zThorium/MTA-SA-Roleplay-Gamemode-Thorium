@@ -33,7 +33,7 @@ SEATBELT = {
     },
 
     -- Pantalla tras el impacto
-    BLACK_TIME = 2500,        -- ms en negro
+    BLACK_TIME = 10000,       -- ms en negro y sin sonido
     WAKE_TIME = 7000,         -- ms del efecto de abrir los ojos
     SCRATCH_TIME = 2200,      -- ms que dura el rojo en los bordes
 }

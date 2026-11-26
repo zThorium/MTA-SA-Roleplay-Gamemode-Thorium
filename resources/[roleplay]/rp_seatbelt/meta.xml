@@ -16,7 +16,7 @@
     <file src="images/eyelid.png" />
     <file src="sounds/buckle.ogg" />
     <file src="sounds/unbuckle.ogg" />
-    <file src="sounds/glass.ogg" />
+    <file src="sounds/glass.mp3" />
     <file src="sounds/impact.ogg" />
     <file src="sounds/warning.ogg" />
 </meta>
