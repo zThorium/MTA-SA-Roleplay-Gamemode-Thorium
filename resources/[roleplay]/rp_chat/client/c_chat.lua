@@ -105,7 +105,6 @@ addEventHandler("onClientResourceStop", resourceRoot, function()
     unbindKey("y", "down", "chatbox")
     unbindKey("u", "down", "chatbox")
     if isTimer(typingTimer) then killTimer(typingTimer) end
-    if getElementData(localPlayer, "rp:typing") then setElementData(localPlayer, "rp:typing", false) end
 end)
 
 ----------------------------------------------------------------
@@ -289,14 +288,16 @@ addEventHandler("onClientRender", root, function()
 end)
 
 ----------------------------------------------------------------
--- Indicador "escribiendo..." (se sincroniza solo al cambiar)
+-- Indicador "escribiendo..." (solo se avisa al cambiar)
+-- El servidor tiene elementdata_whitelisted: el cliente no puede escribir element data,
+-- así que avisa con rp:chat:typing y el servidor pone "rp:typing" (s_chat.lua).
 ----------------------------------------------------------------
 local amTyping = false
 typingTimer = setTimer(function()
     local now = isChatBoxInputActive() and getElementData(localPlayer, "rp:characterId") and true or false
     if now ~= amTyping then
         amTyping = now
-        setElementData(localPlayer, "rp:typing", now)
+        triggerServerEvent("rp:chat:typing", resourceRoot, now)
     end
 end, 250, 0)
 

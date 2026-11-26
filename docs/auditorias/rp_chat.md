@@ -1,5 +1,12 @@
 # Auditoría de rp_chat
 
+## 2026-11-26 · arreglar · síntoma: «ERROR: Client trying to change protected element data … (rp:typing)» en la consola
+- **Causa raíz**: el indicador de «escribiendo…» hacía `setElementData(localPlayer, "rp:typing", …)` desde el cliente, y el servidor tiene `elementdata_whitelisted` activo: rechaza (y registra como error) cualquier element data sincronizado escrito por un cliente. Cada vez que alguien abría o cerraba el chat salía un error y el indicador no llegaba a los demás.
+- **Arreglo**: el cliente avisa con `rp:chat:typing` (solo al cambiar) y el servidor valida (`client`, personaje en juego, no abatido, máximo un encendido cada 200 ms) y pone `rp:typing`. Se limpia al salir, al cerrar el personaje y al parar el recurso (SEG-01).
+- **Prevención**: la regla queda en `docs/CONVENCIONES.md` (Eventos y seguridad).
+- **Nota**: 98 → 98.
+- **Probar en juego**: abrir y cerrar el chat varias veces con otro jugador al lado (ve los tres puntos) y la consola del servidor sin ese error.
+
 ## 2026-11-26 · mejorar · foco: legibilidad y bordes suaves
 - **Motivo**: Fabián: la fuente de los globos (Kenney Future, sin minúsculas reales y con esquinas biseladas) cuesta leerla, y los bordes diagonales y redondos se ven en dientes de sierra.
 - **Nota**: 98 → 98.

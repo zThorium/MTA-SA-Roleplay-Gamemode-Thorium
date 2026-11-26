@@ -78,6 +78,11 @@ Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank
   end)
   ```
 - Convierte y acota lo que llega (`tonumber`, `math.floor`, rangos, longitudes de texto).
+- **El cliente no puede escribir element data sincronizado**: `mtaserver.conf` tiene
+  `<elementdata_whitelisted>1</elementdata_whitelisted>`, y un `setElementData` desde el cliente da
+  en consola `ERROR: Client trying to change protected element data`. Si el cliente tiene que publicar un
+  estado (p. ej. "escribiendo..."), lo manda con un evento y el servidor lo valida y hace el `setElementData`
+  (ejemplo: `rp:chat:typing` en `rp_chat`). Desde el cliente solo vale element data local (`setElementData(el, k, v, false)`).
 - Identidad: `exports.rp_login:getPlayerAccountId(p)`, `exports.rp_characters:getPlayerCharacterId(p)`;
   si es `nil`, el jugador no tiene sesión o personaje y no se hace nada.
 - Admin: `local function isAdmin(p) return (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 end`.

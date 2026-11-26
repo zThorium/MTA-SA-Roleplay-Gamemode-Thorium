@@ -278,3 +278,32 @@ addEvent("rp:onCharacterLogout", false)
 addEventHandler("rp:onCharacterLogout", root, function()
     lastUse[source], pmWarned[source] = nil, nil
 end)
+
+----------------------------------------------------------------
+-- "Escribiendo...": el cliente avisa y el servidor pone el element data
+-- (con elementdata_whitelisted el cliente no puede escribirlo, ver mtaserver.conf)
+----------------------------------------------------------------
+local typingAt = {}   -- [player] = tick del último cambio (anti spam)
+
+addEvent("rp:chat:typing", true)
+addEventHandler("rp:chat:typing", resourceRoot, function(state)
+    if not client or not charId(client) then return end
+    state = state == true and not getElementData(client, "rp:downed")
+    local now = getTickCount()
+    -- Apagar siempre se acepta; encender, como mucho cada 200 ms
+    if state and typingAt[client] and now - typingAt[client] < 200 then return end
+    typingAt[client] = now
+    if (getElementData(client, "rp:typing") and true or false) ~= state then
+        setElementData(client, "rp:typing", state)
+    end
+end)
+
+local function clearTyping(player)
+    typingAt[player] = nil
+    if isElement(player) and getElementData(player, "rp:typing") then setElementData(player, "rp:typing", false) end
+end
+addEventHandler("onPlayerQuit", root, function() typingAt[source] = nil end)
+addEventHandler("rp:onCharacterLogout", root, function() clearTyping(source) end)
+addEventHandler("onResourceStop", resourceRoot, function()
+    for _, p in ipairs(getElementsByType("player")) do clearTyping(p) end
+end)
