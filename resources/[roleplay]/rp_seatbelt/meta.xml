@@ -12,7 +12,7 @@
     <script src="client/c_seatbelt.lua" type="client" cache="false" />
 
     <file src="images/key_c.png" />
-    <file src="images/scratch.png" />
+    <file src="images/border.png" />
     <file src="images/eyelid.png" />
     <file src="sounds/buckle.ogg" />
     <file src="sounds/unbuckle.ogg" />

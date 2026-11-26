@@ -6,7 +6,7 @@
 - **Cambios**: recurso nuevo. Servidor valida cada choque con `client`, cooldown, coche con cinturón, sin cinturón y no abatido (SEG-01/02); el choque solo puede pedirlo el propio jugador. `rp_injury` respeta un daño ya cancelado (`wasEventCancelled`) para que el vuelo no lo abata antes del impacto.
 - **Reglas manuales revisadas**: SEG-02 ✔ (tipo, cooldown, estado), CIC-03 ✔ (cinturón fuera al bajar, morir, cerrar personaje y parar), CIC-05 ✔ (velocidad del juego y HUD devueltos al parar), UX-01 ✔ (tecla C dibujada), UX-06 ✔ (sonido por evento), UX-10 ✔ (assets de `assets/`, `CREDITOS.md`).
 - **Pendiente**: umbrales (`LIGHT_DROP`, `EJECT_DROP`), fuerza del vuelo y animación `EV_dive` sin calibrar en juego.
-- **Probar en juego**: choque leve sin cinturón (rasguño, −3 de vida), choque a >70 km/h (parabrisas roto, vuelo lento, negro, abatido, ojos que se abren), mismo choque con cinturón (nada), pasajero, moto (sin cinturón), `restart rp_seatbelt` en pleno vuelo; `/debugscript 3` limpio.
+- **Probar en juego**: choque leve sin cinturón (bordes rojos, −3 de vida), choque a >70 km/h (parabrisas roto, vuelo lento, negro, abatido, ojos que se abren), mismo choque con cinturón (nada), pasajero, moto (sin cinturón), `restart rp_seatbelt` en pleno vuelo; `/debugscript 3` limpio.
 
 <details><summary>Informe automático</summary>
 

@@ -11,12 +11,12 @@ local sw, sh = guiGetScreenSize()
 local u = sh / 1080
 
 local lastKey = 0
-local lastSpeed, lastVel = 0, { 0, 0, 0 }   -- del coche en el frame anterior (km/h y vector)
-local crashPending, lastCrashTick = false, 0
+local history, historyVehicle = {}, nil     -- velocidades recientes del coche: { t, s, vx, vy, vz }
+local hitTick, lastCrashTick = nil, 0        -- golpe pendiente de medir / ultimo choque que conto
 local launch                                  -- { x, y, z, vx, vy, vz } preparado al pedir la salida
 local flight                                  -- { start, prev } durante el vuelo
 local screen                                  -- { start } negro y despertar
-local scratchStart                            -- rasguno en los bordes
+local scratchStart                            -- rojo en los bordes (choque leve)
 local lastBeep = 0
 local hudHeld = false
 
@@ -77,12 +77,12 @@ end)
 -- Choques
 ----------------------------------------------------------------
 -- Donde empieza el vuelo: sobre el capo, delante del parabrisas, hacia donde iba el coche
-local function prepareLaunch(vehicle)
+local function prepareLaunch(vehicle, before)
     local m = getElementMatrix(vehicle)
     local _, _, _, _, maxY, maxZ = getElementBoundingBox(vehicle)
     local x, y, z = getElementPosition(vehicle)
     local fy, uz = (maxY or 2) * 0.45, (maxZ or 1) + 0.5
-    local vx, vy, vz = lastVel[1], lastVel[2], lastVel[3]
+    local vx, vy, vz = before.vx, before.vy, before.vz
     local len = math.sqrt(vx * vx + vy * vy + vz * vz)
     if len < 0.01 then vx, vy, vz, len = m[2][1], m[2][2], m[2][3], 1 end
     local speed = math.min(len * cfg().EJECT.FORCE, cfg().EJECT.MAX_SPEED)
@@ -94,14 +94,31 @@ local function prepareLaunch(vehicle)
     }
 end
 
-local function evaluateCrash(vehicle, before)
-    crashPending = false
-    if not isElement(vehicle) or getPedOccupiedVehicle(localPlayer) ~= vehicle or belted() or isDowned() then return end
-    local drop = before - speedOf(vehicle)
+-- La velocidad "de antes" es la mayor de los ultimos frames previos al golpe: el evento de
+-- colision puede llegar cuando el frame ya registro la velocidad tras el choque.
+local function peakBefore(tick)
+    local best
+    for _, e in ipairs(history) do
+        if e.t <= tick and tick - e.t <= 400 and (not best or e.s > best.s) then best = e end
+    end
+    return best
+end
+
+local function evaluateCrash(vehicle)
+    local tick = hitTick
+    hitTick = nil
+    if not tick or not isElement(vehicle) or getPedOccupiedVehicle(localPlayer) ~= vehicle or belted() or isDowned() then return end
+    local before = peakBefore(tick)
+    if not before then return end
+    local drop = before.s - speedOf(vehicle)
+    -- Para calibrar los umbrales con /debugscript 3
+    outputDebugString(("[rp_seatbelt] choque: %.0f km/h antes, perdio %.0f km/h"):format(before.s, drop), 3)
+    if drop < cfg().LIGHT_DROP then return end
+    lastCrashTick = getTickCount()
     if drop >= cfg().EJECT_DROP then
-        prepareLaunch(vehicle)
+        prepareLaunch(vehicle, before)
         triggerServerEvent("rp:seatbelt:crash", resourceRoot, "eject")
-    elseif drop >= cfg().LIGHT_DROP then
+    else
         scratchStart = getTickCount()
         sound("impact", 0.6)
         triggerServerEvent("rp:seatbelt:crash", resourceRoot, "light")
@@ -109,13 +126,13 @@ local function evaluateCrash(vehicle, before)
 end
 
 addEventHandler("onClientVehicleCollision", root, function(hitElement)
-    if source ~= myBeltVehicle() or crashPending or belted() or flight then return end
+    if source ~= myBeltVehicle() or hitTick or belted() or flight then return end
     -- Atropellar a alguien no cuenta como choque
     if isElement(hitElement) and (getElementType(hitElement) == "ped" or getElementType(hitElement) == "player") then return end
     local now = getTickCount()
     if now - lastCrashTick < cfg().CRASH_COOLDOWN then return end
-    lastCrashTick, crashPending = now, true
-    setTimer(evaluateCrash, cfg().MEASURE_DELAY, 1, source, lastSpeed)
+    hitTick = now
+    setTimer(evaluateCrash, cfg().MEASURE_DELAY, 1, source)
 end)
 
 ----------------------------------------------------------------
@@ -152,9 +169,12 @@ end, true, "high+10")
 
 addEventHandler("onClientPreRender", root, function()
     local vehicle = myBeltVehicle()
+    if vehicle ~= historyVehicle then history, historyVehicle = {}, vehicle end
     if vehicle then
+        local now = getTickCount()
         local s, vx, vy, vz = speedOf(vehicle)
-        if not crashPending then lastSpeed, lastVel = s, { vx, vy, vz } end
+        history[#history + 1] = { t = now, s = s, vx = vx, vy = vy, vz = vz }
+        while history[1] and now - history[1].t > 600 do table.remove(history, 1) end
     end
 
     if flight then
@@ -227,7 +247,7 @@ addEventHandler("onClientRender", root, function()
     if scratchStart then
         local k = (getTickCount() - scratchStart) / cfg().SCRATCH_TIME
         if k >= 1 then scratchStart = nil
-        else dxDrawImage(0, 0, sw, sh, "images/scratch.png", 0, 0, 0, tocolor(255, 255, 255, math.floor(255 * (1 - k * k)))) end
+        else dxDrawImage(0, 0, sw, sh, "images/border.png", 0, 0, 0, tocolor(255, 255, 255, math.floor(255 * (1 - k * k)))) end
     end
     if screen then return drawScreen() end
     local vehicle = myBeltVehicle()
