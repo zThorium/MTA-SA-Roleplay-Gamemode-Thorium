@@ -34,4 +34,4 @@ Volumen de la música: `MUSIC_VOLUME` en `shared/s_config.lua`.
 |---|---|---|
 | `kenney/*` | `assets/kenney/sonidos/interfaz/` (Kenney «Interface Sounds») | CC0 (dominio público, crédito opcional) |
 | `sizzle.wav` | generado con `tools/gen_assets.ps1` | propio |
-| `musica_fondo.mp3` | aportado por Fabián (música libre; anotar aquí la fuente exacta) | libre |
+| `musica_fondo.mp3` | FreePD, aportado por Fabián: https://en.freepd.cn/music | dominio público (FreePD) |
