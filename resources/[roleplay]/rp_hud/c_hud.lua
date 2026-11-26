@@ -765,6 +765,21 @@ local function drawTopRight(now)
     end
     Hud.setRect("clock", right - dxGetTextWidth(clock, 1.5 * s, "default-bold") - 8 * s, top - 2 * s, dxGetTextWidth(clock, 1.5 * s, "default-bold") + 16 * s, clockH + 4 * s)
     Hud.topRightBottom = nextY
+
+    -- Borde izquierdo del bloque, para las fichas clicables (c_iconbar.lua):
+    --   topRightLeft = hora, dinero y banco (fila de arriba); topRightLeftLow = tambien arma, estrellas y nivel
+    local left = right - math.max(dxGetTextWidth(clock, 1.5 * s, "default-bold"), mW)
+    local bankR = Hud.getRect("bank")
+    if bank and bankR then left = math.min(left, bankR[1]) end
+    local low = left
+    if weapon and weapon ~= 0 then
+        local clip = getPedAmmoInClip(localPlayer)
+        local ammo = ("%s  %d / %d"):format(getWeaponNameFromID(weapon) or "Arma", clip, getPedTotalAmmo(localPlayer) - clip)
+        low = math.min(low, right - dxGetTextWidth(ammo, 1.05 * s, "default-bold"))
+    end
+    if (tonumber(getElementData(localPlayer, "rp:wanted")) or 0) > 0 then low = math.min(low, right - 200 * s) end
+    if level and frac then low = math.min(low, screenW - math.floor(260 * s)) end
+    Hud.topRightLeft, Hud.topRightLeftLow = left, low
 end
 
 
@@ -881,6 +896,7 @@ addEventHandler("onClientRender", root, function()
     drawStatusText(mapX + MS + 12 * s, needsTop, now)
     drawTopRight(now)
     if prefs.speedo then drawSpeedometer(now) end
+    if Hud.drawIconBars then Hud.drawIconBars(now) end   -- iconos clicables (c_iconbar.lua)
     drawZoneBanner(now)
     Hud.drawFloats()
 end)

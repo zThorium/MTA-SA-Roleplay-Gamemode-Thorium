@@ -238,6 +238,13 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         if not getElementData(localPlayer, "rp:characterId") or getElementData(localPlayer, "rp:downed") then return end
         openPanel()
     end)
+    -- Icono de la radio en el HUD (rp_hud/c_iconbar.lua): mismas condiciones que la R
+    addEvent("rp:hud:action", false)
+    addEventHandler("rp:hud:action", localPlayer, function(id)
+        if id ~= "radio" then return end
+        if not getElementData(localPlayer, "rp:characterId") or getElementData(localPlayer, "rp:downed") then return end
+        openPanel()
+    end)
     bindKey("radio_next", "down", function() cycle(1) end)
     bindKey("radio_previous", "down", function() cycle(-1) end)
     setTimer(reconcile, 750, 0)

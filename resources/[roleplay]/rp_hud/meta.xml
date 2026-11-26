@@ -5,7 +5,7 @@
         Teclas (images/keys) y sonidos .ogg: Kenney CC0 desde assets/; heartbeat.wav y coins.wav
         son propios (tools/gen_sounds.ps1). Ver CREDITOS.md.
     -->
-    <info author="Thorium" name="RP HUD" description="HUD propio: minimapa, vida, necesidades, hora, dinero y velocimetro con bencina, con efectos, sonidos y tutorial de primera vez" version="1.1.0" type="script" />
+    <info author="Thorium" name="RP HUD" description="HUD propio: minimapa, vida, necesidades, hora, dinero y velocimetro con bencina, iconos clicables (accesos rapidos y controles del vehiculo), con efectos, sonidos y tutorial de primera vez" version="1.2.0" type="script" />
     <min_mta_version client="1.6.0" />
 
     <include resource="rp_notify" />
@@ -16,6 +16,8 @@
     <!-- Estrellas de busqueda (nivel en el elementData "rp:wanted" que pone rp_wanted) -->
     <script src="c_wanted.lua" type="client" cache="false" />
     <!-- Tutorial guiado de primera vez y consejos junto a cada indicador -->
+    <!-- Iconos clicables: accesos rapidos (arriba a la derecha) y controles del vehiculo (junto al velocimetro) -->
+    <script src="c_iconbar.lua" type="client" cache="false" />
     <script src="c_tutorial.lua" type="client" cache="false" />
     <export function="setHudSuppressed" type="client" />
     <export function="isHudSuppressed" type="client" />
@@ -50,6 +52,15 @@
     <file src="images/keys/keyboard_f1.png" />
     <file src="images/keys/keyboard_f7.png" />
     <file src="images/keys/keyboard_f11.png" />
+    <file src="images/keys/keyboard_f3.png" />
+    <file src="images/keys/keyboard_p.png" />
+    <file src="images/keys/keyboard_i.png" />
+    <file src="images/keys/keyboard_l.png" />
+    <file src="images/keys/keyboard_x.png" />
+    <file src="images/keys/keyboard_c.png" />
+    <file src="images/keys/keyboard_r.png" />
+    <file src="images/keys/keyboard_m.png" />
+    <file src="images/keys/keyboard_arrow_down.png" />
     <file src="sounds/pluck_001.ogg" />
     <file src="sounds/confirmation_002.ogg" />
     <file src="sounds/confirmation_003.ogg" />
@@ -58,4 +69,7 @@
     <file src="sounds/drop_002.ogg" />
     <file src="sounds/coins.wav" />
     <file src="sounds/heartbeat.wav" />
+    <file src="sounds/click_002.ogg" />
+    <file src="sounds/select_001.ogg" />
+    <file src="fonts/rubik_semibold.ttf" />
 </meta>

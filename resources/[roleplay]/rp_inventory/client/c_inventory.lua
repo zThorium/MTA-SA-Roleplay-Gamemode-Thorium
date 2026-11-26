@@ -257,6 +257,13 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     end)
 end)
 
+-- Icono del inventario en el HUD (rp_hud/c_iconbar.lua): mismas condiciones que la tecla I
+addEvent("rp:hud:action", false)
+addEventHandler("rp:hud:action", localPlayer, function(id)
+    if id ~= "inventory" then return end
+    if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") and not getElementData(localPlayer, "rp:cuffed") then open() end
+end)
+
 addEventHandler("onClientResourceStop", resourceRoot, function()
     close()
     destroyBrowser()
