@@ -9,6 +9,8 @@
     <include resource="rp_inventory" />
     <include resource="bone_attach" />
     <include resource="rp_markers" />
+    <include resource="rp_wanted" />
+    <include resource="rp_hud" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_database.lua" type="server" />
@@ -24,8 +26,50 @@
     <script src="client/c_animations.lua" type="client" cache="false" />
     <script src="client/c_interface.lua" type="client" cache="false" />
     <script src="client/c_stats.lua" type="client" cache="false" />
+    <script src="client/c_fight.lua" type="client" cache="false" />
 
-    <file src="sounds/stat_up.ogg" />
-    <file src="sounds/open.ogg" />
+    <file src="images/blood.png" />
+    <file src="images/glow.png" />
+    <file src="images/keys/keyboard_shift.png" />
+    <file src="images/keys/keyboard_space.png" />
+    <file src="images/keys/keyboard_space_outline.png" />
+    <file src="images/keys/mouse_right.png" />
     <file src="sounds/close.ogg" />
+    <file src="sounds/crowd_cheer.wav" />
+    <file src="sounds/crowd_loop.wav" />
+    <file src="sounds/golpe/bell.ogg" />
+    <file src="sounds/golpe/block_0.ogg" />
+    <file src="sounds/golpe/block_1.ogg" />
+    <file src="sounds/golpe/block_2.ogg" />
+    <file src="sounds/golpe/punch_heavy_0.ogg" />
+    <file src="sounds/golpe/punch_heavy_1.ogg" />
+    <file src="sounds/golpe/punch_heavy_2.ogg" />
+    <file src="sounds/golpe/punch_heavy_3.ogg" />
+    <file src="sounds/golpe/punch_heavy_4.ogg" />
+    <file src="sounds/golpe/punch_medium_0.ogg" />
+    <file src="sounds/golpe/punch_medium_1.ogg" />
+    <file src="sounds/golpe/punch_medium_2.ogg" />
+    <file src="sounds/golpe/punch_medium_3.ogg" />
+    <file src="sounds/golpe/punch_medium_4.ogg" />
+    <file src="sounds/open.ogg" />
+    <file src="sounds/shutter.wav" />
+    <file src="sounds/stat_up.ogg" />
+    <file src="sounds/voz/1.ogg" />
+    <file src="sounds/voz/10.ogg" />
+    <file src="sounds/voz/2.ogg" />
+    <file src="sounds/voz/3.ogg" />
+    <file src="sounds/voz/4.ogg" />
+    <file src="sounds/voz/5.ogg" />
+    <file src="sounds/voz/6.ogg" />
+    <file src="sounds/voz/7.ogg" />
+    <file src="sounds/voz/8.ogg" />
+    <file src="sounds/voz/9.ogg" />
+    <file src="sounds/voz/combo.ogg" />
+    <file src="sounds/voz/fight.ogg" />
+    <file src="sounds/voz/player_1.ogg" />
+    <file src="sounds/voz/player_2.ogg" />
+    <file src="sounds/voz/prepare_yourself.ogg" />
+    <file src="sounds/voz/ready.ogg" />
+    <file src="sounds/voz/you_lose.ogg" />
+    <file src="sounds/voz/you_win.ogg" />
 </meta>

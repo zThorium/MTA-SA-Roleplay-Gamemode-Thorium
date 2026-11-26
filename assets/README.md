@@ -32,6 +32,10 @@ assets/
                                   scroll, select, switch, tick, toggle)
       ui/                         UI Audio: 51 (click1-5, mouseclick1, mouserelease1, rollover1-6, switch1-38)
       ui-pack/                    6 (click-a/b, switch-a/b, tap-a/b)
+      impacto/                    Impact Sounds 1.0: 130 (impactPunch_medium/heavy, impactSoft, impactBell, impactGlass,
+                                  impactMetal, impactWood, impactPlate, impactMining, footstep_*)
+      voces-luchador/             Voiceover Pack: Fighter: 46 voces de narrador en ingles (1-10, fight, ready, round_1-5,
+                                  you_win, you_lose, combo, player_1/2, prepare_yourself, winner, game_over...)
     licencias/                    License.txt original de cada pack
   propios/                        hechos para Thorium
     sonidos/freir.wav             aceite friendo (sintetizado, rp_pizzeria/tools/gen_assets.ps1)
@@ -93,6 +97,8 @@ Las teclas son blancas: sobre fondo claro, ponles contorno (`filter: drop-shadow
 | Paso nuevo de tutorial | `pluck_001.ogg` |
 | Reloj de urgencia (uno por segundo) | `tick_002.ogg` |
 | Vida baja (latido) / cobrar dinero | `propios/sonidos/heartbeat.wav` / `propios/sonidos/coins.wav` |
+| Golpe / golpe bloqueado / campana (combate) | `impacto/impactPunch_medium_00N.ogg` / `impacto/impactSoft_medium_00N.ogg` / `impacto/impactBell_heavy_000.ogg` |
+| Narrador de combate o competición (cuenta, ¡pelea!, ganaste) | `voces-luchador/` (en inglés; caso de uso: `rp_gym`) |
 
 ## Cómo usarlos en un recurso
 

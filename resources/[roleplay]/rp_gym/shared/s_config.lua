@@ -127,13 +127,31 @@ GYM_STYLES = {
 }
 GYM_STANDARD_STYLE = 4
 
+-- Combate en el ring (todo [A], decisiones del proyecto)
+GYM_FIGHT = {
+    INTRO_MS = 11000,          -- cinematica: retador 3,5 s, entrenador 3,5 s, cuenta 3-2-1 y campana (el servidor espera esto)
+    STUN_MS = { 1000, 2000 },  -- aturdimiento por golpe sin cubrirse: 1 s, sube con golpes seguidos hasta 2 s
+    STREAK_WINDOW_MS = 5000,   -- golpes sin cubrirse seguidos si llegan con menos de esto entre ellos
+    DOWN_STREAK = 3,           -- a partir de tantos golpes seguidos puede caer
+    DOWN_CHANCE = 0.6,         -- probabilidad de caer en cada golpe desde DOWN_STREAK
+    COUNT_MS = 1000,           -- ritmo de la cuenta del arbitro (1 a 10)
+    MASH_GAIN = 9,             -- % de la barra por pulsacion de Espacio
+    MASH_DECAY = 22,           -- % que baja por segundo
+    CROWD_SKINS = { 7, 14, 15, 17, 20, 21, 22, 23, 24, 25, 44, 47, 48, 66, 67, 101, 102, 143, 144, 170, 176, 180, 185, 188 },
+    PHOTO_SKINS = { 60, 59, 186 },
+    REFEREE_SKIN = 171,
+    CHEER_PLAYER = { "¡Vamos!", "¡Dale duro!", "¡Eso es!", "¡Uooooh!", "¡Otra más!", "¡Tíralo!" },
+    CHEER_TRAINER = { "¡Túmbalo, coach!", "¡Así se pega!", "¡Uuuuh!", "¡Enséñale!", "¡Al suelo!" },
+}
+
 -- Nombres de comando en espanol -> clave interna
 GYM_STYLE_ALIAS = { boxeo = "boxing", kungfu = "kungfu", kickboxing = "kickboxing" }
 
--- Gimnasios fijos con el interior original de GTA SA. Las maquinas van donde estan en el mapa del juego
--- (gta_int.img, gen_int3_stream0.ipl, leido con scripts/leer-ipl-interior.ps1): x, y, z, rz son los del
--- objeto. native = true usa el objeto que ya trae el interior (no se crea otro encima).
--- Sus ids empiezan en GYM_FIXED_ID para no chocar con las maquinas que crean los admins en la BD.
+-- Gimnasios fijos con el interior original de GTA SA: puerta, salida y entrenador. Las maquinas las
+-- crean los admins con /crearmaquina; las que trae el interior del juego se quitan (removeModels) para
+-- que no queden dobles. Posiciones leidas del mapa del juego (gta_int.img, gen_int3_stream0.ipl y
+-- gen_int3_1.col) con scripts/leer-ipl-interior.ps1.
+-- Los ids de los entrenadores fijos empiezan en GYM_FIXED_ID para no chocar con los de la BD.
 GYM_FIXED_ID = 900000
 GYM_FIXED = {
     {
@@ -143,13 +161,33 @@ GYM_FIXED = {
         interior = 5, dimension = 0,
         inside = { x = 772.11, y = -3.89, z = 1000.73, rot = 0 },                   -- donde entras [C]
         exit = { x = 772.06, y = -5.55, z = 1000.73 },                              -- marcador de salida, junto a la puerta
-        machines = {
-            { kind = "treadmill", x = 773.492, y = -2.602, z = 999.672, rz = 180, native = true },
-            { kind = "bench",     x = 773.898, y = 1.453,  z = 999.672, rz = 90,  native = true },
-            { kind = "dumbbells", x = 772.992, y = 5.383,  z = 999.772, rz = 0 },   -- mancuernas sobre la colchoneta (gym_mat1)
-            { kind = "bike",      x = 772.172, y = 9.414,  z = 999.680, rz = 90,  native = true },
-        },
+        -- Maquinas del interior original que se quitan (cinta, banco y bici), en un radio alrededor de { x, y, z }
+        removeModels = { models = { 2627, 2629, 2630 }, x = 773, y = 3.4, z = 999.7, radius = 8 },
         -- [A] junto al ring, mirando hacia el: el juego no guarda la posicion del entrenador en el mapa
-        trainer = { style = "boxing", x = 768.2, y = 5.4, z = 1000.72, rot = 90 },
+        trainer = {
+            style = "boxing", x = 768.2, y = 5.4, z = 1000.72, rot = 90,
+            -- Ring in_bxing05 (suelo a z 1000.60, unos 5,8 m de lado). Al empezar, cada uno a una esquina.
+            -- Salir a mas de `radius` m del centro = rendirse.
+            ring = {
+                x = 761.77, y = -0.63, radius = 3.8,
+                player = { x = 763.97, y = -2.83, z = 1001.65, rot = 45 },
+                trainer = { x = 759.57, y = 1.57, z = 1001.65, rot = 225 },
+                referee = { x = 763.6, y = 1.2, z = 1001.65, rot = 225 },
+                exit = { x = 767.5, y = -3.8, z = 1000.72, rot = 90 },       -- donde aparece el jugador si pierde (fuera del ring)
+                -- [A] publico alrededor del ring (suelo a z 999.67): side = "player" te apoya, "trainer" al entrenador,
+                -- "photo" fotografo con flash
+                crowd = {
+                    { x = 766.3, y = -2.5, rot = 90,  side = "player" },  { x = 766.3, y = -0.6, rot = 90,  side = "player" },
+                    { x = 766.3, y = 1.3,  rot = 90,  side = "trainer" },
+                    { x = 759.8, y = 3.8,  rot = 180, side = "trainer" }, { x = 761.8, y = 3.8,  rot = 180, side = "photo" },
+                    { x = 763.8, y = 3.8,  rot = 180, side = "player" },
+                    { x = 759.8, y = -5.1, rot = 0,   side = "player" },  { x = 761.8, y = -5.1, rot = 0,   side = "photo" },
+                    { x = 763.8, y = -5.1, rot = 0,   side = "trainer" },
+                    { x = 757.3, y = -1.6, rot = 270, side = "player" },  { x = 757.3, y = 0.4,  rot = 270, side = "trainer" },
+                    { x = 757.3, y = 2.2,  rot = 270, side = "photo" },
+                },
+                crowdZ = 1000.72,
+            },
+        },
     },
 }

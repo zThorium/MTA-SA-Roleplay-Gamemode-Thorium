@@ -3,31 +3,51 @@
     Entrenadores de boxeo (Ganton), kung fu (Cobra) y kickboxing (Below the Belt).
 
     Flujo: E junto al entrenador con 35 % de musculo o mas -> aviso -> E otra vez (en 8 s) para aceptar.
-    Combate: el entrenador persigue y golpea al jugador (IA propia sobre setPedControlState).
+    Combate:
+      - Con ring (GYM_FIXED): publico alrededor (unos te apoyan, otros al entrenador, fotografos con flash),
+        arbitro, jugador y entrenador a esquinas opuestas, cinematica de presentacion y cuenta 3-2-1
+        (GYM_FIGHT.INTRO_MS) y campana. Los efectos (cinematica, sangre, aturdimiento, caidas y cuenta del
+        arbitro, publico) los hace el cliente del jugador: client/c_fight.lua.
+      - El jugador es el sincronizador del entrenador y su cliente lleva la IA (setPedControlState solo existe
+        en el cliente). El servidor mide vidas y distancia al ring y decide el resultado.
+      - Durante el combate rp_wanted queda suspendido (pegar al entrenador no da estrellas); con estrellas no se pelea.
       - Victoria: la vida del entrenador baja a TRAINER_WIN_HP. Se aprende el estilo (reemplaza al anterior).
-      - Derrota: la vida del jugador baja a PLAYER_LOSE_HP. No pasa nada mas.
+      - Derrota: la vida del jugador baja a PLAYER_LOSE_HP, un golpe lo mataria o no se levanta antes del 10.
+        No queda abatido: aparece fuera del ring.
       - Rendirse: salir del ring (en Cobra, de la esterilla) hace perder las armas, como en el original.
     Cada estilo se aprende una sola vez: no hay forma de recuperar uno reemplazado, como en el original.
 
-    Evento cliente -> servidor (con `client`):
+    Eventos cliente -> servidor (con `client`):
         rp:gym:trainer (trainerId)
+        rp:gym:down (caido)       el jugador cae (true) o se levanta (false) durante el combate
+        rp:gym:lost               el jugador pierde (no se levanto a tiempo o un golpe lo mataria)
+    Evento servidor -> cliente:
+        rp:gym:fight (ped, activo, resultado | datos)   empieza (datos: publico, arbitro, nombre) o termina
+    Element data publico: rp:gymFight = true mientras pelea (rp_injury no lo deja abatido).
 ]]
 
 addEvent("rp:gym:trainer", true)
+addEvent("rp:gym:down", true)
+addEvent("rp:gym:lost", true)
 
-local trainers = {}   -- [id] = { row, cfg, ped, col, fight }
+local trainers = {}   -- [id] = { row, cfg, ped, col, fight, crowd }
 local fights = {}     -- [player] = pelea
 local pending = {}    -- [player] = { id, tick }
+local stopping = false
 
 local function sameWorld(a, b)
     return getElementDimension(a) == getElementDimension(b) and getElementInterior(a) == getElementInterior(b)
 end
 
+local function placeIn(el, row)
+    setElementInterior(el, row.interior)
+    setElementDimension(el, row.dimension)
+end
+
 local function createTrainerPed(t)
     local row, cfg = t.row, t.cfg
     local ped = createPed(cfg.skin, row.x, row.y, row.z, row.rotation)
-    setElementInterior(ped, row.interior)
-    setElementDimension(ped, row.dimension)
+    placeIn(ped, row)
     setElementFrozen(ped, true)
     setPedFightingStyle(ped, cfg.id)
     t.ped = ped
@@ -39,8 +59,7 @@ function gymSpawnTrainer(row)
     local t = { row = row, cfg = cfg }
     createTrainerPed(t)
     t.col = createColSphere(row.x, row.y, row.z, GYM.TRIGGER_RADIUS + 0.8)
-    setElementInterior(t.col, row.interior)
-    setElementDimension(t.col, row.dimension)
+    placeIn(t.col, row)
     trainers[row.id] = t
 
     addEventHandler("onColShapeHit", t.col, function(el, sameDim)
@@ -58,6 +77,52 @@ end
 function gymTrainerList() return trainers end
 
 ----------------------------------------------------------------
+-- Publico y arbitro (solo entrenadores con ring)
+----------------------------------------------------------------
+local function destroyCrowd(t)
+    for _, c in ipairs(t.crowd or {}) do
+        if isElement(c.ped) then destroyElement(c.ped) end
+    end
+    t.crowd, t.crowdToken = nil, nil
+end
+
+local function spawnCrowd(t)
+    destroyCrowd(t)
+    local ring, row = t.row.ring, t.row
+    local list = {}
+    local function add(skin, x, y, z, rot, side)
+        local ped = createPed(skin, x, y, z, rot)
+        if not ped then return end
+        placeIn(ped, row)
+        setElementFrozen(ped, true)
+        setElementData(ped, "rp:gymCrowd", side)
+        list[#list + 1] = { ped = ped, side = side }
+        return ped
+    end
+    for _, c in ipairs(ring.crowd or {}) do
+        local photo = c.side == "photo"
+        local pool = photo and GYM_FIGHT.PHOTO_SKINS or GYM_FIGHT.CROWD_SKINS
+        local ped = add(pool[math.random(#pool)], c.x, c.y, ring.crowdZ, c.rot, c.side)
+        if ped and photo then
+            giveWeapon(ped, 43, 50, true)   -- camara en la mano
+            setPedAnimation(ped, "CAMERA", "camstnd_idleloop", -1, true, false, false, false)
+        elseif ped then
+            setPedAnimation(ped, "RIOT", "RIOT_CHANT", -1, true, false, false, false)
+        end
+    end
+    local r = ring.referee
+    if r then add(GYM_FIGHT.REFEREE_SKIN, r.x, r.y, r.z, r.rot, "referee") end
+    t.crowd = list
+end
+
+-- El publico se queda unos segundos tras el combate (celebracion) y se va
+local function dismissCrowd(t, ms)
+    local token = {}
+    t.crowdToken = token
+    setTimer(function() if t.crowdToken == token and not t.fight then destroyCrowd(t) end end, ms, 1)
+end
+
+----------------------------------------------------------------
 -- Fin del combate
 ----------------------------------------------------------------
 -- Rendirse: se pierden las armas que se llevan (nativas y las del inventario)
@@ -70,11 +135,11 @@ end
 
 local function resetTrainer(t)
     if not isElement(t.ped) then return end
-    setPedControlState(t.ped, "forwards", false)
-    setPedControlState(t.ped, "fire", false)
+    setElementSyncer(t.ped, true)   -- vuelve a la sincronizacion automatica
+    setPedAnimation(t.ped)
     setElementFrozen(t.ped, true)
     setElementPosition(t.ped, t.row.x, t.row.y, t.row.z)
-    setPedRotation(t.ped, t.row.rotation)
+    setElementRotation(t.ped, 0, 0, t.row.rotation)
     setElementHealth(t.ped, 100)
 end
 
@@ -82,12 +147,25 @@ local function endFight(f, result)
     if f.over then return end
     f.over = true
     if isTimer(f.timer) then killTimer(f.timer) end
+    if isTimer(f.liveTimer) then killTimer(f.liveTimer) end
     local player, t = f.player, f.trainer
     fights[player] = nil
     gymInFight[player] = nil
     t.fight = nil
-    resetTrainer(t)
+    if result == "win" and isElement(t.ped) and not stopping then
+        -- K.O.: queda tendido unos segundos y vuelve a su sitio (si nadie empezo otro combate)
+        setElementSyncer(t.ped, true)
+        setPedAnimation(t.ped, "PED", "KO_skid_front", -1, false, true, false, true)
+        setTimer(function() if not t.fight then resetTrainer(t) end end, 3500, 1)
+    else
+        resetTrainer(t)
+    end
+    if t.crowd then dismissCrowd(t, 6000) end
     if not isElement(player) then return end
+    removeElementData(player, "rp:gymFight")
+    if f.suspendedWanted then exports.rp_wanted:setWantedSuspended(player, false) end
+    -- Con el recurso parandose el cliente ya no tiene el evento (se limpia solo)
+    if not stopping then triggerClientEvent(player, "rp:gym:fight", resourceRoot, t.ped, false, result) end
 
     local p = profiles[player]
     if result == "win" and p then
@@ -99,9 +177,22 @@ local function endFight(f, result)
     elseif result == "lose" then
         setElementHealth(player, math.max(getElementHealth(player), 30))
         gymNotify(player, "Has perdido el combate de instruccion. Vuelve cuando estes listo.", "warning")
+        -- No queda abatido ni tendido en el ring: aparece fuera de el tras la campana
+        local exit = t.row.ring and t.row.ring.exit
+        setTimer(function()
+            if not isElement(player) or fights[player] then return end
+            setPedAnimation(player)
+            if exit then
+                setElementPosition(player, exit.x, exit.y, exit.z)
+                setElementRotation(player, 0, 0, exit.rot)
+            end
+        end, 2500, 1)
     elseif result == "forfeit" then
+        if f.down then setPedAnimation(player) end
         loseWeapons(player)
         gymNotify(player, "Te rindes y sales del ring: pierdes todas tus armas.", "error")
+    elseif f.down then
+        setPedAnimation(player)
     end
 end
 
@@ -112,29 +203,18 @@ local function fightTick(f)
     local player, t = f.player, f.trainer
     if not isElement(player) or not isElement(t.ped) then return endFight(f, "abort") end
     if isPedDead(player) or getElementData(player, "rp:downed") or not gymCharacter(player) then return endFight(f, "abort") end
+    if not f.live then return end   -- cinematica de presentacion
 
-    local row = t.row
-    local px, py, pz = getElementPosition(player)
-    if not sameWorld(player, t.ped) or getDistanceBetweenPoints3D(px, py, pz, row.x, row.y, row.z) > t.cfg.ring then
+    -- Con ring: salir de el (distancia al centro) es rendirse. Sin ring: alejarse del sitio del entrenador.
+    local row, ring = t.row, t.row.ring
+    local px, py = getElementPosition(player)
+    local cx, cy, limit = row.x, row.y, t.cfg.ring
+    if ring then cx, cy, limit = ring.x, ring.y, ring.radius end
+    if not sameWorld(player, t.ped) or (not f.down and getDistanceBetweenPoints2D(px, py, cx, cy) > limit) then
         return endFight(f, "forfeit")
     end
     if getElementHealth(t.ped) <= GYM.TRAINER_WIN_HP then return endFight(f, "win") end
     if getElementHealth(player) <= GYM.PLAYER_LOSE_HP then return endFight(f, "lose") end
-
-    -- IA del entrenador: se gira hacia el jugador, se acerca y pega a intervalos
-    local tx, ty = getElementPosition(t.ped)
-    local dx, dy = px - tx, py - ty
-    local dist = math.sqrt(dx * dx + dy * dy)
-    setPedRotation(t.ped, math.deg(math.atan2(-dx, dy)))
-    setPedControlState(t.ped, "forwards", dist > 1.4)
-    local now = getTickCount()
-    if dist <= 1.7 and now >= f.nextHit then
-        f.nextHit = now + math.random(GYM.TRAINER_HIT_MS[1], GYM.TRAINER_HIT_MS[2])
-        setPedControlState(t.ped, "fire", true)
-        setTimer(function()
-            if isElement(t.ped) then setPedControlState(t.ped, "fire", false) end
-        end, 120, 1)
-    end
 end
 
 function gymEndFightFor(player, result)
@@ -168,6 +248,10 @@ addEventHandler("rp:gym:trainer", resourceRoot, function(trainerId)
     if getElementHealth(player) <= GYM.PLAYER_LOSE_HP + 10 then
         return gymNotify(player, "Estas demasiado herido para pelear.", "warning")
     end
+    -- Suspender rp_wanted pone las estrellas a 0: con estrellas no se pelea (si no, seria una forma de borrarlas)
+    if (exports.rp_wanted:getWantedLevel(player) or 0) > 0 then
+        return gymNotify(player, "No puedes pelear con el entrenador mientras te busca la policia.", "warning")
+    end
 
     local now = getTickCount()
     local wait = pending[player]
@@ -177,15 +261,64 @@ addEventHandler("rp:gym:trainer", resourceRoot, function(trainerId)
     end
     pending[player] = nil
 
-    local f = { player = player, trainer = t, nextHit = now + 1500 }
+    local f = { player = player, trainer = t }
     fights[player], gymInFight[player], t.fight = f, true, f
+    setElementData(player, "rp:gymFight", true)
+    -- Pegar al entrenador no es delito (no pisa una suspension ajena, p. ej. de una mision)
+    if not exports.rp_wanted:isWantedSuspended(player) then
+        exports.rp_wanted:setWantedSuspended(player, true)
+        f.suspendedWanted = true
+    end
+    setPedAnimation(t.ped)   -- por si sigue tendido del K.O. anterior
     setElementHealth(t.ped, 100)
     setPedFightingStyle(t.ped, t.cfg.id)
-    setElementFrozen(t.ped, false)
     gymNear(player, false)
-    gymNotify(player, "Combate de instruccion: derrota al entrenador.", "info")
+
+    local ring, intro = t.row.ring, 0
+    if ring then   -- cada uno a su esquina, con publico y arbitro; el combate empieza tras la presentacion
+        setElementPosition(player, ring.player.x, ring.player.y, ring.player.z)
+        setElementRotation(player, 0, 0, ring.player.rot)
+        setElementPosition(t.ped, ring.trainer.x, ring.trainer.y, ring.trainer.z)
+        setElementRotation(t.ped, 0, 0, ring.trainer.rot)
+        setCameraTarget(player, player)
+        spawnCrowd(t)
+        intro = GYM_FIGHT.INTRO_MS
+    end
+    setElementSyncer(t.ped, player)   -- la IA corre en su cliente
+    triggerClientEvent(player, "rp:gym:fight", resourceRoot, t.ped, true, {
+        crowd = t.crowd, intro = intro, style = t.cfg.name, label = t.cfg.label,
+    })
+    local function goLive()
+        if fights[player] ~= f then return end
+        f.live = true
+        if isElement(t.ped) then
+            setPedAnimation(t.ped)
+            setElementFrozen(t.ped, false)
+            setElementSyncer(t.ped, player)
+        end
+    end
+    if intro > 0 then f.liveTimer = setTimer(goLive, intro, 1) else goLive() end
     -- MTA copia las tablas pasadas a un temporizador: se pasa el jugador y se busca el combate real
-    f.timer = setTimer(function(p) if fights[p] then fightTick(fights[p]) end end, 100, 0, player)
+    f.timer = setTimer(function(pl) if fights[pl] then fightTick(fights[pl]) end end, 100, 0, player)
+end)
+
+-- Caida y levantarse (lo decide el cliente: solo cambia la animacion; no da ventaja)
+addEventHandler("rp:gym:down", resourceRoot, function(down)
+    local f = fights[client]
+    if not f or not f.live or type(down) ~= "boolean" or f.down == down then return end
+    f.down = down
+    if down then
+        setPedAnimation(client, "PED", "KO_skid_back", -1, false, true, false, true)
+    else
+        setPedAnimation(client, "PED", "getup_front", -1, false, true, false, false)
+        setTimer(function(p) if isElement(p) and fights[p] and not fights[p].down then setPedAnimation(p) end end, 1300, 1, client)
+    end
+end)
+
+-- El jugador pierde por cuenta o por un golpe que lo mataria (solo puede perder: no hay nada que validar)
+addEventHandler("rp:gym:lost", resourceRoot, function()
+    local f = fights[client]
+    if f and f.live then endFight(f, "lose") end
 end)
 
 ----------------------------------------------------------------
@@ -209,6 +342,7 @@ function gymDestroyTrainer(id)
     local t = trainers[id]
     if not t then return false end
     if t.fight then endFight(t.fight, "abort") end
+    destroyCrowd(t)
     for player, near in pairs(nearTarget) do
         if near[1] == "trainer" and near[2] == id then gymNear(player, false) end
     end
@@ -222,6 +356,12 @@ for _, event in ipairs({ "onPlayerQuit", "onPlayerWasted", "rp:onCharacterLogout
     addEventHandler(event, root, function() gymEndFightFor(source, "abort"); pending[source] = nil end)
 end
 
+-- El publico y el arbitro no reciben dano
+addEventHandler("onPedWasted", resourceRoot, function()
+    if getElementData(source, "rp:gymCrowd") then destroyElement(source) end
+end)
+
 addEventHandler("onResourceStop", resourceRoot, function()
+    stopping = true
     for player, f in pairs(fights) do endFight(f, "abort") end
 end)
