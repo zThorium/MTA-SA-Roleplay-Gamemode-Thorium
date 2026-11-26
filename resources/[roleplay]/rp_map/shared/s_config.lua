@@ -27,10 +27,6 @@ MAPA = {
         { 1742.9, -1861.6, 250, "Estacion Unity (primer spawn)" },
     },
 
-    -- Marcadores personales
-    MAX_MARKERS = 30,
-    MARKER_NAME_MAX = 40,
-
     -- GPS
     GPS_ARRIVE_METERS = 25,        -- llegada en coche (a pie: la mitad)
     GPS_OFFROUTE_METERS = 45,      -- distancia a la ruta para recalcular
@@ -38,9 +34,9 @@ MAPA = {
     GPS_CHECK_MS = 500,            -- cada cuanto se revisa el avance
 
     -- Interfaz
-    MUSIC_FILE = "sounds/map_theme.mp3",
-    MUSIC_VOLUME = 0.6,
-    MUSIC_REASON = "rp_map",       -- motivo para silenciar radio y musica del telefono
+    AUDIO_REASON = "rp_map",       -- motivo para pausar la radio y la musica del telefono con el mapa abierto
+    MUSIC_FILE = "sounds/map_theme.mp3",   -- "Calm Relax 1" de cynicmusic (ver CREDITOS.md)
+    MUSIC_VOLUME = 0.5,
 
     -- Ajustes que cambian los admins (clave = valor por defecto). Tipos: n = numero, b = 0/1
     SETTINGS = {
@@ -49,7 +45,7 @@ MAPA = {
         fog      = { "b", 1 },                -- niebla activa (0 = mapa entero visible)
         gps      = { "b", 1 },
         mode3d   = { "b", 1 },
-        music    = { "b", 1 },
+        music    = { "b", 1 },                -- tema de fondo con el mapa abierto
         blips    = { "b", 1 },                -- importar como iconos los puntos de otros recursos (tiendas, bencineras...)
         houses   = { "b", 1 },                -- mostrar casas de rp_properties
     },

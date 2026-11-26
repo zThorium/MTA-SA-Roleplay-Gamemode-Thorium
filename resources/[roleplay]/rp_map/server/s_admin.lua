@@ -7,6 +7,7 @@
     Admin (catalogo en rp_adminpanel/server/s_catalog.lua):
         /mapaprogreso <jugador|id personaje>   exploracion de un personaje
         /resetmapa <jugador|id personaje>      borra la exploracion de un personaje
+        /mapajugador                           alterna tu vista: admin (todo) o jugador normal (solo lo descubierto)
 ]]
 
 local ADMIN_LEVEL = 1
@@ -20,6 +21,7 @@ addEvent("rp:map:admin:sectorSave", true)
 addEvent("rp:map:admin:settingsSave", true)
 addEvent("rp:map:admin:playerQuery", true)
 addEvent("rp:map:admin:playerReset", true)
+addEvent("rp:map:admin:view", true)
 
 local lastAction = {}
 
@@ -257,7 +259,7 @@ local function progressOf(target, cid, cb)
             if sec.land > 0 and (st.sectorLand[s] or 0) >= math.ceil(sec.land * MAPA.SECTOR_DISCOVERED_PCT / 100) then sectorsDone = sectorsDone + 1 end
         end
         return cb({ name = getPlayerName(target):gsub("_", " "), cid = cid, online = true, land = st.landCount,
-            pct = Map.percentOf(st.landCount, Map.getLandTotal()), sectors = sectorsDone, markers = #st.markers })
+            pct = Map.percentOf(st.landCount, Map.getLandTotal()), sectors = sectorsDone })
     end
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0)
@@ -315,6 +317,23 @@ addCommandHandler("resetmapa", function(p, _, query)
     local target, cid = resolveTarget(query)
     if not cid then return Map.notify(p, "Uso: /resetmapa <id o nombre de jugador | id de personaje>", "warning") end
     resetTarget(p, target, cid)
+end)
+
+addEventHandler("rp:map:admin:view", resourceRoot, function()
+    local p = client
+    if not guard(p) then return end
+    local st = Map.getPlayers()[p]
+    if st and st.loaded then Map.setAdminView(p, not st.adminView) end
+end)
+
+-- Alterna la vista del mapa del admin: todos los lugares (admin) o solo lo que tiene descubierto (jugador normal)
+addCommandHandler("mapajugador", function(p)
+    if not isAdmin(p) then return Map.notify(p, "No tienes permiso para usar este comando.", "error") end
+    local st = Map.getPlayers()[p]
+    if not st or not st.loaded then return Map.notify(p, "Tu mapa aún no ha cargado.", "warning") end
+    Map.setAdminView(p, not st.adminView)
+    Map.notify(p, st.adminView and "Mapa en vista de administrador: ves todos los lugares y todo el mapa."
+        or "Mapa en vista de jugador: ves solo lo que tu personaje ha descubierto. Repite /mapajugador para volver.", "info")
 end)
 
 addEventHandler("onPlayerQuit", root, function() lastAction[source] = nil end)

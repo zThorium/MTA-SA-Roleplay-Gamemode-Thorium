@@ -25,17 +25,16 @@ input, select { font: inherit; color: var(--text); }
 #backdrop { position: fixed; inset: 0; background: radial-gradient(ellipse at center, rgba(5, 6, 10, .55), rgba(5, 6, 10, .86)); opacity: 0; transition: opacity .25s; pointer-events: none; }
 body.open #backdrop { opacity: 1; }
 
+/* El mapa ocupa toda la pantalla del jugador */
 .window {
-    position: fixed; left: 50%; top: 50%;
-    width: min(94vw, 1560px); height: min(90vh, 920px);
-    transform: translate(-50%, -50%) scale(.97); opacity: 0;
+    position: fixed; inset: 0; width: 100vw; height: 100vh;
+    transform: scale(1.01); opacity: 0;
     transition: opacity .22s ease, transform .22s ease;
     display: grid; grid-template-rows: 56px 1fr 46px;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
-    box-shadow: 0 30px 90px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255, 255, 255, .05);
+    background: #0a0b11;
     overflow: hidden;
 }
-body.open .window { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+body.open .window { opacity: 1; transform: none; }
 
 /* Barra superior */
 #top { display: flex; align-items: center; gap: 14px; padding: 0 14px; border-bottom: 1px solid var(--border);
@@ -62,6 +61,8 @@ body.open .window { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .seg.small button { padding: 5px 8px; font-size: 12px; }
 .hint-keys { display: flex; align-items: center; gap: 4px; color: var(--faint); font-size: 11px; }
 .hint-keys img { width: 26px; height: 26px; opacity: .85; }
+.view-btn { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(245, 165, 36, .6); background: rgba(245, 165, 36, .15); color: var(--accent); font-weight: 700; white-space: nowrap; }
+.view-btn.player { border-color: rgba(79, 209, 255, .6); background: rgba(79, 209, 255, .12); color: #4fd1ff; }
 .icon-btn { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 20px; line-height: 1; }
 .icon-btn:hover { background: rgba(255, 92, 108, .18); border-color: rgba(255, 92, 108, .5); }
 

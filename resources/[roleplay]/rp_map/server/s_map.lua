@@ -34,9 +34,6 @@ addEvent("rp:onDatabaseReady", false)
 addEvent("rp:onCharacterSpawn", false)
 addEvent("rp:onCharacterLogout", false)
 addEvent("rp:map:request", true)
-addEvent("rp:map:markerAdd", true)
-addEvent("rp:map:markerEdit", true)
-addEvent("rp:map:markerDelete", true)
 addEvent("rp:map:prefs", true)
 
 local function db() return exports.rp_database:getConnection() end
@@ -45,10 +42,13 @@ local function characterOf(p) return exports.rp_characters:getPlayerCharacterId(
 local function log(msg, level) outputDebugString("[rp_map] " .. msg, level or 3) end
 Map.db, Map.notify, Map.log, Map.characterOf = db, notify, log, characterOf
 
-local function takeCooldown(p, ms)
+-- Un cooldown por accion: que pedir el mapa no se coma el guardado de preferencias
+local function takeCooldown(p, ms, key)
     local now = getTickCount()
-    if cooldown[p] and now - cooldown[p] < (ms or 250) then return false end
-    cooldown[p] = now
+    cooldown[p] = cooldown[p] or {}
+    key = key or "default"
+    if cooldown[p][key] and now - cooldown[p][key] < (ms or 250) then return false end
+    cooldown[p][key] = now
     return true
 end
 
@@ -145,11 +145,13 @@ local function placeOut(pl)
 end
 Map.placeOut = placeOut
 
+-- st.adminView (solo admins, /mapajugador lo alterna): ve todos los lugares sin explorar
 local function visiblePlaces(st)
     local list = {}
+    local seeAll = st.adminView
     local function scan(t)
         for _, pl in pairs(t) do
-            if (pl.src ~= "house" or settings.houses == 1) and categories[pl.cat] and canSee(st, pl) then
+            if (pl.src ~= "house" or settings.houses == 1) and categories[pl.cat] and pl.cell and (seeAll or canSee(st, pl)) then
                 list[#list + 1] = placeOut(pl)
             end
         end
@@ -271,8 +273,8 @@ local function sendInit(p)
     if not st or not st.loaded then return end
     triggerClientEvent(p, "rp:map:init", resourceRoot, {
         cells = cellsList(st), start = startList(), places = visiblePlaces(st), cats = categoryList(),
-        sectors = sectorOverList(), settings = settings, markers = st.markers, prefs = st.prefs,
-        totals = placeTotals(), isAdmin = (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1,
+        sectors = sectorOverList(), settings = settings, prefs = st.prefs,
+        totals = placeTotals(), isAdmin = (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1, adminView = st.adminView == true,
     })
 end
 Map.sendInit = sendInit
@@ -319,7 +321,8 @@ Map.savePlayer = savePlayer
 local function loadPlayer(p, cid)
     if players[p] and players[p].cid == cid then sendInit(p); return end
     if players[p] then savePlayer(p) end
-    local st = { cid = cid, cells = {}, landCount = 0, sectorLand = {}, markers = {}, prefs = {}, loaded = false, pending = 3 }
+    local st = { cid = cid, cells = {}, landCount = 0, sectorLand = {}, prefs = {}, loaded = false, pending = 2,
+        adminView = (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 }
     players[p] = st
     local function done()
         st.pending = st.pending - 1
@@ -335,14 +338,6 @@ local function loadPlayer(p, cid)
         if rows and rows[1] then st.cells = MapGrid.decode(rows[1].cells) end
         done()
     end, db(), "SELECT cells FROM map_exploration WHERE character_id = ?", cid)
-    dbQuery(function(qh)
-        local rows = dbPoll(qh, 0) or {}
-        if players[p] ~= st then return end
-        for _, r in ipairs(rows) do
-            st.markers[#st.markers + 1] = { id = r.id, name = r.name, x = r.x, y = r.y, z = r.z, favorite = tonumber(r.favorite) == 1 }
-        end
-        done()
-    end, db(), "SELECT id, name, x, y, z, favorite FROM map_markers WHERE character_id = ? ORDER BY id", cid)
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0)
         if players[p] ~= st then return end
@@ -374,7 +369,7 @@ local function reveal(p, st, list)
             local need = math.ceil(land * MAPA.SECTOR_DISCOVERED_PCT / 100)
             if land > 0 and before < need and before + 1 >= need then sectorsDone[#sectorsDone + 1] = s end
         end
-        if not startCells[i] and settings.fog == 1 then
+        if not startCells[i] and settings.fog == 1 and not st.adminView then
             for _, pl in ipairs(placesByCell[i] or {}) do
                 if not isPublic(pl) and categories[pl.cat] and (pl.src ~= "house" or settings.houses == 1) then
                     newPlaces[#newPlaces + 1] = placeOut(pl)
@@ -448,76 +443,21 @@ end
 -- Eventos del cliente
 ----------------------------------------------------------------
 addEventHandler("rp:map:request", resourceRoot, function()
-    if not takeCooldown(client, 1000) then return end
+    if not takeCooldown(client, 1000, "request") then return end
     local cid = characterOf(client)
     if not cid or not ready then return end
     loadPlayer(client, cid)
-end)
-
-addEventHandler("rp:map:markerAdd", resourceRoot, function(x, y, z, name)
-    local p = client
-    local st = players[p]
-    if not st or not st.loaded or not takeCooldown(p) then return end
-    x, y, z = tonumber(x), tonumber(y), tonumber(z) or 0
-    name = cleanText(name, MAPA.MARKER_NAME_MAX) or "Marcador"
-    if not validCoord(x) or not validCoord(y) or z ~= z or math.abs(z) > 2000 then return end
-    if #st.markers >= MAPA.MAX_MARKERS then
-        return notify(p, ("Tienes el máximo de %d marcadores. Borra alguno."):format(MAPA.MAX_MARKERS), "warning")
-    end
-    dbQuery(function(qh)
-        local res, _, insertId = dbPoll(qh, 0)
-        if not res or not insertId then return log("No se pudo guardar un marcador", 1) end
-        if players[p] ~= st then return end
-        st.markers[#st.markers + 1] = { id = insertId, name = name, x = x, y = y, z = z, favorite = false }
-        triggerClientEvent(p, "rp:map:markers", resourceRoot, st.markers, insertId)
-    end, db(), "INSERT INTO map_markers (character_id, name, x, y, z) VALUES (?, ?, ?, ?, ?)", st.cid, name, x, y, z)
-end)
-
-addEventHandler("rp:map:markerEdit", resourceRoot, function(id, data)
-    local p = client
-    local st = players[p]
-    if not st or not st.loaded or type(data) ~= "table" or not takeCooldown(p) then return end
-    id = tonumber(id)
-    for _, m in ipairs(st.markers) do
-        if m.id == id then
-            local name = data.name ~= nil and cleanText(data.name, MAPA.MARKER_NAME_MAX) or m.name
-            local x, y = tonumber(data.x) or m.x, tonumber(data.y) or m.y
-            local fav = data.favorite == nil and m.favorite or data.favorite == true
-            if not validCoord(x) or not validCoord(y) then return end
-            m.name, m.x, m.y, m.favorite = name, x, y, fav
-            dbExec(db(), "UPDATE map_markers SET name = ?, x = ?, y = ?, favorite = ? WHERE id = ? AND character_id = ?",
-                name, x, y, fav and 1 or 0, id, st.cid)
-            triggerClientEvent(p, "rp:map:markers", resourceRoot, st.markers)
-            return
-        end
-    end
-end)
-
-addEventHandler("rp:map:markerDelete", resourceRoot, function(id)
-    local p = client
-    local st = players[p]
-    if not st or not st.loaded or not takeCooldown(p) then return end
-    id = tonumber(id)
-    for k, m in ipairs(st.markers) do
-        if m.id == id then
-            table.remove(st.markers, k)
-            dbExec(db(), "DELETE FROM map_markers WHERE id = ? AND character_id = ?", id, st.cid)
-            triggerClientEvent(p, "rp:map:markers", resourceRoot, st.markers)
-            return
-        end
-    end
 end)
 
 -- Preferencias: solo claves conocidas y con tipo correcto
 addEventHandler("rp:map:prefs", resourceRoot, function(prefs)
     local p = client
     local st = players[p]
-    if not st or not st.loaded or type(prefs) ~= "table" or not takeCooldown(p, 1000) then return end
+    if not st or not st.loaded or type(prefs) ~= "table" or not takeCooldown(p, 300, "prefs") then return end
     local clean = {}
     if prefs.mode == "2d" or prefs.mode == "3d" then clean.mode = prefs.mode end
-    clean.tutorial = prefs.tutorial == true
+    clean.tutorial = prefs.tutorial == true or st.prefs.tutorial == true   -- una vez visto, no vuelve
     clean.grid = prefs.grid ~= false
-    clean.music = tonumber(prefs.music) and math.max(0, math.min(1, tonumber(prefs.music))) or MAPA.MUSIC_VOLUME
     if type(prefs.hidden) == "table" then
         clean.hidden = {}
         local n = 0
@@ -648,6 +588,14 @@ function Map.getPlayers() return players end
 function Map.getLandTotal() return landTotal end
 function Map.percentOf(n, total) return percentOf(n, total) end
 function Map.isReady() return ready end
+function Map.setAdminView(p, on)
+    local st = players[p]
+    if not st or not st.loaded then return false end
+    st.adminView = on == true
+    sendInit(p)
+    return true
+end
+
 function Map.resetPlayer(p)
     local st = players[p]
     if not st then return false end

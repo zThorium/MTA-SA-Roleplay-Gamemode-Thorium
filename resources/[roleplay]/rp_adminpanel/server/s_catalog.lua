@@ -118,6 +118,7 @@ ADMIN_CATALOG = {
             { cmd = "F11 > Admin", args = "", desc = "Pestana Admin del mapa: lugares, categorias, cuadriculas visibles desde el inicio, ajustes (radio, intervalo, niebla, GPS, 3D, musica) y progreso de jugadores.", res = "rp_map" },
             { cmd = "/mapaprogreso", args = "<jugador|id personaje>", desc = "Muestra cuanto mapa exploro un personaje.", res = "rp_map" },
             { cmd = "/resetmapa", args = "<jugador|id personaje>", desc = "Reinicia la exploracion (niebla) del mapa de un personaje.", res = "rp_map" },
+            { cmd = "/mapajugador", args = "", desc = "Alterna tu mapa F11 entre vista de admin (todo el mapa y todos los lugares) y vista de jugador normal (solo lo descubierto).", res = "rp_map" },
         },
     },
     {

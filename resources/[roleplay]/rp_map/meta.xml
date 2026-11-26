@@ -1,13 +1,13 @@
 <meta>
     <!--
         rp_map: mapa F11 estilo GTA VI (CEF 2D + Three.js 3D) con niebla de exploracion por celdas,
-        cuadriculas por ciudad, lugares que se descubren, marcadores, GPS con rutas reales por las
+        cuadriculas por ciudad, lugares que se descubren, GPS con rutas reales por las
         calles de GTA SA, buscador, estadisticas y panel de admin. Ver docs/MAPA.md.
         Los datos de html/data y client/c_roads.lua se generan con tools/generar-datos.ps1 desde
-        la instalacion de GTA SA; map.jpg y sounds/map_theme.mp3 estan en el repo.
-        Three.js r147 (MIT) en html/lib. Sonidos y teclas Kenney (CC0). Ver CREDITOS.md.
+        la instalacion de GTA SA (map.jpg incluido en el repo). Tema de fondo: "Calm Relax 1" de
+        cynicmusic (sounds/map_theme.mp3). Three.js r147 (MIT) en html/lib. Sonidos y teclas Kenney (CC0). Ver CREDITOS.md.
     -->
-    <info author="Thorium" name="RP Map" description="Mapa F11 estilo GTA VI: exploracion, cuadriculas, lugares, marcadores, GPS real y vista 3D" version="1.0.0" type="script" />
+    <info author="Thorium" name="RP Map" description="Mapa F11 estilo GTA VI: exploracion, cuadriculas, lugares, GPS real y vista 3D" version="1.0.0" type="script" />
     <oop>false</oop>
     <min_mta_version client="1.6.0" server="1.6.0" />
 
