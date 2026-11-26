@@ -34,10 +34,11 @@ function characterOf(p) return exports.rp_characters:getPlayerCharacterId(p) end
 function displayName(p) return (getPlayerName(p):gsub("_", " ")) end
 function isAdmin(p) return (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 end
 
--- Policia = miembro de la faccion reservada (rp_factions publica "rp:faction")
+-- Policia = miembro de una facción de tipo policía (API central de rp_factions)
+-- estandar:dep-opcional rp_factions arranca después que rp_vehicles; sin él nadie es policía (pcall)
 function isPolice(p)
-    local f = getElementData(p, "rp:faction")
-    return type(f) == "table" and tonumber(f.id) == VEHICLES.POLICE_FACTION_ID
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(p, VEHICLES.POLICE_FACTION_TYPE) end)
+    return ok and yes == true
 end
 
 function getVehicleData(vehicle) return vehicles[vehicle] end

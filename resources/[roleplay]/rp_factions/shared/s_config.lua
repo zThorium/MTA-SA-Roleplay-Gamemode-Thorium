@@ -36,11 +36,15 @@ for _, p in ipairs(FACTION_PERMISSIONS) do
 end
 
 -- Tipos de faccion. state = el Estado paga los sueldos (no salen de los fondos de la faccion).
+-- duty = recurso que lleva el servicio de ese tipo (vestuario): debe exportar isOnDuty(player).
+--   Con duty, el sueldo de rol solo se cobra de servicio e isPlayerOnDuty le pregunta a ese recurso.
+--   Un sistema nuevo de facción (médicos, taxis...) se registra aquí, no con llamadas a mano.
+-- Pertenencia: los recursos preguntan por el TIPO (isPlayerInFaction(p, "policia")), nunca por un id fijo.
 FACTION_TYPES = {
     gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff" },
-    policia  = { name = "Policia",           state = true,  color = "#3b6fe0" },
+    policia  = { name = "Policia",           state = true,  color = "#3b6fe0", duty = "rp_police" },
     medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d" },
-    bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b" },   -- rp_firefighters
+    bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b", duty = "rp_firefighters" },
     empresa  = { name = "Empresa",           state = false, color = "#4cd38a" },
     banda    = { name = "Banda",             state = false, color = "#a35bff" },
     otra     = { name = "Otra",              state = false, color = "#f5a524" },

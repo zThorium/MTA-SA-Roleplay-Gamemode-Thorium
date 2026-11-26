@@ -1,8 +1,7 @@
 --[[
     rp_vehicles / s_police.lua
     Herramientas de policia sobre vehiculos con dueno. Solo para miembros de
-    la faccion reservada VEHICLES.POLICE_FACTION_ID (1 = Policia, ver
-    rp_factions y rp_database/schema.lua):
+    facciones de tipo VEHICLES.POLICE_FACTION_TYPE (isPolice, API de rp_factions):
         - Cepo (inmoviliza el vehiculo y no deja encender el motor)
         - Multas (las paga el dueno desde el banco con el menu del vehiculo)
         - Historial: multas y registro de acciones policiales

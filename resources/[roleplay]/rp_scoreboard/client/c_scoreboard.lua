@@ -36,7 +36,9 @@ end
 local function playerKey(player) return "p" .. tostring(getElementData(player, "id") or tostring(player):sub(-6)) end
 
 local function rowOf(player)
-    local fac = getElementData(player, "rp:faction")
+    -- estandar:dep-opcional rp_factions sin él la fila sale sin facción (pcall)
+    local ok, fac = pcall(function() return exports.rp_factions:getPlayerFactionInfo(player) end)
+    if not ok then fac = false end
     local pr = getElementData(player, "rp:tabProfile")
     local row = {
         k = playerKey(player),

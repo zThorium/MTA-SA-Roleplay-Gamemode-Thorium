@@ -5,7 +5,8 @@
 ]]
 
 POLICE = {
-    FACTION_ID = 1,
+    FACTION_TYPE = "policia", -- quién es policía: cualquier facción de este tipo (rp_factions:isPlayerInFaction)
+    FACTION_ID = 1,           -- facción LSPD que crea el esquema: solo para sus roles por defecto y su registro
     KEY_INTERACT = "k",       -- cursor de interaccion (jugadores y vehiculos)
     KEY_MDT = "F6",
     KEY_SIREN = "o",

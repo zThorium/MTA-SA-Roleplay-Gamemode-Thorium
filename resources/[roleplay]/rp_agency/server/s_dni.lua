@@ -214,8 +214,8 @@ addCommandHandler("mostrardni", function(player, _, query)
 end)
 
 local function isPolice(player)
-    local ok, id, _, _, _, ftype = pcall(function() return exports.rp_factions:getPlayerFaction(player) end)
-    return ok and id and ftype == "policia"
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(player, "policia") end)
+    return ok and yes == true
 end
 
 addCommandHandler("consultardni", function(player, _, query)
