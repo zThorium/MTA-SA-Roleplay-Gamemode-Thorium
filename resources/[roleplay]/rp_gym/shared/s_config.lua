@@ -163,6 +163,7 @@ GYM_FIXED = {
         outside = { x = 2227.35, y = -1722.37, z = 13.55, rot = 118.6 },           -- donde sales (frente a la puerta)
         interior = 5, dimension = 0,
         inside = { x = 772.11, y = -3.89, z = 1000.73, rot = 0 },                   -- donde entras [C]
+        exit = { x = 772.06, y = -5.55, z = 1000.73 },                              -- marcador de salida, junto a la puerta
         -- Maquinas del interior original que se quitan (cinta, banco y bici), en un radio alrededor de { x, y, z }
         removeModels = { models = { 2627, 2629, 2630 }, x = 773, y = 3.4, z = 999.7, radius = 8 },
         -- [A] junto al ring, mirando hacia el: el juego no guarda la posicion del entrenador en el mapa
