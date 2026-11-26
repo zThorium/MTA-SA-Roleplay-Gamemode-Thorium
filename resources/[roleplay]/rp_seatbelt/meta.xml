@@ -1,0 +1,22 @@
+<meta>
+    <info author="Thorium" name="RP Seatbelt" description="Cinturon de seguridad (C): sin el, los choques rasgunan y los fuertes te lanzan por el parabrisas" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_characters" />
+    <include resource="rp_injury" />
+    <include resource="rp_hud" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_seatbelt.lua" type="server" />
+    <script src="client/c_seatbelt.lua" type="client" cache="false" />
+
+    <file src="images/key_c.png" />
+    <file src="images/scratch.png" />
+    <file src="images/eyelid.png" />
+    <file src="sounds/buckle.ogg" />
+    <file src="sounds/unbuckle.ogg" />
+    <file src="sounds/glass.ogg" />
+    <file src="sounds/impact.ogg" />
+    <file src="sounds/warning.ogg" />
+</meta>

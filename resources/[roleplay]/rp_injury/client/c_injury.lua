@@ -32,6 +32,7 @@ end
 ----------------------------------------------------------------
 local headshotAsked = false
 addEventHandler("onClientPlayerDamage", localPlayer, function(attacker, weapon, bodypart, loss)
+    if wasEventCancelled() then return end   -- otro recurso ya lo anulo (p. ej. rp_seatbelt durante el vuelo)
     -- Disparo en la cabeza de otro jugador: muerte instantanea (el servidor lo valida)
     if bodypart == 9 and not dyingLocal and isElement(attacker) and attacker ~= localPlayer
         and getElementType(attacker) == "player" and getElementData(localPlayer, "rp:characterId")

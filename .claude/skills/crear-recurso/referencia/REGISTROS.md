@@ -38,6 +38,7 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27
 | H | interactuar con peatones (`rp_npcrel`), amenazar en robos (`rp_robbery`) |
 | I | inventario |
 | O | menú radial de animaciones (`rp_anims`, mantener), mochila (`rp_backpacks`), sirena (`rp_police`, en patrulla) ⚠️ saturada |
+| C | cinturón de seguridad, solo dentro de un coche (`rp_seatbelt`) |
 | J | motor del vehículo (`rp_vehicles`, rebindeable) |
 | K | cursor de interacción policial (`rp_police`) |
 | L / X / flechas | cerrar, freno de mano, intermitentes (`rp_vehicles`, rebindeables en Ajustes > Binds) |

@@ -77,6 +77,7 @@ HELP.KEYS = {
         { key = "L",   text = "Abrir o cerrar tu vehiculo" },
         { key = "J",   text = "Encender o apagar el motor (necesitas la llave)" },
         { key = "X",   text = "Freno de mano" },
+        { key = "C",   text = "Ponerte o quitarte el cinturon. Sin el, un choque fuerte te lanza por el parabrisas" },
         { key = "\226\134\144 \226\134\146", text = "Intermitentes izquierdo y derecho" },
         { key = "\226\134\147", text = "Balizas" },
         { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas). En Vroom alterna app y mapa" },

@@ -78,6 +78,7 @@ El objetivo no es juntar la mayor cantidad de features, sino que cada una esté 
 | `rp_inventory` | Items por personaje |
 | `rp_needs` | Hambre, sed, energía |
 | `rp_injury` | Estado abatido, sangrado y respawn en el hospital |
+| `rp_seatbelt` | Cinturón de seguridad (C): sin él, rasguños en choques leves y salida por el parabrisas en cámara lenta en los fuertes |
 | `rp_shops` · `rp_bank` · `rp_dealership` | Economía |
 | `rp_phone` | Teléfono con apps |
 | `rp_rides` | App de viajes Vroom (conductores jugadores o IA) |
