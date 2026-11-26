@@ -1,5 +1,10 @@
 # Auditoría de rp_gym
 
+## 2026-11-26 · arreglar (congelar al elegir peso)
+- **Motivo**: al elegir el peso del press o las mancuernas el personaje podía moverse.
+- **Cambios**: `gymSelect(sel)` en `client/c_main.lua`: mientras se elige el peso el personaje queda congelado y sin controles; se descongela al empezar (Enter), cancelar (Retroceso), alejarse, cambiar de personaje o parar el recurso, y solo si lo congeló el gimnasio.
+- **Probar en juego**: E en el press o las mancuernas, intentar moverse y pegar mientras se elige; Enter y Retroceso devuelven el control.
+
 ## 2026-11-26 · arreglar + mejorar (congelamiento en el combate e interfaz)
 - **Motivo**: al recibir golpes del entrenador el jugador quedaba congelado (sin poder pegar ni cubrirse); al terminar quedaba atrapado en el ring; pedido de rehacer la interfaz de todo el recurso y de logs para seguir el fallo.
 - **Causa**: cada golpe sin cubrirse quitaba los controles 1-2 s y el entrenador pega cada 0,65-1,1 s: el aturdimiento se encadenaba sin fin y, sin controles, tampoco se podía cubrir.
