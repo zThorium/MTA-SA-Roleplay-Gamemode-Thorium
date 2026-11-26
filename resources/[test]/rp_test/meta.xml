@@ -17,6 +17,7 @@
     <include resource="rp_restaurants" />
     <include resource="rp_jobs" />
     <include resource="rp_pizzeria" />
+    <include resource="rp_train" />
 
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
@@ -26,4 +27,5 @@
     <script src="server/s_tests_shootingrange.lua" type="server" />
     <script src="server/s_tests_restaurants.lua" type="server" />
     <script src="server/s_tests_pizzeria.lua" type="server" />
+    <script src="server/s_tests_train.lua" type="server" />
 </meta>

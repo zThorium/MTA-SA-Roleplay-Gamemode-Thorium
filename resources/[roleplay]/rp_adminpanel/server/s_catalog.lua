@@ -107,6 +107,9 @@ ADMIN_CATALOG = {
             { cmd = "/clima", args = "[nombre]", desc = "Cambia el clima compartido (sun, smog, cloudy, rain, storm, fog). Sin nombre muestra el actual.", res = "rp_events" },
             { cmd = "/hora", args = "<0-23> [minutos]", desc = "Cambia la hora de juego (el reloj sigue avanzando desde ahi).", res = "rp_events" },
             { cmd = "/mercadoajuste", args = "<dz> <rotacion>", desc = "Calibra los puestos del mercadillo: metros que se suben (por si quedan enterrados) y rotacion extra 0/90/180/270 para que miren a la calle. Luego crea otro con /evento market.", res = "rp_events" },
+            { cmd = "/crearbarrera", args = "[inv]", desc = "Crea una barrera de paso a nivel en tu posicion junto a la via (el brazo apunta hacia donde miras; inv lo baja al otro lado). Baja sola cuando pasa el tren.", res = "rp_train" },
+            { cmd = "/borrarbarrera", args = "<id>", desc = "Elimina una barrera de paso a nivel.", res = "rp_train" },
+            { cmd = "/barreras", args = "", desc = "Lista las barreras de paso a nivel con id, estado y distancia.", res = "rp_train" },
         },
     },
     {

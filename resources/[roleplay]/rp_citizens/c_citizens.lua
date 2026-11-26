@@ -705,6 +705,25 @@ local function lightFor(axis)
     return "red"
 end
 
+-- Cruces de tren (rp_train): distancia a la barrera bajada que el auto tiene delante, o nil.
+-- La lista de cruces se refresca cada 2 s; los que ya dejo atras (o a los lados) no cuentan.
+local railList, railListAt = {}, 0
+local function railStopDist(x, y, fx, fy, now)
+    if now - railListAt > 2000 then railList, railListAt = getElementsByType("rp_railcrossing"), now end
+    local best
+    for _, c in ipairs(railList) do
+        if isElement(c) and getElementData(c, "closed") then
+            local cx, cy = getElementPosition(c)
+            local rx, ry = cx - x, cy - y
+            local along = rx * fx + ry * fy
+            if along > 2 and along < 35 and math.abs(rx * fy - ry * fx) < 9 and (not best or along < best) then
+                best = along
+            end
+        end
+    end
+    return best
+end
+
 local function isJunction(n)
     local list = VEH_LINKS[n]
     return list and #list >= 3
@@ -2642,6 +2661,14 @@ local function stageDecide(vehicle, s, f, now)
             waiting = true
             mode = "RED"
         end
+    end
+
+    -- Paso a nivel con las barreras bajadas (rp_train): se detiene antes de la barrera hasta que suba
+    local railDist = railStopDist(x, y, m[2][1], m[2][2], now)
+    if railDist then
+        if railDist < 5 then target = 0 else target = math.min(target, math.max(4, (railDist - 5) * 1.6)) end
+        waiting = true
+        mode = "RED"
     end
 
     -- Cruce: pide paso; si otro auto lo tiene, espera antes de entrar

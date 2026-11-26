@@ -1,0 +1,25 @@
+<meta>
+    <info author="Thorium" name="RP Tren" description="Trenes de San Andreas en la via principal (paradas en estaciones, bocina) y cruces con barreras y campanas" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+
+    <!-- Via principal (tracks.dat de GTA SA) y su geometria: solo servidor, el cliente no la necesita -->
+    <script src="server/s_track.lua" type="server" />
+    <script src="server/s_trackmath.lua" type="server" />
+    <script src="shared/s_config.lua" type="shared" />
+
+    <script src="server/s_train.lua" type="server" />
+    <!-- Barreras de los cruces (/crearbarrera, /borrarbarrera, /barreras) -->
+    <script src="server/s_crossings.lua" type="server" />
+
+    <script src="client/c_train.lua" type="client" cache="false" />
+
+    <!-- Campanas del cruce (ver CREDITOS.md) -->
+    <file src="sounds/campanas.mp3" />
+
+    <export function="getTrainState" type="server" />
+    <export function="getTrackLength" type="server" />
+</meta>

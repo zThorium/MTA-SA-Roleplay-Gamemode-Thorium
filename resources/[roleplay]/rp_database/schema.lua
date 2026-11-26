@@ -1384,4 +1384,19 @@ SCHEMA = {
         CONSTRAINT fk_scoreboard_profiles_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_train: barreras de los cruces a nivel (las pone un admin con /crearbarrera)
+    [[
+    CREATE TABLE IF NOT EXISTS rail_crossings (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        rot        FLOAT        NOT NULL DEFAULT 0,
+        side       TINYINT      NOT NULL DEFAULT 1,
+        interior   TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+        dimension  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
