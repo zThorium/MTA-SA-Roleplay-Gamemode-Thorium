@@ -47,14 +47,14 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("enter", "down", function()
         if gymBusy() or not gymSelecting then return end
         local s = gymSelecting
-        gymSelecting = nil
+        gymSelect(nil)   -- se descongela antes de subir: congelado no reproduce animaciones
         triggerServerEvent("rp:gym:start", resourceRoot, s.id, s.index)
     end)
 
     bindKey("backspace", "down", function()
         if gymBusy() then return end
         if gymSelecting then
-            gymSelecting = nil
+            gymSelect(nil)
         else
             -- No depende de gymState: aunque el cliente no tenga el estado, el servidor decide si hay sesion
             triggerServerEvent("rp:gym:stop", resourceRoot)
