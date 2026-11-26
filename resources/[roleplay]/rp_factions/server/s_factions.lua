@@ -816,6 +816,11 @@ function collectPaydaySalary(player)
         local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
         if ok and not duty then return false, "offduty", f.name end
     end
+    -- Los bomberos, igual: sueldo solo de servicio (rp_firefighters)
+    if f.type == "bomberos" then
+        local ok, duty = pcall(function() return exports.rp_firefighters:isOnDuty(player) end)
+        if ok and not duty then return false, "offduty", f.name end
+    end
     if salary <= 0 then return false, "nosalary", f.name end
     if not f.state_funded then
         if f.bank < salary then

@@ -1,0 +1,52 @@
+<meta>
+    <info author="Thorium" name="RP Bomberos" description="Facción de bomberos: servicio, autobombas y emergencias dinámicas (incendios con focos y civiles atrapados)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_ids" />
+    <include resource="rp_factions" />
+    <include resource="rp_markers" />
+    <include resource="rp_hud" />
+    <include resource="rp_levels" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_core.lua" type="server" />
+    <script src="server/s_incidents.lua" type="server" />
+    <script src="server/s_admin.lua" type="server" />
+    <script src="client/c_core.lua" type="client" cache="false" />
+    <script src="client/c_fire.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="html/fonts/kenney_future.ttf" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/sounds/coins.wav" />
+    <file src="html/sounds/heartbeat.wav" />
+    <file src="html/sounds/kenney/bong_001.ogg" />
+    <file src="html/sounds/kenney/click_002.ogg" />
+    <file src="html/sounds/kenney/confirmation_001.ogg" />
+    <file src="html/sounds/kenney/confirmation_003.ogg" />
+    <file src="html/sounds/kenney/drop_001.ogg" />
+    <file src="html/sounds/kenney/drop_002.ogg" />
+    <file src="html/sounds/kenney/error_004.ogg" />
+    <file src="html/sounds/kenney/error_006.ogg" />
+    <file src="html/sounds/kenney/maximize_003.ogg" />
+    <file src="html/sounds/kenney/minimize_003.ogg" />
+    <file src="html/sounds/kenney/pluck_001.ogg" />
+    <file src="html/sounds/kenney/tick_002.ogg" />
+    <file src="images/emote_cross.png" />
+    <file src="images/emote_exclamation.png" />
+    <file src="images/emote_faceHappy.png" />
+    <file src="images/keys/keyboard_ctrl.png" />
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/mouse_left.png" />
+
+    <export function="isOnDuty" type="server" />
+    <export function="isFirefighter" type="server" />
+    <export function="getFirefightersOnDuty" type="server" />
+</meta>

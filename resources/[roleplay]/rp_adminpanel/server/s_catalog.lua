@@ -123,4 +123,18 @@ ADMIN_CATALOG = {
             { cmd = "/entrenadores", args = "", desc = "Lista los entrenadores de combate con id y posicion.", res = "rp_gym" },
         },
     },
+    {
+        id = "bomberos", name = "Bomberos",
+        items = {
+            { cmd = "/fdmover", args = "<vestuario|garaje|camion>", desc = "Mueve un punto de la estacion de bomberos a tu posicion (camion = donde aparece la autobomba, con tu rumbo).", res = "rp_firefighters" },
+            { cmd = "/fdsitio crear", args = "<nombre>", desc = "Crea un sitio de incendio; tu posicion es la zona segura con ambulancia. Devuelve el id.", res = "rp_firefighters" },
+            { cmd = "/fdsitio foco", args = "<id>", desc = "Anade un foco de fuego donde estas (azotea, balcon, pasillo accesible). Max. 120 m de la zona segura.", res = "rp_firefighters" },
+            { cmd = "/fdsitio civil", args = "<id>", desc = "Anade un punto de civil atrapado donde estas, mirando hacia tu rumbo.", res = "rp_firefighters" },
+            { cmd = "/fdsitio vaciar", args = "<id>", desc = "Quita todos los focos y civiles de un sitio.", res = "rp_firefighters" },
+            { cmd = "/fdsitio borrar", args = "<id>", desc = "Borra un sitio de incendio.", res = "rp_firefighters" },
+            { cmd = "/fdsitios", args = "", desc = "Lista los sitios de incendio con focos, civiles y distancia.", res = "rp_firefighters" },
+            { cmd = "/fdincendio", args = "[id]", desc = "Lanza una emergencia ya (sin id, en un sitio completo al azar). Solo una a la vez.", res = "rp_firefighters" },
+            { cmd = "/fdcancelar", args = "", desc = "Cancela la emergencia de bomberos activa y limpia la escena.", res = "rp_firefighters" },
+        },
+    },
 }

@@ -123,6 +123,7 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_wanted:setWantedSuspended(p, bool)`, `isWantedSuspended(p)` | no acumula estrellas (misiones, minijuegos) |
 | `rp_wanted:jailPlayer(p, segundos, fianza, caos)`, `isPlayerJailed(p)`, `holdPursuit`, `setPursuitTerms` | ver `docs/BUSQUEDA_POLICIAL.md` |
 | `rp_emergency:callService(p, "ambulance"|"police"|"fire")` | |
+| `rp_firefighters:isOnDuty(p)`, `isFirefighter(p)`, `getFirefightersOnDuty()` | bomberos (facciones de tipo `bomberos`) y quién está de servicio |
 
 ## Mundo, vehículos y propiedades
 

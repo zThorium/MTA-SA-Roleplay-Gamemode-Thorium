@@ -1399,4 +1399,54 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_firefighters: experiencia de facción de bomberos por personaje
+    [[
+    CREATE TABLE IF NOT EXISTS firefighter_stats (
+        character_id INT UNSIGNED NOT NULL,
+        xp           INT UNSIGNED NOT NULL DEFAULT 0,
+        fires        INT UNSIGNED NOT NULL DEFAULT 0,
+        rescues      INT UNSIGNED NOT NULL DEFAULT 0,
+        ok           INT UNSIGNED NOT NULL DEFAULT 0,
+        failed       INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_firefighter_stats_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_firefighters: puntos de la estación movidos por un admin (/fdmover)
+    [[
+    CREATE TABLE IF NOT EXISTS fire_points (
+        kind VARCHAR(16) NOT NULL,
+        x    FLOAT       NOT NULL,
+        y    FLOAT       NOT NULL,
+        z    FLOAT       NOT NULL,
+        rot  FLOAT       NOT NULL DEFAULT 0,
+        PRIMARY KEY (kind)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_firefighters: sitios de incendio (la posición es la zona segura) y sus focos y civiles (/fdsitio)
+    [[
+    CREATE TABLE IF NOT EXISTS fire_sites (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name       VARCHAR(48)  NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    [[
+    CREATE TABLE IF NOT EXISTS fire_site_points (
+        id      INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        site_id INT UNSIGNED NOT NULL,
+        kind    ENUM('fire', 'victim') NOT NULL,
+        x       FLOAT        NOT NULL,
+        y       FLOAT        NOT NULL,
+        z       FLOAT        NOT NULL,
+        rot     FLOAT        NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        KEY idx_fire_site_points_site (site_id),
+        CONSTRAINT fk_fire_site_points_site FOREIGN KEY (site_id) REFERENCES fire_sites (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

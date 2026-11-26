@@ -55,7 +55,7 @@ Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados d
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Gimnasio: `rp_gym` (Ganton fijo con interior original; las máquinas las ponen los admins con `/crearmaquina`; entrenadores que enseñan estilos de pelea en el ring sin dar estrellas, aviso al subir una stat y `/stats`).
 Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (campo de tiro: entrena la habilidad nativa de arma con tus balas; progreso en `weapon_skills`).
-Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
+Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos) y `rp_firefighters` (facción de bomberos: servicio en el vestuario, autobombas e incendios dinámicos con focos y civiles atrapados en sitios que colocan los admins con `/fdsitio`).
 Drogas: `rp_dealers` (traficantes skin 28/29/30; comprar con un policia mirando da estrella).
 Trámites: `rp_agency` (agencia de empleo: turnos, DNI `id_card` y alta en trabajos).
 Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: dashboard, jugadores en 3D, cuentas, IAM/RBAC, auditoría y catálogo de comandos; añade ahí cada comando de admin nuevo). `rp_resmanager` (F9, solo super admin).

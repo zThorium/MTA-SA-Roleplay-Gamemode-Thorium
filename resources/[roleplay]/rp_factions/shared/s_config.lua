@@ -40,6 +40,7 @@ FACTION_TYPES = {
     gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff" },
     policia  = { name = "Policia",           state = true,  color = "#3b6fe0" },
     medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d" },
+    bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b" },   -- rp_firefighters
     empresa  = { name = "Empresa",           state = false, color = "#4cd38a" },
     banda    = { name = "Banda",             state = false, color = "#a35bff" },
     otra     = { name = "Otra",              state = false, color = "#f5a524" },
