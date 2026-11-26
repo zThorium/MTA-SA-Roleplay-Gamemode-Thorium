@@ -22,4 +22,5 @@
 
     <export function="getTrainState" type="server" />
     <export function="getTrackLength" type="server" />
+    <export function="getTrainRoute" type="server" />
 </meta>

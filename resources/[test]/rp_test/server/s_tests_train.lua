@@ -35,3 +35,15 @@ test("train_avanza_sin_jugadores", function(t)
         t.fail("ningún tren se movió en 3 s")
     end, 3000, 1)
 end)
+
+-- El recorrido completo empieza en Unity Station (Los Santos) y pasa por las 6 estaciones en orden de marcha
+test("train_recorrido_desde_unity", function(t)
+    local r = exports.rp_train:getTrainRoute()
+    if type(r) ~= "table" or type(r.stations) ~= "table" then return t.fail("getTrainRoute no devolvió el recorrido") end
+    if #r.stations ~= 6 then return t.fail("estaciones en el recorrido: " .. #r.stations) end
+    if r.stations[1].name ~= "Unity Station" or r.stations[1].km ~= 0 then return t.fail("el recorrido no empieza en Unity Station") end
+    for i = 2, #r.stations do
+        if r.stations[i].km <= r.stations[i - 1].km then return t.fail("estaciones fuera de orden en " .. r.stations[i].name) end
+    end
+    t.pass(("%s > ... > %s (%.1f km)"):format(r.stations[1].name, r.stations[6].name, r.length / 1000))
+end)
