@@ -2,17 +2,25 @@
     <!--
         images/map.png se genero a partir de los 144 tiles del radar (radar00-143.txd)
         de gta3.img de la instalacion local de GTA SA (ver tools/RadarExtract.cs).
+        Teclas (images/keys) y sonidos .ogg: Kenney CC0 desde assets/; heartbeat.wav y coins.wav
+        son propios (tools/gen_sounds.ps1). Ver CREDITOS.md.
     -->
-    <info author="Thorium" name="RP HUD" description="HUD propio: minimapa, vida, necesidades, hora, dinero y velocimetro con bencina" version="1.0.0" type="script" />
+    <info author="Thorium" name="RP HUD" description="HUD propio: minimapa, vida, necesidades, hora, dinero y velocimetro con bencina, con efectos, sonidos y tutorial de primera vez" version="1.1.0" type="script" />
     <min_mta_version client="1.6.0" />
 
     <include resource="rp_notify" />
 
-    <script src="c_hud.lua" type="client" />
+    <!-- c_fx crea el estado compartido (Hud) que usan los demas: va primero -->
+    <script src="c_fx.lua" type="client" cache="false" />
+    <script src="c_hud.lua" type="client" cache="false" />
     <!-- Estrellas de busqueda (nivel en el elementData "rp:wanted" que pone rp_wanted) -->
-    <script src="c_wanted.lua" type="client" />
+    <script src="c_wanted.lua" type="client" cache="false" />
+    <!-- Tutorial guiado de primera vez y consejos junto a cada indicador -->
+    <script src="c_tutorial.lua" type="client" cache="false" />
     <export function="setHudSuppressed" type="client" />
     <export function="isHudSuppressed" type="client" />
+    <export function="setHudHidden" type="client" />
+    <export function="getTopRightBottom" type="client" />
     <file src="images/map.png" />
     <file src="images/icons/heart.png" />
     <file src="images/icons/shield.png" />
@@ -20,9 +28,12 @@
     <file src="images/icons/drop.png" />
     <file src="images/icons/bolt.png" />
     <file src="images/icons/run.png" />
+    <file src="images/blips/10.png" />
+    <file src="images/blips/14.png" />
     <file src="images/blips/17.png" />
     <file src="images/blips/22.png" />
     <file src="images/blips/27.png" />
+    <file src="images/blips/29.png" />
     <file src="images/blips/36.png" />
     <file src="images/blips/41.png" />
     <file src="images/blips/45.png" />
@@ -32,4 +43,19 @@
     <file src="images/blips/55.png" />
     <file src="images/blips/56.png" />
     <file src="images/blips/63.png" />
+    <file src="images/keys/keyboard_enter.png" />
+    <file src="images/keys/keyboard_backspace.png" />
+    <file src="images/keys/mouse_left.png" />
+    <file src="images/keys/keyboard_j.png" />
+    <file src="images/keys/keyboard_f1.png" />
+    <file src="images/keys/keyboard_f7.png" />
+    <file src="images/keys/keyboard_f11.png" />
+    <file src="sounds/pluck_001.ogg" />
+    <file src="sounds/confirmation_002.ogg" />
+    <file src="sounds/confirmation_003.ogg" />
+    <file src="sounds/error_004.ogg" />
+    <file src="sounds/glass_001.ogg" />
+    <file src="sounds/drop_002.ogg" />
+    <file src="sounds/coins.wav" />
+    <file src="sounds/heartbeat.wav" />
 </meta>

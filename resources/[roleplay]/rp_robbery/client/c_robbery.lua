@@ -312,8 +312,17 @@ local function prompt(text)
     dxDrawText(text, x, y, x + w, y + 36 * s, tocolor(242, 244, 248), 1.1 * s, "default-bold", "center", "center")
 end
 
--- Debajo del dinero, el arma y las estrellas (mismas medidas que rp_hud)
+-- Debajo del dinero, el arma y las estrellas: rp_hud dice donde termina su bloque
+-- (se pregunta 4 veces por segundo, no en cada frame). Si rp_hud no esta, medidas aproximadas.
+local hudBottom, hudBottomAt = nil, 0
 local function fearTop()
+    local now = getTickCount()
+    if now - hudBottomAt > 250 then
+        hudBottomAt = now
+        local ok, y = pcall(function() return exports.rp_hud:getTopRightBottom() end)
+        hudBottom = ok and tonumber(y) or nil
+    end
+    if hudBottom then return hudBottom + 6 * s end
     local y = MARGIN + dxGetFontHeight(2.2 * s, "default-bold") + 2 * s + dxGetFontHeight(1.5 * s, "default-bold") + 4 * s
     local weapon = getPedWeapon(localPlayer)
     if weapon and weapon ~= 0 then y = y + dxGetFontHeight(1.0 * s, "default-bold") + 4 * s end
