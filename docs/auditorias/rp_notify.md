@@ -1,5 +1,10 @@
 # Auditoría de rp_notify
 
+## 2026-11-26 · mejorar · foco: tipo "level" para subidas de nivel
+- **Nota**: 100 → 100.
+- **Cambios**: tipo nuevo `"level"` (dorado, etiqueta NIVEL, icono de flecha hacia arriba). El `popup` de ese tipo no suena porque `rp_levels` pone su propio sonido (`playNotifySound` ignora un sonido vacío). Los tipos de siempre no cambian.
+- **Probar en juego**: `/probarnivel` (rp_levels) para ver el anuncio dorado.
+
 ## 2026-11-26 · mejorar · foco: legibilidad y bordes suaves
 - **Motivo**: Fabián: la fuente de los globos (Kenney Future, sin minúsculas reales y con esquinas biseladas) cuesta leerla, y los bordes diagonales y redondos se ven en dientes de sierra.
 - **Nota**: 100 → 100.

@@ -1,5 +1,5 @@
 --[[
-    c_dx.lua · formas dx con antialiasing (copia idéntica en rp_notify, rp_chat y rp_nametags)
+    c_dx.lua · formas dx con antialiasing (copia idéntica en rp_notify, rp_chat, rp_nametags y rp_levels)
 
     dxDrawPrimitive y dxDrawLine de MTA no suavizan los bordes: toda diagonal o curva sale
     en "dientes de sierra". Aquí cada forma lleva alrededor un borde de 1 px que pasa de su
@@ -12,7 +12,7 @@
         DX.roundRect(x, y, w, h, r, color, postGUI)
         DX.fade(color)                                          -- el mismo color con alfa 0
 
-    Si cambias este archivo, cópialo igual a los otros dos recursos.
+    Si cambias este archivo, cópialo igual a los otros recursos.
 ]]
 
 DX = {}

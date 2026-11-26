@@ -6,7 +6,7 @@
         exports.rp_notify:notify("Compraste una botella de agua", "success")
         exports.rp_notify:popup("Bienvenido", "Juan Perez llega a Los Santos", "info")
         exports.rp_notify:bubble(ped, "Hola! Pulsa E para comprar", 5000)
-    Tipos: "info", "success", "warning", "error"
+    Tipos: "info", "success", "warning", "error" y "level" (dorado, para subidas de nivel)
 
     Diseño ("señal"):
       - Toast: tarjeta con el borde izquierdo en diagonal. Entra con un barrido del
@@ -44,6 +44,8 @@ local TYPES = {
     success = { color = { 72, 222, 140 },  label = "HECHO",    glyph = "check", sound = "confirmation_002.ogg", popSound = "confirmation_003.ogg" },
     warning = { color = { 255, 178, 46 },  label = "ATENCIÓN", glyph = "bang",  sound = "question_001.ogg",     popSound = "bong_001.ogg" },
     error   = { color = { 255, 84, 96 },   label = "ERROR",    glyph = "cross", sound = "error_004.ogg",        popSound = "error_004.ogg" },
+    -- Subida de nivel (rp_levels): dorado; el popup no suena porque rp_levels pone su propio sonido
+    level   = { color = { 255, 196, 64 },  label = "NIVEL",    glyph = "up",    sound = "confirmation_003.ogg", popSound = nil },
 }
 local function typeOf(kind) return TYPES[kind] or TYPES.info end
 
@@ -124,6 +126,10 @@ local function drawGlyph(glyph, cx, cy, r, color)
     elseif glyph == "bang" then
         DX.line(cx, cy - r * 0.44, cx, cy + r * 0.08, w, color, true, true)
         circle(cx, cy + r * 0.40, w * 0.62, color, true)
+    elseif glyph == "up" then
+        DX.line(cx, cy + r * 0.44, cx, cy - r * 0.36, w, color, true, true)
+        DX.line(cx - r * 0.32, cy - r * 0.06, cx, cy - r * 0.40, w, color, true, true)
+        DX.line(cx + r * 0.32, cy - r * 0.06, cx, cy - r * 0.40, w, color, true, true)
     else -- info
         circle(cx, cy - r * 0.42, w * 0.62, color, true)
         DX.line(cx, cy - r * 0.08, cx, cy + r * 0.44, w, color, true, true)
@@ -135,7 +141,7 @@ end
 ----------------------------------------------------------------
 local lastSound, lastAny = {}, 0
 local function playNotifySound(file, volume)
-    if userMuted or externalMuted then return end
+    if not file or userMuted or externalMuted then return end
     local now = getTickCount()
     if (lastSound[file] and now - lastSound[file] < 150) or now - lastAny < 50 then return end
     lastSound[file], lastAny = now, now
