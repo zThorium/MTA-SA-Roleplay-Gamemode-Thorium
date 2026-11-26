@@ -7,10 +7,11 @@
          Izquierda: insignia con tu nivel y un aro que es el progreso al siguiente.
          Derecha: "NIVEL N", contador "+N XP" que sube rodando, barra con la parte
          ganada en blanco y una cabeza brillante, y "actual / necesario XP · faltan N".
-      2. Mientras se llena suenan ticks que suben de tono; al terminar, una confirmación.
+      2. Al empezar a llenarse suena sounds/xp_gain.mp3.
       3. Si subes de nivel: la barra y el aro se completan en dorado, destello y onda
          desde la insignia, chispas doradas, el número cambia con un salto y suena
-         levelup.ogg. Sale el anuncio central de rp_notify ("¡Nivel N!", tipo "level")
+         sounds/level_up.mp3. Tu personaje brilla con un aura dorada que solo ves tú
+         (c_aura.lua). Sale el anuncio central de rp_notify ("¡Nivel N!", tipo "level")
          y la barra se rellena con el progreso del nivel nuevo.
       4. Sube y se esconde. Varios avisos seguidos se encolan.
     Con el HUD suprimido (cinemáticas) la animación se pausa.
@@ -74,6 +75,7 @@ local function play(file, volume, speed)
         setSoundVolume(snd, volume or 0.5)
         if speed then setSoundSpeed(snd, speed) end
     end
+    return snd
 end
 
 local function needOf(level) return xpForLevel(level + 1) - xpForLevel(level) end
@@ -96,10 +98,9 @@ local function startNext()
         toFrac = ev.need > 0 and ev.cur / ev.need or 1,
         fromNeed = fromNeed, cur = ev.cur, need = ev.need,
         hold = (#queue > 0) and T.HOLD_QUEUED or T.HOLD, restore = ev.restore,
-        lastTick = 0, filled = false, flashed = false, popped = false,
+        filled = false, popped = false, xpPlayed = false,
     }
     known.level, known.frac = ev.level, anim.toFrac
-    play("maximize_003.ogg", 0.25)
 end
 
 addEvent("rp:levels:update", true)
@@ -237,18 +238,22 @@ addEventHandler("onClientRender", root, function()
     end
     color = mix(BLUE, GOLD, gold)
 
-    -- Sonidos: ticks que suben de tono mientras se llena, y el cierre
-    if t >= tFill and t < tFlash and now - anim.lastTick > 70 then
-        anim.lastTick = now
-        play("tick_001.ogg", 0.22, 0.9 + 0.7 * fillK)
+    -- Sonidos de Fabián: XP ganada al empezar a llenarse; al subir de nivel, el de subida
+    -- (el de XP se apaga rápido para no pisarlo) y el aura dorada sobre el personaje
+    if t >= tFill and not anim.xpPlayed then
+        anim.xpPlayed = true
+        anim.xpSound = play("xp_gain.mp3", 0.6)
     end
     if t >= tFlash and not anim.filled then
         anim.filled = true
         if up then
-            play("levelup.ogg", 0.75)
-        else
-            play("confirmation_001.ogg", 0.35)
+            play("level_up.mp3", 0.8)
+            LevelAura.start()
         end
+    end
+    if up and t >= tFlash and isElement(anim.xpSound) then
+        local k = 1 - (t - tFlash) / 250
+        if k <= 0 then destroyElement(anim.xpSound) else setSoundVolume(anim.xpSound, 0.6 * k) end
     end
 
     drawCard(x, y, a, (up and t >= tFlash and t < tFlash + 900) and easeOut((t - tFlash) / 900) or nil)

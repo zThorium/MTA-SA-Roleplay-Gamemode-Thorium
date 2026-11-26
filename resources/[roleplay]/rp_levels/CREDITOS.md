@@ -2,8 +2,8 @@
 
 | Archivo | Origen | Autor | Licencia |
 |---|---|---|---|
-| `sounds/levelup.ogg` | Digital Audio (ya estaba en el recurso) | Kenney (www.kenney.nl) | CC0 |
-| `sounds/tick_001.ogg`, `sounds/maximize_003.ogg`, `sounds/confirmation_001.ogg` | `assets/kenney/sonidos/interfaz/` (Interface Sounds) | Kenney (www.kenney.nl) | CC0 |
+| `sounds/xp_gain.mp3`, `sounds/level_up.mp3` | Aportados por Fabián (2026-11-26) | Por confirmar | **Por confirmar** (UX-10: debe ser libre o propia) |
+| `fx/mta-helper.fx` | Copia de `rp_characters/fx/mta-helper.fx` (helper estándar de shaders de MTA) | Equipo de MTA:SA | Libre (se distribuye con los ejemplos de shaders de MTA) |
 
 Fuentes: las de `rp_notify` (Kenney Future CC0 y Rubik OFL), cargadas con `:rp_notify/fonts/...`.
-Barra, insignia, chispas y efectos: dibujados por código (dx, formas suavizadas en `client/c_dx.lua`).
+Barra, insignia, chispas, aura y efectos: dibujados por código (dx, SVG generado y `fx/aura.fx`), sin imágenes.

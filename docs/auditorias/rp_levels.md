@@ -1,5 +1,16 @@
 # Auditoría de rp_levels
 
+## 2026-11-26 · mejorar · foco: sonidos propios y aura dorada al subir de nivel
+- **Motivo**: Fabián aporta dos sonidos (XP ganada y subida de nivel) y pide un aura dorada sobre el personaje al subir de nivel, como en los MMORPG, visible solo para el propio jugador.
+- **Nota**: 98 → 98.
+- **Cambios**:
+  - Sonidos: `sounds/xp_gain.mp3` al empezar a llenarse la barra y `sounds/level_up.mp3` al subir (el de XP se apaga en 250 ms para no pisarlo). Fuera los sonidos de Kenney anteriores de la barra.
+  - **Aura** (`client/c_aura.lua`, unos 3,4 s): cuerpo dorado con borde luminoso (`fx/aura.fx`, shader **en capa** que suma luz y repite la escala de altura de `rp_characters`, así no pisa su shader de altura y tono; también a la cabeza y toys de `bone_attach`), columna de luz y halo, dos anillos que se abren por el suelo, destellos que suben girando y una luz dorada real. Texturas SVG generadas en código.
+  - Solo la ve el propio jugador: todo se crea en su cliente y no se sincroniza.
+- **Reglas manuales revisadas**: UX-10 ⚠ (licencia de los dos MP3 por confirmar, anotada en `CREDITOS.md`), CLI-03 ✔ (texturas y shaders se crean una vez), CIC-05 ✔ (al parar el recurso se quita el shader y la luz).
+- **Pendiente**: confirmar origen y licencia de `xp_gain.mp3` y `level_up.mp3`; PRU-01.
+- **Probar en juego**: `/probarnivel` a pie y dentro de un vehículo, con un personaje de altura distinta y con cabeza de `rp_heads` (el brillo debe coincidir con el cuerpo); que otro jugador al lado no vea nada; de noche y de día.
+
 ## 2026-11-26 · mejorar · foco: HUD de niveles más propio, con sonidos y anuncio central al subir de nivel
 - **Motivo**: Fabián: la barra «se ve muy IA y básica y sin sonidos cool»; quiere el anuncio central de `rp_notify` al subir de nivel.
 - **Nota**: 96 → 98.

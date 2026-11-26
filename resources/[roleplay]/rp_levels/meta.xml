@@ -11,14 +11,16 @@
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_levels.lua" type="server" />
     <script src="client/c_dx.lua" type="client" cache="false" />
+    <script src="client/c_aura.lua" type="client" cache="false" />
     <script src="client/c_levels.lua" type="client" cache="false" />
 
-    <!-- Sonidos Kenney (CC0): Digital Audio (levelup) e Interface Sounds; ver CREDITOS.md.
-         Las fuentes se usan desde rp_notify (":rp_notify/fonts/...") -->
-    <file src="sounds/levelup.ogg" />
-    <file src="sounds/tick_001.ogg" />
-    <file src="sounds/maximize_003.ogg" />
-    <file src="sounds/confirmation_001.ogg" />
+    <!-- Sonidos aportados por Fabián (ver CREDITOS.md). Las fuentes se usan desde rp_notify (":rp_notify/fonts/...") -->
+    <file src="sounds/xp_gain.mp3" />
+    <file src="sounds/level_up.mp3" />
+
+    <!-- Aura dorada al subir de nivel (shader en capa) -->
+    <file src="fx/aura.fx" />
+    <file src="fx/mta-helper.fx" />
 
     <export function="giveXP" type="server" />
     <export function="getPlayerLevel" type="server" />
