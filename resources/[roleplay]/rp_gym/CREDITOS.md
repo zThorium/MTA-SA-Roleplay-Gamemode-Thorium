@@ -13,5 +13,6 @@
 | `sounds/shutter.wav`, `images/blood.png` | Sintetizados (`tools/gen_assets.py`) | Thorium | Propios |
 | `images/glow.png` | Copia de `rp_markers/images/glow.png` (generada por `rp_markers/tools/gen_textures.ps1`) | Thorium | Propio |
 
+Fuentes: las de `rp_notify` (Kenney Future CC0 y Rubik OFL), cargadas con `:rp_notify/fonts/...` desde `client/c_ui.lua`.
 Aviso de estadística, panel `/stats`, HUD del combate y K.O.: dibujados con dx.
 El interior y el ring del gimnasio son los del propio GTA SA (no se copia ningún archivo del juego).

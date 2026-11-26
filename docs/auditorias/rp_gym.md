@@ -1,5 +1,11 @@
 # Auditoría de rp_gym
 
+## 2026-11-26 · arreglar + mejorar (congelamiento en el combate e interfaz)
+- **Motivo**: al recibir golpes del entrenador el jugador quedaba congelado (sin poder pegar ni cubrirse); al terminar quedaba atrapado en el ring; pedido de rehacer la interfaz de todo el recurso y de logs para seguir el fallo.
+- **Causa**: cada golpe sin cubrirse quitaba los controles 1-2 s y el entrenador pega cada 0,65-1,1 s: el aturdimiento se encadenaba sin fin y, sin controles, tampoco se podía cubrir.
+- **Cambios**: inmunidad de `GYM_FIGHT.STUN_IMMUNE_MS` tras cada aturdimiento; el entrenador se aparta `TRAINER_RECOVER_MS` tras conectar; vigilante que reactiva los controles si quedan desactivados sin aturdimiento; logs `[rp_gym:pelea]` (cliente y servidor, `GYM_FIGHT.DEBUG`). Al ganar o perder aparece junto al entrenador, fuera del ring. Interfaz nueva con `client/c_ui.lua` (paleta del HUD, fuentes de `rp_notify`, teclas dibujadas): avisos "Pulsa E", tarjeta de máquina, selector de peso, aviso de estadística, `/stats`, presentación, fichas de vida, "¡Levántate!" y tarjeta de resultado (UX-01, UX-06).
+- **Probar en juego**: recibir varios golpes seguidos sin cubrirse y comprobar que se recupera el control; ganar y perder (aparece junto al entrenador); revisar `/debugscript 3` con el prefijo `[rp_gym:pelea]`; todas las pantallas del gimnasio.
+
 ## 2026-11-26 · arreglar (esquinas y paredes del ring)
 - **Motivo**: Fabián midió en juego las esquinas del ring; pidió paredes invisibles para no salir del ring por error.
 - **Causa**: el centro del ring se calculó con el giro del IPL invertido (salía a 0,9 m en X e Y del real).
