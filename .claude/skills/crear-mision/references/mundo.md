@@ -4,7 +4,7 @@ Todo esto **ya lo resuelve el motor**; una misión nueva solo debe respetar las 
 
 ## Instancias y estado (`s_core.lua`)
 - Máquina de estados `LOBBY → LOADING → IN_PROGRESS → COMPLETED/FAILED → CLEANUP`. Cada instancia vive en su dimensión `MISSIONS.DIM_BASE (1000) + n`; ahí están los jugadores, vehículos, peds, props y blips del grupo.
-- Sala (menú CEF con `J` o `/misiones`, o marcador del contacto): invitaciones (Y/N) o jugadores cercanos, roles con equipo propio, voto de dificultad (Fácil ×1.0 / Normal ×1.25 / Difícil ×1.5), sala abierta o privada. Aforo = `min(def.maxP, rango de respeto del líder)`.
+- Sala (menú CEF con `/misiones`, o marcador del contacto): invitaciones (Y/N) o jugadores cercanos, roles con equipo propio, voto de dificultad (Fácil ×1.0 / Normal ×1.25 / Difícil ×1.5), sala abierta o privada. Aforo = `min(def.maxP, rango de respeto del líder)`.
 - Al entrar se guarda una instantánea (posición, interior, dimensión, vida, armadura, armas) y se restaura al salir; la BD guarda la posición original cada 30 s para que el autoguardado de `rp_characters` (que corre con el jugador dentro de la misión) no deje a nadie en la dimensión de misión tras un cierre. Al abandonar/desconectar se restaura antes de que `rp_characters` guarde (`onPlayerQuit` con prioridad `high`).
 
 ## Vidas compartidas y espectador (compatible con `rp_injury`)

@@ -5,7 +5,7 @@
     maquina de estados  LOBBY -> LOADING -> IN_PROGRESS -> COMPLETED / FAILED -> CLEANUP
     y vidas compartidas / espectador. Las etapas viven en s_stages.lua, las recompensas en s_finish.lua.
 
-    Comandos:  /misiones (menu, tambien J)   /salirmision (abandonar)
+    Comandos:  /misiones (menu, o el marcador del contacto)   /salirmision (abandonar)
     Admin:     /mskip (salta la etapa)  /mmover <sweet|ryder|cesar> (mueve el punto de inicio del contacto)
     Exports:   getPlayerMission(player) -> instancia o false   getRespect(player[, contacto])   getRespectDiscount(player)
 ]]
