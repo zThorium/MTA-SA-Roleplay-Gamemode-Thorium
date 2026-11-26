@@ -43,8 +43,8 @@ VEHICLES = {
     HIT_MIN_LOSS = 5,           -- dano minimo para registrar un golpe
     PANEL_ROWS = 40,
 
-    -- Policia: faccion reservada (ver rp_database/schema.lua)
-    POLICE_FACTION_ID = 1,
+    -- Policia: cualquier faccion de este tipo (rp_factions:isPlayerInFaction)
+    POLICE_FACTION_TYPE = "policia",
     FINE_MIN = 50,
     FINE_MAX = 50000,
     FINE_REASON_MAX = 128,

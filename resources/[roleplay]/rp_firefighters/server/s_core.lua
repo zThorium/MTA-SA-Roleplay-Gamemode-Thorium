@@ -66,8 +66,8 @@ end
 ----------------------------------------------------------------
 function isFirefighter(p)
     if not isElement(p) then return false end
-    local ok, id, _, _, _, kind = pcall(function() return exports.rp_factions:getPlayerFaction(p) end)
-    return ok and id and kind == FIRE.FACTION_TYPE or false
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(p, FIRE.FACTION_TYPE) end)
+    return ok and yes == true
 end
 
 function isOnDuty(p)

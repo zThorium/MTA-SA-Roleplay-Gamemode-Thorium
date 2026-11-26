@@ -71,7 +71,7 @@ DRIVING = {
     REPRINT_PRICE = 150,          -- $ en efectivo por un duplicado del papel
     SHOW_DISTANCE = 3,            -- m para /mostrarlicencia
     REVOKE_DISTANCE = 5,          -- m para /retirarlicencia (la policia)
-    POLICE_FACTION_ID = 1,        -- faccion reservada de policia; tambien vale cualquier faccion de tipo "policia"
+    POLICE_FACTION_TYPE = "policia", -- quien puede retirar licencias: cualquier faccion de este tipo
     REASON_MAX = 120,
 
     -- Colores (r, g, b) de la interfaz dx

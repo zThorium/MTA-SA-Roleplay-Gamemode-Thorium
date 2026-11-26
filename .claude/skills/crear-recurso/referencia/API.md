@@ -112,9 +112,21 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 
 ## Facciones y policía
 
+`rp_factions` es la **única fuente** de facciones: nadie lee `faction_members` ni decide con el element data
+`rp:faction`. Se pregunta **por tipo** (`"policia"`, `"bomberos"`, `"medicos"`...; ver `FACTION_TYPES`), nunca por
+un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cualquier facción.
+
 | Export | |
 |---|---|
-| `rp_factions:getPlayerFaction(p)` | `id, nombre, rol, esLider, tipo` o `false` |
+| `rp_factions:isPlayerInFaction(p [, which])` | ¿pertenece? — **la consulta normal** (también en cliente) |
+| `rp_factions:isPlayerOnDuty(p [, which])` | ¿pertenece y está de servicio? Lo responde el recurso de `FACTION_TYPES[tipo].duty` (`rp_police`, `rp_firefighters`); tipos sin servicio: `false` |
+| `rp_factions:getPlayerFactionId(p)`, `getPlayerFactionType(p)`, `isPlayerFactionLeader(p)` | id / tipo o `false` (los dos primeros también en cliente) |
+| `rp_factions:getPlayerFactionInfo(p)` | `{ id, name, tag, type, color, stateFunded, rank, rankLevel, leader }` o `false` (en cliente, sin `stateFunded`/`rankLevel`) |
+| `rp_factions:getFactionInfo(id)`, `getFactions([tipo])` | `{ id, name, tag, type, color, stateFunded, leaderId, online }` / lista |
+| `rp_factions:getFactionPlayers(which [, soloDeServicio])` | jugadores conectados de esas facciones |
+| `rp_factions:getCharacterFaction(characterId)` | `id, tipo` si el personaje está conectado; `false` si no |
+| evento `rp:faction:onMembershipChange` | `source` = jugador; `(idNuevo\|false, tipoNuevo\|false, idAnterior\|false)` al entrar, salir o cambiar |
+| `rp_factions:getPlayerFaction(p)` | `id, nombre, rol, esLider, tipo` o `false` (anterior; sigue valiendo) |
 | `rp_factions:hasFactionPermission(p, clave)` | permisos de rol (p. ej. `pol_detain`) |
 | `rp_factions:getPlayerRankLevel(p)`, `getFactionMembersOnline(id)` | |
 | `rp_police:dispatchAlert(clave, x, y, z, extra, jugador)` | claves en `POLICE_CODES`: `shots`, `wanted`, `call`, `panic`, `robbery`... |

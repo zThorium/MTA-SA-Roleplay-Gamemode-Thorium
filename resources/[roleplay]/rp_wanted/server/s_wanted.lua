@@ -46,10 +46,10 @@ local function displayName(player)
     return (tostring(name):gsub("_", " "))
 end
 
--- Miembro de la policia (faccion reservada). Sin rp_factions nadie es policia.
+-- Miembro de una facción de tipo policía (API central de rp_factions). Sin rp_factions nadie es policía.
 function isWantedPolice(player)
-    local ok, id = pcall(function() return exports.rp_factions:getPlayerFaction(player) end)
-    return ok and tonumber(id) == WANTED.POLICE_FACTION_ID
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(player, WANTED.POLICE_FACTION_TYPE) end)
+    return ok and yes == true
 end
 
 -- Policia de servicio: miembro de la faccion y con uniforme (skin de policia) o

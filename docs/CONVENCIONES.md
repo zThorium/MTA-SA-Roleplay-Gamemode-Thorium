@@ -87,6 +87,19 @@ Tablas actuales: `accounts`, `login_log`, `characters`, `character_items`, `bank
   si es `nil`, el jugador no tiene sesión o personaje y no se hace nada.
 - Admin: `local function isAdmin(p) return (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 end`.
   Hoy solo hay nivel 1; si añades niveles, documéntalos en `RECURSOS.md`.
+- **Facciones: solo a través de `rp_factions`**. Ningún recurso lee `faction_members` ni decide nada con el
+  element data `rp:faction`; se pregunta a la API central, y **por tipo**, nunca por un id fijo:
+  ```lua
+  local function isPolice(p)
+      local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(p, "policia") end)
+      return ok and yes == true
+  end
+  ```
+  `isPlayerOnDuty(p, tipo)` para el servicio, `hasFactionPermission(p, clave)` para permisos de rol y el evento
+  `rp:faction:onMembershipChange` para reaccionar a altas y bajas. Un sistema de facción nuevo con servicio
+  (vestuario) exporta `isOnDuty(p)` y se registra en `FACTION_TYPES[tipo].duty` de `rp_factions`. En el cliente,
+  `exports.rp_factions:isPlayerInFaction` / `getPlayerFactionInfo` (solo para mostrar). Lista completa en
+  `.claude/skills/crear-recurso/referencia/API.md`.
 
 ## Interfaces CEF
 

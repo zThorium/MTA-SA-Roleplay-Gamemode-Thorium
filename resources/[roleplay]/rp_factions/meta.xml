@@ -11,6 +11,7 @@
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_factions.lua" type="server" />
     <script src="client/c_factions.lua" type="client" cache="false" />
+    <script src="client/c_api.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
@@ -22,4 +23,20 @@
     <export function="collectPaydaySalary" type="server" />
     <export function="getPlayerRankLevel" type="server" />
     <export function="reloadFactions" type="server" />
+
+    <!-- API central (ver cabecera de la sección Exports en server/s_factions.lua) -->
+    <export function="isPlayerInFaction" type="server" />
+    <export function="isPlayerOnDuty" type="server" />
+    <export function="getPlayerFactionId" type="server" />
+    <export function="getPlayerFactionType" type="server" />
+    <export function="isPlayerFactionLeader" type="server" />
+    <export function="getPlayerFactionInfo" type="server" />
+    <export function="getFactionInfo" type="server" />
+    <export function="getFactions" type="server" />
+    <export function="getFactionPlayers" type="server" />
+    <export function="getCharacterFaction" type="server" />
+    <export function="isPlayerInFaction" type="client" />
+    <export function="getPlayerFactionId" type="client" />
+    <export function="getPlayerFactionType" type="client" />
+    <export function="getPlayerFactionInfo" type="client" />
 </meta>

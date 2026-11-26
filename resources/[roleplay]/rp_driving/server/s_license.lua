@@ -29,9 +29,8 @@ addEvent("rp:onItemUse", false)
 addEvent("rp:driving:reprint", true)
 
 local function isPolice(player)
-    local ok, id, _, _, _, ftype = pcall(function() return exports.rp_factions:getPlayerFaction(player) end)
-    if not ok or not id then return false end
-    return ftype == "policia" or id == DRIVING.POLICE_FACTION_ID
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(player, DRIVING.POLICE_FACTION_TYPE) end)
+    return ok and yes == true
 end
 
 local function sameSpot(a, b, maxDist)

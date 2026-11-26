@@ -52,9 +52,9 @@ WANTED = {
     -- como el progreso de la historia en GTA SA: 4 al empezar, 5 y luego 6
     MAX_LEVEL_BY_AGE = { { days = 0, max = 4 }, { days = 3, max = 5 }, { days = 10, max = 6 } },
 
-    -- La policia (faccion reservada en rp_factions / rp_database) de servicio (con
+    -- La policia (facciones de este tipo en rp_factions) de servicio (con
     -- uniforme o en un vehiculo policial) no acumula busqueda; de civil, si
-    POLICE_FACTION_ID = 1,
+    POLICE_FACTION_TYPE = "policia",
     -- Delitos contra otros jugadores (golpes, disparos, atropellos) tambien suman
     PLAYER_CRIMES = true,
 

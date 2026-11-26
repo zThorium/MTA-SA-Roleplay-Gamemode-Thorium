@@ -37,6 +37,7 @@ addEvent("rp:onCharacterLogout", false)
 addEvent("rp:fac:open", true)
 addEvent("rp:fac:close", true)
 addEvent("rp:fac:action", true)
+addEvent("rp:faction:onMembershipChange", false) -- público: lo escuchan otros recursos
 
 local function db() return exports.rp_database:getConnection() end
 local function notify(p, t, k) exports.rp_notify:notify(p, t, k) end
@@ -133,10 +134,22 @@ local function addLog(factionId, text)
     dbExec(db(), "INSERT INTO faction_log (faction_id, text) VALUES (?, ?)", factionId, text:sub(1, 255))
 end
 
+-- Avisa a los demás recursos cuando un jugador entra, sale o cambia de facción:
+-- rp:faction:onMembershipChange (source = jugador; idNuevo|false, tipoNuevo|false, idAnterior|false)
+local publishedId = {}  -- [player] = id de facción publicado (o false)
+local function announceChange(player, f)
+    local newId = f and f.id or false
+    local old = publishedId[player] or false
+    if newId == old then return end
+    publishedId[player] = newId
+    triggerEvent("rp:faction:onMembershipChange", player, newId, f and f.type or false, old)
+end
+
 -- Dato publico (nametags, scoreboard u otros recursos)
 local function publishMembership(player)
     if not isElement(player) then return end
     local f, m = getFaction(player)
+    announceChange(player, f)
     if not f then return setElementData(player, "rp:faction", false) end
     local rank = f.ranks[m.rankId]
     setElementData(player, "rp:faction", {
@@ -233,9 +246,12 @@ end
 
 addEventHandler("rp:onCharacterLogout", root, function()
     forget(source)
-    if isElement(source) then setElementData(source, "rp:faction", false) end
+    if isElement(source) then
+        announceChange(source, nil)
+        setElementData(source, "rp:faction", false)
+    end
 end)
-addEventHandler("onPlayerQuit", root, function() forget(source) end)
+addEventHandler("onPlayerQuit", root, function() forget(source) publishedId[source] = nil end)
 
 ----------------------------------------------------------------
 -- Panel F3
@@ -768,6 +784,124 @@ end)
 ----------------------------------------------------------------
 -- Exports
 ----------------------------------------------------------------
+--[[
+    API central de facciones. Es la ÚNICA forma en que otros recursos saben de facciones:
+    nadie lee la tabla faction_members ni el elementData "rp:faction" para decidir algo en el servidor.
+
+    "which" en estas funciones es un id de facción (número) o un TIPO (texto: "policia", "bomberos"...).
+    Para sistemas de una profesión (policía, bomberos, médicos) se pregunta SIEMPRE por el tipo:
+    así sirven igual con una o con varias facciones de ese tipo.
+
+        isPlayerInFaction(p [, which])     ¿pertenece? (sin which: a cualquiera)
+        isPlayerOnDuty(p [, which])        ¿pertenece y está de servicio? (lo responde el recurso
+                                           FACTION_TYPES[tipo].duty; tipos sin servicio: false)
+        getPlayerFactionId(p), getPlayerFactionType(p), isPlayerFactionLeader(p)
+        getPlayerFactionInfo(p)            tabla { id, name, tag, type, color, stateFunded, rank, rankLevel, leader }
+        getFactionInfo(id)                 tabla { id, name, tag, type, color, stateFunded, leaderId, online }
+        getFactions([tipo])                lista de getFactionInfo
+        getFactionPlayers(which [, soloDeServicio])   jugadores conectados
+        getCharacterFaction(characterId)   id, tipo del personaje si está conectado; false si no
+    Evento: rp:faction:onMembershipChange (source = jugador; idNuevo|false, tipoNuevo|false, idAnterior|false)
+]]
+local function matches(f, which)
+    if which == nil or which == true then return true end
+    local n = tonumber(which)
+    if n then return f.id == n end
+    return f.type == tostring(which):lower()
+end
+
+local function dutyResource(f)
+    local t = FACTION_TYPES[f.type]
+    local name = t and t.duty
+    local res = name and getResourceFromName(name)
+    if res and getResourceState(res) == "running" then return res end
+    return nil, name ~= nil
+end
+
+-- Servicio según el recurso de ese tipo; nil si el tipo no tiene servicio
+local function onDuty(player, f)
+    local res, hasDuty = dutyResource(f)
+    if not res then return hasDuty and false or nil end
+    local ok, on = pcall(call, res, "isOnDuty", player)
+    return ok and on == true
+end
+
+local function factionInfo(f)
+    return {
+        id = f.id, name = f.name, tag = f.tag, type = f.type, color = f.color,
+        stateFunded = f.state_funded, leaderId = f.leader_id, online = #onlineMembers(f.id),
+    }
+end
+
+function isPlayerInFaction(player, which)
+    local f = getFaction(player)
+    return f ~= nil and matches(f, which)
+end
+
+function isPlayerOnDuty(player, which)
+    local f = getFaction(player)
+    if not f or not matches(f, which) then return false end
+    return onDuty(player, f) == true
+end
+
+function getPlayerFactionId(player)
+    local f = getFaction(player)
+    return f and f.id or false
+end
+
+function getPlayerFactionType(player)
+    local f = getFaction(player)
+    return f and f.type or false
+end
+
+function isPlayerFactionLeader(player)
+    return isLeader(player)
+end
+
+function getPlayerFactionInfo(player)
+    local f, m = getFaction(player)
+    if not f then return false end
+    local rank = f.ranks[m.rankId]
+    return {
+        id = f.id, name = f.name, tag = f.tag, type = f.type, color = f.color, stateFunded = f.state_funded,
+        rank = rank and rank.name or "", rankLevel = getPlayerRankLevel(player), leader = isLeader(player),
+    }
+end
+
+function getFactionInfo(factionId)
+    local f = factions[tonumber(factionId)]
+    return f and factionInfo(f) or false
+end
+
+function getFactions(kind)
+    local list = {}
+    for _, f in pairs(factions) do
+        if matches(f, kind) then list[#list + 1] = factionInfo(f) end
+    end
+    table.sort(list, function(a, b) return a.id < b.id end)
+    return list
+end
+
+function getFactionPlayers(which, dutyOnly)
+    local list = {}
+    for player, m in pairs(members) do
+        local f = factions[m.factionId]
+        if f and isElement(player) and matches(f, which) and (not dutyOnly or onDuty(player, f) == true) then
+            list[#list + 1] = player
+        end
+    end
+    return list
+end
+
+function getCharacterFaction(characterId)
+    characterId = tonumber(characterId)
+    if not characterId then return false end
+    local player = playerOfCharacter(characterId)
+    local f = player and getFaction(player)
+    if not f then return false end
+    return f.id, f.type
+end
+
 -- Devuelve id de faccion, nombre, rol y si es lider; false si no tiene faccion
 function getPlayerFaction(player)
     local f, m = getFaction(player)
@@ -811,16 +945,9 @@ function collectPaydaySalary(player)
     if not f then return false, "none" end
     local rank = f.ranks[m.rankId]
     local salary = rank and rank.salary or 0
-    -- La policia solo cobra el sueldo de su rol estando de servicio (rp_police)
-    if f.type == "policia" then
-        local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
-        if ok and not duty then return false, "offduty", f.name end
-    end
-    -- Los bomberos, igual: sueldo solo de servicio (rp_firefighters)
-    if f.type == "bomberos" then
-        local ok, duty = pcall(function() return exports.rp_firefighters:isOnDuty(player) end)
-        if ok and not duty then return false, "offduty", f.name end
-    end
+    -- Tipos con servicio (FACTION_TYPES[tipo].duty: policía, bomberos...): sueldo solo de servicio.
+    -- Si el recurso del servicio no está en marcha se paga como siempre.
+    if dutyResource(f) and not onDuty(player, f) then return false, "offduty", f.name end
     if salary <= 0 then return false, "nosalary", f.name end
     if not f.state_funded then
         if f.bank < salary then

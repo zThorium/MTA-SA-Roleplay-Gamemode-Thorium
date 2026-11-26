@@ -35,9 +35,10 @@ function dname(p)
 end
 local function adminLevel(p) return exports.rp_login:getPlayerAdminLevel(p) or 0 end
 
+-- Miembro de una facción de tipo policía (API central de rp_factions)
 function isOfficer(p)
-    local ok, id = pcall(function() return exports.rp_factions:getPlayerFaction(p) end)
-    return ok and tonumber(id) == POLICE.FACTION_ID
+    local ok, yes = pcall(function() return exports.rp_factions:isPlayerInFaction(p, POLICE.FACTION_TYPE) end)
+    return ok and yes == true
 end
 
 function isOnDuty(p)
