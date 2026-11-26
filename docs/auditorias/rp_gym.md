@@ -1,5 +1,11 @@
 # Auditoría de rp_gym
 
+## 2026-11-26 · arreglar (esquinas y paredes del ring)
+- **Motivo**: Fabián midió en juego las esquinas del ring; pidió paredes invisibles para no salir del ring por error.
+- **Causa**: el centro del ring se calculó con el giro del IPL invertido (salía a 0,9 m en X e Y del real).
+- **Cambios**: esquinas medidas en juego; centro (760.91, 0.24); público, árbitro y salida recolocados con el centro corregido. Paredes invisibles en `client/c_fight.lua`: durante el combate el jugador y el entrenador no pasan de `ring.half` (2,45 m) del centro.
+- **Probar en juego**: que nadie pueda salir del ring empujando contra las cuerdas ni al caer; que el público no quede dentro de una pared; `/debugscript 3` limpio.
+
 ## 2026-11-26 · mejorar (combate en el ring)
 - **Motivo**: pedido de Fabián: público y fotógrafos alrededor del ring, sangre, aturdimiento con mareo, caídas con cuenta del árbitro y Espacio para levantarse, perder sin quedar abatido, cinemática de presentación y sonidos de Kenney (narrador e impactos).
 - **Cambios**: `server/s_trainers.lua` (público, árbitro y fotógrafos como peds del servidor; fase de presentación `GYM_FIGHT.INTRO_MS`; eventos `rp:gym:down` y `rp:gym:lost`; derrota fuera del ring; element data `rp:gymFight`). `client/c_fight.lua` reescrito (cinemática, IA, golpes, efectos, cuenta y HUD del combate). `rp_injury/client/c_injury.lua`: no deja abatido durante un combate de `rp_gym`. Packs Kenney Impact Sounds y Voiceover Fighter añadidos a `assets/` (CC0); sonidos de público, obturador y textura de sangre sintetizados (`tools/gen_assets.py`). Teclas dibujadas (UX-01): Espacio animado, clic derecho + Shift para cubrirse.
