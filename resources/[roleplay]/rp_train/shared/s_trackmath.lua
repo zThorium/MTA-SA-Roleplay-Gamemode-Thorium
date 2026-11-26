@@ -25,6 +25,7 @@ end
 function TrainTrack.length() build() return length end
 function TrainTrack.nodeD(i) build() return cum[i] end
 function TrainTrack.wrap(d) build() return d % length end
+function TrainTrack.gameLength() build() return length2 end -- largo del bucle en unidades del juego (~18107)
 
 -- Nodo de la vía principal más cercano a la distancia d: x, y, z exactos.
 -- Un tren puesto ahí con setElementPosition queda enganchado a la vía principal (el juego toma la vía

@@ -113,17 +113,20 @@ local function createTrain(def)
     t.loco = createVehicle(def.model, x, y, z + 1, 0, 0, heading(ux, uy))
     if not t.loco then return outputDebugString("[rp_train] no se pudo crear la locomotora " .. def.model, 1) end
     t.wagons[1] = t.loco
-    local prev = t.loco
+    -- Los vagones NO se enganchan (attachTrailerToVehicle): el enganche de trenes de MTA no los arrastraba
+    -- (la locomotora se iba y el vagón quedaba en el andén). Cada vagón es un tren suelto en la vía
+    -- principal y el cliente que lo sincroniza lo lleva a la velocidad de la locomotora, a su distancia
+    -- (c_train.lua, tickCar). rp:train:of y rp:train:idx le dicen a qué tren pertenece y en qué puesto.
     for i, model in ipairs(def.carriages) do
         local cd = t.d - i * TRAIN.CARRIAGE_GAP
         local _, _, _, cux, cuy = TrainTrack.point(cd)
         local cx, cy, cz = TrainTrack.nodePoint(cd)
         local car = createVehicle(model, cx, cy, cz + 1, 0, 0, heading(cux, cuy))
         if car then
-            attachTrailerToVehicle(prev, car)
+            setElementData(car, "rp:train:of", t.loco)
+            setElementData(car, "rp:train:idx", #t.cars + 1)
             t.cars[#t.cars + 1] = car
             t.wagons[#t.wagons + 1] = car
-            prev = car
         end
     end
     for _, veh in ipairs(t.wagons) do

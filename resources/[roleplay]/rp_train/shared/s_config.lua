@@ -22,7 +22,10 @@ TRAIN = {
     SYNC_RADIUS = 180,
     OFF_TRACK = 2,            -- un vagón a más de esto de la vía principal está en otra (en LS corre pegada la de tracks4)
     CLOCKWISE = true,         -- sentido de marcha inicial; el servidor lo corrige si el juego lo mueve al revés
-    CARRIAGE_GAP = 18.5,      -- separación entre enganches (para recolocar el tren sin jugadores cerca)
+    CARRIAGE_GAP = 18.5,      -- separación aproximada entre centros (servidor; el cliente usa el largo real de cada modelo)
+    COUPLING = 1.0,           -- hueco entre vagón y vagón (m)
+    CAR_SNAP = 25,            -- un vagón más desfasado que esto se coloca de una vez (al aparecer)
+    CAR_CATCHUP = 4,          -- m/s máximos de corrección para recuperar su sitio (suave, sin saltos)
     DRIVER_SKIN = 255,        -- maquinista
 
     SPEED = 22,               -- crucero (~80 km/h)

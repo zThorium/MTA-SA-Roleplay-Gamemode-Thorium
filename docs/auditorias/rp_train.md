@@ -1,5 +1,11 @@
 # Auditoría de rp_train
 
+## 2026-11-26 · arreglar (vagones)
+- **Síntoma** (prueba de Fabián): al iniciar, locomotora y vagón solapados; la locomotora se va y el vagón se queda siempre en el andén. Ya pasaba antes de esta rama (primera captura).
+- **Causa raíz**: el enganche de trenes de MTA (`attachTrailerToVehicle`) no arrastraba los vagones; el foro de MTA reconoce problemas de sincronización de remolques desde hace años. Además, al crear cada pieza en el nodo más cercano, dos piezas podían caer en el mismo nodo.
+- **Arreglo**: sin enganche. Cada vagón es un tren suelto en la vía principal (`rp:train:of`, `rp:train:idx`), colocado con `setTrainPosition`; el cliente que lo sincroniza (el mismo que la locomotora) le aplica la velocidad real de la locomotora más una corrección de hasta `CAR_CATCHUP` m/s hacia su sitio, calculado con el largo real de cada modelo (`getElementBoundingBox`) + `COUPLING`. Solo si está a más de `CAR_SNAP` m (al aparecer) se coloca de una vez. Unidades de `setTrainPosition` confirmadas con la wiki (bucle 0..18107 = `TrainTrack.gameLength`).
+- **Probar en juego**: `restart rp_train`; en Unity los 3 vagones detrás de la locomotora, sin solaparse, y salen con ella; seguir el tren hasta Market (curvas y túnel): los vagones no se separan ni chocan.
+
 ## 2026-11-26 · arreglar
 - **Síntoma** (prueba en juego de Fabián): el tren salía con los vagones solapados, uno en la vía de al lado (túnel de Market), e iba en reversa empujando los vagones.
 - **Causa raíz**: (1) cada vagón se colocaba con `setElementPosition` y el juego lo engancha a la vía más cercana; en LS corre pegada la vía de `tracks4.dat`. (2) Al detectar marcha atrás se invertía el signo de `setTrainSpeed` en vez del sentido del tren, así que la locomotora avanzaba empujando a los vagones.
