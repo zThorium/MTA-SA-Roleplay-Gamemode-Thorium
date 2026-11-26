@@ -1,0 +1,16 @@
+<meta>
+    <info author="Thorium" name="RP Restaurants" description="Burger Shot, Cluckin' Bell y Well Stacked Pizza de Los Santos con interior original, empleados y menus que se comen con la animacion de GTA SA" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_characters" />
+    <include resource="rp_needs" />
+    <include resource="rp_markers" />
+    <include resource="bone_attach" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_restaurants.lua" type="server" />
+    <script src="client/c_restaurants.lua" type="client" cache="false" />
+
+    <export function="isPlayerEating" type="server" />
+</meta>

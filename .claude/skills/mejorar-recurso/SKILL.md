@@ -1,6 +1,6 @@
 ---
 name: mejorar-recurso
-description: Mejorar un recurso rp_* existente del gamemode Thorium (MTA:SA) hasta el estándar del proyecto - auditoría, plan priorizado (estándar, seguridad, integración con la GM, robustez, rendimiento, experiencia de juego), ejecución por fases verificables y registro antes/después. Recibe el nombre del recurso y, opcionalmente, el foco de la mejora. Úsala para modernizar, endurecer, ampliar o pulir un sistema que ya existe.
+description: Mejorar un recurso rp_* existente del gamemode Thorium (MTA:SA) hasta el estándar del proyecto - auditoría, plan priorizado (estándar, seguridad, integración con la GM, robustez, rendimiento, experiencia de juego con las reglas UX: tutorial guiado, teclas dibujadas, foco, sonidos), ejecución por fases verificables y registro antes/después. Recibe el nombre del recurso y, opcionalmente, el foco de la mejora. Úsala para modernizar, endurecer, ampliar o pulir un sistema que ya existe, también cuando «no se entiende» o «agobia».
 argument-hint: <rp_recurso> [foco: seguridad | integracion | rendimiento | ux | "añadir X"...]
 ---
 
@@ -35,6 +35,9 @@ scripts/auditar-recurso.sh rp_x            # NOTA y FALLA de partida
 - Mira quién depende de él: `grep -rn "exports.rp_x" resources/` y quién escucha sus eventos.
   Sus exports y eventos son un **contrato**: no cambies firmas sin actualizar a todos los que llaman.
 - Revisa PRs abiertos que lo toquen (`gh pr list`).
+- Si el jugador **hace** algo en el recurso (trabajo, minijuego, panel, actividad), juégalo mentalmente como
+  alguien nuevo con [`docs/EXPERIENCIA_JUEGO.md`](../../../docs/EXPERIENCIA_JUEGO.md) al lado: ¿sabe qué tecla pulsar, a dónde ir,
+  en qué orden, cómo va y si lo hizo bien? Cada «no» es un punto del plan (reglas `UX-*`).
 - Revisa a mano las reglas **manuales** del estándar (SEG-02, SEG-04, BD-06, CIC-03, CIC-06,
   INT-07...): es donde suelen estar los problemas que el script no ve.
 
@@ -49,7 +52,7 @@ un beneficio concreto en el juego:
 | P1 · Robustez | Ciclo de vida y estado | limpieza al salir/cambiar de personaje, rehidratar al reiniciar, abatido/esposado/en misión |
 | P2 · Integración | Usar la GM en vez de duplicarla | `rp_notify` en vez de chat, `rp_inventory`, `rp_levels`, `rp_wanted`, HUD/radio con supresión, dimensiones y teclas sin choques |
 | P3 · Calidad | FALLA [I], AVISOS, config centralizada, documentación, pruebas en `rp_test` | |
-| P4 · Experiencia | Lo que nota el jugador | feedback claro, textos de rol, menos pasos, rendimiento (onClientRender, timers) |
+| P4 · Experiencia | Lo que nota el jugador (reglas `UX-*`, `docs/EXPERIENCIA_JUEGO.md`) | tecla y ratón dibujados, una cosa a la vez, tutorial guiado y foco, entrenador en paneles, sonidos y recompensa, globos de estado, zonas de acción amplias, textos de rol, rendimiento (onClientRender, timers). Assets desde `assets/` (paleta estándar en `assets/README.md`) |
 | P5 · Funcionalidad | Solo si el foco lo pide | |
 
 Para cada punto: **qué** se cambia, **por qué** (regla o beneficio), **riesgo** (qué podría romper)
@@ -81,7 +84,8 @@ scripts/auditar-recurso.sh rp_x
 ```
 
 - Nota final ≥ nota inicial; **0 FALLA [B]** salvo que Fabián acepte dejar alguna (queda en "Pendiente").
-- Reglas manuales revisadas y anotadas.
+- Reglas manuales revisadas y anotadas, incluidas las `UX-*` si el jugador interactúa con el recurso.
+- Si tocaste la experiencia: pide a Fabián la **prueba del jugador nuevo** (alguien que no lo conoce lo completa sin ayuda).
 - Lista concreta de qué probar en el cliente (Claude no puede): flujo principal, errores
   (sin dinero, lejos, sin permiso), abatido a mitad, salir a mitad, `restart` con gente dentro.
 

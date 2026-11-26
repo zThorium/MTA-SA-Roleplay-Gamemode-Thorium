@@ -1,0 +1,66 @@
+<meta>
+    <info author="Thorium" name="RP Pizzeria" description="Trabajo de pizzero en la Well Stacked Pizza de Idlewood: comandas, armado, horno, corte, freidora, despensa y clientes que comen en las mesas" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_characters" />
+    <include resource="rp_jobs" />
+    <include resource="rp_hud" />
+    <include resource="rp_markers" />
+    <include resource="rp_restaurants" />
+    <include resource="bone_attach" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_orders.lua" type="server" />
+    <script src="server/s_pizzeria.lua" type="server" />
+    <script src="client/c_pizzeria.lua" type="client" cache="false" />
+    <script src="client/c_customers.lua" type="client" cache="false" />
+    <script src="client/c_tutorial.lua" type="client" cache="false" />
+    <script src="client/c_fx.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/pizza.js" />
+    <file src="html/app.js" />
+    <file src="html/sounds/sizzle.wav" />
+    <file src="html/sounds/musica_fondo.mp3" />
+    <file src="html/sounds/kenney/bong_001.ogg" />
+    <file src="html/sounds/kenney/click_002.ogg" />
+    <file src="html/sounds/kenney/close_002.ogg" />
+    <file src="html/sounds/kenney/confirmation_001.ogg" />
+    <file src="html/sounds/kenney/confirmation_002.ogg" />
+    <file src="html/sounds/kenney/confirmation_003.ogg" />
+    <file src="html/sounds/kenney/drop_001.ogg" />
+    <file src="html/sounds/kenney/drop_002.ogg" />
+    <file src="html/sounds/kenney/drop_003.ogg" />
+    <file src="html/sounds/kenney/drop_004.ogg" />
+    <file src="html/sounds/kenney/error_004.ogg" />
+    <file src="html/sounds/kenney/error_006.ogg" />
+    <file src="html/sounds/kenney/glass_001.ogg" />
+    <file src="html/sounds/kenney/maximize_003.ogg" />
+    <file src="html/sounds/kenney/minimize_003.ogg" />
+    <file src="html/sounds/kenney/open_002.ogg" />
+    <file src="html/sounds/kenney/pluck_001.ogg" />
+    <file src="html/sounds/kenney/question_001.ogg" />
+    <file src="html/sounds/kenney/scratch_001.ogg" />
+    <file src="html/sounds/kenney/scratch_002.ogg" />
+    <file src="html/sounds/kenney/scratch_003.ogg" />
+    <file src="html/sounds/kenney/scroll_001.ogg" />
+    <file src="html/sounds/kenney/scroll_002.ogg" />
+    <file src="html/sounds/kenney/scroll_003.ogg" />
+    <file src="html/sounds/kenney/select_002.ogg" />
+    <file src="html/sounds/kenney/tick_002.ogg" />
+    <file src="images/happy.png" />
+    <file src="images/neutral.png" />
+    <file src="images/annoyed.png" />
+    <file src="images/angry.png" />
+    <file src="images/love.png" />
+    <file src="images/complain.png" />
+    <file src="images/ready.png" />
+    <file src="images/tip.png" />
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/mouse_left.png" />
+    <file src="images/keys/mouse_move.png" />
+
+    <export function="isPlayerOnPizzaShift" type="server" />
+</meta>

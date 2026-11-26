@@ -17,6 +17,8 @@ Archivos de apoyo (léelos cuando la fase lo pida, no todos de golpe):
 | [`referencia/API.md`](referencia/API.md) | Exports reales de cada recurso con firma y retorno, y eventos del ciclo de vida |
 | [`referencia/REGISTROS.md`](referencia/REGISTROS.md) | Lo que está "ocupado": dimensiones, teclas, elementData, blips, niveles de admin, orden de arranque |
 | [`plantillas/`](plantillas/) | `meta.xml`, `s_config.lua`, `s_main.lua`, `c_main.lua` y prueba de `rp_test` listos para copiar |
+| [`assets/README.md`](../../../assets/README.md) | Biblioteca de assets del repo (teclas, emotes, UI, sonidos de Kenney CC0 y propios) y **paleta estándar**: qué imagen y sonido usar en cada situación. De aquí salen todos los assets |
+| [`docs/EXPERIENCIA_JUEGO.md`](../../../docs/EXPERIENCIA_JUEGO.md) | Estándar de experiencia (reglas `UX-*`): tecla dibujada, una cosa a la vez, tutorial guiado, foco, entrenador, sonidos, assets Kenney. Caso de referencia: `rp_pizzeria` |
 
 **Estándar**: todo recurso cumple [`docs/ESTANDAR_RECURSOS.md`](../../../docs/ESTANDAR_RECURSOS.md)
 (reglas con ID: `SEG-01`, `BD-02`...) y se comprueba con `scripts/auditar-recurso.sh rp_x`. Esta skill
@@ -48,6 +50,7 @@ luego deciden la estructura:
 | Pregunta | Por qué importa |
 |---|---|
 | ¿Qué hace el jugador, paso a paso, y qué ve? | Define cliente, teclas y UI |
+| ¿Cómo lo descubre un jugador nuevo sin que nadie se lo explique? ¿Qué ve en cada paso y qué destaca? | Tutorial, guía y assets (`UX-*`, `docs/EXPERIENCIA_JUEGO.md`) |
 | ¿Qué persiste entre reinicios y qué es solo memoria? | Tablas (migracion-bd) vs. tablas Lua |
 | ¿De quién es cada dato: personaje, propiedad, facción, global? | Columna `character_id` + `ON DELETE CASCADE` |
 | ¿Cuesta o paga dinero? ¿Efectivo, banco o tarjeta? | Patrón de cobro (abajo) |
@@ -139,7 +142,9 @@ Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
 - **E** es la tecla universal de interacción y la usan 15 recursos: solo actúa si estás junto a
   **tu** punto, y nunca consumas la tecla fuera de él. Antes de usar otra tecla, mira `REGISTROS.md`.
 - Aviso "Pulsa E para..." con dx, como `rp_shops/client/c_shops.lua`, solo en la dimensión/interior correcta.
-- Ocultar HUD / silenciar radio: **solo** `exports.rp_hud:setHudSuppressed("rp_sistema", true/false)` y
+- **Posiciones sobre el mobiliario real** (sillas, mostradores, hornos de un interior del juego): no las adivines. `scripts/leer-ipl-interior.ps1` lee los IPL binarios de `gta_int.img` (o `gta3.img`) y lista cada objeto con modelo, nombre, posición y giro dentro de una caja de coordenadas. La ruta del juego está en el registro de MTA (`GTA:SA Path`). Ejemplo: las sillas y hornos de `rp_pizzeria`.
+- Ocultar HUD / silenciar radio: **solo** `exports.rp_hud:setHudSuppressed("rp_sistema", true/false)` (cinemáticas: quita también
+  chat y avisos; para un HUD propio a pantalla completa usa `setHudHidden`, UX-09) y
   `exports.rp_radio:setRadioSuppressed("rp_sistema", true/false)`. Nunca toques `rp:hudHidden` ni la
   radio nativa. Libera siempre la supresión en `onClientResourceStop`.
 - Blips: `rp_hud` solo dibuja los iconos de su lista `KNOWN_BLIP_ICON_IDS`. Usa uno existente
@@ -147,6 +152,17 @@ Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
 - `onClientRender` lo más barato posible: precalcula, cachea texturas y fuentes, y no recorras
   `getElementsByType` cada frame si puedes mantener una lista.
 - Panel HTML → skill **interfaz-cef**.
+
+**Experiencia de juego (obligatorio, reglas `UX-*`)**: lee [`docs/EXPERIENCIA_JUEGO.md`](../../../docs/EXPERIENCIA_JUEGO.md)
+antes de diseñar el cliente y copia los patrones de `rp_pizzeria` en vez de inventar otros:
+- Tecla y ratón **dibujados** (`assets/kenney/teclas/`) en cada aviso y acción (UX-01).
+- **Una cosa a la vez**: indicadores discretos y solo lo útil ahora destacado (UX-02).
+- Actividad de varios pasos: **tutorial guiado** la primera vez, con la guía junto a lo que hay que
+  mirar (visor, objeto resaltado, foco con pantalla oscura) y **entrenador** en los paneles (UX-03/04/05).
+- Un **sonido** por evento (paleta estándar de `assets/README.md`), efectos de acierto y recompensa visible; estado de NPC con globos (UX-06/07).
+- La acción se acepta **donde el jugador la intenta** (UX-08); HUD general oculto con `setHudHidden` si hay HUD propio (UX-09).
+- **Assets siempre desde `assets/`** (biblioteca del repo: teclas, emotes, UI, sonidos; paleta estándar en
+  `assets/README.md`): se copian solo los usados al recurso, con `CREDITOS.md`. Nada de descargas sueltas (UX-10).
 
 ## Fase 6 · Integración con el resto de la GM
 
@@ -177,6 +193,9 @@ Repasa esta lista; cada "sí" es una línea de código que falta:
   (Docker) o `start rp_test` / `rptest` en la consola; debe terminar en `FIN OK`.
 - Arranque limpio: `refresh` → `restart rp_sistema` sin errores en consola.
 - Reinicio en caliente con un personaje dentro: el estado se rehidrata y no quedan elementos huérfanos.
+- Interfaz CEF: revísala en un navegador sin ventana antes de entregar (`chrome --headless=new --screenshot` sobre
+  `html/index.html` con un modo demo, como `rp_pizzeria`).
+- **Prueba del jugador nuevo** (UX): pide a Fabián que alguien que nunca lo jugó lo complete sin ayuda; donde se trabe falta guía.
 - Cliente: **no hay tests**. Di explícitamente a Fabián qué probar en juego (flujo feliz + errores:
   sin dinero, lejos, sin permiso, abatido, salir a mitad) con `/debugscript 3` limpio.
 
@@ -206,6 +225,7 @@ Repasa esta lista; cada "sí" es una línea de código que falta:
       cambiar de personaje, al quedar abatido y en `onResourceStop`.
 - [ ] Dimensión, teclas y blips sin choques (`REGISTROS.md`).
 - [ ] `scripts/test.sh` en `FIN OK`; consola limpia en `restart`.
+- [ ] Reglas de experiencia `UX-01..10` revisadas (`docs/EXPERIENCIA_JUEGO.md`); assets con `CREDITOS.md`.
 - [ ] Docs actualizadas (fase 8) y aviso a Fabián de lo que debe probar en el cliente.
 - [ ] Sin secretos, IPs, emails ni material de Rockstar en el repo.
 

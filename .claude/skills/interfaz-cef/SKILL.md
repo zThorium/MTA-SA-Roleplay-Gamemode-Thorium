@@ -1,6 +1,6 @@
 ---
 name: interfaz-cef
-description: Crear o modificar una interfaz CEF (HTML/CSS/JS) de un recurso del gamemode Thorium con el patrón Lua cliente ↔ navegador ↔ servidor ya usado en rp_shops, rp_inventory y rp_login. Úsala para cualquier panel, menú o ventana nueva en el juego.
+description: Crear o modificar una interfaz CEF (HTML/CSS/JS) de un recurso del gamemode Thorium con el patrón Lua cliente ↔ navegador ↔ servidor ya usado en rp_shops, rp_inventory y rp_login. Incluye el estándar de experiencia (gesto dibujado, entrenador paso a paso, foco, sonidos). Úsala para cualquier panel, menú o ventana nueva en el juego.
 ---
 
 # Interfaz CEF
@@ -155,7 +155,35 @@ Copia las variables de `rp_shops/html/style.css`:
 Ventana centrada (`.window`, borde 16px, sombra, animación `enter`), cabecera con título, pista de
 teclas con `<kbd>` y botón `×`. Fuente `"Segoe UI", Roboto, Arial`. `user-select: none`. Textos en español.
 
+## Guiar al jugador (reglas `UX-*`, obligatorio)
+
+Estándar completo en [`docs/EXPERIENCIA_JUEGO.md`](../../../docs/EXPERIENCIA_JUEGO.md); el código de
+referencia está en `rp_pizzeria/html/app.js` y `style.css`. **Imágenes y sonidos salen de `assets/`** (biblioteca del
+repo; paleta estándar en `assets/README.md`): se copian solo los usados al recurso. Lo mínimo en cualquier panel:
+
+- **Gesto dibujado** (UX-01): `<img class="key-ico" src="../images/keys/mouse_left.png">` (clic) o
+  `mouse_move.png` (arrastrar), copiadas de `assets/kenney/teclas/teclado-raton/128px/`. Sobre fondo claro, con contorno:
+  `filter: drop-shadow(0 0 1px #2b2520) drop-shadow(0 0 1px #2b2520)`.
+- **Entrenador** (UX-05) si el panel tiene pasos: una capa que oscurece la ventana y el elemento a tocar
+  por encima, con borde blanco que late y un globo pegado a él:
+  ```css
+  .coach-dim  { position: absolute; inset: 0; background: rgba(0,0,0,.58); z-index: 5; pointer-events: none; }
+  .coach-spot { position: relative; z-index: 6; outline: 3px solid #fff; outline-offset: 3px; animation: spotBlink 1s infinite; }
+  @keyframes spotBlink { 50% { outline-color: rgba(255,255,255,.2); } }
+  ```
+  El paso se calcula del estado del panel en cada `refresh()` (no con un contador), en orden obligatorio,
+  con «Paso N de M», el conteo («Llevas 2 de 4») y la herramienta correcta elegida sola.
+- **Foco en el HUD** (UX-04): para señalar un panel del HUD, `box-shadow: 0 0 0 4000px rgba(0,0,0,.62)`
+  en ese panel (oscurece todo lo demás) y la tarjeta del tutorial a su lado, nunca en una esquina fija.
+- **Sonidos** (UX-06): un mapa `SOUNDS = { evento: [archivo, variante...] }` y `play(evento)` que elige
+  una variante al azar. Un sonido por acción: al arrastrar, uno al empezar y otro al completar, nunca
+  uno por `mousemove`. Sonidos de la paleta estándar de `assets/README.md`, copiados a `html/sounds/kenney/` y declarados en `meta.xml`.
+- **Recompensa** (UX-06): «¡Bien!» o destello al acertar; al terminar, tarjeta con resultado y efecto.
+- **Modo demo**: `index.html#modo` con datos de ejemplo cuando no hay `window.mta`, para revisar el
+  panel sin el juego (`chrome --headless=new --screenshot=... index.html#panel`).
+
 ## Probar
 
 - Abre `html/index.html` en un navegador normal para maquetar (el `send` cae a `console.log`).
 - En juego: abrir, cerrar con Esc y con `×`, morir con la UI abierta, reiniciar el recurso con la UI abierta.
+- Prueba del jugador nuevo (UX): alguien que no conoce el panel lo usa sin ayuda; donde dude, falta guía.

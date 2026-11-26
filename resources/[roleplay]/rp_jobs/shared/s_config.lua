@@ -123,6 +123,23 @@ JOBS = {
             { cam = { 600, 900, -30 }, look = { 586, 872, -42 }, ms = 4000, text = "El mineral se vende en la fundición de la cantera. El oro y las gemas, aún mejor." },
         },
     },
+    {
+        -- Trabajo externo: lo juega rp_pizzeria (contratación, turno y cocina). rp_jobs solo guarda
+        -- el puesto, los niveles, la XP y lo ganado; no crea sede, HUD ni módulo propio.
+        id = "pizza", name = "Pizzero", icon = "🍕", color = { 200, 60, 50 }, external = "rp_pizzeria",
+        description = "Atiende la Well Stacked Pizza de Idlewood: toma los pedidos, arma cada pizza con lo que pidió el cliente, hornéala en su punto, córtala y entrégala. Clientes contentos dejan propina; si tardas, se enojan y se van.",
+        pay = "$40-90 por pizza según la calidad + propinas.",
+        howTo = "Well Stacked Pizza de Idlewood, junto a Grove Street. Dentro, habla con el encargado en el comedor.",
+        locationName = "Well Stacked Pizza, Idlewood",
+        requirements = nil,
+        hq = { x = 2105.49, y = -1806.50, z = 13.55, interior = 0, dimension = 0 },
+        vehicle = nil,
+        cinematic = {
+            { cam = { 2080, -1780, 25 }, look = { 2105, -1806, 14 }, ms = 4500, text = "La Well Stacked Pizza está en Idlewood. El encargado te contrata en el comedor." },
+            { cam = { 2125, -1820, 16 }, look = { 2105, -1806, 14 }, ms = 4500, text = "Tomas los pedidos, armas las pizzas, las horneas en su punto y las cortas." },
+            { cam = { 2095, -1795, 18 }, look = { 2105, -1806, 14 }, ms = 4000, text = "Cuanto mejor y más rápido, más propina. Si tardas, el cliente se va enojado." },
+        },
+    },
 }
 
 -- Índice por id (lo llenan cliente y servidor al cargar)

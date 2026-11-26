@@ -19,6 +19,7 @@ Lee el archivo de `references/` de cada área que toques. Responde y documenta *
 3. **Animación de personajes con mocap real** (`rp_mocap`): gestos e idles recortados de las cinemáticas del juego; nunca un bucle estático sobre un personaje congelado. → `references/animaciones.md`
 4. **Mundo**: radio silenciada y HUD oculto en cinemáticas; no se entra con estrellas ni se acumulan dentro; blips de objetivo siempre visibles en el radar; enemigos con aparición validada por rayos. → `references/mundo.md`
 5. **Verificación**: servidor de prueba sin errores y aviso explícito de que el **cliente hay que probarlo en juego**; una misión no está terminada sin voces. → `references/verificacion.md`
+6. **Experiencia de juego** (reglas `UX-*`): objetivos con guía donde se mira (visor, objeto resaltado), teclas dibujadas en cada interacción, sonido por evento y una cosa destacada a la vez. → `docs/EXPERIENCIA_JUEGO.md`
 
 ## Flujo (en este orden)
 

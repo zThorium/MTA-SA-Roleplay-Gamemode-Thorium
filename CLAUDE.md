@@ -16,6 +16,7 @@ Lua 5.1 (servidor y cliente), interfaces en **CEF** (HTML/CSS/JS) y dx, y
 - Entorno Docker (Mac/Linux) y pruebas del servidor por CLI: [`docs/DOCKER.md`](docs/DOCKER.md)
 - Patrones de código, BD y seguridad: [`docs/CONVENCIONES.md`](docs/CONVENCIONES.md)
 - Estándar de cinemáticas de misiones: [`docs/CINEMATICAS.md`](docs/CINEMATICAS.md)
+- Experiencia de juego (que se entienda solo: teclas dibujadas, tutorial, guías, sonidos): [`docs/EXPERIENCIA_JUEGO.md`](docs/EXPERIENCIA_JUEGO.md)
 
 ## Estructura
 
@@ -23,6 +24,7 @@ Lua 5.1 (servidor y cliente), interfaces en **CEF** (HTML/CSS/JS) y dx, y
 mtaserver.conf          orden de arranque de los recursos (importa)
 acl.xml                 ACL base (sin cuentas personales)
 vehiclecolors.conf
+assets/                 biblioteca de imágenes y sonidos libres (Kenney CC0 y propios); se copian a los recursos (ver assets/README.md)
 docs/                   plan y guías
 docker-compose.yml      servidor MTA (Linux) + MariaDB; ver docs/DOCKER.md
 docker/mta/             Dockerfile y entrypoint del servidor
@@ -45,11 +47,11 @@ Prefijo `s_` = servidor o compartido, `c_` = cliente.
 Base: `rp_database` (conexión + esquema), `rp_login` (CEF + bcrypt), `rp_characters`
 (3 slots, spawn), `rp_ids`, `rp_notify`. Personaje: `rp_heads` + `bone_attach`
 (terceros, ver créditos), `rp_needs`, `rp_injury` (abatido en vez de morir, hospital), `rp_inventory` (I), `rp_clothing` (ropa y toys).
-Economía: `rp_bank` (cajeros), `rp_shops`, `rp_vending` (expendedoras: sed/hambre), `rp_dealership`, `rp_payday`.
+Economía: `rp_bank` (cajeros), `rp_shops`, `rp_vending` (expendedoras: sed/hambre), `rp_restaurants` (Burger Shot, Cluckin' Bell y pizzería con interior original y comida con animación de SA), `rp_dealership`, `rp_payday`.
 Comunidad: `rp_factions` (F3, roles con permisos y sueldo), `rp_phone` (P) con la app
 de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` (radio de vehículos con emisoras de internet), `rp_citizens`
 (peatones y tráfico IA), `rp_bikes` (arriendo de bicicletas, 60 min). Interfaz: `rp_hud`, `rp_scoreboard`, `rp_nametags`, `rp_markers` (marcadores modernos con icono 3D: rediseña solo todos los cilindros; `setMarkerStyle` para icono y texto).
-Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados dinámicos; API para la agencia en `docs/TRABAJOS.md`).
+Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados dinámicos; API para la agencia en `docs/TRABAJOS.md`) y `rp_pizzeria` (pizzero en Well Stacked Pizza: comandas, armado, horno, corte y clientes NPC; trabajo externo de `rp_jobs`).
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (campo de tiro: entrena la habilidad nativa de arma con tus balas; progreso en `weapon_skills`).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
@@ -126,6 +128,25 @@ Al crear o modificar una misión, Claude debe, sin que se lo pidan, generar las 
 - **Después de generar**: ejecutar `rp_missions/tools/build_voice_index.ps1` (actualiza `shared/s_voice.lua` con las duraciones y los `<file>` del `meta.xml`) y reiniciar `rp_missions`.
 - **Revisar** que ningún audio pese mucho más de ~1 KB por carácter y avisar a Fabián para que lo escuche; no se da por buena una misión sin voces.
 - **Secretos**: la API key de Fish vive solo en `~/.fish-audio-key` o en `FISH_API_KEY`. Nunca en el repo. Las muestras de audio del juego (`muestras/`) tampoco se suben (copyright de Rockstar).
+
+## Estándar de experiencia de juego (obligatorio)
+
+Todo lo que el jugador **hace** (trabajos, minijuegos, paneles, actividades, misiones) debe entenderse solo,
+sin que nadie lo explique: reglas `UX-01..10` de `docs/ESTANDAR_RECURSOS.md`, detalladas en
+[`docs/EXPERIENCIA_JUEGO.md`](docs/EXPERIENCIA_JUEGO.md). Claude las aplica sin que se lo pidan al crear,
+mejorar o arreglar un recurso:
+
+- Tecla y ratón **dibujados** (`assets/kenney/teclas/`) en cada aviso y acción.
+- **Una cosa a la vez**: solo se destaca lo útil ahora; nada de muchos marcadores brillantes juntos.
+- Varios pasos = **tutorial guiado** la primera vez, con la guía junto a lo que hay que mirar (visor,
+  objeto resaltado, foco con pantalla oscura) y **entrenador** paso a paso en los paneles.
+- **Sonido por evento** (Kenney, CC0), recompensa visible, estado de NPC con globos y urgencia cuando algo va a fallar.
+- La acción se acepta **donde el jugador la intenta**; HUD general oculto con `rp_hud:setHudHidden` si hay HUD propio.
+- **Assets siempre desde [`assets/`](assets/README.md)** (biblioteca del repo con teclas, emotes, UI y sonidos de Kenney CC0
+  y propios, más una paleta estándar de qué usar en cada caso): se copia solo lo usado al recurso, con `CREDITOS.md`.
+
+Caso de referencia: `rp_pizzeria`. Al entregar, pedir a Fabián la **prueba del jugador nuevo** (alguien que
+no lo conoce lo completa sin ayuda).
 
 ## Estándar de cinemáticas (obligatorio)
 

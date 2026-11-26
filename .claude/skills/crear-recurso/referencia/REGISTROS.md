@@ -22,9 +22,11 @@ grep -rhoE 'setElementData\([^,]+, *"rp:[^"]+"' --include=*.lua "resources/[role
 | 21000 + slot | `rp_driving` | pistas de autoescuela ⚠️ **choca con `rp_robbery`** (pendiente de mover) |
 | 22000 + id | `rp_ammunation` | armerías |
 | 23000 + n | `rp_shootingrange` | una por jugador dentro del campo de tiro (`DIM_BASE + 1..500`) |
+| 25000 + id | `rp_restaurants` | Burger Shot, Cluckin' Bell y pizzerías |
+| 26000 + slot | `rp_pizzeria` | una por turno de pizzero (`DIM_BASE + 1..500`, interior 5) |
 | 30001 | `rp_agency` | agencia de empleo |
 
-Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `23000 + id`, `24000 + n`...) en
+Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27000 + n`...) en
 `DIMENSION_BASE` de su config, y escríbelo aquí. Comprueba siempre **interior + dimensión + distancia**.
 
 ## Teclas
@@ -36,7 +38,7 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `23000 + id`, `24
 | H | interactuar con peatones (`rp_npcrel`), amenazar en robos (`rp_robbery`) |
 | I | inventario |
 | O | menú radial de animaciones (`rp_anims`, mantener), mochila (`rp_backpacks`), sirena (`rp_police`, en patrulla) ⚠️ saturada |
-| J | misiones (`rp_missions`); motor del vehículo (`rp_vehicles`, rebindeable) |
+| J | motor del vehículo (`rp_vehicles`, rebindeable) |
 | K | cursor de interacción policial (`rp_police`) |
 | L / X / flechas | cerrar, freno de mano, intermitentes (`rp_vehicles`, rebindeables en Ajustes > Binds) |
 | M | cursor y menú de vehículo (`rp_vehicles`), mapa/app en Vroom (`rp_rides`) |
@@ -65,7 +67,7 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
 - Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:perf`, `rp:radio`, `rp:rides:ai`.
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
 - Marcadores: `rp:marker` (estilo de `rp_markers`; ponlo solo con `setMarkerStyle`).
-  `rp:robberyStore`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
+  `rp:robberyStore`, `rp:restaurantClerk`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
 - Root: `rp:world` (hora y clima), `rp:events`.
 - Blips: `rp:radarEdge` (el blip se queda en el borde del minimapa).
 
@@ -76,8 +78,11 @@ no aparece. Iconos con PNG propio en `rp_hud/images/blips/`:
 
 | Icono | Uso actual |
 |---|---|
+| 10 | Burger Shot (`rp_restaurants`) |
+| 14 | Cluckin' Bell (`rp_restaurants`) |
 | 17 | tiendas 24/7 (`rp_robbery`) |
 | 22 | emergencias (`rp_emergency`) |
+| 29 | Well Stacked Pizza (`rp_restaurants`) |
 | 27 | talleres (`rp_vehicles`) |
 | 36 | autoescuela, agencia, sedes de trabajo, Vroom (`rp_driving`, `rp_agency`, `rp_jobs`, `rp_rides`) |
 | 41 | waypoint (siempre visible) |
@@ -115,7 +120,7 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
-→ rp_missions
+→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria
 ```
 
 Un recurso nuevo va **al final** salvo que otro existente dependa de él. Aun así, declara las
@@ -128,7 +133,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 `rp:dealers:`, `rp:driving:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
 `rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
 `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
-`rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
+`rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
 `rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:vending:`, `rp:wanted:`.
 
 Usa uno nuevo y único, igual al nombre del recurso sin `rp_`: `rp:<sistema>:<accion>` (y

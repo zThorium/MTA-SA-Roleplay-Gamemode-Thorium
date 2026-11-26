@@ -45,6 +45,10 @@
     <export function="getPlayerJobStats" type="server" />
     <export function="showJobLocation" type="server" />
     <export function="getMarketPrice" type="server" />
+    <export function="startExternalShift" type="server" />
+    <export function="endExternalShift" type="server" />
+    <export function="payExternalJob" type="server" />
+    <export function="giveExternalJobXP" type="server" />
     <export function="playJobCinematic" type="client" />
     <export function="stopJobCinematic" type="client" />
     <export function="isJobCinematicPlaying" type="client" />

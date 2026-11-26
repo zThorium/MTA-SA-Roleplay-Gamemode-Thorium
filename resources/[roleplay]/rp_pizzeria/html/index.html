@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Well Stacked Pizza</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- HUD del turno (navegador dx, sin raton) -->
+    <div id="hud" class="hidden">
+        <div id="rail"><div class="rail-bar"></div><div id="queue">Nadie en la fila</div><div id="tickets"></div></div>
+        <div id="stats" class="card">
+            <div class="brand">Well Stacked <b>Pizza</b></div>
+            <div class="stat-row"><span>Ganado</span><b id="st-earned">$0</b></div>
+            <div class="stat-row"><span>Servidas</span><b id="st-served">0</b></div>
+            <div class="stat-row"><span>Racha</span><b id="st-streak">0</b></div>
+            <div class="stat-row"><span>Nivel</span><b id="st-level">1</b></div>
+        </div>
+        <div id="kitchen" class="card">
+            <div class="k-title">Cocina</div>
+            <div id="k-ovens"></div>
+            <div id="k-fryer"></div>
+        </div>
+        <div id="hand" class="chip hidden"></div>
+        <div id="warn" class="chip warn hidden"></div>
+        <div id="toasts"></div>
+        <div id="result" class="hidden"></div>
+        <div id="urgent"></div>
+        <div id="tutorial" class="hidden"><div class="tu-step"></div><div class="tu-title"></div><div class="tu-text"></div></div>
+    </div>
+
+    <!-- Paneles con raton -->
+    <div id="panel" class="hidden">
+        <div id="dim"></div>
+        <div id="win" class="window"></div>
+    </div>
+
+    <script src="pizza.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

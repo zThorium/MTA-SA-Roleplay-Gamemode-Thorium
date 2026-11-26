@@ -394,14 +394,17 @@ end, 1000, 0)
 ----------------------------------------------------------------
 local function createStaticPoints()
     for _, job in ipairs(JOBS) do
-        local h, c = job.hq, job.color
-        local m = createMarker(h.x, h.y, h.z - 1, "cylinder", 1.3, c[1], c[2], c[3], 110)
-        exports.rp_markers:setMarkerStyle(m, { icon = "job", label = job.name })
-        setElementInterior(m, h.interior or 0)
-        setElementDimension(m, h.dimension or 0)
-        local b = createBlip(h.x, h.y, h.z, 56, 2, c[1], c[2], c[3], 255, 0, 300)
-        staticPoints[#staticPoints + 1] = { kind = "hq", id = job.id, x = h.x, y = h.y, z = h.z, marker = m, blip = b,
-            name = job.icon .. " " .. job.name, job = job }
+        -- Los trabajos externos (p. ej. rp_pizzeria) crean su propia sede
+        if not job.external then
+            local h, c = job.hq, job.color
+            local m = createMarker(h.x, h.y, h.z - 1, "cylinder", 1.3, c[1], c[2], c[3], 110)
+            exports.rp_markers:setMarkerStyle(m, { icon = "job", label = job.name })
+            setElementInterior(m, h.interior or 0)
+            setElementDimension(m, h.dimension or 0)
+            local b = createBlip(h.x, h.y, h.z, 56, 2, c[1], c[2], c[3], 255, 0, 300)
+            staticPoints[#staticPoints + 1] = { kind = "hq", id = job.id, x = h.x, y = h.y, z = h.z, marker = m, blip = b,
+                name = job.icon .. " " .. job.name, job = job }
+        end
     end
     for _, mk in ipairs(MARKETS) do
         local m = createMarker(mk.x, mk.y, mk.z - 1, "cylinder", 1.3, 245, 165, 36, 110)

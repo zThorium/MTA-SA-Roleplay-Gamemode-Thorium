@@ -109,6 +109,25 @@ queda visible y buscable (`grep -rn "estandar:"`). Sin motivo no vale.
 | CLI-03 | I | manual | Interfaces HTML con la skill `interfaz-cef` (patrón, paleta, Esc cierra). |
 | CLI-04 | I | auto | Un script de cliente con `cache="false"` puede ejecutarse **antes** que un `shared` cacheado: no copies su config al cargar (`local C = CONFIG` queda `nil`). Léela dentro de funciones o en `onClientResourceStart`, o declara ese shared también con `cache="false"`. (Caso real: `rp_balizas`, 2026-11-25.) |
 
+## UX · Experiencia de juego
+
+Aplica a todo lo que el jugador **hace** (trabajos, minijuegos, tiendas con panel, actividades,
+misiones). Cómo cumplirlas, con código de ejemplo: [`EXPERIENCIA_JUEGO.md`](EXPERIENCIA_JUEGO.md)
+(caso de referencia: `rp_pizzeria`). Criterio final: un jugador nuevo lo completa sin que le expliquen.
+
+| ID | Grav. | Verif. | Regla |
+|---|---|---|---|
+| UX-01 | I | manual | Toda interacción muestra la **tecla o el gesto dibujado** (`assets/kenney/teclas/`): tecla en el aviso y sobre el objeto; ratón de clic o arrastrar en las acciones de ratón. |
+| UX-02 | I | manual | **Una cosa a la vez**: dentro de una actividad, indicadores discretos y solo se destaca lo útil ahora (`rp_markers` es para sitios en la calle, no para 8 estaciones juntas). |
+| UX-03 | I | manual | Actividad de varios pasos: **tutorial guiado** automático la primera vez y repetible; el paso se deduce del estado, avanza solo y usa textos de una línea. |
+| UX-04 | I | manual | La guía **va donde hay que mirar**: visor sobre el objetivo lejano, objeto real resaltado de cerca, foco con pantalla oscura sobre la parte del HUD; la tarjeta del tutorial junto al foco, nunca fija en una esquina. |
+| UX-05 | I | manual | Panel CEF con varios pasos: **entrenador** (orden fijo, solo lo tocable iluminado, globo pegado al elemento, herramienta automática, conteo) al menos en el tutorial y niveles bajos; guías que se quitan al subir de nivel. |
+| UX-06 | R | manual | **Respuesta a cada acción**: un sonido por evento (variantes al azar si se repite; nunca en ráfaga al arrastrar), efecto de acierto y recompensa visible. |
+| UX-07 | R | manual | **Estado legible**: globos de ánimo de los NPC (`assets/kenney/emotes/`), «!» cuando esperan al jugador, urgencia multimodal (música, reloj, bordes) cuando algo está por fallar. |
+| UX-08 | I | manual | La acción se acepta **donde el jugador la intenta** (zonas amplias validadas en el servidor) y los momentos los marca lo que se ve (aviso del cliente con mínimo plausible validado). NPC que caminan con `"forwards"` + `"walk"`, sin teletransporte. |
+| UX-09 | I | manual | Con HUD propio a pantalla completa, el HUD general se oculta con `rp_hud:setHudHidden` y se devuelve al terminar (`setHudSuppressed` es para cinemáticas: quita chat y avisos). |
+| UX-10 | B | manual | Assets **desde la biblioteca `assets/`** del repo (licencia libre; catálogo y paleta en `assets/README.md`), copiando **solo** lo usado al recurso y anotado en `CREDITOS.md`. Nada de descargas sueltas: si falta algo, se añade primero a `assets/` con su licencia. Nunca material de Rockstar ni de origen desconocido. |
+
 ## DOC · Documentación
 
 | ID | Grav. | Verif. | Regla |

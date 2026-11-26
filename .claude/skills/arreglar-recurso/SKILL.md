@@ -56,6 +56,13 @@ No cambies código hasta poder **explicar** el fallo. Fuentes, de más a menos d
    - cliente que oculta HUD o congela controles y no los devuelve (CIC-05);
    - `attempt to index ... (a nil value)` sobre la config en un script de cliente: copió una global
      de un `shared` cacheado al cargar y se ejecutó antes que él (CLI-04);
+   - estado que "no avanza" o se repite: `setTimer(f, ms, n, tabla)` **copia** la tabla en cada llamada
+     (`f` nunca ve los cambios). Pasa el estado con un cierre: `setTimer(function() f(tabla) end, ms, n)`.
+   - sonido que «suena a fallo»: se dispara en ráfaga (por frame o por tramo mientras se arrastra). Uno al
+     empezar y otro al completar (UX-06).
+   - el jugador no ve o no entiende algo que el código sí hace: casi siempre falta guía o sobra ruido visual (UX-02/04).
+   - NPC que no camina o avanza a saltos: el control es `"forwards"` (con s), no `"forward"`; un nombre de
+     control mal escrito no da error. Para caminar de A a B copia el patrón de `rp_citizens` (`setWalking`).
    - funciones de MTA que devuelven `false` en casos raros y rompen un `dxDrawText`/concatenación
      (`getVehiclePlateText` en vehículos sin placa, `getPlayerName` de un elemento destruido...).
 4. **Reproducción**: en el servidor, con `restart rp_x` y comandos; si hace falta el cliente, pide a
@@ -71,6 +78,11 @@ arregla cambiando Z."** Si hay varias hipótesis, ordénalas por evidencia y des
 - Cambia lo mínimo: nada de refactors, renombres ni "mejoras de paso". Si ves otros problemas,
   apúntalos para el informe (o para `mejorar-recurso`).
 - Todo lo que toques cumple el estándar, aunque el resto del archivo no lo haga todavía.
+- Si el fallo es de **experiencia** («no se entiende», «suena raro», «no sé dónde entregar», «agobia»), es un
+  fallo de verdad: la causa suele ser una regla `UX-*` rota y el arreglo sale de un patrón de
+  [`docs/EXPERIENCIA_JUEGO.md`](../../../docs/EXPERIENCIA_JUEGO.md) (una cosa a la vez, guía junto al foco, zona de acción amplia...).
+  Al arreglar algo de la interfaz, no rompas las `UX-*` que ya cumple.
+  Si el arreglo necesita una imagen o un sonido, sácalo de `assets/` (paleta en `assets/README.md`).
 - Si el arreglo necesita BD: skill **migracion-bd** (nunca editar entradas viejas de `schema.lua`).
 - Si el arreglo es una excepción legítima a una regla automática, márcala con
   `-- estandar:<etiqueta> <motivo>` (ver el estándar); no la escondas.

@@ -190,7 +190,9 @@ end
 
 function Jobs.refreshHud(player)
     local s = shifts[player]
-    if not s then return triggerClientEvent(player, "rp:jobs:hud", resourceRoot, false) end
+    if not s or JOBS_BY_ID[s.job].external then   -- los trabajos externos dibujan su propio HUD
+        return triggerClientEvent(player, "rp:jobs:hud", resourceRoot, false)
+    end
     local st = statsOf(player, s.job)
     local level = levelFromXP(st.xp)
     local nextXP = JOBS_CONFIG.LEVEL_XP[level + 1]
@@ -610,6 +612,44 @@ function quitPlayerJob(player)
     dbExec(db(), "DELETE FROM character_jobs WHERE character_id = ?", i.characterId)
     applyJob(player, nil)
     triggerEvent("rp:jobs:onJobChanged", player, false, old)
+    return true
+end
+
+----------------------------------------------------------------
+-- Trabajos externos (job.external = "rp_x"): otro recurso juega el turno y rp_jobs
+-- lleva el puesto, el turno (rp:jobShift, fin al morir o con /terminarturno), la XP y los pagos.
+-- El recurso externo escucha rp:jobs:onShiftEnd para limpiar su parte.
+----------------------------------------------------------------
+for _, job in ipairs(JOBS) do
+    if job.external then Jobs.register(job.id, { start = function() return true end }) end
+end
+
+local function externalShift(player)
+    local s = shifts[player]
+    return s and JOBS_BY_ID[s.job].external and s or nil
+end
+
+function startExternalShift(player, jobId)
+    local job, i = JOBS_BY_ID[jobId], info[player]
+    if not job or not job.external then return false, "Ese trabajo no es externo." end
+    if not i or i.job ~= jobId then return false, "Este no es tu trabajo." end
+    return startShift(player, jobId)
+end
+
+function endExternalShift(player, reason, quiet)
+    if not externalShift(player) then return false end
+    return Jobs.endShift(player, reason, quiet)
+end
+
+-- Paga `base` con el bonus de nivel y el tope de MAX_TASK_PAY. Devuelve lo pagado.
+function payExternalJob(player, base, label)
+    if not externalShift(player) or type(base) ~= "number" then return 0 end
+    return Jobs.pay(player, base, label)
+end
+
+function giveExternalJobXP(player, amount)
+    if not externalShift(player) or type(amount) ~= "number" then return false end
+    Jobs.xp(player, amount)
     return true
 end
 

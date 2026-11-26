@@ -2,7 +2,7 @@
     rp_missions / client / c_core.lua
 
     Estado compartido del cliente, interfaz CEF (menu de contactos y sala), invitaciones y entorno.
-    Tecla J o /misiones: abre el menu.  Y / N: aceptar o rechazar una invitacion.
+    /misiones o el marcador de un contacto: abre el menu.  Y / N: aceptar o rechazar una invitacion.
 ]]
 
 C = C or {}
@@ -96,12 +96,6 @@ addEventHandler("rp:missions:ui:kick", root, function(n) triggerServerEvent("rp:
 addEventHandler("rp:missions:ui:public", root, function(f) triggerServerEvent("rp:missions:public", resourceRoot, f == true or f == "true") end)
 addEventHandler("rp:missions:ui:close", root, function() C.closeUI() end)
 
-bindKey("j", "down", function()
-    if C.active or isCursorShowing() and not isElement(browserGui) then return end
-    if isElement(browserGui) then return C.closeUI() end
-    triggerServerEvent("rp:missions:open", resourceRoot)
-end)
-
 addEventHandler("onClientPlayerWasted", localPlayer, function() C.closeUI() end)
 
 ----------------------------------------------------------------
@@ -157,7 +151,7 @@ local function drawContactLabels()
                     local s = C.sc * (1.05 - d / 60)
                     dxDrawText(name, sx - 150 + 1, sy + 1, sx + 150 + 1, sy + 31, tocolor(0, 0, 0, a), s * 1.3, "default-bold", "center")
                     dxDrawText(name, sx - 150, sy, sx + 150, sy + 30, C.contactColor(contact, a), s * 1.3, "default-bold", "center")
-                    dxDrawText("Misiones - entra o pulsa J", sx - 150, sy + 20 * C.sc, sx + 150, sy + 50, tocolor(242, 244, 248, a), s * 0.95, "default", "center")
+                    dxDrawText("Misiones - entra en el marcador", sx - 150, sy + 20 * C.sc, sx + 150, sy + 50, tocolor(242, 244, 248, a), s * 0.95, "default", "center")
                 end
             end
         end

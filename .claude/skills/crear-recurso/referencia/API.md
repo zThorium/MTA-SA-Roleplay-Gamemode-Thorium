@@ -106,6 +106,8 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_driving:hasDriverLicense(p)`, `getDriverLicense(p)`, `isPlayerInDrivingTest(p)` | |
 | `rp_agency:hasPlayerDNI(p)`, `getPlayerDNI(p)` | |
 | `rp_jobs:getPlayerJob(p)`, `setPlayerJob(p, id, force)`, `isPlayerOnShift(p)`, `getPlayerJobLevel(p)`, `showJobLocation(p, id)`, `getMarketPrice(...)` | API completa en `docs/TRABAJOS.md` |
+| `rp_jobs:startExternalShift(p, id)`, `endExternalShift(p, motivo)`, `payExternalJob(p, base, concepto)`, `giveExternalJobXP(p, n)` | trabajos externos (`external = "rp_x"` en `JOBS`): otro recurso juega el turno y `rp_jobs` lleva puesto, XP y pagos. Ejemplo: `rp_pizzeria` |
+| `rp_pizzeria:isPlayerOnPizzaShift(p)` | si está de turno en la pizzería |
 | `rp_backpacks:getBackpack(p)`, `getPackWeight(p)` | |
 
 ## Facciones y policía
@@ -141,6 +143,8 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | Export | |
 |---|---|
 | `rp_hud:setHudSuppressed(razon, bool)`, `isHudSuppressed()` | oculta HUD, chat y avisos; `razon` = nombre de tu recurso |
+| `rp_hud:setHudHidden(razon, bool)` (cliente) | oculta **solo** el HUD de `rp_hud` (minimapa, necesidades, velocímetro), como F7; chat y avisos siguen. Para recursos con HUD propio (ej. `rp_pizzeria`) |
+| `rp_hud:getTopRightBottom()` (cliente) | Y en px donde termina el bloque de arriba a la derecha (hora, dinero, banco, arma, estrellas, nivel). Pon tus paneles de esa esquina debajo, preguntando unas veces por segundo, no en cada frame (ej. `rp_robbery`) |
 | `rp_radio:setRadioSuppressed(razon, bool)`, `isRadioSuppressed()` | silencia `rp_radio` y la radio nativa |
 | `rp_jobs:playJobCinematic`, `stopJobCinematic`, `isJobCinematicPlaying` | cinemáticas cortas reutilizables |
 | `rp_mocap` (servidor `play`, cliente `playClip`) | mocap de personajes; ver `rp_mocap/MOCAP_CATALOGO.md` |

@@ -31,6 +31,7 @@ lo que produce se vende en **mercados con precios que cambian**.
 | 🦌 **Cazador** | Ir en quad a la zona, seguir el rastro a pie examinando huellas (mantener E), preparar la pieza. | **Huellas** en la bifurcación del rastro, **mira** al disparar (viento, respiración, caída) y **despiece** con ciervo u oso abatido de un tiro limpio. | Carne, pieles y cornamentas para vender en la peletería. Jabalí y oso cargan si fallas. |
 | 🎣 **Pescador** | Ir al punto (muelle a pie o barco desde nivel 2), lanzar y esperar la picada en el mundo: pulsar E cuando pica, sin picar a los amagos. Los puntos se agotan. | **Recoger** solo con los peces grandes (lubina, atún, pez espada): mantener el pez en la zona verde sin romper el sedal. | Pescado y rarezas para la lonja o la compraventa. |
 | ⛏️ **Minero** | Ir a cada veta de la cantera y picar (pulsar E). | **Veta rica** (plata, oro o 25% de las demás): grietas que brillan y dinamita opcional. **Derrumbe** a veces: teclas a tiempo o daño. | Mineral y gemas para la fundición o la compraventa. |
+| 🍕 **Pizzero** (`rp_pizzeria`) | En la Well Stacked Pizza de Idlewood, en tu propia instancia: tomar pedidos en la caja, armar, hornear, cortar y entregar; los clientes NPC hacen fila, esperan y se sientan a comer. | Todo el turno es un juego de gestión en CEF (armado, corte, freidora y despensa). | $40-90 por pizza según la nota, más propina y racha. |
 
 **Niveles**: XP por cada tarea (`LEVEL_XP = 0, 120, 320, 650, 1100`). Cada nivel paga un
 8% más y desbloquea cosas (barco, jabalí y oso, plata y oro, dinamita, más hallazgos en
@@ -105,3 +106,21 @@ puesto solo se pida allí.
   zona carga. Conviene revisar sedes, puntos de pesca y árboles con un admin en juego.
 - Árboles, rocas y bolsas los ve solo el trabajador (son objetos de cliente).
 - Los vehículos de trabajo no tienen combustible propio ni llaves (no están en la tabla `vehicles`).
+
+## Trabajos externos
+
+Un trabajo puede jugarse en **otro recurso** con `external = "rp_x"` en su entrada de `JOBS`
+(hoy: `pizza`, jugado por `rp_pizzeria`). `rp_jobs` no crea su sede, su HUD ni su módulo:
+solo guarda el puesto (agencia, `setPlayerJob`, `/dejartrabajo`), el turno (`rp:jobShift`,
+fin al morir, al cambiar de trabajo o con `/terminarturno`), la XP, los niveles y lo ganado
+(`job_stats`). `hq` sigue sirviendo para la agencia y el GPS (`showJobLocation`).
+
+| Export (servidor) | Uso |
+|---|---|
+| `startExternalShift(player, jobId)` | `true` o `false, motivo`. Solo si ese es su trabajo |
+| `endExternalShift(player, motivo [, quiet])` | Cierra el turno y muestra el resumen |
+| `payExternalJob(player, base, concepto)` | Paga con el bonus de nivel y el tope `MAX_TASK_PAY`; devuelve lo pagado |
+| `giveExternalJobXP(player, n)` | Suma XP y una tarea |
+
+El recurso externo escucha `rp:jobs:onShiftEnd` (con su `jobId`) para limpiar su parte cuando
+`rp_jobs` cierra el turno por su cuenta.

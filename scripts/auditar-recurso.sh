@@ -402,7 +402,7 @@ else
         awk -F'\t' -v st="$st" '$1==st { printf "%-6s [%s] %-7s %s%s\n", $1, $2, $3, $4, ($5 != "" ? "\n         -> " $5 : "") }' "$RESULTS"
     done
     echo
-    echo "Reglas manuales (docs/ESTANDAR_RECURSOS.md): B: SEG-02 SEG-04 BD-06 PRU-02 · I: EST-08 SEG-03 SEG-07 BD-07 CIC-03 CIC-06 INT-07 INT-08 CLI-03 DOC-05"
+    echo "Reglas manuales (docs/ESTANDAR_RECURSOS.md): B: SEG-02 SEG-04 BD-06 PRU-02 UX-10 · I: EST-08 SEG-03 SEG-07 BD-07 CIC-03 CIC-06 INT-07 INT-08 CLI-03 DOC-05 UX-01..05 UX-08 UX-09 · R: UX-06 UX-07 (experiencia: docs/EXPERIENCIA_JUEGO.md)"
     echo "NOTA: $nota/100  (OK $okc, FALLA B $fb, FALLA I $fi_, AVISO $av)"
 fi
 [ "$fb" -eq 0 ]
