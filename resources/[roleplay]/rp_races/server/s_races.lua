@@ -910,6 +910,7 @@ local function createWorldMarkers()
         setElementDimension(m, 0)
         local b = createBlip(s[1], s[2], s[3], 53, 2, 255, 255, 255, 255, 0, 700)
         setElementData(m, "rp:raceTrack", i, false)
+        exports.rp_markers:setMarkerStyle(m, { icon = "flag", label = t.name })
         addEventHandler("onMarkerHit", m, function(hit, matching)
             if not matching or getElementType(hit) ~= "player" or isPedInVehicle(hit) then return end
             openMenu(hit, i)

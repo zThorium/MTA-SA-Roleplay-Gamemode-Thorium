@@ -103,6 +103,7 @@ function M.spawnContactPoint(contact)
     local mk = createMarker(P.x, P.y, P.z - 0.9, "cylinder", 1.6, c[1], c[2], c[3], 130)
     local bl = createBlip(P.x, P.y, P.z, 0, 2, c[1], c[2], c[3], 255, 0, 350)
     setElementData(mk, "rp:mcontact", contact)
+    exports.rp_markers:setMarkerStyle(mk, { icon = "star", label = C.name })
     M.markers[contact] = { mk, bl }
     addEventHandler("onMarkerHit", mk, function(hit, dimOk)
         if getElementType(hit) ~= "player" or not dimOk or isPedInVehicle(hit) then return end

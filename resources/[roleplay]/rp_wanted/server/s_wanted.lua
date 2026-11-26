@@ -573,6 +573,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
     for _, spot in ipairs(WANTED.SPRAYS) do
         local marker = createMarker(spot.x, spot.y, spot.z - 1, "cylinder", 4, 245, 165, 36, 60)
         setElementData(marker, "rp:spray", spot.name, false)
+        exports.rp_markers:setMarkerStyle(marker, { icon = "car", label = spot.name })
         createBlip(spot.x, spot.y, spot.z, 63, 2, 255, 255, 255, 255, 0, 400)
         addEventHandler("onMarkerHit", marker, function(player, sameDim)
             if not sameDim or getElementType(player) ~= "player" then return end

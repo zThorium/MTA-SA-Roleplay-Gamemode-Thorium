@@ -208,6 +208,7 @@ local function spawnPoints()
     for i, c in ipairs(BIKES.POINTS) do
         local m = BIKES.MARKER
         local marker = createMarker(c.x, c.y, c.z - 0.9, "cylinder", m.size, m.r, m.g, m.b, m.a)
+        exports.rp_markers:setMarkerStyle(marker, { icon = "bike", label = "Arriendo de bicicletas" })
         local shape = createColSphere(c.x, c.y, c.z, BIKES.INTERACT_RADIUS)
         local blip
         if BIKES.BLIP.enabled then

@@ -17,6 +17,7 @@ ADMIN_CATALOG = {
             { cmd = "/adminpanel", args = "", alt = "/apanel, F10", desc = "Abre este panel con todos los comandos de administracion.", res = "rp_adminpanel" },
             { cmd = "/freecam", args = "", desc = "Camara libre, solo super admin (WASD, Espacio/Ctrl, Shift rapido, Alt lento, rueda = velocidad, F = teletransportar al punto de la camara). El personaje queda congelado.", res = "rp_admin" },
             { cmd = "/nodos", args = "", desc = "Editor de la red vial y peatonal de los ciudadanos IA (mover, crear y enlazar nodos).", res = "rp_citizens" },
+            { cmd = "/markerdemo", args = "", desc = "Muestra en tu cliente todos los iconos de marcador (rp_markers) alrededor tuyo; repetir para quitarlos.", res = "rp_markers" },
         },
     },
     {

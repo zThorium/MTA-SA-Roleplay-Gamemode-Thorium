@@ -7,12 +7,14 @@ addEvent("rp:ammu:door", true)
 
 local function spawnLocation(loc)
     local dim = ammuDimension(loc)
-    createMarker(loc.x, loc.y, loc.z - 1, "cylinder", 1.2, 255, 140, 0, 120)
+    local entryM = createMarker(loc.x, loc.y, loc.z - 1, "cylinder", 1.2, 255, 140, 0, 120)
+    exports.rp_markers:setMarkerStyle(entryM, { icon = "gun", label = loc.name or "Ammu-Nation" })
     createBlip(loc.x, loc.y, loc.z, 18, 2, 255, 255, 255, 255, 0, 300)
     local e = AMMU.ENTRY
     local exitM = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, 255, 140, 0, 120)
     setElementInterior(exitM, AMMU.INTERIOR)
     setElementDimension(exitM, dim)
+    exports.rp_markers:setMarkerStyle(exitM, { icon = "exit", label = "Salir" })
 
     local c = AMMU.CLERK
     local ped = createPed(c.skin, c.x, c.y, c.z, c.rot)

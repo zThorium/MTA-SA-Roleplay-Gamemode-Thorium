@@ -9,6 +9,7 @@
     <include resource="rp_characters" />
     <include resource="rp_inventory" />
     <include resource="bone_attach" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_jobs.lua" type="server" />

@@ -144,4 +144,5 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_radio:setRadioSuppressed(razon, bool)`, `isRadioSuppressed()` | silencia `rp_radio` y la radio nativa |
 | `rp_jobs:playJobCinematic`, `stopJobCinematic`, `isJobCinematicPlaying` | cinemáticas cortas reutilizables |
 | `rp_mocap` (servidor `play`, cliente `playClip`) | mocap de personajes; ver `rp_mocap/MOCAP_CATALOGO.md` |
+| `rp_markers:setMarkerStyle(marker, { icon, label, color, beam, native })` | icono 3D y texto en un marcador de cilindro (servidor: sincronizado; cliente: marcadores de cliente). Iconos: `getMarkerIcons()`. Todo cilindro ya sale con el estilo moderno sin llamar a nada |
 | `rp_characters:applyPedLook(ped, look)` | vestir un ped como un personaje |

@@ -6,6 +6,7 @@
     <include resource="rp_notify" />
     <include resource="rp_login" />
     <include resource="rp_characters" />
+    <include resource="rp_markers" />
 
     <!-- La misma config se carga en servidor y cliente (por separado: 'shared' no llegaba al cliente) -->
     <script src="shared/s_config.lua" type="server" />

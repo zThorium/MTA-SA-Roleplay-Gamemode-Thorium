@@ -188,6 +188,12 @@ end, 5000, 0)
 ----------------------------------------------------------------
 -- Puntos fisicos
 ----------------------------------------------------------------
+-- Icono de rp_markers de cada punto fisico
+local POINT_ICONS = {
+    entrance = "police", exit = "exit", locker = "clothes", armory = "gun",
+    lab = "info", booking = "key", garage = "car",
+}
+
 local function placePoint(kind, x, y, z, rot)
     local def = POLICE_POINTS[kind]
     local pt = POINTS[kind] or {}
@@ -197,6 +203,8 @@ local function placePoint(kind, x, y, z, rot)
         local c = def.color
         pt.marker = createMarker(x, y, z - 0.95, "cylinder", 1.6, c[1], c[2], c[3], 110)
         setElementInterior(pt.marker, def.interior or 0)
+        exports.rp_markers:setMarkerStyle(pt.marker, { icon = POINT_ICONS[kind] or "police", label = def.label,
+            color = kind ~= "exit" and { 59, 111, 224 } or nil })  -- azul policía salvo la salida (verde)
         if isElement(pt.blip) then destroyElement(pt.blip) end
     end
     POINTS[kind] = pt

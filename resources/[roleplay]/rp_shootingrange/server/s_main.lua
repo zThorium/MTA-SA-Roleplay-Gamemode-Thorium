@@ -184,6 +184,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
         local marker = createMarker(D.x, D.y, D.z - 1, "cylinder", m.size * 1.2, m.r, m.g, m.b, m.a)
         setElementInterior(marker, RANGE.STORE_INTERIOR)
         setElementDimension(marker, storeDim(loc))
+        exports.rp_markers:setMarkerStyle(marker, { icon = "target", label = "Campo de tiro" })
     end
     for _, p in ipairs(getElementsByType("player")) do
         local id = exports.rp_characters:getPlayerCharacterId(p)
