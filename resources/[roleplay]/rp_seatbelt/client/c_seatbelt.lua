@@ -46,8 +46,8 @@ local function holdHud(on)
     if res and getResourceState(res) == "running" then exports.rp_hud:setHudSuppressed("rp_seatbelt", on) end
 end
 
-local function sound(name, volume)
-    local s = playSound("sounds/" .. name .. ".ogg")
+local function sound(name, volume, ext)
+    local s = playSound("sounds/" .. name .. "." .. (ext or "ogg"))
     if s then setSoundVolume(s, volume or 1) end
 end
 
@@ -139,11 +139,36 @@ end)
 ----------------------------------------------------------------
 -- Vuelo y despertar
 ----------------------------------------------------------------
+-- Inconsciente: silencio total (sonidos del mundo, radio y sonidos de cualquier recurso)
+local muted   -- [sonido] = volumen anterior
+local function muteAll(on)
+    local radio = getResourceFromName("rp_radio")
+    if radio and getResourceState(radio) == "running" then exports.rp_radio:setRadioSuppressed("rp_seatbelt", on) end
+    if on then
+        if muted then return end
+        muted = {}
+        for group = 0, 44 do setWorldSoundEnabled(group, false) end
+        setAmbientSoundEnabled("general", false)
+        setAmbientSoundEnabled("gunfire", false)
+        for _, s in ipairs(getElementsByType("sound")) do
+            muted[s] = getSoundVolume(s)
+            setSoundVolume(s, 0)
+        end
+    elseif muted then
+        resetWorldSounds()
+        resetAmbientSounds()
+        for s, volume in pairs(muted) do
+            if isElement(s) then setSoundVolume(s, volume) end
+        end
+        muted = nil
+    end
+end
+
 local function endFlight()
     if not flight then return end
     flight = nil
     setGameSpeed(1)
-    sound("impact", 1)
+    muteAll(true)
     screen = { start = getTickCount() }
     holdHud(true)
     triggerServerEvent("rp:seatbelt:landed", resourceRoot)
@@ -153,7 +178,7 @@ addEventHandler("rp:seatbelt:eject", resourceRoot, function()
     if not launch then return end
     local l = launch
     launch = nil
-    sound("glass", 1)
+    sound("glass", 1, "mp3")
     -- Un instante para que el servidor termine de sacarlo del coche
     setTimer(function()
         setElementPosition(localPlayer, l.x, l.y, l.z, false)
@@ -208,6 +233,7 @@ local function drawScreen()
         dxDrawRectangle(0, 0, sw, sh, tocolor(0, 0, 0, 255), true)
         return
     end
+    muteAll(false)   -- el sonido vuelve al abrir los ojos
     local t = (elapsed - c.BLACK_TIME) / c.WAKE_TIME
     if t >= 1 then
         screen = nil
@@ -270,5 +296,6 @@ end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()
     if flight then setGameSpeed(1) end
+    muteAll(false)
     holdHud(false)
 end)

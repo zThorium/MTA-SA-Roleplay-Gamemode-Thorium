@@ -1,0 +1,63 @@
+<meta>
+    <!--
+        rp_map: mapa F11 estilo GTA VI (CEF 2D + Three.js 3D) con niebla de exploracion por celdas,
+        cuadriculas por ciudad, lugares que se descubren, marcadores, GPS con rutas reales por las
+        calles de GTA SA, buscador, estadisticas y panel de admin. Ver docs/MAPA.md.
+        Los datos de html/data y client/c_roads.lua se generan con tools/generar-datos.ps1 desde
+        la instalacion de GTA SA (map.jpg y sounds/map_theme.mp3 son de Rockstar: no se suben).
+        Three.js r147 (MIT) en html/lib. Sonidos y teclas Kenney (CC0). Ver CREDITOS.md.
+    -->
+    <info author="Thorium" name="RP Map" description="Mapa F11 estilo GTA VI: exploracion, cuadriculas, lugares, marcadores, GPS real y vista 3D" version="1.0.0" type="script" />
+    <oop>false</oop>
+    <min_mta_version client="1.6.0" server="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_ids" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_hud" />
+    <!-- rp_radio y rp_phone son opcionales: se silencian con pcall si estan en marcha -->
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="shared/s_land.lua" type="shared" />
+    <script src="shared/s_grid.lua" type="shared" />
+    <script src="server/s_seed.lua" type="server" />
+    <script src="server/s_map.lua" type="server" />
+    <script src="server/s_admin.lua" type="server" />
+    <script src="client/c_map.lua" type="client" cache="false" />
+    <script src="client/c_roads.lua" type="client" cache="false" />
+    <script src="client/c_gps.lua" type="client" cache="false" />
+
+    <export function="getPlayerExplorationPercent" type="server" />
+    <export function="revealPlayerArea" type="server" />
+    <export function="getMapStats" type="server" />
+
+    <file src="sounds/map_theme.mp3" />
+    <file src="html/data/buildings.js" />
+    <file src="html/data/map.jpg" />
+    <file src="html/data/roads.js" />
+    <file src="html/data/terrain.js" />
+    <file src="html/images/keys/keyboard_escape.png" />
+    <file src="html/images/keys/keyboard_f11.png" />
+    <file src="html/images/keys/mouse_left.png" />
+    <file src="html/images/keys/mouse_move.png" />
+    <file src="html/images/keys/mouse_right.png" />
+    <file src="html/images/keys/mouse_scroll.png" />
+    <file src="html/index.html" />
+    <file src="html/js/app.js" />
+    <file src="html/js/icons.js" />
+    <file src="html/js/map2d.js" />
+    <file src="html/js/map3d.js" />
+    <file src="html/lib/OrbitControls.js" />
+    <file src="html/lib/three.min.js" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/confirmation_002.ogg" />
+    <file src="html/sounds/confirmation_003.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/pluck_001.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/style.css" />
+</meta>

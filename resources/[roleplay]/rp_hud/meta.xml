@@ -23,6 +23,7 @@
     <export function="isHudSuppressed" type="client" />
     <export function="setHudHidden" type="client" />
     <export function="getTopRightBottom" type="client" />
+    <export function="setNavRoute" type="client" />
     <file src="images/map.png" />
     <file src="images/icons/heart.png" />
     <file src="images/icons/shield.png" />

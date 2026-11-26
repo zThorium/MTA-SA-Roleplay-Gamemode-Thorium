@@ -46,4 +46,5 @@
     <file src="html/music.js" />
     <export function="getMusicConfigErrors" type="server" />
     <export function="stopVehicleMusic" type="server" />
+    <export function="setMusicSuppressed" type="client" />
 </meta>

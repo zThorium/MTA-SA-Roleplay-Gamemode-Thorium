@@ -27,6 +27,7 @@ local MS = math.floor(220 * s) -- tamano del minimapa en pantalla
 local MARGIN = math.floor(22 * s)
 
 local mapTexture, renderTarget
+local navRoute   -- ruta del GPS de rp_map: { x1, y1, x2, y2, ... } o nil
 
 -- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
 -- 17 = tienda/robo, 22 = emergencias, 36 = autoescuela, 52 = tienda,
@@ -235,6 +236,23 @@ local function drawMinimap(x, y, now)
         local size = MS * 1.5
         dxDrawImageSection(MS / 2 - size / 2, MS / 2 - size / 2, size, size,
             mx - section / 2, my - section / 2, section, section, mapTexture, -heading)
+
+        -- Ruta del GPS (rp_map: setNavRoute), por las calles hasta el destino
+        if navRoute then
+            local reach = unitsAcross
+            local lw, col = math.max(3, 5 * s), tocolor(197, 92, 255, 235)
+            local prevX, prevY, prevSx, prevSy
+            for i = 1, #navRoute - 1, 2 do
+                local wx, wy = navRoute[i], navRoute[i + 1]
+                local dx, dy = rotate((wx - px) * unitPx, -(wy - py) * unitPx, -heading)
+                local sx, sy = MS / 2 + dx, MS / 2 + dy
+                if prevX and (math.abs(wx - px) < reach or math.abs(prevX - px) < reach)
+                    and (math.abs(wy - py) < reach or math.abs(prevY - py) < reach) then
+                    dxDrawLine(prevSx, prevSy, sx, sy, col, lw)
+                end
+                prevX, prevY, prevSx, prevSy = wx, wy, sx, sy
+            end
+        end
 
         -- Blips (tiendas, etc.): icono propio si existe images/blips/<icono>.png,
         -- si no un cuadrado del color del blip. Solo dentro de su distancia visible.
@@ -1025,4 +1043,18 @@ end
 -- Para que otros recursos pongan sus paneles debajo sin solaparse (p. ej. el miedo del cajero en rp_robbery).
 function getTopRightBottom()
     return Hud.topRightBottom or (MARGIN + 120 * s)
+end
+
+-- Ruta del GPS dibujada en el minimapa (la calcula rp_map por las calles reales).
+--   exports.rp_hud:setNavRoute({ x1, y1, x2, y2, ... })   nil o {} la quita
+function setNavRoute(points)
+    if type(points) ~= "table" or #points < 4 then navRoute = nil; return true end
+    local clean = {}
+    for i = 1, #points do
+        local v = tonumber(points[i])
+        if not v then navRoute = nil; return false end
+        clean[i] = v
+    end
+    navRoute = clean
+    return true
 end

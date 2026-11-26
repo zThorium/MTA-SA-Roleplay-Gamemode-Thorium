@@ -113,6 +113,14 @@ ADMIN_CATALOG = {
         },
     },
     {
+        id = "mapa", name = "Mapa",
+        items = {
+            { cmd = "F11 > Admin", args = "", desc = "Pestana Admin del mapa: lugares, categorias, cuadriculas visibles desde el inicio, ajustes (radio, intervalo, niebla, GPS, 3D, musica) y progreso de jugadores.", res = "rp_map" },
+            { cmd = "/mapaprogreso", args = "<jugador|id personaje>", desc = "Muestra cuanto mapa exploro un personaje.", res = "rp_map" },
+            { cmd = "/resetmapa", args = "<jugador|id personaje>", desc = "Reinicia la exploracion (niebla) del mapa de un personaje.", res = "rp_map" },
+        },
+    },
+    {
         id = "gimnasio", name = "Gimnasio",
         items = {
             { cmd = "/crearmaquina", args = "<cinta|bici|banca|mancuernas> [gimnasio]", desc = "Crea una maquina de gimnasio en tu posicion y rumbo (el personaje quedara donde estas).", res = "rp_gym" },

@@ -1449,4 +1449,88 @@ SCHEMA = {
         CONSTRAINT fk_fire_site_points_site FOREIGN KEY (site_id) REFERENCES fire_sites (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_map: celdas de 50 m exploradas por cada personaje (niebla del mapa F11), en hexadecimal
+    [[
+    CREATE TABLE IF NOT EXISTS map_exploration (
+        character_id INT UNSIGNED NOT NULL,
+        cells        TEXT         NOT NULL,
+        explored     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_map_exploration_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: marcadores y favoritos personales del mapa
+    [[
+    CREATE TABLE IF NOT EXISTS map_markers (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        name         VARCHAR(40)  NOT NULL,
+        x            FLOAT        NOT NULL,
+        y            FLOAT        NOT NULL,
+        z            FLOAT        NOT NULL DEFAULT 0,
+        favorite     TINYINT(1)   NOT NULL DEFAULT 0,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_map_markers_character (character_id),
+        CONSTRAINT fk_map_markers_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: preferencias del mapa por personaje (modo 2D/3D, filtros, tutorial visto), JSON validado por el servidor
+    [[
+    CREATE TABLE IF NOT EXISTS map_prefs (
+        character_id INT UNSIGNED NOT NULL,
+        prefs        TEXT         NOT NULL,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_map_prefs_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: categorias de iconos (las crean y editan los admins; se siembran desde shared/s_config.lua)
+    [[
+    CREATE TABLE IF NOT EXISTS map_categories (
+        cat_key    VARCHAR(24)  NOT NULL,
+        name       VARCHAR(40)  NOT NULL,
+        icon       VARCHAR(24)  NOT NULL DEFAULT 'star',
+        color      CHAR(7)      NOT NULL DEFAULT '#f5a524',
+        is_public  TINYINT(1)   NOT NULL DEFAULT 0,
+        sort       SMALLINT     NOT NULL DEFAULT 0,
+        PRIMARY KEY (cat_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: establecimientos y lugares del mapa (los gestionan los admins)
+    [[
+    CREATE TABLE IF NOT EXISTS map_places (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        seed_key    VARCHAR(32)  NULL,
+        name        VARCHAR(48)  NOT NULL,
+        description VARCHAR(255) NOT NULL DEFAULT '',
+        cat_key     VARCHAR(24)  NOT NULL,
+        x           FLOAT        NOT NULL,
+        y           FLOAT        NOT NULL,
+        z           FLOAT        NOT NULL DEFAULT 0,
+        is_public   TINYINT(1)   NOT NULL DEFAULT 0,
+        created_by  INT UNSIGNED NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_map_places_seed (seed_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: cuadriculas (sectores de 500 m) con nombre, territorio o visibles desde el inicio fijados por un admin
+    [[
+    CREATE TABLE IF NOT EXISTS map_sectors (
+        sector_id  VARCHAR(4)   NOT NULL,
+        name       VARCHAR(40)  NULL,
+        city       VARCHAR(24)  NULL,
+        revealed   TINYINT(1)   NOT NULL DEFAULT 0,
+        PRIMARY KEY (sector_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_map: ajustes globales del mapa que cambian los admins (radio, intervalo, funciones activas)
+    [[
+    CREATE TABLE IF NOT EXISTS map_settings (
+        setting_key   VARCHAR(32) NOT NULL,
+        setting_value VARCHAR(64) NOT NULL,
+        PRIMARY KEY (setting_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
