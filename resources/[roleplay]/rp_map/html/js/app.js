@@ -1,6 +1,6 @@
 /*
  * rp_map / app.js
- * Interfaz del mapa F11. Lua llama a window.RP.* (open, close, player, cells, places, markers,
+ * Interfaz del mapa F11. Lua llama a window.RP.* (open, close, player, cells, places,
  * route, navDist, adminData, adminPlayer) y la interfaz responde con mta.triggerEvent("rp:map:ui:*").
  * El servidor revalida todo; aqui solo hay lo que este jugador puede ver.
  * Vista previa sin el juego: abrir index.html#demo en un navegador.
@@ -11,7 +11,7 @@
     var N = 120;
 
     var S = { land: "", cells: {}, start: {}, places: [], placeById: {}, cats: [], catMap: {}, sectors: [], zones: [],
-        settings: {}, markers: [], prefs: {}, totals: { all: 0, city: {} }, isAdmin: false, cities: [], discoveredPct: 90, icons: [] };
+        settings: {}, prefs: {}, totals: { all: 0, city: {} }, isAdmin: false, cities: [], discoveredPct: 90, icons: [] };
     var cellZone = {}, cellCity = {}, cityLand = {};
     var player = null, route = { active: false }, mode = "2d", isOpen = false, firstCenter = true;
     var selection = null, pickMode = null, tab = "places", adminTab = "places", admin = null, adminForm = {};
@@ -52,7 +52,7 @@
         return sy * 12 + sx;
     }
     function known(x, y) {
-        if (S.settings.fog === 0) return true;
+        if (S.settings.fog === 0 || S.adminView) return true;
         var c = cellOf(x, y);
         return !!(S.cells[c] || S.start[c]);
     }
@@ -111,7 +111,7 @@
     }
 
     function refreshFog() {
-        var fogOn = S.settings.fog !== 0;
+        var fogOn = S.settings.fog !== 0 && !S.adminView;   // vista de admin: todo el mapa
         window.Map2D.setFog(S.land, S.cells, S.start, fogOn);
         window.Map3D.setFog(S.cells, S.start, fogOn);
         var st = sectorStats();
@@ -251,71 +251,38 @@
         var c = S.catMap[p.cat] || { name: "Lugar", color: "#888", icon: "pin" };
         card(p.name, c.name, c.color, c.icon, p.desc, p.x, p.y, [
             gpsBtn(p.x, p.y, p.name, p.z),
-            btn("Guardar marcador", "ghost", function () { send("rp:map:ui:markerAdd", p.x, p.y, p.name.slice(0, 40)); play("ok"); }),
-        ]);
+        ].concat(S.isAdmin && p.src === "db" ? [btn("Editar lugar", "ghost", function () { adminEditPlace(p.id); })] : []));
         if (focus) focusOn(p.x, p.y);
     }
 
-    function markerById(id) {
-        for (var i = 0; i < S.markers.length; i++) if (S.markers[i].id === id) return S.markers[i];
-        return null;
-    }
-
-    function selectMarker(id, focus) {
-        var m = markerById(id);
-        if (!m) return;
-        play("select");
-        selection = { type: "marker", id: id };
-        window.Map2D.setSelected(null);
-        window.Map2D.setTemp(null);
-        card(m.name, m.favorite ? "Favorito" : "Marcador", m.favorite ? "#f5a524" : "#4fd1ff", "pin", "", m.x, m.y, [
-            gpsBtn(m.x, m.y, m.name, m.z),
-            btn(m.favorite ? "Quitar favorito" : "Favorito", "ghost", function () { editMarker(m, { favorite: !m.favorite }); }),
-            btn("Renombrar", "ghost", function () { renameInline(m); }),
-            btn("Mover", "ghost", function () { startPick("Haz clic donde quieras mover \"" + m.name + "\"", function (x, y) { editMarker(m, { x: x, y: y }); }); }),
-            btn("Borrar", "danger-btn", function () { send("rp:map:ui:markerDelete", m.id); closeCard(); }),
-        ]);
-        if (focus) focusOn(m.x, m.y);
-    }
-
-    function editMarker(m, data) { send("rp:map:ui:markerEdit", m.id, JSON.stringify(data)); }
-
-    function renameInline(m) {
-        var c = $("card");
-        var form = el("div", "form");
-        var inp = el("input", "inp");
-        inp.maxLength = 40;
-        inp.value = m.name;
-        form.appendChild(inp);
-        form.appendChild(btn("Guardar nombre", "primary", function () {
-            var v = inp.value.trim();
-            if (v) editMarker(m, { name: v });
-        }));
-        c.appendChild(form);
-        inp.focus();
-        inp.select();
-    }
-
+    // Clic en el mapa: se marca el punto y el GPS calcula la ruta al momento (se ve en el minimapa)
     function selectPoint(x, y) {
         play("select");
         selection = { type: "point", x: x, y: y };
         window.Map2D.setSelected(null);
         window.Map2D.setTemp(x, y);
-        var form = el("div", "form");
-        var inp = el("input", "inp");
-        inp.maxLength = 40;
-        inp.placeholder = "Nombre del marcador";
-        form.appendChild(inp);
         var k = known(x, y);
-        card(k ? (cellZone[cellOf(x, y)] || "Punto del mapa") : "Zona sin explorar", "Punto del mapa", "#f5a524", "flag",
-            k ? "" : "Aun no conoces esta zona. Puedes poner ruta igualmente.", x, y, [
-                gpsBtn(x, y, k ? (cellZone[cellOf(x, y)] || "Punto del mapa") : "Punto marcado"),
-                btn("Crear marcador", "ghost", function () {
-                    send("rp:map:ui:markerAdd", x, y, inp.value.trim() || (k ? (cellZone[cellOf(x, y)] || "Marcador") : "Marcador"));
-                    play("ok");
-                }),
-            ]);
-        $("card").insertBefore(form, $("card").lastChild);
+        var label = k ? (cellZone[cellOf(x, y)] || "Punto del mapa") : "Punto marcado";
+        if (S.settings.gps !== 0) send("rp:map:ui:navigate", x, y, 0, label);
+        var buttons = [btn("Quitar ruta", "ghost", function () { send("rp:map:ui:navStop"); closeCard(); })];
+        if (S.isAdmin) buttons.push(btn("Crear lugar aquí", "primary", function () { adminNewPlace(x, y); }));
+        card(k ? label : "Zona sin explorar", S.settings.gps !== 0 ? "Destino marcado · ruta en el minimapa" : "Punto del mapa", "#c55cff", "flag",
+            k ? "" : "Aún no conoces esta zona; la ruta te lleva igualmente.", x, y, buttons);
+    }
+
+    // Atajos de admin desde la tarjeta: abren la pestaña Admin con el formulario listo
+    function adminNewPlace(x, y) {
+        adminForm.place = { x: x, y: y, z: 0, cat: "especial" };
+        adminTab = "places";
+        setTab("admin");
+    }
+    function adminEditPlace(id) {
+        var p = S.placeById[id];
+        if (!p) return;
+        adminForm.place = { id: p.id, name: p.name, desc: p.desc, cat: p.cat, x: p.x, y: p.y, z: p.z, public: false };
+        if (admin) admin.places.forEach(function (q) { if (q.id === p.id) adminForm.place.public = q.public; });
+        adminTab = "places";
+        setTab("admin");
     }
 
     function selectBuilding(b) {
@@ -339,7 +306,7 @@
         else window.Map2D.centerOn(x, y, Math.max(window.Map2D.getView().s, 0.9));
     }
 
-    // ---------------------------------------------------------------- seleccion en el mapa (admin, mover marcador)
+    // ---------------------------------------------------------------- seleccion en el mapa (formularios de admin)
     function startPick(text, fn) {
         pickMode = fn;
         $("pick-banner").textContent = text + "  (Esc del teclado cierra el mapa)";
@@ -354,39 +321,6 @@
             return fn(x, y);
         }
         selectPoint(x, y);
-    }
-
-    // ---------------------------------------------------------------- marcadores
-    function renderMarkers() {
-        var box = $("marker-list");
-        box.textContent = "";
-        var favOnly = $("fav-only").checked;
-        var list = S.markers.slice().sort(function (a, b) { return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || a.id - b.id; })
-            .filter(function (m) { return !favOnly || m.favorite; });
-        if (!list.length) box.appendChild(el("div", "empty", favOnly ? "No tienes favoritos." : "Aun no tienes marcadores."));
-        list.forEach(function (m) {
-            var row = el("div", "row");
-            var dot = el("div", "dot");
-            dot.style.background = m.favorite ? "#f5a524" : "#4fd1ff";
-            dot.innerHTML = window.ICONS.svg("pin", 14);
-            row.appendChild(dot);
-            var t = el("div", "txt");
-            t.appendChild(el("div", "", m.name));
-            var d = distTo(m.x, m.y);
-            t.appendChild(el("small", "", (d !== null ? fmtDist(d) + " · " : "") + Math.round(m.x) + ", " + Math.round(m.y)));
-            row.appendChild(t);
-            var acts = el("div", "acts");
-            var star = btn("★", "mini star" + (m.favorite ? " on" : ""), function () { editMarker(m, { favorite: !m.favorite }); });
-            star.title = "Favorito";
-            acts.appendChild(star);
-            acts.appendChild(btn("GPS", "mini", function () { send("rp:map:ui:navigate", m.x, m.y, m.z || 0, m.name); }));
-            acts.appendChild(btn("×", "mini danger", function () { send("rp:map:ui:markerDelete", m.id); }));
-            row.appendChild(acts);
-            row.addEventListener("click", function () { selectMarker(m.id, true); });
-            box.appendChild(row);
-        });
-        window.Map2D.setMarkers(S.markers);
-        window.Map3D.setMarkers(S.markers);
     }
 
     // ---------------------------------------------------------------- estadisticas
@@ -457,7 +391,7 @@
     // ---------------------------------------------------------------- buscador (respeta la exploracion)
     var searchSel = 0, searchItems = [];
     function zoneKnown(z) {
-        if (S.settings.fog === 0) return z.cells[0];
+        if (S.settings.fog === 0 || S.adminView) return z.cells[0];
         for (var i = 0; i < z.cells.length; i++) if (S.cells[z.cells[i]] || S.start[z.cells[i]]) return z.cells[i];
         return 0;
     }
@@ -473,9 +407,6 @@
             if (norm(p.name).indexOf(q) >= 0 || (c && norm(c.name).indexOf(q) >= 0))
                 searchItems.push({ t: p.name, s: (c ? c.name : "") + " · " + placeName(p.x, p.y), icon: c ? c.icon : "pin", color: c ? c.color : "#888",
                     go: function () { selectPlace(p.id, true); } });
-        });
-        S.markers.forEach(function (m) {
-            if (norm(m.name).indexOf(q) >= 0) searchItems.push({ t: m.name, s: "Tu marcador", icon: "pin", color: "#4fd1ff", go: function () { selectMarker(m.id, true); } });
         });
         S.zones.forEach(function (z) {
             if (norm(z.name).indexOf(q) < 0) return;
@@ -562,9 +493,8 @@
         window.Map2D.setActive(isOpen && m === "2d");
         window.Map3D.setActive(isOpen && m === "3d");
         if (m === "3d") {
-            window.Map3D.setFog(S.cells, S.start, S.settings.fog !== 0);
+            window.Map3D.setFog(S.cells, S.start, S.settings.fog !== 0 && !S.adminView);
             window.Map3D.setPlaces(S.places, S.catMap, hidden);
-            window.Map3D.setMarkers(S.markers);
             window.Map3D.setRoute(route.active ? route.points : null, route.active ? [route.tx, route.ty] : null);
             if (player) { window.Map3D.setPlayer(player); }
             var v = window.Map2D.getView();
@@ -590,7 +520,7 @@
         { el: "map-wrap", img: "mouse_left", text: "Haz clic en un icono o en cualquier punto para ver su información y poner una ruta GPS." },
         { el: "bottom", img: "mouse_left", text: "Lo oscuro aún no lo conoces: se descubre solo cuando caminas o conduces por ahí. Aquí ves cuánto llevas." },
         { el: "mode-seg", img: "mouse_left", text: "Cambia a 3D para ver los edificios con su altura real. En 3D, el botón derecho gira e inclina." },
-        { el: "tabs", img: "mouse_left", text: "Aquí tienes tus marcadores, favoritos y tu progreso por ciudad. Busca lugares arriba." },
+        { el: "tabs", img: "mouse_left", text: "Aquí ves tus lugares cercanos y tu progreso por ciudad. Busca lugares arriba." },
     ];
     var coachStep = -1, coachSpot = null;
     function coachShow() {
@@ -819,7 +749,7 @@
         var radius = adminInput("Radio de exploración (m, " + defs.radius[2] + "-" + defs.radius[3] + ")", st.radius, "number");
         var interval = adminInput("Intervalo de exploración (ms, " + defs.interval[2] + "-" + defs.interval[3] + ")", st.interval, "number");
         var checks = [["fog", "Niebla de exploracion (si se apaga, todo el mapa se ve)"], ["gps", "GPS"], ["mode3d", "Vista 3D"],
-            ["music", "Musica del mapa"], ["blips", "Importar tiendas, bencineras, talleres, cajeros..."], ["houses", "Mostrar casas de rp_properties"]]
+            ["music", "Tema de fondo con el mapa abierto"], ["blips", "Importar tiendas, bencineras, talleres, cajeros..."], ["houses", "Mostrar casas de rp_properties"]]
             .map(function (c) { var ch = adminCheck(c[1], st[c[0]] === 1); ch.key = c[0]; return ch; });
         form.appendChild(radius.label);
         form.appendChild(interval.label);
@@ -848,7 +778,7 @@
             var c = el("div", "stat-box");
             c.appendChild(el("b", "", info.name + " · " + fmtPct(info.pct)));
             c.appendChild(el("small", "", "Personaje #" + info.cid + (info.online ? " (conectado)" : "") + " · " + info.land + " celdas de tierra" +
-                (info.sectors !== undefined ? " · " + info.sectors + " cuadrículas completas · " + info.markers + " marcadores" : "")));
+                (info.sectors !== undefined ? " · " + info.sectors + " cuadrículas completas" : "")));
             box.appendChild(c);
             var bt = el("div", "btns");
             bt.style.marginTop = "8px";
@@ -857,12 +787,21 @@
         }
     }
 
+    // ---------------------------------------------------------------- vista admin / jugador (/mapajugador)
+    function renderView() {
+        var b = $("view-toggle");
+        b.classList.toggle("hidden", !S.isAdmin);
+        b.textContent = S.adminView ? "Vista: Admin" : "Vista: Jugador";
+        b.title = S.adminView ? "Ves todos los lugares y todo el mapa. Clic (o /mapajugador) para verlo como un jugador normal."
+            : "Ves solo lo que tu personaje ha descubierto. Clic (o /mapajugador) para volver a la vista de admin.";
+        b.classList.toggle("player", !S.adminView);
+    }
+
     // ---------------------------------------------------------------- pestañas
     function setTab(t) {
         tab = t;
         document.querySelectorAll("#tabs button").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === t); });
-        ["places", "markers", "stats", "admin"].forEach(function (p) { $("page-" + p).classList.toggle("hidden", p !== t); });
-        if (t === "markers") renderMarkers();
+        ["places", "stats", "admin"].forEach(function (p) { $("page-" + p).classList.toggle("hidden", p !== t); });
         if (t === "stats") renderStats();
         if (t === "admin") { send("rp:map:ui:admin", "open", ""); renderAdmin(); }
     }
@@ -895,7 +834,7 @@
             savePrefs();
         });
         $("cats-all").addEventListener("click", function () { hidden = {}; savePrefs(); refreshPlaces(); });
-        $("fav-only").addEventListener("change", renderMarkers);
+        $("view-toggle").addEventListener("click", function () { play("click"); send("rp:map:ui:admin", "view", ""); });
         $("b-gps-stop").addEventListener("click", function () { play("click"); send("rp:map:ui:navStop"); });
     }
 
@@ -934,7 +873,7 @@
         S.sectors = st.sectors || [];
         S.zones = st.zones || S.zones;
         S.settings = st.settings || {};
-        S.markers = st.markers || [];
+        S.adminView = !!st.adminView;
         S.prefs = st.prefs || {};
         S.totals = st.totals || { all: 0, city: {} };
         S.isAdmin = !!st.isAdmin;
@@ -960,7 +899,7 @@
             $("mode-seg").querySelector('[data-mode="3d"]').disabled = S.settings.mode3d === 0;
             refreshFog();
             refreshPlaces();
-            renderMarkers();
+            renderView();
             renderGps();
             setMode(wasOpen ? mode : (S.prefs.mode || "2d"), true);
             if (!wasOpen) {
@@ -1011,14 +950,6 @@
             if (selection && selection.type === "place" && !S.placeById[selection.id]) closeCard();
             if (tab === "stats") renderStats();
         },
-        markers: function (list, newId) {
-            S.markers = list || [];
-            renderMarkers();
-            if (newId) { play("ok"); selectMarker(newId, false); }
-            else if (selection && selection.type === "marker") {
-                if (markerById(selection.id)) selectMarker(selection.id, false); else closeCard();
-            }
-        },
         route: function (r) {
             route = r || { active: false };
             window.Map2D.setRoute(route.active ? route.points : null, route.active ? [route.tx, route.ty] : null);
@@ -1037,7 +968,6 @@
     // ---------------------------------------------------------------- arranque
     window.Map3D.setup($("map3d"), {
         onPlace: function (id) { selectPlace(id, false); },
-        onMarker: function (id) { selectMarker(id, false); },
         onBuilding: selectBuilding,
         onClick: onMapClick,
     });
@@ -1045,7 +975,6 @@
         onClick: onMapClick,
         onHover: onHover,
         onPlace: function (id) { selectPlace(id, false); },
-        onMarker: function (id) { selectMarker(id, false); },
         onBase: function () { window.Map3D.refreshTexture(); },
         onFog: function () { window.Map3D.refreshTexture(); },
         onMissing: function () { $("nofile").classList.remove("hidden"); },
@@ -1071,7 +1000,7 @@
                 { id: 2, name: "Comisaría LSPD", cat: "policia", x: 1555, y: -1675, z: 16, desc: "Pershing Square." },
                 { id: 3, name: "Gasolinera de Idlewood", cat: "gasolinera", x: 1940, y: -1773, z: 13, desc: "" },
                 { id: 4, name: "Gimnasio de Ganton", cat: "gimnasio", x: 2229, y: -1721, z: 13, desc: "" }],
-            settings: { fog: 1, gps: 1, mode3d: 1, music: 1 }, markers: [{ id: 9, name: "Casa de Sweet", x: 2520, y: -1678, z: 13, favorite: true }],
+            settings: { fog: 1, gps: 1, mode3d: 1 },
             prefs: { tutorial: location.hash.indexOf("tuto") < 0 }, totals: { all: 40, city: { "Los Santos": 25 } }, isAdmin: true });
         window.RP.player({ x: 1742, y: -1861, z: 13.5, rot: 30, zone: "El Corona", city: "Los Santos", inside: false });
         window.RP.route({ active: true, label: "Gimnasio de Ganton", tx: 2229, ty: -1721, dist: 720,

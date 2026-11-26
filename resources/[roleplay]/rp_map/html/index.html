@@ -19,9 +19,10 @@
         </div>
         <div class="search">
             <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" d="M10.5 4a6.5 6.5 0 104.1 11.6L20 21"/></svg>
-            <input id="search" type="text" maxlength="40" placeholder="Buscar ciudades, barrios, lugares, marcadores..." autocomplete="off">
+            <input id="search" type="text" maxlength="40" placeholder="Buscar ciudades, barrios y lugares..." autocomplete="off">
             <div id="search-results" class="dropdown hidden"></div>
         </div>
+        <button id="view-toggle" class="view-btn hidden">Vista: Admin</button>
         <div class="seg" id="mode-seg">
             <button data-mode="2d" class="on">2D</button>
             <button data-mode="3d">3D</button>
@@ -37,7 +38,6 @@
         <aside id="side">
             <nav class="tabs" id="tabs">
                 <button data-tab="places" class="on">Lugares</button>
-                <button data-tab="markers">Marcadores</button>
                 <button data-tab="stats">Progreso</button>
                 <button data-tab="admin" id="tab-admin" class="hidden">Admin</button>
             </nav>
@@ -46,13 +46,6 @@
                 <div id="cats"></div>
                 <div class="side-title">Cerca de ti</div>
                 <div id="near"></div>
-            </section>
-            <section class="tab-page hidden" id="page-markers">
-                <div class="side-help">
-                    <img class="key-ico" src="images/keys/mouse_left.png" alt=""> Haz clic en el mapa y pulsa <b>Crear marcador</b>.
-                </div>
-                <label class="check"><input type="checkbox" id="fav-only"> Solo favoritos</label>
-                <div id="marker-list"></div>
             </section>
             <section class="tab-page hidden" id="page-stats">
                 <div id="stats"></div>

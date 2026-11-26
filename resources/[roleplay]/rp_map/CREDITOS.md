@@ -7,5 +7,5 @@
 | `html/images/keys/*.png` | Kenney Input Prompts (`assets/kenney/teclas/teclado-raton/128px/`) | CC0 |
 | `html/data/map.jpg` | radar de tu instalación de GTA SA (`tools/generar-datos.ps1`); incluido en el repo | Rockstar |
 | `html/data/roads.js`, `buildings.js`, `terrain.js`, `client/c_roads.lua`, `shared/s_land.lua` | datos derivados de `data/Paths`, IPL, IDE y COL de GTA SA (`tools/generar-datos.ps1`) | derivado de Rockstar |
-| `sounds/map_theme.mp3` | tema del menú de pausa, convertido a MP3 (128 kbps); incluido en el repo | Rockstar |
 | `html/js/icons.js` | iconos SVG propios | propio |
+| `sounds/map_theme.mp3` | "Calm Relax 1" de **cynicmusic** (OpenGameArt), recomprimido a 128 kbps | según el dueño del repo, sin restricciones de copyright; **confirmar la licencia exacta** en la página de OpenGameArt de cynicmusic y citar al autor si la licencia lo pide |

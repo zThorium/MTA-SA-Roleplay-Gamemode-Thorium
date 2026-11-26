@@ -1,5 +1,12 @@
 # Auditoría de rp_map
 
+## 2026-11-26 · mejorar
+- **Motivo**: pedido de Fabián: quitar la música del mapa (derechos de autor), tutorial solo la primera vez, mapa a pantalla completa, clic en un punto = destino con ruta en el minimapa, solo los admins crean iconos y dos vistas para el admin con `/mapajugador`.
+- **Nota**: 100/100 → 100/100  (OK 32, FALLA B 0, FALLA I 0, AVISO 0)
+- **Cambios**: el tema de Rockstar se sustituye por «Calm Relax 1» de cynicmusic (`sounds/map_theme.mp3`, 128 kbps, en bucle desde el inicio y desactivable en Ajustes; licencia por confirmar en `CREDITOS.md`); la radio y la música del teléfono siguen pausándose. Se quitan los marcadores de jugador (eventos `rp:map:marker*`, pestaña y buscador; `map_markers` queda sin uso). El clic en el mapa marca el punto y lanza el GPS al instante. El tutorial se marca como visto al mostrarse (preferencia del personaje, que ya no vuelve a `false`, y `@map_tutorial.xml` local); el cooldown del servidor es por acción para que no se pierda el guardado de preferencias. La ventana ocupa el 100 % de la pantalla. Vista de admin (todos los lugares, sin niebla) y vista de jugador con `/mapajugador` o el botón «Vista»; «Crear lugar aquí» y «Editar lugar» desde las tarjetas.
+- **Reglas manuales revisadas**: SEG-02 ✔ (se quitan eventos remotos), SEG-04 ✔ (`/mapajugador` y `rp:map:admin:view` comprueban el nivel de admin en el servidor), PRU-02 ✔ (`map_*` PASS; CEF revisado sin ventana en `#demo`).
+- **Probar en juego**: abrir dos veces (el tutorial sale solo la primera); clic en un punto (ruta en el minimapa); `/mapajugador` con un admin; cuenta de nivel 0 sin botón «Vista» ni Admin.
+
 ## 2026-11-26 · crear
 - **Motivo**: sustituir el mapa F11 de GTA por un mapa propio estilo GTA VI: niebla de exploración por personaje, cuadrículas por ciudad, lugares que se descubren, marcadores, GPS con rutas reales, buscador, estadísticas, vista 3D con edificios y panel de admin; tema musical mientras está abierto y la radio y la música del teléfono en pausa.
 - **Nota**: — → 100/100  (OK 32, FALLA B 0, FALLA I 0, AVISO 0)

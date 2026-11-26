@@ -1,12 +1,14 @@
 --[[
     rp_map / client/c_map.lua  (cliente)
     Sustituye el mapa F11 de GTA por el mapa CEF (html/). Guarda lo que el servidor
-    deja ver a este jugador (celdas exploradas, lugares, marcadores...) y lo pasa al
-    navegador. Mientras el mapa esta abierto:
+    deja ver a este jugador (celdas exploradas, lugares...) y lo pasa al navegador,
+    que ocupa toda la pantalla. Mientras el mapa esta abierto:
       - el personaje no se mueve (guiSetInputEnabled) y se recuperan los controles al cerrar;
       - suena el tema del mapa en bucle desde el inicio (se corta al cerrar);
-      - la radio y la musica del telefono se silencian (setRadioSuppressed / setMusicSuppressed).
+      - la radio y la musica del telefono se pausan (setRadioSuppressed / setMusicSuppressed).
     Se cierra con F11, Esc o la X.
+    El tutorial sale solo la primera vez: se marca en las preferencias del personaje y en
+    @map_tutorial.xml de este PC.
 ]]
 
 MapC = MapC or {}
@@ -20,7 +22,7 @@ local posTimer
 
 -- Estado que manda el servidor (solo lo que este jugador puede ver)
 local S = { loaded = false, cells = {}, start = {}, places = {}, cats = {}, sectors = {}, settings = {},
-    markers = {}, prefs = {}, totals = { all = 0, city = {} }, isAdmin = false }
+    prefs = {}, totals = { all = 0, city = {} }, isAdmin = false, adminView = false }
 MapC.state = S
 
 local sectors, cellCity, zoneCells
@@ -28,11 +30,10 @@ local sectors, cellCity, zoneCells
 addEvent("rp:map:init", true)
 addEvent("rp:map:cells", true)
 addEvent("rp:map:places", true)
-addEvent("rp:map:markers", true)
 addEvent("rp:map:config", true)
 addEvent("rp:map:admin:data", true)
 addEvent("rp:map:admin:player", true)
-for _, e in ipairs({ "ready", "close", "navigate", "navStop", "markerAdd", "markerEdit", "markerDelete", "prefs", "admin" }) do
+for _, e in ipairs({ "ready", "close", "navigate", "navStop", "prefs", "admin" }) do
     addEvent("rp:map:ui:" .. e, false)
 end
 
@@ -85,8 +86,8 @@ local function fullState()
     end
     return {
         land = MAP_LAND, cells = listOf(S.cells), start = listOf(S.start), places = placesList(), cats = S.cats,
-        sectors = secs, zones = buildZones(), settings = S.settings, markers = S.markers, prefs = S.prefs,
-        totals = S.totals, isAdmin = S.isAdmin, cities = MAPA_CITIES, discoveredPct = MAPA.SECTOR_DISCOVERED_PCT,
+        sectors = secs, zones = buildZones(), settings = S.settings, prefs = S.prefs,
+        totals = S.totals, isAdmin = S.isAdmin, adminView = S.adminView, cities = MAPA_CITIES, discoveredPct = MAPA.SECTOR_DISCOVERED_PCT,
         icons = MAPA.ICONS,
     }
 end
@@ -119,7 +120,7 @@ addEventHandler("rp:map:ui:ready", root, function()
 end)
 
 ----------------------------------------------------------------
--- Musica y supresion de otros audios
+-- Pausar otros audios con el mapa abierto
 ----------------------------------------------------------------
 -- rp_radio y rp_phone son opcionales: solo se llaman si estan en marcha
 -- estandar:dep-opcional rp_radio
@@ -130,8 +131,8 @@ local function running(name)
 end
 
 local function setOtherAudioSuppressed(on)
-    if running("rp_radio") then pcall(function() exports.rp_radio:setRadioSuppressed(MAPA.MUSIC_REASON, on) end) end
-    if running("rp_phone") then pcall(function() exports.rp_phone:setMusicSuppressed(MAPA.MUSIC_REASON, on) end) end
+    if running("rp_radio") then pcall(function() exports.rp_radio:setRadioSuppressed(MAPA.AUDIO_REASON, on) end) end
+    if running("rp_phone") then pcall(function() exports.rp_phone:setMusicSuppressed(MAPA.AUDIO_REASON, on) end) end
 end
 
 local function stopTheme()
@@ -143,9 +144,24 @@ local function startTheme()
     stopTheme()
     if S.settings.music == 0 or not fileExists(MAPA.MUSIC_FILE) then return end
     theme = playSound(MAPA.MUSIC_FILE, true)   -- true = en bucle: al terminar vuelve a empezar
-    if theme then setSoundVolume(theme, tonumber(S.prefs.music) or MAPA.MUSIC_VOLUME) end
+    if theme then setSoundVolume(theme, MAPA.MUSIC_VOLUME) end
 end
-MapC.setMusicVolume = function(v) if isElement(theme) then setSoundVolume(theme, v) end end
+
+-- Tutorial: solo la primera vez (preferencia del personaje o marca local de este PC)
+local TUTORIAL_FILE = "@map_tutorial.xml"
+local function tutorialSeen()
+    return S.prefs.tutorial == true or fileExists(TUTORIAL_FILE)
+end
+local function markTutorialSeen()
+    if not fileExists(TUTORIAL_FILE) then
+        local f = fileCreate(TUTORIAL_FILE)
+        if f then fileWrite(f, "<tutorial visto=\"1\" />"); fileClose(f) end
+    end
+    if S.prefs.tutorial ~= true then
+        S.prefs.tutorial = true
+        triggerServerEvent("rp:map:prefs", resourceRoot, S.prefs)
+    end
+end
 
 ----------------------------------------------------------------
 -- Abrir / cerrar
@@ -177,7 +193,16 @@ function MapC.open()
     pcall(function() exports.rp_hud:setHudHidden("rp_map", true) end)
     setOtherAudioSuppressed(true)
     startTheme()
-    callJS(("RP.open(%s)"):format(js(fullState())))
+    local state = fullState()
+    if not tutorialSeen() then
+        markTutorialSeen()                       -- se muestra esta vez y ya no vuelve
+        state.prefs = {}
+        for k, v in pairs(S.prefs) do state.prefs[k] = v end
+        state.prefs.tutorial = false
+    else
+        state.prefs.tutorial = true
+    end
+    callJS(("RP.open(%s)"):format(js(state)))
     if MapC.gpsState then callJS(("RP.route(%s)"):format(js(MapC.gpsState()))) end
     pushPlayer()
     posTimer = setTimer(pushPlayer, 150, 0)
@@ -244,7 +269,7 @@ addEventHandler("rp:map:init", resourceRoot, function(data)
     S.start = setFromList(data.start)
     S.places = placesFromList(data.places)
     S.cats, S.sectors, S.settings = data.cats or {}, data.sectors or {}, data.settings or {}
-    S.markers, S.prefs, S.totals, S.isAdmin = data.markers or {}, data.prefs or {}, data.totals or S.totals, data.isAdmin == true
+    S.prefs, S.totals, S.isAdmin, S.adminView = data.prefs or {}, data.totals or S.totals, data.isAdmin == true, data.adminView == true
     S.loaded = true
     if isOpen then callJS(("RP.open(%s)"):format(js(fullState()))) end
 end)
@@ -259,11 +284,6 @@ addEventHandler("rp:map:places", resourceRoot, function(list, totals)
     S.places = placesFromList(list)
     S.totals = totals or S.totals
     if isOpen then callJS(("RP.places(%s, %s)"):format(js(placesList()), js(S.totals))) end
-end)
-
-addEventHandler("rp:map:markers", resourceRoot, function(list, newId)
-    S.markers = list or {}
-    if isOpen then callJS(("RP.markers(%s, %s)"):format(js(S.markers), tostring(tonumber(newId) or "null"))) end
 end)
 
 addEventHandler("rp:map:config", resourceRoot, function(data)
@@ -297,34 +317,17 @@ addEventHandler("rp:map:ui:navStop", root, function()
     if MapC.gpsStop then MapC.gpsStop(true) end
 end)
 
-addEventHandler("rp:map:ui:markerAdd", root, function(x, y, name)
-    x, y = num(x), num(y)
-    if not x or not y then return end
-    local z = getGroundPosition(x, y, 500) or 0
-    triggerServerEvent("rp:map:markerAdd", resourceRoot, x, y, z, tostring(name or "Marcador"))
-end)
-
-addEventHandler("rp:map:ui:markerEdit", root, function(id, json)
-    local data = type(json) == "string" and fromJSON(json)
-    if type(data) ~= "table" then return end
-    triggerServerEvent("rp:map:markerEdit", resourceRoot, num(id), data)
-end)
-
-addEventHandler("rp:map:ui:markerDelete", root, function(id)
-    triggerServerEvent("rp:map:markerDelete", resourceRoot, num(id))
-end)
-
 addEventHandler("rp:map:ui:prefs", root, function(json)
     local data = type(json) == "string" and fromJSON(json)
     if type(data) ~= "table" then return end
+    if S.prefs.tutorial == true then data.tutorial = true end
     S.prefs = data
-    if data.music then MapC.setMusicVolume(tonumber(data.music) or MAPA.MUSIC_VOLUME) end
     triggerServerEvent("rp:map:prefs", resourceRoot, data)
 end)
 
 -- Admin: el cliente solo reenvia; s_admin.lua comprueba el nivel y todos los datos
 local ADMIN_EVENTS = { open = true, placeSave = true, placeDelete = true, catSave = true, catDelete = true,
-    sectorSave = true, settingsSave = true, playerQuery = true, playerReset = true }
+    sectorSave = true, settingsSave = true, playerQuery = true, playerReset = true, view = true }
 addEventHandler("rp:map:ui:admin", root, function(action, json, extra)
     if not ADMIN_EVENTS[action] then return end
     local data = json
