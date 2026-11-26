@@ -306,7 +306,7 @@ addEventHandler("rp:gym:fight", resourceRoot, function(ped, active, info)
         if not isElement(ped) then return end
         textures()
         info = type(info) == "table" and info or {}
-        F = { ped = ped, crowd = info.crowd or {}, phase = "intro", timers = {}, streak = 0, nextHit = 0, nextFlash = 0,
+        F = { ped = ped, crowd = info.crowd or {}, ring = info.ring, phase = "intro", timers = {}, streak = 0, nextHit = 0, nextFlash = 0,
               intro = tonumber(info.intro) or 0, startedAt = getTickCount(), label = info.label or "Entrenador",
               style = info.style or "", name = getPlayerName(localPlayer):gsub("_", " ") }
         for _, c in ipairs(F.crowd) do if c.side == "referee" then F.referee = c.ped end end
@@ -335,6 +335,28 @@ addEventHandler("rp:gym:fight", resourceRoot, function(ped, active, info)
             if result == "win" then koShownAt = getTickCount() end
         end
     end
+end)
+
+----------------------------------------------------------------
+-- Paredes invisibles del ring: ni el jugador ni el entrenador pasan de `half` m del centro (X e Y)
+----------------------------------------------------------------
+local function keepInside(el, r)
+    if not isElement(el) then return end
+    local x, y, z = getElementPosition(el)
+    local nx = math.max(r.x - r.half, math.min(r.x + r.half, x))
+    local ny = math.max(r.y - r.half, math.min(r.y + r.half, y))
+    if nx ~= x or ny ~= y then
+        setElementPosition(el, nx, ny, z, false)   -- sin warp: no corta la animacion
+        local vx, vy, vz = getElementVelocity(el)
+        setElementVelocity(el, nx ~= x and 0 or vx, ny ~= y and 0 or vy, vz)
+    end
+end
+
+addEventHandler("onClientPreRender", root, function()
+    local r = F and F.ring
+    if not r or not r.half or F.phase == "over" then return end
+    keepInside(localPlayer, r)
+    keepInside(F.ped, r)   -- este cliente es su sincronizador
 end)
 
 ----------------------------------------------------------------

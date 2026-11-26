@@ -166,25 +166,26 @@ GYM_FIXED = {
         -- [A] junto al ring, mirando hacia el: el juego no guarda la posicion del entrenador en el mapa
         trainer = {
             style = "boxing", x = 768.2, y = 5.4, z = 1000.72, rot = 90,
-            -- Ring in_bxing05 (suelo a z 1000.60, unos 5,8 m de lado). Al empezar, cada uno a una esquina.
-            -- Salir a mas de `radius` m del centro = rendirse.
+            -- Ring in_bxing05 (suelo a z 1000.60, cuerdas a unos 2,8 m del centro). Esquinas medidas en juego.
+            -- half = paredes invisibles: durante el combate nadie pasa de half m del centro en X ni en Y.
+            -- Salir a mas de `radius` m del centro (solo posible por teletransporte) = rendirse.
             ring = {
-                x = 761.77, y = -0.63, radius = 3.8,
-                player = { x = 763.97, y = -2.83, z = 1001.65, rot = 45 },
-                trainer = { x = 759.57, y = 1.57, z = 1001.65, rot = 225 },
-                referee = { x = 763.6, y = 1.2, z = 1001.65, rot = 225 },
-                exit = { x = 767.5, y = -3.8, z = 1000.72, rot = 90 },       -- donde aparece el jugador si pierde (fuera del ring)
+                x = 760.91, y = 0.24, half = 2.45, radius = 3.8,
+                player = { x = 759.024, y = -1.895, z = 1001.594, rot = 319.9 },
+                trainer = { x = 762.793, y = 2.369, z = 1001.594, rot = 133.3 },
+                referee = { x = 762.8, y = -1.8, z = 1001.594, rot = 45 },
+                exit = { x = 765.5, y = -3.6, z = 1000.72, rot = 90 },       -- donde aparece el jugador si pierde (fuera del ring)
                 -- [A] publico alrededor del ring (suelo a z 999.67): side = "player" te apoya, "trainer" al entrenador,
                 -- "photo" fotografo con flash
                 crowd = {
-                    { x = 766.3, y = -2.5, rot = 90,  side = "player" },  { x = 766.3, y = -0.6, rot = 90,  side = "player" },
-                    { x = 766.3, y = 1.3,  rot = 90,  side = "trainer" },
-                    { x = 759.8, y = 3.8,  rot = 180, side = "trainer" }, { x = 761.8, y = 3.8,  rot = 180, side = "photo" },
-                    { x = 763.8, y = 3.8,  rot = 180, side = "player" },
-                    { x = 759.8, y = -5.1, rot = 0,   side = "player" },  { x = 761.8, y = -5.1, rot = 0,   side = "photo" },
-                    { x = 763.8, y = -5.1, rot = 0,   side = "trainer" },
-                    { x = 757.3, y = -1.6, rot = 270, side = "player" },  { x = 757.3, y = 0.4,  rot = 270, side = "trainer" },
-                    { x = 757.3, y = 2.2,  rot = 270, side = "photo" },
+                    { x = 765.4, y = -1.6, rot = 90,  side = "player" },  { x = 765.4, y = 0.3,  rot = 90,  side = "player" },
+                    { x = 765.4, y = 2.2,  rot = 90,  side = "trainer" },
+                    { x = 758.9, y = 4.7,  rot = 180, side = "trainer" }, { x = 760.9, y = 4.7,  rot = 180, side = "photo" },
+                    { x = 762.9, y = 4.7,  rot = 180, side = "player" },
+                    { x = 758.9, y = -4.2, rot = 0,   side = "player" },  { x = 760.9, y = -4.2, rot = 0,   side = "photo" },
+                    { x = 762.9, y = -4.2, rot = 0,   side = "trainer" },
+                    { x = 756.4, y = -0.7, rot = 270, side = "player" },  { x = 756.4, y = 1.3,  rot = 270, side = "trainer" },
+                    { x = 756.4, y = 3.1,  rot = 270, side = "photo" },
                 },
                 crowdZ = 1000.72,
             },

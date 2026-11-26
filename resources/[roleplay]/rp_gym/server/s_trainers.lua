@@ -286,7 +286,7 @@ addEventHandler("rp:gym:trainer", resourceRoot, function(trainerId)
     end
     setElementSyncer(t.ped, player)   -- la IA corre en su cliente
     triggerClientEvent(player, "rp:gym:fight", resourceRoot, t.ped, true, {
-        crowd = t.crowd, intro = intro, style = t.cfg.name, label = t.cfg.label,
+        crowd = t.crowd, intro = intro, style = t.cfg.name, label = t.cfg.label, ring = ring,
     })
     local function goLive()
         if fights[player] ~= f then return end
