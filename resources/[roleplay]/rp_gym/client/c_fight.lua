@@ -8,9 +8,10 @@
     - Golpes: sonido de impacto (Kenney Impact Sounds) y sangre en los dos; el publico grita y anima a su lado;
       fotografos con flash.
     - Golpe recibido sin cubrirse (clic derecho + salto): aturdido 1-2 s, mareo y vision borrosa, sangre
-      alrededor de la pantalla y quejido (audio del propio juego, PAIN_A con playSFX: no se copia nada).
+      alrededor de la pantalla (sin gritos: al recibir un golpe solo suena el impacto).
     - Varios golpes seguidos sin cubrirse: puede caer; el arbitro cuenta hasta 10 y hay que pulsar Espacio
-      rapido para llenar la barra y levantarse. Si llega a 10, pierde.
+      rapido para llenar la barra y levantarse. Si llega a 10, pierde. Mientras, el entrenador se va a
+      su esquina y celebra con su publico; al levantarse dejan de celebrar y tiene 3 s antes del siguiente golpe.
     - Al ganar: "K.O." y campana. Vidas, ring y resultado los decide el servidor (s_trainers.lua).
 ]]
 
@@ -25,8 +26,6 @@ local tex = {}
 local screen = nil
 local lastFrame = getTickCount()
 
-local PAIN_BANK, PAIN_COUNT = 1, 131   -- PAIN_A, banco 1 (voz de CJ, 12 kHz): quejidos cortos
-
 ----------------------------------------------------------------
 -- Utilidades
 ----------------------------------------------------------------
@@ -37,6 +36,11 @@ local function sound(path, volume)
 end
 local function voice(name) return sound("sounds/voz/" .. name .. ".ogg", 1) end
 local function bell() return sound("sounds/golpe/bell.ogg", 1) end
+-- Campana de inicio (Pixabay): el archivo dura ~15 s, se corta a los 4 s
+local function startBell()
+    local s = sound("sounds/golpe/bell_start.mp3", 1)
+    if s then setTimer(function() if isElement(s) then destroyElement(s) end end, 4000, 1) end
+end
 
 local function later(ms, fn)
     local t = setTimer(fn, ms, 1)
@@ -83,7 +87,8 @@ local function setControls(on) toggleAllControls(on, true, false) end
 ----------------------------------------------------------------
 -- Publico y fotografos
 ----------------------------------------------------------------
-local function crowdReact(side)
+-- silent = sin subir el ruido del publico (cuando el golpe lo recibe el jugador)
+local function crowdReact(side, silent)
     local now = getTickCount()
     if now - (F.lastCheer or 0) < 700 then return end
     F.lastCheer = now
@@ -97,10 +102,7 @@ local function crowdReact(side)
         end, 1500, 1)
         if i == 1 then exports.rp_notify:bubble(ped, texts[math.random(#texts)], 1600) end
     end
-    if now - (F.lastRoar or 0) > 1200 then
-        F.lastRoar = now
-        sound("sounds/crowd_cheer.wav", 0.55)
-    end
+    if not silent then F.roar = 1 end   -- el bucle del publico sube y vuelve a bajar (onClientRender)
     F.nextFlash = math.min(F.nextFlash or 0, now + 200)   -- los fotografos disparan tras un buen golpe
 end
 
@@ -134,8 +136,8 @@ local function hitFx(target, covered)
         sound("sounds/golpe/block_" .. math.random(0, 2) .. ".ogg", 0.8)
         return
     end
-    local kind = math.random() < 0.4 and "heavy" or "medium"
-    sound(("sounds/golpe/punch_%s_%d.ogg"):format(kind, math.random(0, 4)), 1)
+    local s = sound("sounds/golpe/punch.mp3", 1)
+    if s then setSoundSpeed(s, 0.88 + math.random() * 0.24) end   -- tono distinto en cada golpe
     local x, y, z = getPedBonePosition(target, 8)   -- cabeza
     if x then
         fxAddBlood(x, y, z, 0, 0, 0.3, 6, 1)
@@ -159,29 +161,51 @@ end
 ----------------------------------------------------------------
 -- Caida y cuenta del arbitro
 ----------------------------------------------------------------
+-- El publico del entrenador celebra mientras el jugador esta en el suelo (y deja de hacerlo al levantarse)
+local function crowdCelebrate(on)
+    for _, ped in ipairs(crowdBy("trainer")) do
+        if on then
+            setPedAnimation(ped, "ON_LOOKERS", "shout_01", -1, true, false, false, false)
+        else
+            setPedAnimation(ped, "RIOT", "RIOT_CHANT", -1, true, false, false, false)
+        end
+    end
+end
+
+local function stopCelebrating()
+    if F.celebrating and isElement(F.ped) then setPedAnimation(F.ped) end
+    F.celebrating = false
+    crowdCelebrate(false)
+end
+
 local function getUp()
     if not F or F.phase ~= "down" then return end
     F.phase = "rising"
     if isTimer(F.countTimer) then killTimer(F.countTimer) end
     triggerServerEvent("rp:gym:down", resourceRoot, false)
     voice("ready")
+    stopCelebrating()
     crowdReact("player")
     later(1300, function()
         if not F or F.phase ~= "rising" then return end
         F.phase, F.streak, F.stunUntil = "live", 0, 0
+        F.nextHit = getTickCount() + 3000   -- 3 s de respiro antes de que el entrenador vuelva a pegar
         setControls(true)
     end)
 end
 
 local function startDown()
-    F.phase, F.mash, F.count, F.pressedAt = "down", 0, 0, 0
+    F.phase, F.mash, F.count, F.pressedAt, F.stunUntil = "down", 0, 0, 0, 0
     setControls(false)
+    if setCameraShakeLevel then setCameraShakeLevel(0) end
     triggerServerEvent("rp:gym:down", resourceRoot, true)
     crowdReact("trainer")
+    crowdCelebrate(true)
     F.countTimer = setTimer(function()
         if not F or F.phase ~= "down" then return end
         F.count = F.count + 1
         voice(tostring(F.count))
+        F.roar = 1
         if isElement(F.referee) then
             setPedAnimation(F.referee, "RIOT", "RIOT_shout", -1, false, false, false, false)
         end
@@ -205,7 +229,7 @@ addEventHandler("onClientPlayerDamage", localPlayer, function(attacker, weapon, 
     if attacker ~= F.ped then return end
     local covered = isCovered()
     hitFx(localPlayer, covered)
-    crowdReact("trainer")
+    crowdReact("trainer", true)
     if covered then F.streak = 0 return end
 
     local now = getTickCount()
@@ -216,8 +240,6 @@ addEventHandler("onClientPlayerDamage", localPlayer, function(attacker, weapon, 
     setControls(false)
     if setCameraShakeLevel then setCameraShakeLevel(120) end
     fx.blood, fx.dizzy = math.min(1, fx.blood + 0.55), 1
-    local pain = playSFX("pain_a", PAIN_BANK, math.random(0, PAIN_COUNT - 1), false)
-    if pain then setSoundVolume(pain, 1) end
     if F.streak >= GYM_FIGHT.DOWN_STREAK and math.random() < GYM_FIGHT.DOWN_CHANCE then startDown() end
 end)
 
@@ -250,9 +272,25 @@ local function think()
     local dx, dy = px - tx, py - ty
     local dist = math.sqrt(dx * dx + dy * dy)
     local fighting = F.phase == "live"
+    local now = getTickCount()
+    local corner = F.ring and F.ring.trainer
+    if (F.phase == "down" or F.phase == "rising") and corner then
+        -- Con el jugador en el suelo el entrenador se va a su esquina (como manda el arbitro) y celebra con el publico
+        local cx, cy = corner.x - tx, corner.y - ty
+        local away = math.sqrt(cx * cx + cy * cy) > 0.6 and F.phase == "down"
+        if away then
+            setElementRotation(ped, 0, 0, math.deg(math.atan2(-cx, cy)))
+        elseif F.phase == "down" and not F.celebrating then
+            F.celebrating = true
+            setElementRotation(ped, 0, 0, math.deg(math.atan2(-dx, dy)))
+            setPedAnimation(ped, "CASINO", "manwinb", -1, true, false, false, false)
+        end
+        setPedControlState(ped, "forwards", away)
+        setPedControlState(ped, "fire", false)
+        return
+    end
     if F.phase ~= "intro" then setElementRotation(ped, 0, 0, math.deg(math.atan2(-dx, dy))) end
     setPedControlState(ped, "forwards", fighting and dist > 1.4)
-    local now = getTickCount()
     if fighting and dist <= 1.7 and now >= F.nextHit then
         F.nextHit = now + math.random(GYM.TRAINER_HIT_MS[1], GYM.TRAINER_HIT_MS[2])
         setPedControlState(ped, "fire", true)   -- se suelta en el siguiente tick (golpe de ~100 ms)
@@ -280,8 +318,8 @@ local function goLive()
     setControls(true)
     exports.rp_hud:setHudSuppressed("rp_gym", false)
     voice("fight")
-    bell()
-    F.loop = playSound("sounds/crowd_loop.wav", true)
+    startBell()
+    F.loop = playSound("sounds/crowd.mp3", true)   -- publico (Pixabay); sube con cada golpe (F.roar)
     if F.loop then setSoundVolume(F.loop, 0.35) end
 end
 
@@ -492,6 +530,10 @@ addEventHandler("onClientRender", root, function()
     end
 
     if F then
+        if isElement(F.loop) then
+            F.roar = math.max(0, (F.roar or 0) - dt / 1.5)
+            setSoundVolume(F.loop, 0.35 + 0.5 * F.roar)
+        end
         if F.phase == "intro" then
             drawIntroTexts(now - F.startedAt)
         else

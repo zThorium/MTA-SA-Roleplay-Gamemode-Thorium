@@ -37,6 +37,7 @@ assets/
       voces-luchador/             Voiceover Pack: Fighter: 46 voces de narrador en ingles (1-10, fight, ready, round_1-5,
                                   you_win, you_lose, combo, player_1/2, prepare_yourself, winner, game_over...)
     licencias/                    License.txt original de cada pack
+  pixabay/sonidos/                golpe de boxeo, campana de ring y público de estadio (Licencia de Pixabay, ver pixabay/LICENCIA.md)
   propios/                        hechos para Thorium
     sonidos/freir.wav             aceite friendo (sintetizado, rp_pizzeria/tools/gen_assets.ps1)
     sonidos/heartbeat.wav         latido "lub-dub" (vida baja; sintetizado, rp_hud/tools/gen_sounds.ps1)
