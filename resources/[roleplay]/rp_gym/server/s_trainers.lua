@@ -13,7 +13,7 @@
       - Durante el combate rp_wanted queda suspendido (pegar al entrenador no da estrellas); con estrellas no se pelea.
       - Victoria: la vida del entrenador baja a TRAINER_WIN_HP. Se aprende el estilo (reemplaza al anterior).
       - Derrota: la vida del jugador baja a PLAYER_LOSE_HP, un golpe lo mataria o no se levanta antes del 10.
-        No queda abatido: aparece fuera del ring.
+        No queda abatido. Gane o pierda, al terminar aparece junto al entrenador, fuera del ring.
       - Rendirse: salir del ring (en Cobra, de la esterilla) hace perder las armas, como en el original.
     Cada estilo se aprende una sola vez: no hay forma de recuperar uno reemplazado, como en el original.
 
@@ -34,6 +34,23 @@ local trainers = {}   -- [id] = { row, cfg, ped, col, fight, crowd }
 local fights = {}     -- [player] = pelea
 local pending = {}    -- [player] = { id, tick }
 local stopping = false
+
+local function dbg(fmt, ...)
+    if not GYM_FIGHT.DEBUG then return end
+    local ok, msg = pcall(string.format, fmt, ...)
+    outputDebugString("[rp_gym:pelea] " .. (ok and msg or fmt), 3)
+end
+
+-- Al terminar el combate el jugador aparece junto al sitio del entrenador (fuera del ring), a su derecha
+local function placeBesideTrainer(player, t)
+    local r = math.rad(t.row.rotation)
+    local x, y = t.row.x + math.cos(r) * 1.3, t.row.y + math.sin(r) * 1.3
+    setPedAnimation(player)
+    setElementPosition(player, x, y, t.row.z)
+    setElementRotation(player, 0, 0, t.row.rotation)
+    setCameraTarget(player, player)
+    dbg("%s colocado junto al entrenador (%.2f, %.2f, %.2f)", getPlayerName(player), x, y, t.row.z)
+end
 
 local function sameWorld(a, b)
     return getElementDimension(a) == getElementDimension(b) and getElementInterior(a) == getElementInterior(b)
@@ -152,6 +169,7 @@ local function endFight(f, result)
     fights[player] = nil
     gymInFight[player] = nil
     t.fight = nil
+    dbg("fin del combate de %s: %s", isElement(player) and getPlayerName(player) or "?", tostring(result))
     if result == "win" and isElement(t.ped) and not stopping then
         -- K.O.: queda tendido unos segundos y vuelve a su sitio (si nadie empezo otro combate)
         setElementSyncer(t.ped, true)
@@ -168,6 +186,12 @@ local function endFight(f, result)
     if not stopping then triggerClientEvent(player, "rp:gym:fight", resourceRoot, t.ped, false, result) end
 
     local p = profiles[player]
+    if result == "win" or result == "lose" then
+        -- Gane o pierda, tras la campana sale del ring y aparece junto al entrenador (no queda atrapado ni abatido)
+        setTimer(function()
+            if isElement(player) and not fights[player] then placeBesideTrainer(player, t) end
+        end, result == "win" and 3000 or 2500, 1)
+    end
     if result == "win" and p then
         p[t.cfg.column] = 1
         p.style = t.cfg.id
@@ -177,16 +201,6 @@ local function endFight(f, result)
     elseif result == "lose" then
         setElementHealth(player, math.max(getElementHealth(player), 30))
         gymNotify(player, "Has perdido el combate de instruccion. Vuelve cuando estes listo.", "warning")
-        -- No queda abatido ni tendido en el ring: aparece fuera de el tras la campana
-        local exit = t.row.ring and t.row.ring.exit
-        setTimer(function()
-            if not isElement(player) or fights[player] then return end
-            setPedAnimation(player)
-            if exit then
-                setElementPosition(player, exit.x, exit.y, exit.z)
-                setElementRotation(player, 0, 0, exit.rot)
-            end
-        end, 2500, 1)
     elseif result == "forfeit" then
         if f.down then setPedAnimation(player) end
         loseWeapons(player)
@@ -288,9 +302,11 @@ addEventHandler("rp:gym:trainer", resourceRoot, function(trainerId)
     triggerClientEvent(player, "rp:gym:fight", resourceRoot, t.ped, true, {
         crowd = t.crowd, intro = intro, style = t.cfg.name, label = t.cfg.label, ring = ring,
     })
+    dbg("%s empieza combate con %s (ring %s, presentacion %d ms)", getPlayerName(player), t.cfg.label, tostring(ring ~= nil), intro)
     local function goLive()
         if fights[player] ~= f then return end
         f.live = true
+        dbg("combate de %s en vivo", getPlayerName(player))
         if isElement(t.ped) then
             setPedAnimation(t.ped)
             setElementFrozen(t.ped, false)
@@ -307,6 +323,7 @@ addEventHandler("rp:gym:down", resourceRoot, function(down)
     local f = fights[client]
     if not f or not f.live or type(down) ~= "boolean" or f.down == down then return end
     f.down = down
+    dbg("%s %s", getPlayerName(client), down and "cae al suelo" or "se levanta")
     if down then
         setPedAnimation(client, "PED", "KO_skid_back", -1, false, true, false, true)
     else

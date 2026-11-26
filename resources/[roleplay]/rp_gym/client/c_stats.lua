@@ -1,40 +1,17 @@
 --[[
     rp_gym / c_stats.lua
     1) Aviso momentaneo cuando entrenando se gana un punto (1 %) de musculo o resistencia, o se pierde
-       uno de grasa: barra con el valor nuevo y cuanto ha cambiado (se acumula si sigue en pantalla).
+       uno de grasa: tarjeta con la barra del valor nuevo y cuanto ha cambiado (se acumula si sigue en pantalla).
     2) /stats: panel con las estadisticas base de GTA SA del personaje (fisico, armas, conduccion...).
        Las lee del propio ped (el servidor las pone con setPedStat y se sincronizan).
+    Dibujo con GymUI (client/c_ui.lua).
 ]]
 
 addEvent("rp:gym:statChange", true)
 
-local sw, sh = guiGetScreenSize()
-local scale = math.max(0.8, math.min(1.4, sh / 900))
-local ORANGE, WHITE, BLACK = tocolor(245, 165, 36, 255), tocolor(255, 255, 255, 255), tocolor(0, 0, 0, 255)
-local GREEN, MUTED = tocolor(76, 211, 138, 255), tocolor(170, 176, 188, 255)
-
-local POPUP_MS, FADE_MS = 4500, 600
-local LABELS = { muscle = "MUSCULO", stamina = "RESISTENCIA", fat = "GRASA" }
+local POPUP_MS, FADE_MS, SLIDE_MS = 4500, 600, 250
+local LABELS = { muscle = "MÚSCULO", stamina = "RESISTENCIA", fat = "GRASA" }
 local popups = {}   -- lista de { stat, value, diff, shownAt }
-
-local function outlined(str, x, y, w, size, align, color, alpha)
-    local black = tocolor(0, 0, 0, alpha or 255)
-    for ox = -1, 1 do
-        for oy = -1, 1 do
-            if ox ~= 0 or oy ~= 0 then
-                dxDrawText(str, x + ox, y + oy, x + w + ox, y + oy, black, size * scale, "default-bold", align, "top")
-            end
-        end
-    end
-    dxDrawText(str, x, y, x + w, y, color, size * scale, "default-bold", align, "top")
-end
-
-local function withAlpha(color, alpha)
-    local b = color % 256
-    local g = math.floor(color / 256) % 256
-    local r = math.floor(color / 65536) % 256
-    return tocolor(r, g, b, alpha)
-end
 
 addEventHandler("rp:gym:statChange", resourceRoot, function(changes)
     if type(changes) ~= "table" then return end
@@ -56,24 +33,26 @@ addEventHandler("rp:gym:statChange", resourceRoot, function(changes)
 end)
 
 local function drawPopups()
+    local S, sw, sh = GymUI.S, GymUI.sw, GymUI.sh
     local now = getTickCount()
-    local w, h = 280 * scale, 58 * scale
-    local x, y = sw - w - 40 * scale, sh * 0.16
+    local w, h = 320 * S, 76 * S
+    local y = sh * 0.14
     for i = #popups, 1, -1 do
         if now - popups[i].shownAt > POPUP_MS then table.remove(popups, i) end
     end
     for _, p in ipairs(popups) do
-        local left = POPUP_MS - (now - p.shownAt)
-        local a = math.floor(255 * math.min(1, left / FADE_MS))
-        dxDrawRectangle(x - 10 * scale, y - 8 * scale, w + 20 * scale, h, tocolor(12, 14, 20, math.floor(a * 0.75)))
-        outlined(LABELS[p.stat], x, y, w, 1.1, "left", withAlpha(ORANGE, a), a)
-        local sign = p.diff > 0 and "+" or ""
-        outlined(("%s%d %%   %d %%"):format(sign, p.diff, math.floor(p.value / 10)), x, y, w, 1.1, "right", withAlpha(GREEN, a), a)
-        local by = y + 24 * scale
-        dxDrawRectangle(x - 2, by - 2, w + 4, 14 * scale + 4, tocolor(0, 0, 0, a))
-        dxDrawRectangle(x, by, w, 14 * scale, tocolor(60, 60, 60, math.floor(a * 0.86)))
-        dxDrawRectangle(x, by, w * math.max(0, math.min(1, p.value / 1000)), 14 * scale, withAlpha(ORANGE, a))
-        y = y + h + 8 * scale
+        local age = now - p.shownAt
+        local a = math.min(1, (POPUP_MS - age) / FADE_MS)
+        local slide = (1 - math.min(1, age / SLIDE_MS)) ^ 2 * 60 * S   -- entra desde la derecha
+        local x = sw - w - 32 * S + slide
+        GymUI.panel(x, y, w, h, a, GymUI.C.good)
+        local px, pw = x + 20 * S, w - 38 * S
+        GymUI.text(LABELS[p.stat], px, y + 10 * S, pw, 20 * S, GymUI.col(GymUI.C.muted, 255 * a), GymUI.font("title", 13), "left", "center")
+        GymUI.text(("%s%d %%"):format(p.diff > 0 and "+" or "", p.diff), px, y + 8 * S, pw, 24 * S,
+            GymUI.col(GymUI.C.good, 255 * a), GymUI.font("bold", 22), "right", "center")
+        GymUI.text(("%d %%"):format(math.floor(p.value / 10)), px, y + 32 * S, pw, 18 * S, GymUI.col(GymUI.C.text, 255 * a), GymUI.font("bold", 15), "left", "center")
+        GymUI.bar(px, y + 56 * S, pw, 8 * S, p.value / 1000, GymUI.col(GymUI.C.accent, 255 * a), a)
+        y = y + h + 10 * S
     end
 end
 
@@ -82,12 +61,12 @@ end
 ----------------------------------------------------------------
 -- Ids de setPedStat / getPedStat (wiki de MTA, "Ped stats")
 local SECTIONS = {
-    { title = "FISICO", rows = {
-        { "Musculo", 23 }, { "Resistencia", 22 }, { "Grasa", 21 }, { "Sex appeal", 25 },
-        { "Capacidad pulmonar", 225 }, { "Salud maxima", 24 },
+    { title = "FÍSICO", rows = {
+        { "Músculo", 23 }, { "Resistencia", 22 }, { "Grasa", 21 }, { "Sex appeal", 25 },
+        { "Capacidad pulmonar", 225 }, { "Salud máxima", 24 },
     } },
-    { title = "CONDUCCION", rows = {
-        { "Conduccion", 160 }, { "Moto", 229 }, { "Bicicleta", 230 }, { "Vuelo", 223 },
+    { title = "CONDUCCIÓN", rows = {
+        { "Conducción", 160 }, { "Moto", 229 }, { "Bicicleta", 230 }, { "Vuelo", 223 },
     } },
     { title = "OTROS", rows = { { "Respeto", 64 }, { "Apuestas", 81 } } },
     { title = "ARMAS", column = 2, rows = {
@@ -96,50 +75,54 @@ local SECTIONS = {
         { "AK-47", 77 }, { "M4", 78 }, { "Rifle de francotirador", 79 },
     } },
 }
-local STYLE_NAMES = { [4] = "Estandar", [5] = "Boxeo", [6] = "Kung Fu", [7] = "Kickboxing", [15] = "Codazos", [16] = "Codazos" }
-local showStats = false
+local STYLE_NAMES = { [4] = "Estándar", [5] = "Boxeo", [6] = "Kung Fu", [7] = "Kickboxing", [15] = "Codazos", [16] = "Codazos" }
+local showStats, openedAt = false, 0
 
 local function statRow(label, value, x, y, w)
+    local S = GymUI.S
     value = math.max(0, math.min(1000, value or 0))
-    dxDrawText(label, x, y, x + w, y, WHITE, 0.95 * scale, "default-bold", "left", "top")
-    dxDrawText(("%d %%"):format(math.floor(value / 10)), x, y, x + w, y, MUTED, 0.95 * scale, "default-bold", "right", "top")
-    local by, bh = y + 17 * scale, 5 * scale
-    dxDrawRectangle(x, by, w, bh, tocolor(60, 60, 60, 220))
-    dxDrawRectangle(x, by, w * value / 1000, bh, ORANGE)
+    GymUI.text(label, x, y, w, 20 * S, GymUI.col(GymUI.C.text), GymUI.font("body", 16), "left", "center")
+    GymUI.text(("%d %%"):format(math.floor(value / 10)), x, y, w, 20 * S,
+        value >= 999 and GymUI.col(GymUI.C.accent) or GymUI.col(GymUI.C.muted), GymUI.font("bold", 15), "right", "center")
+    GymUI.bar(x, y + 23 * S, w, 5 * S, value / 1000, GymUI.col(GymUI.C.accent))
 end
 
 local function drawStats()
-    local colW, rowH, gap = 270 * scale, 30 * scale, 36 * scale
-    local w, h = colW * 2 + gap * 3, 560 * scale
-    local x0, y0 = (sw - w) / 2, (sh - h) / 2
-    dxDrawRectangle(x0, y0, w, h, tocolor(12, 14, 20, 225))
-    dxDrawRectangle(x0, y0, w, 3 * scale, ORANGE)
-    dxDrawText("ESTADISTICAS", x0, y0 + 16 * scale, x0 + w, y0, ORANGE, 1.5 * scale, "default-bold", "center", "top")
+    local S, sw, sh = GymUI.S, GymUI.sw, GymUI.sh
+    local a = math.min(1, (getTickCount() - openedAt) / 180)
+    local colW, rowH, gap = 300 * S, 36 * S, 40 * S
+    local w, h = colW * 2 + gap * 3, 640 * S
+    local x0, y0 = (sw - w) / 2, (sh - h) / 2 + (1 - a) * 20 * S
+    GymUI.panel(x0, y0, w, h, a)
+    GymUI.text("ESTADÍSTICAS", x0 + gap, y0 + 22 * S, w, 30 * S, GymUI.col(GymUI.C.text, 255 * a), GymUI.font("title", 24), "left", "center")
+    GymUI.text(getPlayerName(localPlayer):gsub("_", " "), x0, y0 + 22 * S, w - gap, 30 * S, GymUI.col(GymUI.C.muted, 255 * a), GymUI.font("body", 16), "right", "center")
+    dxDrawRectangle(x0 + gap, y0 + 64 * S, w - gap * 2, 1, GymUI.col(GymUI.C.border, 30 * a))
 
-    local cols = { y0 + 60 * scale, y0 + 60 * scale }
+    local cols = { y0 + 82 * S, y0 + 82 * S }
     for _, sec in ipairs(SECTIONS) do
         local c = sec.column or 1
         local x, y = x0 + gap + (c - 1) * (colW + gap), cols[c]
-        dxDrawText(sec.title, x, y, x + colW, y, ORANGE, 1.0 * scale, "default-bold", "left", "top")
-        y = y + 24 * scale
+        GymUI.text(sec.title, x, y, colW, 20 * S, GymUI.col(GymUI.C.accent, 255 * a), GymUI.font("title", 14), "left", "center")
+        y = y + 28 * S
         for _, r in ipairs(sec.rows) do
             statRow(r[1], getPedStat(localPlayer, r[2]), x, y, colW)
             y = y + rowH
         end
-        cols[c] = y + 10 * scale
+        cols[c] = y + 14 * S
     end
     -- Estilo de pelea, al final de la columna de armas
     local x, y = x0 + gap * 2 + colW, cols[2]
+    GymUI.text("ESTILO DE PELEA", x, y, colW, 20 * S, GymUI.col(GymUI.C.accent, 255 * a), GymUI.font("title", 14), "left", "center")
     local style = getPedFightingStyle(localPlayer)
-    dxDrawText("ESTILO DE PELEA", x, y, x + colW, y, ORANGE, 1.0 * scale, "default-bold", "left", "top")
-    dxDrawText(STYLE_NAMES[style] or tostring(style), x, y + 24 * scale, x + colW, y, WHITE, 1.1 * scale, "default-bold", "left", "top")
+    GymUI.text(STYLE_NAMES[style] or tostring(style), x, y + 26 * S, colW, 26 * S, GymUI.col(GymUI.C.text, 255 * a), GymUI.font("bold", 22), "left", "center")
 
-    dxDrawText("Escribe /stats otra vez para cerrar", x0, y0 + h - 30 * scale, x0 + w, y0, MUTED, 0.9 * scale, "default", "center", "top")
+    GymUI.text("Escribe /stats otra vez para cerrar", x0, y0 + h - 36 * S, w, 20 * S, GymUI.col(GymUI.C.muted, 255 * a), GymUI.font("body", 15), "center", "center")
 end
 
 addCommandHandler("stats", function()
     if not getElementData(localPlayer, "rp:characterId") then return end
     showStats = not showStats
+    openedAt = getTickCount()
     playSound(showStats and "sounds/open.ogg" or "sounds/close.ogg")
 end)
 

@@ -130,7 +130,10 @@ GYM_STANDARD_STYLE = 4
 -- Combate en el ring (todo [A], decisiones del proyecto)
 GYM_FIGHT = {
     INTRO_MS = 11000,          -- cinematica: retador 3,5 s, entrenador 3,5 s, cuenta 3-2-1 y campana (el servidor espera esto)
+    DEBUG = true,              -- logs del combate en /debugscript 3 con el prefijo [rp_gym:pelea] (cliente y servidor)
     STUN_MS = { 1000, 2000 },  -- aturdimiento por golpe sin cubrirse: 1 s, sube con golpes seguidos hasta 2 s
+    STUN_IMMUNE_MS = 2500,     -- tras un aturdimiento, tiempo sin poder volver a quedar aturdido (para recuperar el control)
+    TRAINER_RECOVER_MS = 1200, -- tras conectar un golpe, el entrenador se aparta este tiempo antes de volver a pegar
     STREAK_WINDOW_MS = 5000,   -- golpes sin cubrirse seguidos si llegan con menos de esto entre ellos
     DOWN_STREAK = 3,           -- a partir de tantos golpes seguidos puede caer
     DOWN_CHANCE = 0.6,         -- probabilidad de caer en cada golpe desde DOWN_STREAK
@@ -160,7 +163,6 @@ GYM_FIXED = {
         outside = { x = 2227.35, y = -1722.37, z = 13.55, rot = 118.6 },           -- donde sales (frente a la puerta)
         interior = 5, dimension = 0,
         inside = { x = 772.11, y = -3.89, z = 1000.73, rot = 0 },                   -- donde entras [C]
-        exit = { x = 772.06, y = -5.55, z = 1000.73 },                              -- marcador de salida, junto a la puerta
         -- Maquinas del interior original que se quitan (cinta, banco y bici), en un radio alrededor de { x, y, z }
         removeModels = { models = { 2627, 2629, 2630 }, x = 773, y = 3.4, z = 999.7, radius = 8 },
         -- [A] junto al ring, mirando hacia el: el juego no guarda la posicion del entrenador en el mapa
@@ -174,7 +176,6 @@ GYM_FIXED = {
                 player = { x = 759.024, y = -1.895, z = 1001.594, rot = 319.9 },
                 trainer = { x = 762.793, y = 2.369, z = 1001.594, rot = 133.3 },
                 referee = { x = 762.8, y = -1.8, z = 1001.594, rot = 45 },
-                exit = { x = 765.5, y = -3.6, z = 1000.72, rot = 90 },       -- donde aparece el jugador si pierde (fuera del ring)
                 -- [A] publico alrededor del ring (suelo a z 999.67): side = "player" te apoya, "trainer" al entrenador,
                 -- "photo" fotografo con flash
                 crowd = {

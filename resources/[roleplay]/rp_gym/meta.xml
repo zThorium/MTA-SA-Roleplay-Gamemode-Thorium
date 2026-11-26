@@ -21,6 +21,7 @@
     <script src="server/s_fixed.lua" type="server" />
     <script src="server/s_main.lua" type="server" />
 
+    <script src="client/c_ui.lua" type="client" cache="false" />
     <script src="client/c_main.lua" type="client" cache="false" />
     <script src="client/c_machines.lua" type="client" cache="false" />
     <script src="client/c_animations.lua" type="client" cache="false" />
@@ -30,9 +31,17 @@
 
     <file src="images/blood.png" />
     <file src="images/glow.png" />
+    <file src="images/keys/keyboard_a.png" />
+    <file src="images/keys/keyboard_arrow_down.png" />
+    <file src="images/keys/keyboard_arrow_up.png" />
+    <file src="images/keys/keyboard_backspace.png" />
+    <file src="images/keys/keyboard_d.png" />
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/keyboard_enter.png" />
     <file src="images/keys/keyboard_shift.png" />
     <file src="images/keys/keyboard_space.png" />
     <file src="images/keys/keyboard_space_outline.png" />
+    <file src="images/keys/mouse_left.png" />
     <file src="images/keys/mouse_right.png" />
     <file src="sounds/close.ogg" />
     <file src="sounds/crowd.mp3" />
