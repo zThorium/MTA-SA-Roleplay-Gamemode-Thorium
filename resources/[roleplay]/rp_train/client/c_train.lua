@@ -3,22 +3,22 @@
     Pensado para PCs de gama baja: solo trabaja con trenes que el juego ya tiene cargados cerca
     (streaming nativo de MTA) y con un temporizador de 250 ms, nunca en onClientRender.
 
-    - Si este cliente sincroniza la locomotora, le aplica la velocidad que marca el servidor.
+    - Si este cliente sincroniza la locomotora, le aplica la velocidad que marca el servidor (siempre
+      positiva: el sentido lo fija el servidor con setTrainDirection).
+    - Mantiene cada vagón en la vía principal: en LS corre pegada otra vía (tracks4) y el juego puede
+      enganchar ahí un vagón colocado por coordenadas (se veían vagones en la vía de al lado).
     - Bocina nativa del tren (control "horn" del maquinista) si un jugador está en la vía por delante
       o al acercarse a un cruce con las barreras bajadas.
     - Campanas en los cruces cerrados cercanos.
 ]]
 
 local locos = {}       -- [loco] = true, solo las cargadas (stream in)
+local wagons = {}      -- [locomotora o vagón] = true, cargados: se vigila que sigan en la vía principal
 local hornUntil = {}   -- [loco] = tick en que suelta la bocina
 local hornNext = {}    -- [loco] = tick a partir del cual puede volver a tocar
 local warnedCross = {} -- [loco .. crossing] = tick del último aviso en ese cruce
 local bells = {}       -- [crossing] = sound
 local crossingList, crossingListAt = {}, 0
-
-local function isTrain(el)
-    return isElement(el) and getElementType(el) == "vehicle" and getElementData(el, "rp:train") == true
-end
 
 local function honk(loco, now)
     if hornNext[loco] and now < hornNext[loco] then return end
@@ -57,8 +57,7 @@ local function tickLoco(loco, now)
     -- Velocidad: solo el cliente que sincroniza mueve el tren
     if isElementSyncer(loco) then
         local v = tonumber(getElementData(loco, "rp:train:v")) or 0
-        local sign = tonumber(getElementData(loco, "rp:train:sign")) or 1
-        setTrainSpeed(loco, sign * v / TRAIN.VELOCITY_UNIT)
+        setTrainSpeed(loco, v / TRAIN.VELOCITY_UNIT) -- siempre positiva: el sentido lo fija el servidor
     end
 
     if hornUntil[loco] and now >= hornUntil[loco] then
@@ -133,19 +132,39 @@ local function forget(loco)
     locos[loco], hornUntil[loco], hornNext[loco] = nil, nil, nil
 end
 
-addEventHandler("onClientElementStreamIn", root, function()
-    if isTrain(source) then locos[source] = true end
-end)
-addEventHandler("onClientElementStreamOut", root, function() if locos[source] then forget(source) end end)
-addEventHandler("onClientElementDestroy", root, function() if locos[source] then forget(source) end end)
+-- Si el juego enganchó el vagón a otra vía, se devuelve a la principal en el mismo punto
+local function keepOnMainTrack(veh)
+    if getTrainTrack(veh) == TRAIN.TRACK_ID then return end
+    local x, y = getElementPosition(veh)
+    local d = TrainTrack.project(x, y)
+    setTrainTrack(veh, TRAIN.TRACK_ID)
+    setTrainPosition(veh, TrainTrack.gameD(d))
+end
+
+local function track(el)
+    if not (isElement(el) and getElementType(el) == "vehicle" and getElementData(el, "rp:train:wagon")) then return end
+    wagons[el] = true
+    keepOnMainTrack(el)
+    if getElementData(el, "rp:train") == true then locos[el] = true end
+end
+
+local function untrack(el)
+    wagons[el] = nil
+    if locos[el] then forget(el) end
+end
+
+addEventHandler("onClientElementStreamIn", root, function() track(source) end)
+addEventHandler("onClientElementStreamOut", root, function() untrack(source) end)
+addEventHandler("onClientElementDestroy", root, function() untrack(source) end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
-        if isTrain(v) then locos[v] = true end
-    end
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do track(v) end
     local bellTick = 0
     setTimer(function()
         local now = getTickCount()
+        for veh in pairs(wagons) do
+            if isElement(veh) then keepOnMainTrack(veh) else wagons[veh] = nil end
+        end
         for loco in pairs(locos) do
             if isElement(loco) then tickLoco(loco, now) else forget(loco) end
         end

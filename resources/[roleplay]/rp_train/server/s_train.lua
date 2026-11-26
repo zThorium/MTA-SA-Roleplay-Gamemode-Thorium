@@ -5,13 +5,16 @@
     Recorre el bucle completo de tracks.dat (LS-SF-LV) y para en las 6 estaciones del juego como en el
     modo historia. El de pasajeros sale de Unity Station (Los Santos), ver TRAIN.TRAINS.
 
-    Coste mínimo:
-    - Sin jugadores cerca (TRAIN.PLACE_RADIUS) el tren solo existe en memoria: el servidor avanza d y no
-      toca los elementos ni manda nada por la red. Antes de que alguien se acerque (el radio es mayor que
-      el de streaming) lo coloca de una vez donde va.
-    - Con un jugador cerca, ese cliente lo sincroniza y mueve con la física del juego a la velocidad que
-      marca el servidor (elementData rp:train:v, que solo se envía mientras hay quien sincroniza);
-      el servidor lee su posición y actualiza d.
+    Tres zonas según el jugador más cercano:
+    - Más lejos que TRAIN.PLACE_RADIUS: el tren solo existe en memoria; el servidor avanza d y no toca
+      los elementos ni manda nada por la red.
+    - Entre SYNC_RADIUS y PLACE_RADIUS: el servidor lo recoloca en la vía (fuera de la vista cercana),
+      así llega ya en su sitio.
+    - A menos de SYNC_RADIUS: se le asigna como sincronizador al jugador más cercano y la física de su
+      juego mueve el tren (fluido, sin saltos) a la velocidad que marca el servidor (elementData
+      rp:train:v); los demás lo ven por la sincronización normal de MTA. El servidor solo lee su posición.
+    El sentido de marcha se fija con setTrainDirection (velocidad siempre positiva): así la locomotora
+    tira de los vagones y el juego los coloca detrás.
 ]]
 
 local trains = {}
@@ -19,8 +22,8 @@ local stations = {}       -- { d, node, name } ordenadas por d
 local stationByNode = {}  -- [node] = estación
 local route = {}          -- estaciones en orden de marcha desde TRAIN.ROUTE_ORIGIN, con km del recorrido
 
--- Posiciones (x, y) de los jugadores en la dimensión 0, en un array plano reutilizado cada paso
-local playerPos, playerCount = {}, 0
+-- Jugadores en la dimensión 0: posiciones (x, y) en un array plano y sus elementos, reutilizados cada paso
+local playerPos, playerEl, playerCount = {}, {}, 0
 
 local function heading(ux, uy) return math.deg(math.atan2(-ux, uy)) end
 
@@ -36,16 +39,40 @@ local function nearPlayer(x, y)
     return false
 end
 
+-- Jugador más cercano a (x, y) dentro de r, o nil
+local function nearestPlayer(x, y, r)
+    local best, bestD2 = nil, r * r
+    for i = 1, playerCount, 2 do
+        local dx, dy = playerPos[i] - x, playerPos[i + 1] - y
+        local d2 = dx * dx + dy * dy
+        if d2 < bestD2 then best, bestD2 = playerEl[i], d2 end
+    end
+    return best
+end
+
 local function collectPlayers()
     local n = 0
     for _, p in ipairs(getElementsByType("player")) do
-        if getElementDimension(p) == 0 then
+        if getElementDimension(p) == 0 and getElementInterior(p) == 0 then
             local x, y = getElementPosition(p)
-            playerPos[n + 1], playerPos[n + 2] = x, y
+            playerPos[n + 1], playerPos[n + 2], playerEl[n + 1] = x, y, p
             n = n + 2
         end
     end
     playerCount = n
+end
+
+local function setDirection(t)
+    for _, veh in ipairs(t.wagons) do setTrainDirection(veh, t.dir) end
+end
+
+-- Sincronizador del tren entero (locomotora y vagones van juntos en la física de un solo cliente).
+-- player = elemento jugador, o true para devolverlo a la asignación automática de MTA.
+local function setSyncer(t, player)
+    for _, veh in ipairs(t.wagons) do
+        if isElement(veh) then setElementSyncer(veh, player, player ~= true) end
+    end
+    t.forcedSyncer = player ~= true and player or nil
 end
 
 local function spawnDriver(t)
@@ -72,7 +99,7 @@ local function createTrain(def)
     if def.station and not origin then
         outputDebugString("[rp_train] estación de salida desconocida: nodo " .. tostring(def.station), 2)
     end
-    local t = { def = def, d = TrainTrack.wrap(origin and origin.d or def.start or 0), v = 0, sign = 1,
+    local t = { def = def, d = TrainTrack.wrap(origin and origin.d or def.start or 0), v = 0, dir = TRAIN.CLOCKWISE,
                 cars = {}, wagons = {}, back = 0 }
     if origin then -- espera en el andén y sale
         t.dwellUntil, t.leaving = getTickCount() + TRAIN.STATION_STOP_MS, origin
@@ -98,9 +125,9 @@ local function createTrain(def)
         toggleVehicleRespawn(veh, false)
         setElementData(veh, "rp:train:wagon", true)
     end
+    setDirection(t)
     setElementData(t.loco, "rp:train", true)
     setElementData(t.loco, "rp:train:v", 0)
-    setElementData(t.loco, "rp:train:sign", 1)
     t.sentV = 0
     t.px, t.py, t.placedD = x, y, t.d
     spawnDriver(t)
@@ -146,6 +173,26 @@ local function tickTrain(t, now, dt)
     if not isElement(t.loco) then return end
     updateSpeed(t, now, dt)
 
+    -- Quién mueve el tren: el jugador más cercano a menos de SYNC_RADIUS, con la física de su juego.
+    -- Se mantiene mientras siga cerca (margen de 40 m) para no saltar de un cliente a otro.
+    local forced = t.forcedSyncer
+    local keep = false
+    if forced and isElement(forced) and getElementDimension(forced) == 0 then
+        local fx, fy = getElementPosition(forced)
+        local dx, dy = fx - t.px, fy - t.py
+        keep = dx * dx + dy * dy < (TRAIN.SYNC_RADIUS + 40) ^ 2
+    end
+    if not keep then
+        local near = nearestPlayer(t.px, t.py, TRAIN.SYNC_RADIUS)
+        if near then
+            -- Si el tren quedó atrás en la vía (llegó alguien de golpe), primero a su sitio
+            if not getElementSyncer(t.loco) and t.placedD ~= t.d then placeTrain(t) end
+            setSyncer(t, near)
+        elseif forced then
+            setSyncer(t, true)
+        end
+    end
+
     local syncer = getElementSyncer(t.loco)
     if syncer then
         if not isElement(t.driver) or isPedDead(t.driver) or getVehicleController(t.loco) ~= t.driver then spawnDriver(t) end
@@ -153,11 +200,13 @@ local function tickTrain(t, now, dt)
         local x, y = getElementPosition(t.loco)
         local nd = TrainTrack.project(x, y, t.d)
         local moved = TrainTrack.ahead(t.d, nd)
-        if moved > TrainTrack.length() / 2 then -- retrocedió: el signo de setTrainSpeed está al revés
+        if moved > TrainTrack.length() / 2 then -- retrocede: el juego tiene el sentido al revés
             t.back = t.back + 1
-            if t.back >= 2 and t.v > 3 then
-                t.sign, t.back = -t.sign, 0
-                setElementData(t.loco, "rp:train:sign", t.sign)
+            if t.back >= 2 and t.v > 1 then
+                t.dir, t.back = not t.dir, 0
+                setDirection(t)
+                outputDebugString(("[rp_train] tren %s: sentido corregido (clockwise = %s); ajusta TRAIN.CLOCKWISE"):format(
+                    t.def.model, tostring(t.dir)), 2)
             end
         else
             t.back = 0
@@ -172,8 +221,8 @@ local function tickTrain(t, now, dt)
     else
         t.d = TrainTrack.wrap(t.d + t.v * dt)
         t.sentV = nil -- el próximo que lo sincronice recibe la velocidad al momento
-        -- Solo se recoloca si alguien está cerca de donde va o de donde quedó (así nunca aparece
-        -- un tren quieto y desfasado al acercarse a la vía)
+        -- Solo se recoloca si alguien está a menos de PLACE_RADIUS de donde va o de donde quedó (así nunca
+        -- aparece un tren quieto y desfasado al acercarse a la vía). Más cerca ya lo mueve un cliente.
         if t.placedD ~= t.d then
             local x, y = TrainTrack.point(t.d)
             if nearPlayer(x, y) or nearPlayer(t.px, t.py) then

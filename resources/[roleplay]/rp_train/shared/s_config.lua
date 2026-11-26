@@ -17,6 +17,11 @@ TRAIN = {
     -- Sin jugadores a menos de esto del tren (ni de donde quedó aparcado) el servidor solo avanza su
     -- distancia en memoria: no mueve elementos ni manda nada por la red.
     PLACE_RADIUS = 450,
+    -- Con un jugador a menos de esto el tren lo mueve SIEMPRE la física de su juego (se le asigna como
+    -- sincronizador): movimiento fluido, nunca a saltos. Menor que la distancia de streaming de vehículos.
+    SYNC_RADIUS = 180,
+    TRACK_ID = 0,             -- vía principal (tracks.dat); en LS corre en paralelo otra vía (tracks4)
+    CLOCKWISE = true,         -- sentido de marcha inicial; el servidor lo corrige si el juego lo mueve al revés
     CARRIAGE_GAP = 18.5,      -- separación entre enganches (para recolocar el tren sin jugadores cerca)
     DRIVER_SKIN = 255,        -- maquinista
 

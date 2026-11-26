@@ -1,5 +1,12 @@
 # Auditoría de rp_train
 
+## 2026-11-26 · arreglar
+- **Síntoma** (prueba en juego de Fabián): el tren salía con los vagones solapados, uno en la vía de al lado (túnel de Market), e iba en reversa empujando los vagones.
+- **Causa raíz**: (1) cada vagón se colocaba con `setElementPosition` y el juego lo engancha a la vía más cercana; en LS corre pegada la vía de `tracks4.dat`. (2) Al detectar marcha atrás se invertía el signo de `setTrainSpeed` en vez del sentido del tren, así que la locomotora avanzaba empujando a los vagones.
+- **Arreglo**: sentido con `setTrainDirection` (`TRAIN.CLOCKWISE`; el servidor lo corrige y avisa si el juego lo mueve al revés) y velocidad siempre positiva; se retira `rp:train:sign`. La geometría de la vía pasa a `shared/` y el cliente devuelve a la vía 0 (`setTrainTrack` + `setTrainPosition`, distancia horizontal como el juego: `TrainTrack.gameD`) cualquier vagón enganchado a otra. Fluidez: a menos de `SYNC_RADIUS` (180 m) el jugador más cercano es el sincronizador (`setElementSyncer` persistente), así el tren visible siempre lo mueve la física y nunca los saltos de 500 ms del servidor.
+- **Nota**: 98/100 → 98/100.
+- **Probar en juego**: salida desde Unity con los 3 vagones detrás de la locomotora y en la misma vía; pasar por el túnel de Market; ir en un vehículo al lado del tren (debe verse fluido); si en consola sale `sentido corregido`, poner `CLOCKWISE` al valor que indica.
+
 ## 2026-11-26 · mejorar
 - **Foco**: recorrido completo del tren de Los Santos, saliendo de Unity Station, y bajo coste.
 - **Nota**: 98/100 → 98/100 (OK 27, FALLA B 0, FALLA I 0, AVISO 1)
