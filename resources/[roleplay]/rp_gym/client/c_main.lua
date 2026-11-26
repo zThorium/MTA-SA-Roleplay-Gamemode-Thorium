@@ -36,7 +36,9 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey("e", "down", function()
         if gymBusy() or gymState or gymSelecting or not gymNearInfo then return end
         if getElementData(localPlayer, "rp:downed") or isPedInVehicle(localPlayer) then return end
-        if gymNearInfo.kind == "trainer" then
+        if gymNearInfo.kind == "door" then
+            triggerServerEvent("rp:gym:door", resourceRoot, gymNearInfo.id)
+        elseif gymNearInfo.kind == "trainer" then
             triggerServerEvent("rp:gym:trainer", resourceRoot, gymNearInfo.id)
         elseif type(gymNearInfo.extra) == "table" then
             gymSelecting = { id = gymNearInfo.id, label = gymNearInfo.label, weights = gymNearInfo.extra, index = 1 }

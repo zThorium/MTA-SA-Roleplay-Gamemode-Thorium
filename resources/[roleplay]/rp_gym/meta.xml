@@ -8,6 +8,7 @@
     <include resource="rp_characters" />
     <include resource="rp_inventory" />
     <include resource="bone_attach" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_database.lua" type="server" />
@@ -15,10 +16,16 @@
     <script src="server/s_stats.lua" type="server" />
     <script src="server/s_machines.lua" type="server" />
     <script src="server/s_trainers.lua" type="server" />
+    <script src="server/s_fixed.lua" type="server" />
     <script src="server/s_main.lua" type="server" />
 
     <script src="client/c_main.lua" type="client" cache="false" />
     <script src="client/c_machines.lua" type="client" cache="false" />
     <script src="client/c_animations.lua" type="client" cache="false" />
     <script src="client/c_interface.lua" type="client" cache="false" />
+    <script src="client/c_stats.lua" type="client" cache="false" />
+
+    <file src="sounds/stat_up.ogg" />
+    <file src="sounds/open.ogg" />
+    <file src="sounds/close.ogg" />
 </meta>

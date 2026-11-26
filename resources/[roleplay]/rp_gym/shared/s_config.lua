@@ -129,3 +129,27 @@ GYM_STANDARD_STYLE = 4
 
 -- Nombres de comando en espanol -> clave interna
 GYM_STYLE_ALIAS = { boxeo = "boxing", kungfu = "kungfu", kickboxing = "kickboxing" }
+
+-- Gimnasios fijos con el interior original de GTA SA. Las maquinas van donde estan en el mapa del juego
+-- (gta_int.img, gen_int3_stream0.ipl, leido con scripts/leer-ipl-interior.ps1): x, y, z, rz son los del
+-- objeto. native = true usa el objeto que ya trae el interior (no se crea otro encima).
+-- Sus ids empiezan en GYM_FIXED_ID para no chocar con las maquinas que crean los admins en la BD.
+GYM_FIXED_ID = 900000
+GYM_FIXED = {
+    {
+        key = "ganton", name = "Gimnasio de Ganton", blip = 54,
+        door = { x = 2228.929, y = -1721.508, z = 13.563 },                         -- puerta, en la calle
+        outside = { x = 2227.35, y = -1722.37, z = 13.55, rot = 118.6 },           -- donde sales (frente a la puerta)
+        interior = 5, dimension = 0,
+        inside = { x = 772.11, y = -3.89, z = 1000.73, rot = 0 },                   -- donde entras [C]
+        exit = { x = 772.06, y = -5.55, z = 1000.73 },                              -- marcador de salida, junto a la puerta
+        machines = {
+            { kind = "treadmill", x = 773.492, y = -2.602, z = 999.672, rz = 180, native = true },
+            { kind = "bench",     x = 773.898, y = 1.453,  z = 999.672, rz = 90,  native = true },
+            { kind = "dumbbells", x = 772.992, y = 5.383,  z = 999.772, rz = 0 },   -- mancuernas sobre la colchoneta (gym_mat1)
+            { kind = "bike",      x = 772.172, y = 9.414,  z = 999.680, rz = 90,  native = true },
+        },
+        -- [A] junto al ring, mirando hacia el: el juego no guarda la posicion del entrenador en el mapa
+        trainer = { style = "boxing", x = 768.2, y = 5.4, z = 1000.72, rot = 90 },
+    },
+}
