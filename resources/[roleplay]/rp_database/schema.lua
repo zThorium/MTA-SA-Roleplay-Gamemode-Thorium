@@ -1368,4 +1368,20 @@ SCHEMA = {
         CONSTRAINT fk_range_sessions_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_scoreboard: perfil del Tab por personaje (color y efecto del nombre, icono, bandera y foto)
+    [[
+    CREATE TABLE IF NOT EXISTS scoreboard_profiles (
+        character_id   INT UNSIGNED NOT NULL,
+        name_color     CHAR(7)      NOT NULL DEFAULT '#f2f4f8',
+        name_color2    CHAR(7)      NULL,
+        name_effect    VARCHAR(16)  NOT NULL DEFAULT 'none',
+        icon           VARCHAR(16)  NOT NULL DEFAULT '',
+        flag           CHAR(2)      NOT NULL DEFAULT '',
+        avatar         MEDIUMTEXT   NULL,
+        avatar_version INT UNSIGNED NOT NULL DEFAULT 0,
+        updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_scoreboard_profiles_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

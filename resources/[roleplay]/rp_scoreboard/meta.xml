@@ -1,9 +1,59 @@
 <meta>
-    <info author="Thorium" name="RP Scoreboard" description="Lista de jugadores en Tab: servidor, conectados, ID y nombre" version="1.0.0" type="script" />
+    <info author="Thorium" name="RP Scoreboard" description="Tab en CEF: jugadores con nivel, faccion, ping y perfil personalizable (/perfil)" version="2.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
     <include resource="rp_ids" />
+    <include resource="rp_characters" />
 
-    <script src="s_scoreboard.lua" type="server" />
-    <script src="c_scoreboard.lua" type="client" />
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_scoreboard.lua" type="server" />
+    <script src="client/c_scoreboard.lua" type="client" cache="false" />
+
+    <file src="html/app.js" />
+    <file src="html/flags/ar.svg" />
+    <file src="html/flags/bo.svg" />
+    <file src="html/flags/br.svg" />
+    <file src="html/flags/ca.svg" />
+    <file src="html/flags/cl.svg" />
+    <file src="html/flags/co.svg" />
+    <file src="html/flags/cr.svg" />
+    <file src="html/flags/cu.svg" />
+    <file src="html/flags/de.svg" />
+    <file src="html/flags/do.svg" />
+    <file src="html/flags/ec.svg" />
+    <file src="html/flags/es.svg" />
+    <file src="html/flags/fr.svg" />
+    <file src="html/flags/gb.svg" />
+    <file src="html/flags/gq.svg" />
+    <file src="html/flags/gt.svg" />
+    <file src="html/flags/hn.svg" />
+    <file src="html/flags/it.svg" />
+    <file src="html/flags/mx.svg" />
+    <file src="html/flags/ni.svg" />
+    <file src="html/flags/pa.svg" />
+    <file src="html/flags/pe.svg" />
+    <file src="html/flags/pr.svg" />
+    <file src="html/flags/pt.svg" />
+    <file src="html/flags/py.svg" />
+    <file src="html/flags/sv.svg" />
+    <file src="html/flags/us.svg" />
+    <file src="html/flags/uy.svg" />
+    <file src="html/flags/ve.svg" />
+    <file src="html/fonts/kenney_future.ttf" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/index.html" />
+    <file src="html/keys/keyboard_tab.png" />
+    <file src="html/keys/mouse_left.png" />
+    <file src="html/keys/mouse_scroll.png" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/confirmation_001.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/style.css" />
 </meta>
