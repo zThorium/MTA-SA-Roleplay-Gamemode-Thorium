@@ -18,7 +18,8 @@
         título se juntan, dos líneas de luz se extienden y el subtítulo aparece después.
       - Globo: bocadillo redondeado que salta, se escala con la distancia y escribe el
         texto letra a letra.
-    Sonidos de Kenney (CC0) de la paleta estándar de assets/README.md; fuentes Kenney Future.
+    Sonidos de Kenney (CC0) de la paleta estándar de assets/README.md. Fuentes: Rubik (OFL) para
+    leer y Kenney Future (CC0) solo en etiquetas cortas y el titular. Formas suavizadas con c_dx.lua.
     Mientras el HUD está suprimido (cinemáticas, foto) los toasts y popups se pausan.
 ]]
 
@@ -33,10 +34,10 @@ local function font(file, size, fallback)
     return dxCreateFont("fonts/" .. file, size, false, "antialiased") or fallback
 end
 local F_LABEL = font("kenney_future.ttf", math.floor(8 * S + 0.5), "default-bold")
-local F_BODY = font("kenney_future_narrow.ttf", math.floor(10.5 * S + 0.5), "default")
+local F_BODY = font("rubik_medium.ttf", math.floor(10 * S + 0.5), "default")
 local F_TITLE = font("kenney_future.ttf", math.floor(24 * S + 0.5), "default-bold")
-local F_SUB = font("kenney_future_narrow.ttf", math.floor(12 * S + 0.5), "default")
-local F_BUBBLE = font("kenney_future_narrow.ttf", math.floor(11 * S + 0.5), "default")
+local F_SUB = font("rubik_regular.ttf", math.floor(12 * S + 0.5), "default")
+local F_BUBBLE = font("rubik_medium.ttf", math.floor(10.5 * S + 0.5), "default")
 
 local TYPES = {
     info    = { color = { 86, 168, 255 },  label = "INFO",     glyph = "info",  sound = "glass_001.ogg",        popSound = "bong_001.ogg" },
@@ -95,63 +96,37 @@ local function wrap(text, width, fnt, maxLines)
     return lines
 end
 
--- Sector circular relleno (también círculo completo)
-local function fan(cx, cy, r, a0, a1, color, postGUI, seg)
-    seg = seg or 24
-    local v = { { cx, cy, color } }
-    for i = 0, seg do
-        local a = math.rad(a0 + (a1 - a0) * i / seg)
-        v[#v + 1] = { cx + math.cos(a) * r, cy + math.sin(a) * r, color }
-    end
-    dxDrawPrimitive("trianglefan", postGUI, unpack(v))
-end
+-- Formas con antialiasing: c_dx.lua (DX.*)
+local function circle(cx, cy, r, color, postGUI) DX.circle(cx, cy, r, color, postGUI) end
+local function ring(cx, cy, r, thick, a0, a1, color, postGUI) DX.ring(cx, cy, r, thick, a0, a1, color, postGUI) end
+local function roundRect(x, y, w, h, r, color, postGUI) DX.roundRect(x, y, w, h, r, color, postGUI) end
 
--- Arco con grosor (aro), en grados; -90 = arriba
-local function ring(cx, cy, r, thick, a0, a1, color, postGUI, seg)
-    if a1 - a0 <= 0.5 then return end
-    seg = seg or 32
-    local v, ri = {}, r - thick
-    for i = 0, seg do
-        local a = math.rad(a0 + (a1 - a0) * i / seg)
-        local c, s = math.cos(a), math.sin(a)
-        v[#v + 1] = { cx + c * r, cy + s * r, color }
-        v[#v + 1] = { cx + c * ri, cy + s * ri, color }
-    end
-    dxDrawPrimitive("trianglestrip", postGUI, unpack(v))
-end
-
--- Cuadrilátero con un color por esquina (degradados): arriba-izq, arriba-der, abajo-izq, abajo-der
+-- Cuadrilátero con un color por esquina, sin suavizar (degradados de fondo y brillos, que ya son difusos):
+-- arriba-izq, arriba-der, abajo-izq, abajo-der
 local function quad(x1, y1, x2, y2, x3, y3, x4, y4, c1, c2, c3, c4, postGUI)
     dxDrawPrimitive("trianglestrip", postGUI, { x1, y1, c1 }, { x2, y2, c2 or c1 }, { x3, y3, c3 or c1 }, { x4, y4, c4 or c2 or c1 })
 end
 
--- Rectángulo redondeado (sin solapes, para que el alfa sea uniforme)
-local function roundRect(x, y, w, h, r, color, postGUI)
-    r = math.min(r, w / 2, h / 2)
-    dxDrawRectangle(x + r, y, w - 2 * r, h, color, postGUI)
-    dxDrawRectangle(x, y + r, r, h - 2 * r, color, postGUI)
-    dxDrawRectangle(x + w - r, y + r, r, h - 2 * r, color, postGUI)
-    fan(x + r, y + r, r, 180, 270, color, postGUI, 8)
-    fan(x + w - r, y + r, r, 270, 360, color, postGUI, 8)
-    fan(x + w - r, y + h - r, r, 0, 90, color, postGUI, 8)
-    fan(x + r, y + h - r, r, 90, 180, color, postGUI, 8)
+-- Paralelogramo con el borde izquierdo en diagonal, suavizado: colores izquierda y derecha
+local function slanted(x, y, w, h, skew, cl, cr, postGUI)
+    DX.poly({ { x + skew, y, cl }, { x + w, y, cr }, { x + w, y + h, cr }, { x, y + h, cl } }, postGUI)
 end
 
--- Iconos vectoriales (nítidos a cualquier escala)
+-- Iconos vectoriales (nítidos a cualquier escala, con extremos redondos)
 local function drawGlyph(glyph, cx, cy, r, color)
     local w = math.max(2, px(2.6))
     if glyph == "check" then
-        dxDrawLine(cx - r * 0.42, cy + r * 0.02, cx - r * 0.12, cy + r * 0.32, color, w, true)
-        dxDrawLine(cx - r * 0.14, cy + r * 0.32, cx + r * 0.44, cy - r * 0.30, color, w, true)
+        DX.line(cx - r * 0.40, cy + r * 0.02, cx - r * 0.12, cy + r * 0.30, w, color, true, true)
+        DX.line(cx - r * 0.12, cy + r * 0.30, cx + r * 0.42, cy - r * 0.28, w, color, true, true)
     elseif glyph == "cross" then
-        dxDrawLine(cx - r * 0.32, cy - r * 0.32, cx + r * 0.32, cy + r * 0.32, color, w, true)
-        dxDrawLine(cx + r * 0.32, cy - r * 0.32, cx - r * 0.32, cy + r * 0.32, color, w, true)
+        DX.line(cx - r * 0.30, cy - r * 0.30, cx + r * 0.30, cy + r * 0.30, w, color, true, true)
+        DX.line(cx + r * 0.30, cy - r * 0.30, cx - r * 0.30, cy + r * 0.30, w, color, true, true)
     elseif glyph == "bang" then
-        dxDrawLine(cx, cy - r * 0.48, cx, cy + r * 0.12, color, w, true)
-        fan(cx, cy + r * 0.40, w * 0.65, 0, 360, color, true, 10)
+        DX.line(cx, cy - r * 0.44, cx, cy + r * 0.08, w, color, true, true)
+        circle(cx, cy + r * 0.40, w * 0.62, color, true)
     else -- info
-        fan(cx, cy - r * 0.42, w * 0.65, 0, 360, color, true, 10)
-        dxDrawLine(cx, cy - r * 0.12, cx, cy + r * 0.48, color, w, true)
+        circle(cx, cy - r * 0.42, w * 0.62, color, true)
+        DX.line(cx, cy - r * 0.08, cx, cy + r * 0.44, w, color, true, true)
     end
 end
 
@@ -284,7 +259,7 @@ local function drawSparks(now, dt)
             p.vy = p.vy + 0.00035 * S * dt
             p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
             local sz = p.size * (1 - k * 0.5)
-            dxDrawRectangle(p.x - sz / 2, p.y - sz / 2, sz, sz, rgba(p.c, 255 * (1 - k)), true)
+            circle(p.x, p.y, sz / 2, rgba(p.c, 255 * (1 - k)), true)
         end
     end
 end
@@ -317,10 +292,10 @@ local function drawToast(toast, now, x, y, a)
     end
 
     -- Sombra y tarjeta con degradado del color del tipo (izquierda) al negro (derecha)
-    quad(x + SKEW, y + px(4), x + W, y + px(4), x, y + h + px(4), x + W, y + h + px(4), tocolor(0, 0, 0, 70 * a), nil, nil, nil, true)
+    slanted(x, y + px(4), W, h, SKEW, tocolor(0, 0, 0, 70 * a), tocolor(0, 0, 0, 70 * a), true)
     local left = tocolor(10 + c[1] * 0.16, 12 + c[2] * 0.16, 18 + c[3] * 0.16, 238 * a)
     local right = tocolor(11, 13, 19, 225 * a)
-    quad(x + SKEW, y, x + W, y, x, y + h, x + W, y + h, left, right, left, right, true)
+    slanted(x, y, W, h, SKEW, left, right, true)
     dxDrawRectangle(x + SKEW, y, W - SKEW, 1, tocolor(255, 255, 255, 22 * a), true)
 
     -- Brillo que cruza la tarjeta al llegar
@@ -336,7 +311,8 @@ local function drawToast(toast, now, x, y, a)
     -- Barrido de color que se recoge hasta quedar como franja lateral
     local stripe = px(4)
     local wipe = stripe + (W - SKEW - stripe) * (1 - easeOut((age - 140) / 320))
-    quad(x + SKEW, y, x + SKEW + wipe, y, x, y + h, x + wipe, y + h, rgba(c, 255 * a), nil, nil, nil, true)
+    local wc = rgba(c, 255 * a)
+    DX.poly({ { x + SKEW, y, wc }, { x + SKEW + wipe, y, wc }, { x + wipe, y + h, wc }, { x, y + h, wc } }, true)
 
     -- Icono: fondo, aro de tiempo restante, glifo y pulso de llegada
     local bcx, bcy = x + SKEW * 0.5 + PAD + BADGE_R + stripe * 0.5, y + h / 2
@@ -345,16 +321,16 @@ local function drawToast(toast, now, x, y, a)
     if br > 1 then
         local glow = 50
         if toast.type.glyph == "bang" and age < 2400 then glow = 50 + 70 * (0.5 + 0.5 * math.sin(age / 120)) end
-        fan(bcx, bcy, br - px(1), 0, 360, rgba(c, glow * a), true, 28)
-        ring(bcx, bcy, br, px(2), 0, 360, tocolor(255, 255, 255, 26 * a), true, 40)
+        circle(bcx, bcy, br - px(1), rgba(c, glow * a), true)
+        ring(bcx, bcy, br, px(2), 0, 360, tocolor(255, 255, 255, 26 * a), true)
         local left01 = clamp(1 - age / toast.duration, 0, 1)
-        ring(bcx, bcy, br, px(2), -90, -90 + 360 * left01, rgba(c, 255 * a), true, 40)
+        ring(bcx, bcy, br, px(2), -90, -90 + 360 * left01, rgba(c, 255 * a), true)
         drawGlyph(toast.type.glyph, bcx, bcy, br, tocolor(255, 255, 255, 245 * a))
     end
     for _, delay in ipairs({ 260, 420 }) do
         if age > delay and age < delay + 650 then
             local e = easeOut((age - delay) / 650)
-            ring(bcx, bcy, BADGE_R * (1 + 1.5 * e), px(2), 0, 360, rgba(c, 170 * (1 - e) * a), true, 40)
+            ring(bcx, bcy, BADGE_R * (1 + 1.5 * e), px(2), 0, 360, rgba(c, 170 * (1 - e) * a), true)
         end
     end
     if toast.type.glyph == "check" and not toast.sparked and age > 300 then
@@ -448,11 +424,11 @@ local function drawPopup(now)
     -- Rombo en el centro de la línea de arriba, con su pulso
     local d = px(7) * easeOutBack((age - 60) / 360) * (1 - outK)
     if d > 0.5 then
-        dxDrawPrimitive("trianglefan", true, { cx, top - d, solid }, { cx + d, top, solid }, { cx, top + d, solid }, { cx - d, top, solid })
+        DX.poly({ { cx, top - d, solid }, { cx + d, top, solid }, { cx, top + d, solid }, { cx - d, top, solid } }, true)
     end
     if age > 120 and age < 900 then
         local e = easeOut((age - 120) / 780)
-        ring(cx, top, px(8) + px(30) * e, px(2), 0, 360, rgba(c, 180 * (1 - e)), true, 40)
+        ring(cx, top, px(8) + px(30) * e, px(2), 0, 360, rgba(c, 180 * (1 - e)), true)
     end
 
     -- Título: las letras llegan separadas y se juntan
@@ -513,7 +489,7 @@ local function drawBubbles(now)
                 roundRect(bx + px(3) * sc, by + px(4) * sc, w, h, r, tocolor(0, 0, 0, 60 * a), false)
                 local white = tocolor(250, 250, 252, 245 * a)
                 roundRect(bx, by, w, h, r, white, false)
-                dxDrawPrimitive("trianglelist", false, { sx - px(9) * sc, by + h - 1, white }, { sx + px(4) * sc, by + h - 1, white }, { sx - px(4) * sc, by + h + px(11) * sc, white })
+                DX.poly({ { sx - px(9) * sc, by + h, white }, { sx + px(4) * sc, by + h, white }, { sx - px(4) * sc, by + h + px(11) * sc, white } }, false)
 
                 -- Texto letra a letra (45 por segundo)
                 local left = math.floor((age - 120) * 0.045)

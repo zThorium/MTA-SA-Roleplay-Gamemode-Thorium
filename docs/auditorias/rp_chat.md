@@ -1,5 +1,13 @@
 # Auditoría de rp_chat
 
+## 2026-11-26 · mejorar · foco: legibilidad y bordes suaves
+- **Motivo**: Fabián: la fuente de los globos (Kenney Future, sin minúsculas reales y con esquinas biseladas) cuesta leerla, y los bordes diagonales y redondos se ven en dientes de sierra.
+- **Nota**: 98 → 98.
+- **Cambios**:
+  - El texto que se lee pasa a **Rubik** (SIL OFL, añadida a `assets/fuentes/rubik/` con su licencia y a la paleta de `assets/README.md`). Kenney Future queda solo en etiquetas cortas en mayúsculas (y en el titular de `popup` en rp_notify).
+  - **Antialiasing**: `dxDrawPrimitive`/`dxDrawLine` no suavizan; las formas se dibujan ahora con `c_dx.lua` (círculos, aros, líneas con extremos redondos, polígonos y rectángulos redondeados con un borde de 1 px que se desvanece). Mismo archivo en rp_notify, rp_chat y rp_nametags.
+- **Probar en juego**: que los textos se lean bien en resolución baja y que los bordes diagonales, redondos e iconos ya no tengan escalones.
+
 ## 2026-11-26 · mejorar · foco: burbujas y chat con la línea visual de rp_notify, más profesional
 - **Motivo**: que el chat de rol se vea al nivel del rediseño de notificaciones (`rp_notify`, mismo PR).
 - **Nota**: 85 → 98.

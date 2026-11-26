@@ -9,9 +9,12 @@
     <include resource="rp_notify" />
 
     <script src="server/s_chat.lua" type="server" />
+    <script src="client/c_dx.lua" type="client" cache="false" />
     <script src="client/c_chat.lua" type="client" cache="false" />
 
-    <!-- Fuentes Kenney Future (CC0), desde assets/kenney/interfaz/fuentes (ver CREDITOS.md) -->
+    <!-- Fuentes: Kenney Future (CC0, etiqueta corta) y Rubik (OFL, texto); ver CREDITOS.md -->
     <file src="fonts/kenney_future.ttf" />
-    <file src="fonts/kenney_future_narrow.ttf" />
+    <file src="fonts/rubik_regular.ttf" />
+    <file src="fonts/rubik_medium.ttf" />
+    <file src="fonts/rubik_semibold.ttf" />
 </meta>

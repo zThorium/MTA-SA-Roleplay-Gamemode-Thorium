@@ -3,11 +3,13 @@
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <script src="s_notify.lua" type="server" />
+    <script src="c_dx.lua" type="client" cache="false" />
     <script src="c_notify.lua" type="client" cache="false" />
 
-    <!-- Fuentes Kenney Future (CC0), desde assets/kenney/interfaz/fuentes -->
+    <!-- Fuentes: Kenney Future (CC0, etiquetas y titular) y Rubik (OFL, texto); ver CREDITOS.md -->
     <file src="fonts/kenney_future.ttf" />
-    <file src="fonts/kenney_future_narrow.ttf" />
+    <file src="fonts/rubik_regular.ttf" />
+    <file src="fonts/rubik_medium.ttf" />
 
     <!-- Sonidos Kenney Interface Sounds (CC0), paleta estándar de assets/README.md -->
     <file src="sounds/glass_001.ogg" />

@@ -7,6 +7,8 @@
 
     Estilo (misma línea que rp_notify): bocadillo oscuro redondeado con sombra que salta
     al aparecer, línea de luz que se abre desde el centro y texto letra a letra.
+    Texto en Rubik (OFL, se lee bien en minúsculas); Kenney Future solo en la etiqueta corta.
+    Formas suavizadas (sin dientes de sierra) con c_dx.lua.
       - decir: oscuro, línea blanca.
       - susurro: morado, más pequeño, con etiqueta y cola de puntos (como un pensamiento).
       - grito: rojo, letra grande, sacudida y trazos de énfasis que salen del bocadillo.
@@ -23,9 +25,9 @@ local function px(v) return v * S end
 local function font(file, size, fallback)
     return dxCreateFont("fonts/" .. file, math.floor(size * S + 0.5), false, "antialiased") or fallback
 end
-local F_SAY = font("kenney_future_narrow.ttf", 11, "default-bold")
-local F_WHISPER = font("kenney_future_narrow.ttf", 9.5, "default")
-local F_SHOUT = font("kenney_future.ttf", 12, "default-bold")
+local F_SAY = font("rubik_medium.ttf", 10.5, "default-bold")
+local F_WHISPER = font("rubik_regular.ttf", 9.5, "default")
+local F_SHOUT = font("rubik_semibold.ttf", 12, "default-bold")
 local F_LABEL = font("kenney_future.ttf", 6.5, "default-bold")
 
 -- Estilo por tipo
@@ -53,25 +55,11 @@ local function easeOutBack(t)
 end
 local function rgba(c, a) return tocolor(c[1], c[2], c[3], clamp(a, 0, 255)) end
 
-local function fan(cx, cy, r, a0, a1, color, seg)
-    seg = seg or 8
-    local v = { { cx, cy, color } }
-    for i = 0, seg do
-        local a = math.rad(a0 + (a1 - a0) * i / seg)
-        v[#v + 1] = { cx + math.cos(a) * r, cy + math.sin(a) * r, color }
-    end
-    dxDrawPrimitive("trianglefan", false, unpack(v))
-end
-
-local function roundRect(x, y, w, h, r, color)
-    r = math.min(r, w / 2, h / 2)
-    dxDrawRectangle(x + r, y, w - 2 * r, h, color)
-    dxDrawRectangle(x, y + r, r, h - 2 * r, color)
-    dxDrawRectangle(x + w - r, y + r, r, h - 2 * r, color)
-    fan(x + r, y + r, r, 180, 270, color)
-    fan(x + w - r, y + r, r, 270, 360, color)
-    fan(x + w - r, y + h - r, r, 0, 90, color)
-    fan(x + r, y + h - r, r, 90, 180, color)
+-- Formas con antialiasing: c_dx.lua (DX.*)
+local function circle(cx, cy, r, color) DX.circle(cx, cy, r, color, false) end
+local function roundRect(x, y, w, h, r, color) DX.roundRect(x, y, w, h, r, color, false) end
+local function tri(x1, y1, x2, y2, x3, y3, color)
+    DX.poly({ { x1, y1, color }, { x2, y2, color }, { x3, y3, color } }, false)
 end
 
 -- Línea horizontal con degradado: sólida en el centro, transparente en los extremos
@@ -176,12 +164,12 @@ local function drawBubble(b, sx, baseY, sc, alpha, now, older)
     local cx = x + w / 2
     if not older then
         if st.tail == "dots" then
-            fan(cx - px(3) * k, y + h + px(4) * k, px(3) * k, 0, 360, bg, 12)
-            fan(cx - px(7) * k, y + h + px(10) * k, px(2) * k, 0, 360, bg, 10)
+            circle(cx - px(3) * k, y + h + px(4) * k, px(3) * k, bg)
+            circle(cx - px(7) * k, y + h + px(10) * k, px(2) * k, bg)
         elseif st.tail == "spike" then
-            dxDrawPrimitive("trianglelist", false, { cx - px(10) * k, y + h - 1, bg }, { cx + px(2) * k, y + h - 1, bg }, { cx - px(9) * k, y + h + px(14) * k, bg })
+            tri(cx - px(10) * k, y + h - 1, cx + px(2) * k, y + h - 1, cx - px(9) * k, y + h + px(14) * k, bg)
         else
-            dxDrawPrimitive("trianglelist", false, { cx - px(8) * k, y + h - 1, bg }, { cx + px(4) * k, y + h - 1, bg }, { cx - px(3) * k, y + h + px(9) * k, bg })
+            tri(cx - px(8) * k, y + h - 1, cx + px(4) * k, y + h - 1, cx - px(3) * k, y + h + px(9) * k, bg)
         end
     end
 
@@ -198,7 +186,7 @@ local function drawBubble(b, sx, baseY, sc, alpha, now, older)
             local ang = math.rad(i * 45 + 22.5)
             local c, s = math.cos(ang), math.sin(ang)
             local d0, d1 = 1 + 0.15 * e, 1 + 0.15 * e + 0.25
-            dxDrawLine(cx + c * rx * d0, cy + s * ry * d0, cx + c * rx * d1, cy + s * ry * d1, col, math.max(1.5, px(2) * k))
+            DX.line(cx + c * rx * d0, cy + s * ry * d0, cx + c * rx * d1, cy + s * ry * d1, math.max(1.5, px(2) * k), col, false, true)
         end
     end
 
@@ -233,7 +221,7 @@ local function drawTyping(sx, baseY, sc, alpha, now, since)
         local ph = (now / 160) - i * 0.9
         local jump = math.max(0, math.sin(ph)) * px(3.5) * sc
         local brightness = 150 + 105 * math.max(0, math.sin(ph))
-        fan(sx + (i - 1) * px(10) * sc, y + h / 2 - jump, px(2.6) * sc, 0, 360, tocolor(brightness, brightness, brightness + 8, 255 * a), 10)
+        circle(sx + (i - 1) * px(10) * sc, y + h / 2 - jump, px(2.6) * sc, tocolor(brightness, brightness, brightness + 8, 255 * a))
     end
     return h
 end

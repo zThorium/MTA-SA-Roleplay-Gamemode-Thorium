@@ -5,7 +5,8 @@
     metros y con línea de visión. También dibuja la etiqueta /ame.
 
     Estilo (misma línea que rp_notify y las burbujas de rp_chat):
-      - Nombre en Kenney Future Narrow con sombra y el ID en una pastilla oscura.
+      - Nombre en Rubik SemiBold (OFL) con sombra y el ID (Kenney Future) en una pastilla oscura.
+      - Formas suavizadas (sin dientes de sierra) con c_dx.lua.
       - Barra de vida redondeada que cambia de verde a ámbar y rojo, con "rastro de daño"
         (la parte perdida se queda en blanco un momento y se vacía después).
       - Aparece y desaparece con un fundido, sin saltos, al entrar o salir de la vista.
@@ -21,9 +22,9 @@ local function px(v) return v * S end
 local function font(file, size, fallback)
     return dxCreateFont("fonts/" .. file, math.floor(size * S + 0.5), false, "antialiased") or fallback
 end
-local F_NAME = font("kenney_future_narrow.ttf", 10.5, "default-bold")
+local F_NAME = font("rubik_semibold.ttf", 10, "default-bold")
 local F_ID = font("kenney_future.ttf", 7, "default-bold")
-local F_AME = font("kenney_future_narrow.ttf", 10, "default-bold")
+local F_AME = font("rubik_medium.ttf", 9.5, "default-bold")
 local NAME_H = dxGetFontHeight(1, F_NAME)
 local ID_H = dxGetFontHeight(1, F_ID)
 
@@ -46,27 +47,9 @@ local function easeOutBack(t)
 end
 local function rgba(c, a) return tocolor(c[1], c[2], c[3], clamp(a, 0, 255)) end
 
-local function fan(cx, cy, r, a0, a1, color, seg)
-    seg = seg or 8
-    local v = { { cx, cy, color } }
-    for i = 0, seg do
-        local a = math.rad(a0 + (a1 - a0) * i / seg)
-        v[#v + 1] = { cx + math.cos(a) * r, cy + math.sin(a) * r, color }
-    end
-    dxDrawPrimitive("trianglefan", false, unpack(v))
-end
-
-local function roundRect(x, y, w, h, r, color)
-    if w <= 0 or h <= 0 then return end
-    r = math.min(r, w / 2, h / 2)
-    dxDrawRectangle(x + r, y, w - 2 * r, h, color)
-    dxDrawRectangle(x, y + r, r, h - 2 * r, color)
-    dxDrawRectangle(x + w - r, y + r, r, h - 2 * r, color)
-    fan(x + r, y + r, r, 180, 270, color)
-    fan(x + w - r, y + r, r, 270, 360, color)
-    fan(x + w - r, y + h - r, r, 0, 90, color)
-    fan(x + r, y + h - r, r, 90, 180, color)
-end
+-- Formas con antialiasing: c_dx.lua (DX.*)
+local function circle(cx, cy, r, color) DX.circle(cx, cy, r, color, false) end
+local function roundRect(x, y, w, h, r, color) DX.roundRect(x, y, w, h, r, color, false) end
 
 local function lightLine(cx, y, half, thick, c, a)
     if half < 1 then return end
@@ -150,7 +133,7 @@ local function drawAme(player, cx, cy, cz, myDim, myInt, now)
 
     roundRect(x + px(2) * sc, y + px(3) * sc, w, h, h / 2, tocolor(0, 0, 0, 60 * alpha))
     roundRect(x, y, w, h, h / 2, tocolor(14, 12, 18, 225 * alpha))
-    fan(x + px(10) * sc + dot / 2, y + h / 2, dot / 2, 0, 360, rgba(ME_COLOR, 255 * alpha), 12)
+    circle(x + px(10) * sc + dot / 2, y + h / 2, dot / 2, rgba(ME_COLOR, 255 * alpha))
     lightLine(sx, y + px(1) * sc, (w / 2 - h / 2) * easeOut((age - 60) / 380), math.max(1, px(1.5) * sc), ME_COLOR, alpha)
     dxDrawText(text, x + px(16) * sc + dot, y, x + w, y + h, tocolor(255, 226, 236, 255 * alpha), sc, F_AME, "left", "center", false, false, false, false, true)
 end

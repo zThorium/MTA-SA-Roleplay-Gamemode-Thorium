@@ -37,6 +37,8 @@ assets/
     sonidos/freir.wav             aceite friendo (sintetizado, rp_pizzeria/tools/gen_assets.ps1)
     sonidos/heartbeat.wav         latido "lub-dub" (vida baja; sintetizado, rp_hud/tools/gen_sounds.ps1)
     sonidos/coins.wav             monedas al cobrar (sintetizado, rp_hud/tools/gen_sounds.ps1)
+  fuentes/
+    rubik/                        Rubik Regular, Medium y SemiBold (.ttf, subconjunto latino con tildes, ñ, ¿ ¡) · SIL OFL 1.1 (OFL.txt)
 ```
 
 Nombres de las teclas: `keyboard_<tecla>.png` (`keyboard_e`, `keyboard_f1`, `keyboard_space`,
@@ -44,6 +46,15 @@ Nombres de las teclas: `keyboard_<tecla>.png` (`keyboard_e`, `keyboard_f1`, `key
 `mouse_move` (arrastrar), `mouse_scroll`, `mouse_scroll_up/down`.
 
 ## Paleta estándar (úsala para que toda la GM sea coherente)
+
+### Fuentes
+
+| Para | Archivo |
+|---|---|
+| Texto que se lee (avisos, globos, nombres, subtítulos) | `fuentes/rubik/rubik_medium.ttf` (nombres: `rubik_semibold.ttf`) |
+| Etiquetas cortas en mayúsculas y titulares grandes (INFO, SUSURRO, IDs) | `kenney/interfaz/fuentes/Kenney Future.ttf` |
+
+Kenney Future no tiene minúsculas reales y tiene esquinas biseladas: en frases largas cuesta leerla.
 
 ### Imágenes
 
