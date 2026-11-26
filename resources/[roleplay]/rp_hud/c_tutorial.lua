@@ -68,6 +68,8 @@ local STEPS = {
     { rect = "bank", title = "Banco", text = "Tu dinero a salvo. Sacalo en un cajero (E) o usalo desde el telefono (P). El sueldo llega aqui." },
     { rect = "level", title = "Nivel", text = "Sube trabajando y haciendo actividades. Cada nivel abre nuevas oportunidades." },
     { rect = "clock", title = "Hora", text = "La hora de la ciudad. Algunos negocios y eventos dependen de ella." },
+    { rect = "iconbar", title = "Accesos rapidos", text = "Tu faccion, el inventario, el telefono y la ayuda. Pulsa M para sacar el cursor y haz clic en un icono, o usa su tecla. Si un icono se pone rojo, algo te limita (esposado, abatido).",
+      keys = { { "keyboard_m", "Cursor" }, { "mouse_left", "Usar" } } },
     { title = "Listo!", text = "Cuando algo importe por primera vez te aparecera un consejo junto a ese indicador. Repite esta guia con /hud tutorial.",
       keys = { { "keyboard_f7", "Ocultar HUD" }, { "keyboard_f1", "Ayuda" } } },
 }
@@ -350,6 +352,9 @@ local TIPS = {
           engineOffSince = nil
           return false
       end },
+    { id = "vehbar", rect = "vehbar", title = "Controles del vehiculo", text = "Motor, freno de mano, cerradura, cinturon, balizas y radio. En color = encendido, gris = apagado. Pulsa M y haz clic en un icono, o usa su tecla.",
+      keys = { { "keyboard_m", "Cursor" }, { "mouse_left", "Usar" } },
+      cond = function() return getPedOccupiedVehicle(localPlayer) ~= false end },
     { id = "fuel", rect = "speedo", title = "Poca bencina", text = "El vehiculo se esta quedando sin bencina. Llena el tanque en una gasolinera.",
       cond = function()
           local v = driverVehicle()

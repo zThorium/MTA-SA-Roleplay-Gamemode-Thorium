@@ -144,6 +144,13 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     end)
 end)
 
+-- Icono de ayuda en el HUD (rp_hud/c_iconbar.lua)
+addEvent("rp:hud:action", false)
+addEventHandler("rp:hud:action", localPlayer, function(id)
+    if id ~= "help" then return end
+    if visible then hide() else show() end
+end)
+
 addEventHandler("onClientPlayerWasted", localPlayer, hide)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     if visible then

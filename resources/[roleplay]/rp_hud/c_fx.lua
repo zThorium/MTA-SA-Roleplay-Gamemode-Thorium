@@ -48,6 +48,8 @@ local SOUNDS = {
     spend = { "drop_002.ogg", 0.45 },          -- pagas
     earn = { "coins.wav", 0.5 },               -- cobras
     heartbeat = { "heartbeat.wav", 0.7 },      -- vida baja
+    click = { "click_002.ogg", 0.5 },          -- clic en un icono del HUD (c_iconbar)
+    hover = { "select_001.ogg", 0.2 },         -- el raton pasa sobre un icono
 }
 local lastPlayed = {}
 

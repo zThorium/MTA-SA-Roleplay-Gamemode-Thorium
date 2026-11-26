@@ -75,6 +75,13 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     end)
 end)
 
+-- Icono de la faccion en el HUD (rp_hud/c_iconbar.lua): mismas condiciones que F3
+addEvent("rp:hud:action", false)
+addEventHandler("rp:hud:action", localPlayer, function(id)
+    if id ~= "faction" then return end
+    if isOpen() then close() elseif not getElementData(localPlayer, "rp:downed") then open() end
+end)
+
 addEventHandler("onClientPlayerWasted", localPlayer, function() close() end)
 addEvent("rp:onClientPlayerDowned", false)
 addEventHandler("rp:onClientPlayerDowned", localPlayer, function() close() end)

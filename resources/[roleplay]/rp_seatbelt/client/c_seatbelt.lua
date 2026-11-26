@@ -59,8 +59,9 @@ end
 ----------------------------------------------------------------
 -- Tecla C
 ----------------------------------------------------------------
-local function toggleBelt()
-    if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
+local function toggleBelt(fromHud)
+    if isChatBoxInputActive() or isConsoleActive() then return end
+    if fromHud ~= true and isCursorShowing() then return end   -- el clic en el icono del HUD ya usa el cursor
     if not myBeltVehicle() or flight or screen or isDowned() then return end
     local now = getTickCount()
     if now - lastKey < cfg().COOLDOWN then return end
@@ -285,6 +286,12 @@ end)
 ----------------------------------------------------------------
 addEventHandler("onClientResourceStart", resourceRoot, function()
     bindKey(SEATBELT.KEY, "down", toggleBelt)
+end)
+
+-- Icono del cinturon en el HUD (rp_hud/c_iconbar.lua)
+addEvent("rp:hud:action", false)
+addEventHandler("rp:hud:action", localPlayer, function(id)
+    if id == "seatbelt" then toggleBelt(true) end
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()

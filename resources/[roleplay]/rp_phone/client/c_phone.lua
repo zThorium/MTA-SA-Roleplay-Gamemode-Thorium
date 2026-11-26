@@ -170,15 +170,24 @@ Phone = {
 }
 
 ----------------------------------------------------------------
+local function togglePhone(fromKey)
+    if isOpen() then return close() end
+    if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
+    if getElementData(localPlayer, "rp:downed") then return end   -- abatido (rp_injury)
+    if getElementData(localPlayer, "rp:cuffed") then return end   -- esposado (rp_police)
+    if isChatBoxInputActive() or isConsoleActive() then return end
+    if fromKey and isCursorShowing() then return end              -- otro panel abierto
+    triggerServerEvent("rp:phone:open", resourceRoot)
+end
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    bindKey("p", "down", function()
-        if isOpen() then return close() end
-        if not getElementData(localPlayer, "rp:characterId") or isPedDead(localPlayer) then return end
-        if getElementData(localPlayer, "rp:downed") then return end   -- abatido (rp_injury)
-        if getElementData(localPlayer, "rp:cuffed") then return end   -- esposado (rp_police)
-        if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() then return end
-        triggerServerEvent("rp:phone:open", resourceRoot)
-    end)
+    bindKey("p", "down", function() togglePhone(true) end)
+end)
+
+-- Icono del telefono en el HUD (rp_hud/c_iconbar.lua): el clic ya necesita el cursor
+addEvent("rp:hud:action", false)
+addEventHandler("rp:hud:action", localPlayer, function(id)
+    if id == "phone" then togglePhone(false) end
 end)
 
 addEventHandler("onClientPlayerWasted", localPlayer, close)
