@@ -3,22 +3,23 @@
     Pensado para PCs de gama baja: solo trabaja con trenes que el juego ya tiene cargados cerca
     (streaming nativo de MTA) y con un temporizador de 250 ms, nunca en onClientRender.
 
-    - Si este cliente sincroniza la locomotora, le aplica la velocidad que marca el servidor.
+    - Si este cliente sincroniza la locomotora, le aplica la velocidad que marca el servidor (siempre
+      positiva: el sentido lo fija el servidor con setTrainDirection).
+    - Mantiene cada vagón en la vía principal: en LS corre pegada otra vía (tracks4) y el juego puede
+      enganchar ahí un vagón colocado por coordenadas (se veían vagones en la vía de al lado).
     - Bocina nativa del tren (control "horn" del maquinista) si un jugador está en la vía por delante
       o al acercarse a un cruce con las barreras bajadas.
     - Campanas en los cruces cerrados cercanos.
 ]]
 
 local locos = {}       -- [loco] = true, solo las cargadas (stream in)
+local wagons = {}      -- [locomotora o vagón] = estado, cargados: se vigila que sigan en la vía principal
+local cars = {}        -- [vagón] = true, cargados: siguen a su locomotora (tickCar)
 local hornUntil = {}   -- [loco] = tick en que suelta la bocina
 local hornNext = {}    -- [loco] = tick a partir del cual puede volver a tocar
 local warnedCross = {} -- [loco .. crossing] = tick del último aviso en ese cruce
 local bells = {}       -- [crossing] = sound
 local crossingList, crossingListAt = {}, 0
-
-local function isTrain(el)
-    return isElement(el) and getElementType(el) == "vehicle" and getElementData(el, "rp:train") == true
-end
 
 local function honk(loco, now)
     if hornNext[loco] and now < hornNext[loco] then return end
@@ -57,8 +58,7 @@ local function tickLoco(loco, now)
     -- Velocidad: solo el cliente que sincroniza mueve el tren
     if isElementSyncer(loco) then
         local v = tonumber(getElementData(loco, "rp:train:v")) or 0
-        local sign = tonumber(getElementData(loco, "rp:train:sign")) or 1
-        setTrainSpeed(loco, sign * v / TRAIN.VELOCITY_UNIT)
+        setTrainSpeed(loco, v / TRAIN.VELOCITY_UNIT) -- siempre positiva: el sentido lo fija el servidor
     end
 
     if hornUntil[loco] and now >= hornUntil[loco] then
@@ -133,21 +133,87 @@ local function forget(loco)
     locos[loco], hornUntil[loco], hornNext[loco] = nil, nil, nil
 end
 
-addEventHandler("onClientElementStreamIn", root, function()
-    if isTrain(source) then locos[source] = true end
-end)
-addEventHandler("onClientElementStreamOut", root, function() if locos[source] then forget(source) end end)
-addEventHandler("onClientElementDestroy", root, function() if locos[source] then forget(source) end end)
+-- MTA 1.6 no expone la vía de un tren (no hay getTrainTrack/setTrainTrack): el juego la elige por el nodo
+-- más cercano. Si el vagón quedó a más de OFF_TRACK de la vía principal, está en otra (en LS corre pegada
+-- la de tracks4): se pone en un nodo exacto de la principal y se lleva a su punto con setTrainPosition.
+local function keepOnMainTrack(veh, now)
+    local st = wagons[veh]
+    local x, y = getElementPosition(veh)
+    local d, off = TrainTrack.project(x, y, st.d) -- con pista: solo ±30 nodos
+    st.d = d
+    if off <= TRAIN.OFF_TRACK or (st.fixedAt and now - st.fixedAt < 2000) then return end
+    st.fixedAt = now
+    local nx, ny, nz = TrainTrack.nodePoint(d)
+    setElementPosition(veh, nx, ny, nz + 1, false)
+    setTrainPosition(veh, TrainTrack.gameD(d))
+end
+
+-- Media longitud de cada modelo (caja del modelo), para dejar los vagones pegados sin solaparse
+local halfLen = {}
+local function half(veh)
+    local m = getElementModel(veh)
+    if not halfLen[m] then
+        local _, y0, _, _, y1 = getElementBoundingBox(veh)
+        if not y0 or y1 <= y0 then return nil end
+        halfLen[m] = (y1 - y0) / 2
+    end
+    return halfLen[m]
+end
+
+-- Vagón suelto (sin enganche de MTA): si este cliente lo sincroniza, lo lleva a la velocidad real de su
+-- locomotora más una corrección suave hacia su sitio detrás de ella. En la vía del juego la posición
+-- crece en el sentido de marcha (el servidor fija el sentido), así que "detrás" es posición - distancia.
+local function tickCar(car)
+    if not isElementSyncer(car) then return end
+    local loco = getElementData(car, "rp:train:of")
+    if not isElement(loco) then return end
+    if not isElementStreamedIn(loco) then -- sin la locomotora cargada: solo su velocidad
+        return setTrainSpeed(car, (tonumber(getElementData(loco, "rp:train:v")) or 0) / TRAIN.VELOCITY_UNIT)
+    end
+    local idx = tonumber(getElementData(car, "rp:train:idx")) or 1
+    local hl, hc = half(loco), half(car)
+    local offset = (hl and hc) and (hl + hc * (2 * idx - 1) + idx * TRAIN.COUPLING) or idx * TRAIN.CARRIAGE_GAP
+    local L = TrainTrack.gameLength()
+    local target = (getTrainPosition(loco) - offset) % L
+    local err = (target - getTrainPosition(car) + L / 2) % L - L / 2 -- metros que le faltan (+ = adelantar)
+    if math.abs(err) > TRAIN.CAR_SNAP then -- recién aparecido o muy desfasado: a su sitio de una vez
+        setTrainPosition(car, target)
+        err = 0
+    end
+    local corr = math.max(-TRAIN.CAR_CATCHUP, math.min(TRAIN.CAR_CATCHUP, err * 0.8))
+    setTrainSpeed(car, getTrainSpeed(loco) + corr / TRAIN.VELOCITY_UNIT)
+end
+
+local function track(el)
+    if not (isElement(el) and getElementType(el) == "vehicle" and getElementData(el, "rp:train:wagon")) then return end
+    wagons[el] = {}
+    keepOnMainTrack(el, getTickCount())
+    if getElementData(el, "rp:train") == true then locos[el] = true
+    elseif getElementData(el, "rp:train:of") then cars[el] = true end
+end
+
+local function untrack(el)
+    wagons[el], cars[el] = nil, nil
+    if locos[el] then forget(el) end
+end
+
+addEventHandler("onClientElementStreamIn", root, function() track(source) end)
+addEventHandler("onClientElementStreamOut", root, function() untrack(source) end)
+addEventHandler("onClientElementDestroy", root, function() untrack(source) end)
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    for _, v in ipairs(getElementsByType("vehicle", root, true)) do
-        if isTrain(v) then locos[v] = true end
-    end
+    for _, v in ipairs(getElementsByType("vehicle", root, true)) do track(v) end
     local bellTick = 0
     setTimer(function()
         local now = getTickCount()
+        for veh in pairs(wagons) do
+            if isElement(veh) then keepOnMainTrack(veh, now) else wagons[veh] = nil end
+        end
         for loco in pairs(locos) do
             if isElement(loco) then tickLoco(loco, now) else forget(loco) end
+        end
+        for car in pairs(cars) do
+            if isElement(car) then tickCar(car) else cars[car] = nil end
         end
         bellTick = bellTick + 1
         if bellTick % 2 == 0 then tickBells(now) end

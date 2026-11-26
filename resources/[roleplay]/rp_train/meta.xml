@@ -6,9 +6,9 @@
     <include resource="rp_notify" />
     <include resource="rp_login" />
 
-    <!-- Via principal (tracks.dat de GTA SA) y su geometria: solo servidor, el cliente no la necesita -->
-    <script src="server/s_track.lua" type="server" />
-    <script src="server/s_trackmath.lua" type="server" />
+    <!-- Via principal (tracks.dat de GTA SA) y su geometria: el cliente la usa para devolver a la via 0 un vagon que el juego enganche a la paralela -->
+    <script src="shared/s_track.lua" type="shared" />
+    <script src="shared/s_trackmath.lua" type="shared" />
     <script src="shared/s_config.lua" type="shared" />
 
     <script src="server/s_train.lua" type="server" />
@@ -22,4 +22,5 @@
 
     <export function="getTrainState" type="server" />
     <export function="getTrackLength" type="server" />
+    <export function="getTrainRoute" type="server" />
 </meta>

@@ -4,13 +4,28 @@
 ]]
 
 TRAIN = {
-    -- Trenes en la vía principal. start = metros desde el nodo 1 de la vía (0..~18135).
+    -- Trenes en la vía principal. station = nodo de la estación donde sale (espera en el andén y arranca);
+    -- sin station, start = metros desde el nodo 1 de la vía (0..~18135).
     -- Modelos: 538 Brown Streak (pasajeros) + 570 vagón; 537 Freight + 569 plataforma / 590 caja.
     TRAINS = {
-        { model = 538, carriages = { 570, 570, 570 }, start = 0 },
-        { model = 537, carriages = { 569, 590, 569, 590 }, start = 9000 },
+        { model = 538, carriages = { 570, 570, 570 }, station = 331 },       -- sale de Unity Station (Los Santos)
+        { model = 537, carriages = { 569, 590, 569, 590 }, station = 597 },  -- carga: al otro lado del bucle (San Fierro)
     },
-    CARRIAGE_GAP = 18.5,      -- separación entre enganches (para recolocar el tren sin jugadores cerca)
+    -- Recorrido completo (bucle LS-SF-LV de tracks.dat) contado desde esta estación:
+    -- Unity → Market → Cranberry → Yellow Bell → Sobell → Linden → Unity
+    ROUTE_ORIGIN = 331,
+    -- Sin jugadores a menos de esto del tren (ni de donde quedó aparcado) el servidor solo avanza su
+    -- distancia en memoria: no mueve elementos ni manda nada por la red.
+    PLACE_RADIUS = 450,
+    -- Con un jugador a menos de esto el tren lo mueve SIEMPRE la física de su juego (se le asigna como
+    -- sincronizador): movimiento fluido, nunca a saltos. Menor que la distancia de streaming de vehículos.
+    SYNC_RADIUS = 180,
+    OFF_TRACK = 2,            -- un vagón a más de esto de la vía principal está en otra (en LS corre pegada la de tracks4)
+    CLOCKWISE = true,         -- sentido de marcha inicial; el servidor lo corrige si el juego lo mueve al revés
+    CARRIAGE_GAP = 18.5,      -- separación aproximada entre centros (servidor; el cliente usa el largo real de cada modelo)
+    COUPLING = 1.0,           -- hueco entre vagón y vagón (m)
+    CAR_SNAP = 25,            -- un vagón más desfasado que esto se coloca de una vez (al aparecer)
+    CAR_CATCHUP = 4,          -- m/s máximos de corrección para recuperar su sitio (suave, sin saltos)
     DRIVER_SKIN = 255,        -- maquinista
 
     SPEED = 22,               -- crucero (~80 km/h)

@@ -1,5 +1,74 @@
 # Auditoría de rp_train
 
+## 2026-11-26 · arreglar (vagones)
+- **Síntoma** (prueba de Fabián): al iniciar, locomotora y vagón solapados; la locomotora se va y el vagón se queda siempre en el andén. Ya pasaba antes de esta rama (primera captura).
+- **Causa raíz**: el enganche de trenes de MTA (`attachTrailerToVehicle`) no arrastraba los vagones; el foro de MTA reconoce problemas de sincronización de remolques desde hace años. Además, al crear cada pieza en el nodo más cercano, dos piezas podían caer en el mismo nodo.
+- **Arreglo**: sin enganche. Cada vagón es un tren suelto en la vía principal (`rp:train:of`, `rp:train:idx`), colocado con `setTrainPosition`; el cliente que lo sincroniza (el mismo que la locomotora) le aplica la velocidad real de la locomotora más una corrección de hasta `CAR_CATCHUP` m/s hacia su sitio, calculado con el largo real de cada modelo (`getElementBoundingBox`) + `COUPLING`. Solo si está a más de `CAR_SNAP` m (al aparecer) se coloca de una vez. Unidades de `setTrainPosition` confirmadas con la wiki (bucle 0..18107 = `TrainTrack.gameLength`).
+- **Probar en juego**: `restart rp_train`; en Unity los 3 vagones detrás de la locomotora, sin solaparse, y salen con ella; seguir el tren hasta Market (curvas y túnel): los vagones no se separan ni chocan.
+
+## 2026-11-26 · arreglar
+- **Síntoma** (prueba en juego de Fabián): el tren salía con los vagones solapados, uno en la vía de al lado (túnel de Market), e iba en reversa empujando los vagones.
+- **Causa raíz**: (1) cada vagón se colocaba con `setElementPosition` y el juego lo engancha a la vía más cercana; en LS corre pegada la vía de `tracks4.dat`. (2) Al detectar marcha atrás se invertía el signo de `setTrainSpeed` en vez del sentido del tren, así que la locomotora avanzaba empujando a los vagones.
+- **Arreglo**: sentido con `setTrainDirection` (`TRAIN.CLOCKWISE`; el servidor lo corrige y avisa si el juego lo mueve al revés) y velocidad siempre positiva; se retira `rp:train:sign`. MTA 1.6 no tiene `getTrainTrack`/`setTrainTrack` (comprobado en `client.dll` y `deathmatch.dll`; la primera versión daba `attempt to call global getTrainTrack`): cada pieza se pone primero en un nodo exacto de la vía principal (`TrainTrack.nodePoint`, el juego engancha a la vía del nodo más cercano) y luego en su punto con `setTrainPosition` (distancia horizontal como el juego: `TrainTrack.gameD`). La geometría pasa a `shared/`: el cliente detecta un vagón a más de 2 m de la vía principal (la paralela de Unity está a 4 m) y lo devuelve igual. Geometría probada fuera del juego con `lua5.1.dll`: proyección exacta, desvío de la vía de tracks4 = 4,0 m. Fluidez: a menos de `SYNC_RADIUS` (180 m) el jugador más cercano es el sincronizador (`setElementSyncer` persistente), así el tren visible siempre lo mueve la física y nunca los saltos de 500 ms del servidor.
+- **Nota**: 98/100 → 98/100.
+- **Probar en juego**: salida desde Unity con los 3 vagones detrás de la locomotora y en la misma vía; pasar por el túnel de Market; ir en un vehículo al lado del tren (debe verse fluido); si en consola sale `sentido corregido`, poner `CLOCKWISE` al valor que indica.
+
+## 2026-11-26 · mejorar
+- **Foco**: recorrido completo del tren de Los Santos, saliendo de Unity Station, y bajo coste.
+- **Nota**: 98/100 → 98/100 (OK 27, FALLA B 0, FALLA I 0, AVISO 1)
+- **Cambios**:
+  - P5 Recorrido: el bucle completo de `tracks.dat` (926 nodos, 18,1 km) se cuenta desde Unity Station (`ROUTE_ORIGIN`): Unity > Market > Cranberry > Yellow Bell > Sobell > Linden. Los trenes salen de una estación (`TRAINS[i].station`): el de pasajeros de Unity (espera 20 s en el andén y arranca), el de carga de Cranberry. Export nuevo `getTrainRoute`; `getTrainState` añade `station`, `next` y `nextIn`. Prueba `train_recorrido_desde_unity` (PRU-01).
+  - P4 Rendimiento: sin jugadores a menos de `PLACE_RADIUS` (450 m) del tren ni de donde quedó, el servidor ya no llama a `setElementPosition`/`setElementRotation` en cada paso (antes ~40 RPC/s a todos los jugadores con 2 trenes de 5 piezas); solo avanza su distancia en memoria. Tampoco reenvía `rp:train:v` si nadie sincroniza el tren, y las posiciones de los jugadores se leen una vez por paso para todos los trenes.
+- **Reglas manuales revisadas**: SEG-02 ✔ (sin eventos remotos), CIC-04 (timer permanente que muere con el recurso), INT-03 ✔. Contrato intacto: `rp:train`, `rp:train:v`, `rp:train:sign`, `rp_railcrossing`, `getTrainState`, `getTrackLength`.
+- **Pendiente**: lo de la entrada anterior (brazo 968, bocina en clientes que no sincronizan).
+- **Probar en juego**: `restart rp_train` y ver en consola la línea `recorrido: Unity Station (0.0 km) > ...`; ir a Unity Station: el Brown Streak espera allí y arranca hacia Market; seguirlo en un vehículo por todo el bucle; alejarse más de 450 m y volver a acercarse: el tren aparece en su sitio, en marcha, sin saltos ni un tren fantasma parado; `/debugscript 3` limpio.
+
+<details><summary>Informe automático</summary>
+
+### Auditoría automática (2026-11-26, commit f8baccc)
+
+**Nota: 98/100** · OK 27 · FALLA B 0 · FALLA I 0 · AVISO 1
+
+| Estado | Grav. | Regla | Qué | Evidencia |
+|---|---|---|---|---|
+| AVISO | I | CIC-04 | Los timers se pueden cancelar | usa setTimer y nunca killTimer/isTimer |
+| OK | B | EST-01 | meta.xml con info y min_mta_version |  |
+| OK | I | EST-02 | Scripts de cliente con cache="false" |  |
+| OK | I | EST-03 | Dependencias declaradas con &lt;include&gt; (u opcionales comprobadas) |  |
+| OK | I | EST-04 | meta.xml y archivos coinciden |  |
+| OK | I | EST-05 | Prefijos s_/c_ según carpeta |  |
+| OK | R | EST-06 | Cabecera de comentario en cada .lua |  |
+| OK | B | EST-07 | Registrado en mtaserver.conf tras sus dependencias |  |
+| OK | B | SEG-05 | Sin secretos, IPs privadas ni emails |  |
+| OK | B | SEG-06 | Sin loadstring |  |
+| OK | B | BD-01 | Sin dbConnect propio |  |
+| OK | B | BD-02 | Sin dbPoll(-1) sin justificar |  |
+| OK | B | BD-03 | SQL parametrizado (sin concatenar) |  |
+| OK | B | BD-04 | Esquema solo en rp_database/schema.lua |  |
+| OK | I | BD-05 | Espera a la BD al arrancar |  |
+| OK | B | INT-01 | HUD y radio solo con setHudSuppressed/setRadioSuppressed |  |
+| OK | I | INT-02 | Hora y clima solo desde rp_events |  |
+| OK | I | INT-03 | Eventos propios con prefijo "rp:" |  |
+| OK | R | INT-04 | Avisos con rp_notify (no outputChatBox) | 1 outputChatBox |
+| OK | R | INT-06 | Teclas sin choques con otros recursos |  |
+| OK | I | CLI-01 | Las teclas ignoran chat/consola/cursor |  |
+| OK | R | CLI-02 | onClientRender sin trabajo pesado por frame |  |
+| OK | I | CLI-04 | El cliente no copia config compartida al cargar |  |
+| OK | B | DOC-01 | Fila en RECURSOS.md |  |
+| OK | I | DOC-02 | Exports documentados en RECURSOS.md |  |
+| OK | I | DOC-03 | Comandos en RECURSOS.md, panel de admin o ayuda |  |
+| OK | R | DOC-04 | Registro de auditoría en docs/auditorias/ |  |
+| OK | I | PRU-01 | Pruebas en rp_test |  |
+| N/A | B | SEG-01 | Handlers de eventos remotos usan client | sin eventos remotos |
+| N/A | I | CIC-01 | Estado por jugador se limpia en onPlayerQuit | sin estado por jugador |
+| N/A | I | CIC-02 | Estado por personaje se limpia en rp:onCharacterLogout | sin estado por jugador |
+| N/A | I | CIC-05 | El cliente devuelve cámara/controles/HUD al parar |  |
+| N/A | B | INT-05 | Dimensiones propias sin choques |  |
+
+</details>
+
+---
+
 ## 2026-11-26 · crear
 - **Motivo**: devolver el tren de San Andreas al servidor, con bocina si hay alguien en la vía y pasos a nivel con barreras, campanas y tráfico IA que se detiene.
 - **Nota**: — → 96/100  (OK 26, FALLA B 0, FALLA I 0, AVISO 2)
