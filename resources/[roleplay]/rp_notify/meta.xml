@@ -1,16 +1,23 @@
 <meta>
-    <info author="Thorium" name="RP Notify" description="Notificaciones reutilizables (toasts, popups y globos) con sonido" version="1.0.0" type="script" />
+    <info author="Thorium" name="RP Notify" description="Notificaciones reutilizables (toasts, titulares y globos) con efectos y sonido" version="2.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <script src="s_notify.lua" type="server" />
-    <script src="c_notify.lua" type="client" />
+    <script src="c_notify.lua" type="client" cache="false" />
 
-    <!-- Sonidos propios (generados para el proyecto) -->
-    <file src="sounds/info.wav" />
-    <file src="sounds/success.wav" />
-    <file src="sounds/warning.wav" />
-    <file src="sounds/error.wav" />
-    <file src="sounds/popup.wav" />
+    <!-- Fuentes Kenney Future (CC0), desde assets/kenney/interfaz/fuentes -->
+    <file src="fonts/kenney_future.ttf" />
+    <file src="fonts/kenney_future_narrow.ttf" />
+
+    <!-- Sonidos Kenney Interface Sounds (CC0), paleta estándar de assets/README.md -->
+    <file src="sounds/glass_001.ogg" />
+    <file src="sounds/confirmation_002.ogg" />
+    <file src="sounds/confirmation_003.ogg" />
+    <file src="sounds/question_001.ogg" />
+    <file src="sounds/error_004.ogg" />
+    <file src="sounds/bong_001.ogg" />
+    <file src="sounds/pluck_002.ogg" />
+    <file src="sounds/tick_002.ogg" />
 
     <export function="notify" type="server" />
     <export function="popup" type="server" />
