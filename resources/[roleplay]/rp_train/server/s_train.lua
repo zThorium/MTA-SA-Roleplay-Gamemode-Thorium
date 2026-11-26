@@ -84,13 +84,16 @@ local function spawnDriver(t)
 end
 
 -- Coloca locomotora y vagones en la vía a partir de t.d (solo cuando nadie lo sincroniza)
+-- Cada pieza va primero a un nodo exacto de la vía principal (para que el juego la enganche a esa vía
+-- y no a la paralela de LS) y luego a su punto exacto con setTrainPosition (orientación incluida).
 local function placeTrain(t)
     for i, veh in ipairs(t.wagons) do
-        local x, y, z, ux, uy = TrainTrack.point(t.d - (i - 1) * TRAIN.CARRIAGE_GAP)
-        setElementPosition(veh, x, y, z + 1, false)
-        setElementRotation(veh, 0, 0, heading(ux, uy))
-        if i == 1 then t.px, t.py = x, y end
+        local d = t.d - (i - 1) * TRAIN.CARRIAGE_GAP
+        local nx, ny, nz = TrainTrack.nodePoint(d)
+        setElementPosition(veh, nx, ny, nz + 1, false)
+        setTrainPosition(veh, TrainTrack.gameD(d))
     end
+    t.px, t.py = TrainTrack.point(t.d)
     t.placedD = t.d
 end
 
@@ -104,13 +107,17 @@ local function createTrain(def)
     if origin then -- espera en el andén y sale
         t.dwellUntil, t.leaving = getTickCount() + TRAIN.STATION_STOP_MS, origin
     end
-    local x, y, z, ux, uy = TrainTrack.point(t.d)
+    -- Se crean sobre nodos exactos de la vía principal (ver placeTrain) y luego se ajustan
+    local _, _, _, ux, uy = TrainTrack.point(t.d)
+    local x, y, z = TrainTrack.nodePoint(t.d)
     t.loco = createVehicle(def.model, x, y, z + 1, 0, 0, heading(ux, uy))
     if not t.loco then return outputDebugString("[rp_train] no se pudo crear la locomotora " .. def.model, 1) end
     t.wagons[1] = t.loco
     local prev = t.loco
     for i, model in ipairs(def.carriages) do
-        local cx, cy, cz, cux, cuy = TrainTrack.point(t.d - i * TRAIN.CARRIAGE_GAP)
+        local cd = t.d - i * TRAIN.CARRIAGE_GAP
+        local _, _, _, cux, cuy = TrainTrack.point(cd)
+        local cx, cy, cz = TrainTrack.nodePoint(cd)
         local car = createVehicle(model, cx, cy, cz + 1, 0, 0, heading(cux, cuy))
         if car then
             attachTrailerToVehicle(prev, car)
@@ -129,7 +136,9 @@ local function createTrain(def)
     setElementData(t.loco, "rp:train", true)
     setElementData(t.loco, "rp:train:v", 0)
     t.sentV = 0
-    t.px, t.py, t.placedD = x, y, t.d
+    for i, veh in ipairs(t.wagons) do setTrainPosition(veh, TrainTrack.gameD(t.d - (i - 1) * TRAIN.CARRIAGE_GAP)) end
+    t.px, t.py = TrainTrack.point(t.d)
+    t.placedD = t.d
     spawnDriver(t)
     trains[#trains + 1] = t
 end

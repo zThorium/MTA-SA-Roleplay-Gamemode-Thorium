@@ -132,19 +132,25 @@ local function forget(loco)
     locos[loco], hornUntil[loco], hornNext[loco] = nil, nil, nil
 end
 
--- Si el juego enganchó el vagón a otra vía, se devuelve a la principal en el mismo punto
-local function keepOnMainTrack(veh)
-    if getTrainTrack(veh) == TRAIN.TRACK_ID then return end
+-- MTA 1.6 no expone la vía de un tren (no hay getTrainTrack/setTrainTrack): el juego la elige por el nodo
+-- más cercano. Si el vagón quedó a más de OFF_TRACK de la vía principal, está en otra (en LS corre pegada
+-- la de tracks4): se pone en un nodo exacto de la principal y se lleva a su punto con setTrainPosition.
+local function keepOnMainTrack(veh, now)
+    local st = wagons[veh]
     local x, y = getElementPosition(veh)
-    local d = TrainTrack.project(x, y)
-    setTrainTrack(veh, TRAIN.TRACK_ID)
+    local d, off = TrainTrack.project(x, y, st.d) -- con pista: solo ±30 nodos
+    st.d = d
+    if off <= TRAIN.OFF_TRACK or (st.fixedAt and now - st.fixedAt < 2000) then return end
+    st.fixedAt = now
+    local nx, ny, nz = TrainTrack.nodePoint(d)
+    setElementPosition(veh, nx, ny, nz + 1, false)
     setTrainPosition(veh, TrainTrack.gameD(d))
 end
 
 local function track(el)
     if not (isElement(el) and getElementType(el) == "vehicle" and getElementData(el, "rp:train:wagon")) then return end
-    wagons[el] = true
-    keepOnMainTrack(el)
+    wagons[el] = {}
+    keepOnMainTrack(el, getTickCount())
     if getElementData(el, "rp:train") == true then locos[el] = true end
 end
 
@@ -163,7 +169,7 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     setTimer(function()
         local now = getTickCount()
         for veh in pairs(wagons) do
-            if isElement(veh) then keepOnMainTrack(veh) else wagons[veh] = nil end
+            if isElement(veh) then keepOnMainTrack(veh, now) else wagons[veh] = nil end
         end
         for loco in pairs(locos) do
             if isElement(loco) then tickLoco(loco, now) else forget(loco) end

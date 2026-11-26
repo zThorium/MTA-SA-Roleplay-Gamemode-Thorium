@@ -26,6 +26,23 @@ function TrainTrack.length() build() return length end
 function TrainTrack.nodeD(i) build() return cum[i] end
 function TrainTrack.wrap(d) build() return d % length end
 
+-- Nodo de la vía principal más cercano a la distancia d: x, y, z exactos.
+-- Un tren puesto ahí con setElementPosition queda enganchado a la vía principal (el juego toma la vía
+-- del nodo más cercano, y en LS hay otra pegada); después se ajusta con setTrainPosition.
+function TrainTrack.nodePoint(d)
+    build()
+    d = d % length
+    local n = TRAIN_TRACK
+    local lo, hi = 1, #n
+    while lo < hi do
+        local mid = math.floor((lo + hi + 1) / 2)
+        if cum[mid] <= d then lo = mid else hi = mid - 1 end
+    end
+    local segEnd = lo < #n and cum[lo + 1] or length
+    local i = (d - cum[lo] > segEnd - d) and (lo % #n + 1) or lo
+    return n[i][1], n[i][2], n[i][3]
+end
+
 -- Distancia d (la nuestra) → posición en la vía del juego, para setTrainPosition
 function TrainTrack.gameD(d)
     build()
