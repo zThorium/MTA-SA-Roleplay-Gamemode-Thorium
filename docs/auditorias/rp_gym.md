@@ -1,5 +1,21 @@
 # Auditoría de rp_gym
 
+## 2026-11-26 · mejorar (combate en el ring)
+- **Motivo**: pedido de Fabián: público y fotógrafos alrededor del ring, sangre, aturdimiento con mareo, caídas con cuenta del árbitro y Espacio para levantarse, perder sin quedar abatido, cinemática de presentación y sonidos de Kenney (narrador e impactos).
+- **Cambios**: `server/s_trainers.lua` (público, árbitro y fotógrafos como peds del servidor; fase de presentación `GYM_FIGHT.INTRO_MS`; eventos `rp:gym:down` y `rp:gym:lost`; derrota fuera del ring; element data `rp:gymFight`). `client/c_fight.lua` reescrito (cinemática, IA, golpes, efectos, cuenta y HUD del combate). `rp_injury/client/c_injury.lua`: no deja abatido durante un combate de `rp_gym`. Packs Kenney Impact Sounds y Voiceover Fighter añadidos a `assets/` (CC0); sonidos de público, obturador y textura de sangre sintetizados (`tools/gen_assets.py`). Teclas dibujadas (UX-01): Espacio animado, clic derecho + Shift para cubrirse.
+- **Reglas manuales revisadas**: SEG-02 ✔ (el cliente solo puede perder o cambiar su animación; vidas, ring y victoria los decide el servidor); UX-01 ✔ en el combate; UX-06 ✔; UX-10 ✔ (`CREDITOS.md`).
+- **Pendiente**: PRU-01/PRU-02 (sin `scripts/test.sh`); sin comprobación automática de sintaxis Lua; posiciones del público, árbitro y salida estimadas ([A]); banco de quejidos `PAIN_A` 1 elegido por la frecuencia de CJ, sin escuchar.
+- **Probar en juego**: combate completo (presentación, cuenta, campana), golpes con sangre y gritos del público, flashes, aturdimiento y visión borrosa sin cubrirse, caída y Espacio, perder por cuenta o por vida (aparece fuera del ring, sin abatido), ganar (K.O.), que no salgan estrellas; `/debugscript 3` limpio.
+
+## 2026-11-26 · arreglar
+- **Motivo**: error `attempt to call global 'setPedControlState' (a nil value)` en `s_trainers.lua` (líneas 73 y 129) al pelear con el entrenador; pegarle daba estrellas; pedido de Fabián: ring con esquinas, campanas y K.O.; quitar las máquinas fijas.
+- **Causa**: `setPedControlState` solo existe en el cliente de MTA; la IA del entrenador corría en el servidor.
+- **Nota**: 92 → 96.
+- **Cambios**: IA del entrenador en `client/c_fight.lua` con el jugador como sincronizador del ped (`setElementSyncer`). `rp_wanted:setWantedSuspended` durante el combate (solo si no estaba ya suspendido) y no se pelea con estrellas. Ring de Ganton (`in_bxing05`, medido en `gen_int3_1.col`): esquinas opuestas, rendirse = salir a más de 3,8 m del centro. Campanas sintetizadas (`tools/gen_bells.py`) y "K.O." con el entrenador tendido 3,5 s. Fuera las máquinas fijas; las del interior original se quitan con `removeWorldModel` (se restauran al parar).
+- **Reglas manuales revisadas**: SEG-02 ✔ (el cliente solo mueve el ped; vidas, ring y resultado los decide el servidor); UX-06 ✔; UX-10 ✔ (sonidos propios con `CREDITOS.md`).
+- **Pendiente**: PRU-01/PRU-02 (sin `scripts/test.sh`); CLI-01 (aviso previo).
+- **Probar en juego**: pelear con 35 % de músculo y sin estrellas: los dos aparecen en esquinas, campana, el entrenador pega, al ganar K.O. y campana; pegarle no da estrellas; salir del ring = rendirse; el interior sin cinta, banco ni bici; `/debugscript 3` limpio.
+
 ## 2026-11-26 · mejorar
 - **Motivo**: pedido de Fabián: gimnasio de Ganton con marcador en la puerta, interior y máquinas originales, aviso al subir una estadística, `/stats` y estilos de pelea ganándole al entrenador.
 - **Nota**: 92 (sin registro previo).

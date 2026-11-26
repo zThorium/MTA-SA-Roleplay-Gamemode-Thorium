@@ -50,6 +50,11 @@ addEventHandler("onClientPlayerDamage", localPlayer, function(attacker, weapon, 
     end
     if not getElementData(localPlayer, "rp:characterId") then return end
     if loss < getElementHealth(localPlayer) then return end
+    -- Combate con un entrenador de rp_gym: no queda abatido, pierde el combate y sale del ring (lo gestiona rp_gym)
+    if getElementData(localPlayer, "rp:gymFight") then
+        cancelEvent()
+        return
+    end
 
     -- Este golpe lo mataria: queda abatido
     cancelEvent()

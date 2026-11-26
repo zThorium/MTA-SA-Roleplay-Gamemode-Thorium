@@ -1,7 +1,7 @@
 --[[
     rp_gym / s_fixed.lua
-    Gimnasios fijos (GYM_FIXED): puerta con marcador en la calle, interior original de GTA SA,
-    maquinas en las posiciones del mapa del juego y entrenador. No usan la BD: se crean al arrancar.
+    Gimnasios fijos (GYM_FIXED): puerta con marcador en la calle, interior original de GTA SA (sin sus
+    maquinas: las crean los admins) y entrenador con ring. No usan la BD: se crean al arrancar.
 
     Evento cliente -> servidor (con `client`):
         rp:gym:door (doorId)    entrar o salir; doorId = indice*2-1 (puerta) o indice*2 (salida)
@@ -12,18 +12,22 @@ addEvent("rp:gym:door", true)
 local doors = {}       -- [doorId] = { gym, inside = bool, x, y, z, int, dim }
 local lastDoor = {}    -- [player] = tick
 
--- Donde se coloca el personaje para que la maquina quede en (x, y, z, rz): inversa de gymSpawnMachine
-local function machineRow(id, m, gym)
-    local cfg = GYM_KINDS[m.kind]
-    local s = cfg.seat or { 0, 0, 0, 0 }
-    local rot = m.rz - s[4]
-    local a = math.rad(rot)
-    local ox = s[1] * math.cos(a) - s[2] * math.sin(a)
-    local oy = s[1] * math.sin(a) + s[2] * math.cos(a)
-    return { id = id, kind = m.kind, gym = gym.key, native = m.native, fixed = true,
-             x = m.x - ox, y = m.y - oy, z = m.z - cfg.zOffset - s[3], rotation = rot,
-             interior = gym.interior, dimension = gym.dimension }
+-- Quita (o devuelve) las maquinas que trae el interior original: las crean los admins con /crearmaquina
+local function originalMachines(gym, remove)
+    local r = gym.removeModels
+    if not r then return end
+    for _, model in ipairs(r.models) do
+        if remove then
+            removeWorldModel(model, r.radius, r.x, r.y, r.z, gym.interior)
+        else
+            restoreWorldModel(model, r.radius, r.x, r.y, r.z, gym.interior)
+        end
+    end
 end
+
+addEventHandler("onResourceStop", resourceRoot, function()
+    for _, gym in ipairs(GYM_FIXED) do originalMachines(gym, false) end
+end)
 
 local function addDoor(id, gym, inside, pos)
     local int, dim = inside and gym.interior or 0, inside and gym.dimension or 0
@@ -51,13 +55,11 @@ addEventHandler("onResourceStart", resourceRoot, function()
         createBlip(gym.door.x, gym.door.y, gym.door.z, gym.blip, 2, 255, 255, 255, 255, 0, 400)
         addDoor(i * 2 - 1, gym, false, gym.door)
         addDoor(i * 2, gym, true, gym.exit)
-        for j, m in ipairs(gym.machines) do
-            if GYM_KINDS[m.kind] then gymSpawnMachine(machineRow(GYM_FIXED_ID + i * 100 + j, m, gym)) end
-        end
+        originalMachines(gym, true)
         local t = gym.trainer
         if t and GYM_STYLES[t.style] then
             gymSpawnTrainer({ id = GYM_FIXED_ID + i * 100, style = t.style, x = t.x, y = t.y, z = t.z, rotation = t.rot,
-                              interior = gym.interior, dimension = gym.dimension, fixed = true })
+                              interior = gym.interior, dimension = gym.dimension, ring = t.ring })
         end
     end
 end)

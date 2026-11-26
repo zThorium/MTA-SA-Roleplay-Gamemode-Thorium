@@ -53,7 +53,7 @@ de viajes `rp_rides` (Vroom). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` 
 (peatones y tráfico IA), `rp_bikes` (arriendo de bicicletas, 60 min). Interfaz: `rp_hud`, `rp_scoreboard`, `rp_nametags`, `rp_markers` (marcadores modernos con icono 3D: rediseña solo todos los cilindros; `setMarkerStyle` para icono y texto).
 Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados dinámicos; API para la agencia en `docs/TRABAJOS.md`) y `rp_pizzeria` (pizzero en Well Stacked Pizza: comandas, armado, horno, corte y clientes NPC; trabajo externo de `rp_jobs`).
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
-Gimnasio: `rp_gym` (Ganton fijo con interior y máquinas originales, entrenadores que enseñan estilos de pelea, aviso al subir una stat y `/stats`).
+Gimnasio: `rp_gym` (Ganton fijo con interior original; las máquinas las ponen los admins con `/crearmaquina`; entrenadores que enseñan estilos de pelea en el ring sin dar estrellas, aviso al subir una stat y `/stats`).
 Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (campo de tiro: entrena la habilidad nativa de arma con tus balas; progreso en `weapon_skills`).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos).
 Drogas: `rp_dealers` (traficantes skin 28/29/30; comprar con un policia mirando da estrella).
