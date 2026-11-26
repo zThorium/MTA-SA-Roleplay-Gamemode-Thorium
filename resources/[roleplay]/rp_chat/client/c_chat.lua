@@ -1,49 +1,93 @@
 --[[
     rp_chat / c_chat.lua
-    Teclas (abren el chat con el comando listo) y burbujas de dialogo sobre la cabeza.
+    Teclas (abren el chat con el comando listo), burbujas de diálogo sobre la cabeza
+    e indicador de "escribiendo...".
         T decir (por defecto de MTA) - Y susurrar - U gritar - B OOC
-    El OOC no genera burbuja (el servidor no la envia).
+    El OOC no genera burbuja (el servidor no la envía).
+
+    Estilo (misma línea que rp_notify): bocadillo oscuro redondeado con sombra que salta
+    al aparecer, línea de luz que se abre desde el centro y texto letra a letra.
+      - decir: oscuro, línea blanca.
+      - susurro: morado, más pequeño, con etiqueta y cola de puntos (como un pensamiento).
+      - grito: rojo, letra grande, sacudida y trazos de énfasis que salen del bocadillo.
+    Cada jugador apila hasta 3 frases: la nueva abajo, las viejas suben y se apagan.
 ]]
 
 local MAX_DISTANCE = 25
-local screenH = select(2, guiGetScreenSize())
-local baseScale = math.max(0.8, math.min(1.2, screenH / 900))
+local TYPING_DISTANCE = 15
+local MAX_STACK = 3
+local screenW, screenH = guiGetScreenSize()
+local S = math.max(0.8, math.min(1.3, screenH / 900))
+local function px(v) return v * S end
 
-addEventHandler("onClientResourceStart", resourceRoot, function()
-    bindKey("b", "down", "chatbox", "b")
-    bindKey("y", "down", "chatbox", "susurrar")
-    bindKey("u", "down", "chatbox", "gritar")
-end)
+local function font(file, size, fallback)
+    return dxCreateFont("fonts/" .. file, math.floor(size * S + 0.5), false, "antialiased") or fallback
+end
+local F_SAY = font("kenney_future_narrow.ttf", 11, "default-bold")
+local F_WHISPER = font("kenney_future_narrow.ttf", 9.5, "default")
+local F_SHOUT = font("kenney_future.ttf", 12, "default-bold")
+local F_LABEL = font("kenney_future.ttf", 6.5, "default-bold")
 
-addEventHandler("onClientResourceStop", resourceRoot, function()
-    unbindKey("b", "down", "chatbox")
-    unbindKey("y", "down", "chatbox")
-    unbindKey("u", "down", "chatbox")
-end)
-
--- Estilo por tipo: fondo, borde, texto, fuente, escala
+-- Estilo por tipo
 local STYLES = {
-    say     = { bg = { 20, 22, 28, 215 },  edge = { 255, 255, 255 }, text = { 255, 255, 255 }, font = "default-bold", scale = 1.0 },
-    whisper = { bg = { 40, 34, 64, 205 },  edge = { 180, 160, 255 }, text = { 215, 205, 255 }, font = "default",      scale = 0.85 },
-    shout   = { bg = { 120, 18, 22, 225 }, edge = { 255, 110, 90 },  text = { 255, 255, 255 }, font = "default-bold", scale = 1.25 },
+    say     = { bg = { 12, 14, 20, 228 }, accent = { 236, 239, 245 }, text = { 245, 247, 250 }, font = F_SAY,     maxW = 230, cps = 70 },
+    whisper = { bg = { 34, 26, 58, 218 }, accent = { 178, 152, 255 }, text = { 224, 214, 255 }, font = F_WHISPER, maxW = 200, cps = 55, label = "SUSURRO", tail = "dots" },
+    shout   = { bg = { 82, 12, 20, 235 }, accent = { 255, 96, 82 },   text = { 255, 255, 255 }, font = F_SHOUT,   maxW = 260, cps = 90, shake = true, burst = true, tail = "spike" },
 }
-local FADE_MS = 300
-local bubbles = {}   -- [player] = { text, style, start, duration }
+local LABEL_H = dxGetFontHeight(1, F_LABEL)
 
-addEvent("rp:chat:bubble", true)
-addEventHandler("rp:chat:bubble", resourceRoot, function(player, text, kind)
-    if not isElement(player) or not STYLES[kind] then return end
-    bubbles[player] = { text = text, style = STYLES[kind], start = getTickCount(), duration = math.max(3500, math.min(9000, #text * 90)) }
-end)
+local stacks = {}    -- [player] = { entrada más nueva primero }
+local typing = {}    -- [player] = tick en que empezó a escribir
+local typingTimer    -- comprueba si el jugador local escribe (ver final del archivo)
 
-addEventHandler("onClientPlayerQuit", root, function() bubbles[source] = nil end)
+----------------------------------------------------------------
+-- Utilidades de dibujo (las mismas de rp_notify)
+----------------------------------------------------------------
+local function clamp(v, a, b) return v < a and a or (v > b and b or v) end
+local function easeOut(t) t = clamp(t, 0, 1); return 1 - (1 - t) ^ 3 end
+local function easeIn(t) t = clamp(t, 0, 1); return t * t * t end
+local function easeOutBack(t)
+    t = clamp(t, 0, 1)
+    local c = 1.70158
+    return 1 + (c + 1) * (t - 1) ^ 3 + c * (t - 1) ^ 2
+end
+local function rgba(c, a) return tocolor(c[1], c[2], c[3], clamp(a, 0, 255)) end
 
--- Parte el texto en lineas de ancho maximo maxW
-local function wrap(text, scale, font, maxW)
+local function fan(cx, cy, r, a0, a1, color, seg)
+    seg = seg or 8
+    local v = { { cx, cy, color } }
+    for i = 0, seg do
+        local a = math.rad(a0 + (a1 - a0) * i / seg)
+        v[#v + 1] = { cx + math.cos(a) * r, cy + math.sin(a) * r, color }
+    end
+    dxDrawPrimitive("trianglefan", false, unpack(v))
+end
+
+local function roundRect(x, y, w, h, r, color)
+    r = math.min(r, w / 2, h / 2)
+    dxDrawRectangle(x + r, y, w - 2 * r, h, color)
+    dxDrawRectangle(x, y + r, r, h - 2 * r, color)
+    dxDrawRectangle(x + w - r, y + r, r, h - 2 * r, color)
+    fan(x + r, y + r, r, 180, 270, color)
+    fan(x + w - r, y + r, r, 270, 360, color)
+    fan(x + w - r, y + h - r, r, 0, 90, color)
+    fan(x + r, y + h - r, r, 90, 180, color)
+end
+
+-- Línea horizontal con degradado: sólida en el centro, transparente en los extremos
+local function lightLine(cx, y, half, thick, c, a)
+    if half < 1 then return end
+    local solid, none = rgba(c, 255 * a), rgba(c, 0)
+    dxDrawPrimitive("trianglestrip", false, { cx - half, y, none }, { cx, y, solid }, { cx - half, y + thick, none }, { cx, y + thick, solid })
+    dxDrawPrimitive("trianglestrip", false, { cx, y, solid }, { cx + half, y, none }, { cx, y + thick, solid }, { cx + half, y + thick, none })
+end
+
+-- Parte el texto en líneas (al recibirlo, nunca por frame)
+local function wrap(text, fnt, maxW)
     local lines, line = {}, ""
     for word in text:gmatch("%S+") do
         local try = line == "" and word or (line .. " " .. word)
-        if line ~= "" and dxGetTextWidth(try, scale, font) > maxW then
+        if line ~= "" and dxGetTextWidth(try, 1, fnt) > maxW then
             lines[#lines + 1] = line
             line = word
         else
@@ -54,10 +98,158 @@ local function wrap(text, scale, font, maxW)
     return lines
 end
 
-local function draw(player, b, cx, cy, cz, myDim, myInt, now)
+----------------------------------------------------------------
+-- Teclas
+----------------------------------------------------------------
+addEventHandler("onClientResourceStart", resourceRoot, function()
+    -- "chatbox" abre la caja de chat con el comando escrito; MTA no dispara estos binds con el chat abierto
+    bindKey("b", "down", "chatbox", "b")
+    bindKey("y", "down", "chatbox", "susurrar")
+    bindKey("u", "down", "chatbox", "gritar")
+    -- Quien ya estaba escribiendo cuando arrancó el recurso
+    for _, p in ipairs(getElementsByType("player")) do
+        if p ~= localPlayer and getElementData(p, "rp:typing") then typing[p] = getTickCount() end
+    end
+end)
+
+addEventHandler("onClientResourceStop", resourceRoot, function()
+    unbindKey("b", "down", "chatbox")
+    unbindKey("y", "down", "chatbox")
+    unbindKey("u", "down", "chatbox")
+    if isTimer(typingTimer) then killTimer(typingTimer) end
+    if getElementData(localPlayer, "rp:typing") then setElementData(localPlayer, "rp:typing", false) end
+end)
+
+----------------------------------------------------------------
+-- Burbujas
+----------------------------------------------------------------
+addEvent("rp:chat:bubble", true)
+addEventHandler("rp:chat:bubble", resourceRoot, function(player, text, kind)
+    local st = STYLES[kind]
+    if not isElement(player) or not st or type(text) ~= "string" then return end
+    local lines = wrap(text, st.font, px(st.maxW))
+    local lh = dxGetFontHeight(1, st.font)
+    local widths, w = {}, 0
+    for n, l in ipairs(lines) do
+        widths[n] = dxGetTextWidth(l, 1, st.font)
+        w = math.max(w, widths[n])
+    end
+    if st.label then w = math.max(w, dxGetTextWidth(st.label, 1, F_LABEL)) end
+    local top = px(8) + (st.label and (LABEL_H + px(2)) or 0)
+
+    local list = stacks[player] or {}
+    stacks[player] = list
+    table.insert(list, 1, {
+        st = st, lines = lines, widths = widths, lh = lh, top = top,
+        w = w + px(24), h = top + #lines * lh + px(8),
+        start = getTickCount(), duration = math.max(3500, math.min(9000, #text * 90)),
+        off = nil,
+    })
+    -- Las que sobran se van (las más viejas)
+    for i = #list, MAX_STACK + 1, -1 do table.remove(list, i) end
+    typing[player] = nil   -- acaba de hablar: fuera el "escribiendo..."
+end)
+
+addEventHandler("onClientPlayerQuit", root, function()
+    stacks[source], typing[source] = nil, nil
+end)
+
+local function drawBubble(b, sx, baseY, sc, alpha, now, older)
+    local st = b.st
     local age = now - b.start
-    if age > b.duration then bubbles[player] = nil return end
-    if isPedDead(player) or getElementDimension(player) ~= myDim or getElementInterior(player) ~= myInt then return end
+    local outK = easeIn((age - (b.duration - 300)) / 300)
+    local pop = easeOutBack(age / 300)
+    local k = sc * (0.6 + 0.4 * pop) * (older and 0.88 or 1)
+    local a = alpha * clamp(age / 120, 0, 1) * (1 - outK) * (older and 0.6 or 1)
+    if a <= 0.01 then return end
+
+    local w, h = b.w * k, b.h * k
+    local x = sx - w / 2
+    if st.shake and age < 420 then x = x + math.sin(age * 0.11) * px(5) * k * (1 - age / 420) end
+    local y = baseY - h
+    local r = px(10) * k
+    local bg = rgba(st.bg, st.bg[4] * a)
+
+    -- Sombra, cuerpo y cola
+    roundRect(x + px(2) * k, y + px(3) * k, w, h, r, tocolor(0, 0, 0, 70 * a))
+    roundRect(x, y, w, h, r, bg)
+    local cx = x + w / 2
+    if not older then
+        if st.tail == "dots" then
+            fan(cx - px(3) * k, y + h + px(4) * k, px(3) * k, 0, 360, bg, 12)
+            fan(cx - px(7) * k, y + h + px(10) * k, px(2) * k, 0, 360, bg, 10)
+        elseif st.tail == "spike" then
+            dxDrawPrimitive("trianglelist", false, { cx - px(10) * k, y + h - 1, bg }, { cx + px(2) * k, y + h - 1, bg }, { cx - px(9) * k, y + h + px(14) * k, bg })
+        else
+            dxDrawPrimitive("trianglelist", false, { cx - px(8) * k, y + h - 1, bg }, { cx + px(4) * k, y + h - 1, bg }, { cx - px(3) * k, y + h + px(9) * k, bg })
+        end
+    end
+
+    -- Línea de luz arriba que se abre desde el centro
+    lightLine(cx, y + px(1) * k, (w / 2 - r * 0.5) * easeOut((age - 60) / 380), math.max(1, px(1.5) * k), st.accent, a)
+
+    -- Grito: trazos de énfasis que salen del bocadillo
+    if st.burst and age < 520 and not older then
+        local e = easeOut(age / 520)
+        local col = rgba(st.accent, 230 * (1 - e) * a)
+        local rx, ry = w / 2 + px(6) * k, h / 2 + px(6) * k
+        local cy = y + h / 2
+        for i = 0, 7 do
+            local ang = math.rad(i * 45 + 22.5)
+            local c, s = math.cos(ang), math.sin(ang)
+            local d0, d1 = 1 + 0.15 * e, 1 + 0.15 * e + 0.25
+            dxDrawLine(cx + c * rx * d0, cy + s * ry * d0, cx + c * rx * d1, cy + s * ry * d1, col, math.max(1.5, px(2) * k))
+        end
+    end
+
+    -- Etiqueta (susurro) y texto letra a letra
+    if st.label then
+        dxDrawText(st.label, x, y + px(7) * k, x + w, 0, rgba(st.accent, 230 * a), k, F_LABEL, "center", "top")
+    end
+    local left = math.floor((age - 80) * st.cps / 1000)
+    if older then left = math.huge end
+    local textCol = rgba(st.text, 255 * a)
+    for n, line in ipairs(b.lines) do
+        if left <= 0 then break end
+        local len = utf8.len(line) or #line
+        local shown = left >= len and line or utf8.sub(line, 1, left)
+        left = left - len - 1
+        local lx = cx - b.widths[n] * k / 2
+        local ly = y + b.top * k + (n - 1) * b.lh * k
+        dxDrawText(shown, lx + 1, ly + 1, 0, 0, tocolor(0, 0, 0, 150 * a), k, st.font, "left", "top")
+        dxDrawText(shown, lx, ly, 0, 0, textCol, k, st.font, "left", "top")
+    end
+    return h
+end
+
+-- "Escribiendo...": píldora con tres puntos que saltan
+local function drawTyping(sx, baseY, sc, alpha, now, since)
+    local a = alpha * easeOut((now - since) / 200)
+    local w, h = px(44) * sc, px(20) * sc
+    local x, y = sx - w / 2, baseY - h
+    roundRect(x + px(2) * sc, y + px(3) * sc, w, h, h / 2, tocolor(0, 0, 0, 60 * a))
+    roundRect(x, y, w, h, h / 2, tocolor(12, 14, 20, 215 * a))
+    for i = 0, 2 do
+        local ph = (now / 160) - i * 0.9
+        local jump = math.max(0, math.sin(ph)) * px(3.5) * sc
+        local brightness = 150 + 105 * math.max(0, math.sin(ph))
+        fan(sx + (i - 1) * px(10) * sc, y + h / 2 - jump, px(2.6) * sc, 0, 360, tocolor(brightness, brightness, brightness + 8, 255 * a), 10)
+    end
+    return h
+end
+
+local lastFrame = getTickCount()
+local function drawPlayer(player, list, since, cx, cy, cz, myDim, myInt, now, dt)
+    -- Limpia las caducadas
+    if list then
+        for i = #list, 1, -1 do
+            if now - list[i].start > list[i].duration then table.remove(list, i) end
+        end
+        if #list == 0 then stacks[player], list = nil, nil end
+    end
+    if not list and not since then return end
+    if not isElementStreamedIn(player) or isPedDead(player)
+        or getElementDimension(player) ~= myDim or getElementInterior(player) ~= myInt then return end
 
     local hx, hy, hz = getPedBonePosition(player, 8)
     local dist = getDistanceBetweenPoints3D(cx, cy, cz, hx, hy, hz)
@@ -67,41 +259,60 @@ local function draw(player, b, cx, cy, cz, myDim, myInt, now)
     local sx, sy = getScreenFromWorldPosition(hx, hy, hz + lift)
     if not sx then return end
 
-    local fade = math.min(1, age / FADE_MS, (b.duration - age) / FADE_MS)
-    local alpha = fade * (1 - math.max(0, (dist - MAX_DISTANCE * 0.7) / (MAX_DISTANCE * 0.3)))
-    local st = b.style
-    local scale = baseScale * st.scale * math.max(0.75, 1.15 - dist / MAX_DISTANCE)
-    local lines = wrap(b.text, scale, st.font, 230 * scale)
-    local lh = dxGetFontHeight(scale, st.font)
-    local w = 0
-    for _, l in ipairs(lines) do w = math.max(w, dxGetTextWidth(l, scale, st.font)) end
-    w = w + 16 * scale
-    local h = #lines * lh + 8 * scale
-    local x, y = sx - w / 2, sy - h - 6   -- 6 px de aire para la punta
+    local alpha = 1 - math.max(0, (dist - MAX_DISTANCE * 0.7) / (MAX_DISTANCE * 0.3))
+    local sc = math.max(0.7, 1.15 - dist / MAX_DISTANCE)
+    local y = sy
 
-    dxDrawRectangle(x - 1, y - 1, w + 2, h + 2, tocolor(st.edge[1], st.edge[2], st.edge[3], 110 * alpha))
-    dxDrawRectangle(x, y, w, h, tocolor(st.bg[1], st.bg[2], st.bg[3], st.bg[4] * alpha))
-    dxDrawRectangle(x, y, w, 2, tocolor(st.edge[1], st.edge[2], st.edge[3], 230 * alpha))
-    -- Punta de la burbuja
-    dxDrawRectangle(sx - 3, y + h, 6, 3, tocolor(st.bg[1], st.bg[2], st.bg[3], st.bg[4] * alpha))
-    dxDrawRectangle(sx - 1, y + h + 3, 2, 2, tocolor(st.bg[1], st.bg[2], st.bg[3], st.bg[4] * alpha))
-    for i, l in ipairs(lines) do
-        local ly = y + 4 * scale + (i - 1) * lh
-        dxDrawText(l, x + 1, ly + 1, x + w + 1, ly + lh + 1, tocolor(0, 0, 0, 180 * alpha), scale, st.font, "center", "top")
-        dxDrawText(l, x, ly, x + w, ly + lh, tocolor(st.text[1], st.text[2], st.text[3], 255 * alpha), scale, st.font, "center", "top")
+    if since and dist <= TYPING_DISTANCE then
+        y = y - drawTyping(sx, y, sc, alpha, now, since) - px(6) * sc
+    end
+    if list then
+        -- Cada frase sube suave a su sitio cuando llega una nueva debajo
+        local target = 0
+        for i, b in ipairs(list) do
+            b.off = b.off and (b.off + (target - b.off) * clamp(dt / 110, 0, 1)) or target
+            local h = drawBubble(b, sx, y - b.off, sc, alpha, now, i > 1) or 0
+            target = target + b.h * sc * (i > 1 and 0.88 or 1) + px(14) * sc
+        end
     end
 end
 
 addEventHandler("onClientRender", root, function()
-    if not next(bubbles) or getElementData(localPlayer, "rp:hudHidden") then return end
+    local now = getTickCount()
+    local dt = math.min(now - lastFrame, 100)
+    lastFrame = now
+    if (not next(stacks) and not next(typing)) or getElementData(localPlayer, "rp:hudHidden") then return end
     local cx, cy, cz = getCameraMatrix()
     local myDim, myInt = getElementDimension(localPlayer), getElementInterior(localPlayer)
-    local now = getTickCount()
-    for player, b in pairs(bubbles) do
-        if isElement(player) and isElementStreamedIn(player) then
-            draw(player, b, cx, cy, cz, myDim, myInt, now)
-        elseif not isElement(player) or now - b.start > b.duration then
-            bubbles[player] = nil
+
+    for player in pairs(typing) do
+        if not isElement(player) then typing[player] = nil end
+    end
+    for player, list in pairs(stacks) do
+        if isElement(player) then
+            drawPlayer(player, list, typing[player], cx, cy, cz, myDim, myInt, now, dt)
+        else
+            stacks[player] = nil
         end
     end
+    for player, since in pairs(typing) do
+        if not stacks[player] then drawPlayer(player, nil, since, cx, cy, cz, myDim, myInt, now, dt) end
+    end
+end)
+
+----------------------------------------------------------------
+-- Indicador "escribiendo..." (se sincroniza solo al cambiar)
+----------------------------------------------------------------
+local amTyping = false
+typingTimer = setTimer(function()
+    local now = isChatBoxInputActive() and getElementData(localPlayer, "rp:characterId") and true or false
+    if now ~= amTyping then
+        amTyping = now
+        setElementData(localPlayer, "rp:typing", now)
+    end
+end, 250, 0)
+
+addEventHandler("onClientElementDataChange", root, function(key, _, new)
+    if key ~= "rp:typing" or source == localPlayer or getElementType(source) ~= "player" then return end
+    typing[source] = new and getTickCount() or nil
 end)

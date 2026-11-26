@@ -7,11 +7,13 @@
         U  /gritar texto          grito (40 m) con animacion          (alias /g)
         B  /b texto               OOC local (15 m), sin burbuja
         /me accion  /do descripcion   rol de accion y entorno (15 m)
-        /ame accion               barra roja sobre la cabeza (vive en rp_nametags)
+        /ame accion               etiqueta sobre la cabeza (vive en rp_nametags)
         /pm <id> texto            mensaje privado OOC (queda en chat_pm_log)
     Admin (nivel 1+):
         /pmlog <id o nombre> [cantidad]   historial de PMs de un jugador
 
+    Las lineas del chat llevan color por partes (nombre, verbo, texto) y se apagan con la
+    distancia. Errores y usos van como aviso de rp_notify, no al chat.
     Los PMs son OOC: usar esa informacion IC es MG.
 ]]
 
@@ -20,12 +22,31 @@ local MAX_LEN, COOLDOWN_MS = 150, 500
 local lastUse = {}      -- [player] = tick
 local pmWarned = {}     -- [player] = true (aviso de MG, una vez por sesion)
 
+-- Paleta de las lineas del chat (misma linea visual que rp_notify y las burbujas)
+local C = {
+    name    = { 242, 244, 248 }, verb = { 142, 150, 164 }, say = { 236, 239, 245 },
+    shout   = { 255, 106, 85 },  shoutText = { 255, 232, 222 },
+    whisper = { 178, 152, 255 }, whisperText = { 222, 212, 255 },
+    ooc     = { 111, 168, 255 }, oocText = { 186, 204, 228 },
+    me      = { 255, 150, 190 }, act = { 128, 222, 168 }, actAuthor = { 98, 160, 128 },
+    pm      = { 255, 211, 90 },  pmText = { 255, 241, 194 },
+}
+
 addEvent("rp:chat:bubble", true)
 
 local function db() return exports.rp_database:getConnection() end
 local function charId(p) return exports.rp_characters:getPlayerCharacterId(p) end
-local function nameOf(p) return (getPlayerName(p):gsub("_", " ")) end
+local function nameOf(p) return (getPlayerName(p):gsub("#%x%x%x%x%x%x", ""):gsub("_", " ")) end
 local function adminLevel(p) return exports.rp_login:getPlayerAdminLevel(p) or 0 end
+local function notify(p, text, kind) exports.rp_notify:notify(p, text, kind or "warning") end
+
+-- "#RRGGBB" de un color, apagado con la distancia (1 cerca -> 0.6 en el limite)
+local function hex(c, d, range)
+    local k = (d and range) and (1 - 0.4 * math.min(1, d / range)) or 1
+    return ("#%02X%02X%02X"):format(math.floor(c[1] * k), math.floor(c[2] * k), math.floor(c[3] * k))
+end
+-- Linea con codigos de color (el texto del jugador llega sin #RRGGBB, ver clean)
+local function line(target, text) outputChatBox(text, target, 255, 255, 255, true) end
 
 -- Limpia texto: sin codigos de color #RRGGBB ni control, recorta y capitaliza
 local function clean(text)
@@ -37,7 +58,7 @@ end
 local function canSpeak(player)
     if not charId(player) then return false end
     if getElementData(player, "rp:downed") then
-        outputChatBox("No puedes hablar abatido.", player, 255, 120, 120)
+        notify(player, "No puedes hablar mientras estás abatido.", "error")
         return false
     end
     local now = getTickCount()
@@ -61,12 +82,6 @@ local function listeners(player, range)
     return out
 end
 
--- Gris cuanto mas lejos: 255 cerca -> 140 en el limite
-local function shade(d, range)
-    local v = math.floor(255 - 115 * math.min(1, d / range))
-    return v, v, v
-end
-
 local function gesture(player, block, anim, ms)
     if isPedInVehicle(player) then return end
     setPedAnimation(player, block, anim, ms, false, false, false, false)
@@ -84,7 +99,8 @@ local function say(player, text)
     local list = listeners(player, RANGE.say)
     local who = nameOf(player)
     for _, l in ipairs(list) do
-        outputChatBox(("%s dice: %s"):format(who, text), l.p, shade(l.d, RANGE.say))
+        local d, r = l.d, RANGE.say
+        line(l.p, ("%s%s %sdice: %s%s"):format(hex(C.name, d, r), who, hex(C.verb, d, r), hex(C.say, d, r), text))
     end
     bubble(list, player, text, "say")
     gesture(player, "PED", "IDLE_chat", math.min(4000, #text * 80))
@@ -92,11 +108,14 @@ end
 
 local function shout(player, text)
     text = clean(text)
-    if text == "" or not canSpeak(player) then return end
+    if text == "" then return notify(player, "Uso: /gritar <texto>  (tecla U, se oye a 40 m)", "info") end
+    if not canSpeak(player) then return end
     local list = listeners(player, RANGE.shout)
     local who = nameOf(player)
+    local body = text:gsub("[!%.]+$", "")
     for _, l in ipairs(list) do
-        outputChatBox(("%s grita: %s!"):format(who, text:gsub("[!%.]+$", "")), l.p, 255, 150 + math.floor(60 * l.d / RANGE.shout), 120)
+        local d, r = l.d, RANGE.shout
+        line(l.p, ("%s%s %sgrita: %s%s!"):format(hex(C.name, d, r), who, hex(C.shout, d, r), hex(C.shoutText, d, r), body))
     end
     bubble(list, player, text:upper(), "shout")
     gesture(player, "ON_LOOKERS", "shout_01", 2200)
@@ -107,35 +126,36 @@ local function whisper(player, targetQuery, text)
     if targetQuery then
         target = exports.rp_ids:findPlayer(targetQuery)
         if not target or target == player or not charId(target) then
-            return outputChatBox("No se encontro ese jugador.", player, 255, 120, 120)
+            return notify(player, "No se encontró ese jugador.", "error")
         end
     end
     text = clean(text)
     if text == "" then
-        return outputChatBox("Uso: /susurrar [id] <texto>  (sin id: lo oye quien este muy cerca)", player, 255, 200, 80)
+        return notify(player, "Uso: /susurrar [id] <texto>  (tecla Y; sin id lo oye quien esté muy cerca)", "info")
     end
     if not canSpeak(player) then return end
 
     local list = listeners(player, RANGE.whisper)
     local who = nameOf(player)
+    local star, nm, vb, tx = hex(C.whisper), hex(C.name), hex(C.verb), hex(C.whisperText)
     if target then
         local near = false
         for _, l in ipairs(list) do if l.p == target then near = true end end
-        if not near then return outputChatBox("Esta demasiado lejos para susurrarle.", player, 255, 120, 120) end
-        outputChatBox(("* %s te susurra: %s"):format(who, text), target, 190, 170, 255)
-        outputChatBox(("* Le susurras a %s: %s"):format(nameOf(target), text), player, 160, 140, 220)
+        if not near then return notify(player, "Está demasiado lejos para susurrarle.", "warning") end
+        line(target, ("%s* %s%s %ste susurra: %s%s"):format(star, nm, who, vb, tx, text))
+        line(player, ("%s* %sLe susurras a %s%s%s: %s%s"):format(star, vb, nm, nameOf(target), vb, tx, text))
         for _, l in ipairs(list) do
             if l.p ~= target and l.p ~= player then
-                outputChatBox(("* %s le susurra algo al oido a %s."):format(who, nameOf(target)), l.p, 200, 160, 255)
+                line(l.p, ("%s* %s%s %sle susurra algo al oído a %s%s%s."):format(star, nm, who, vb, nm, nameOf(target), vb))
             end
         end
         bubble({ { p = target }, { p = player } }, player, text, "whisper")
     else
         for _, l in ipairs(list) do
             if l.p == player then
-                outputChatBox(("* Susurras: %s"):format(text), l.p, 160, 140, 220)
+                line(l.p, ("%s* %sSusurras: %s%s"):format(star, vb, tx, text))
             else
-                outputChatBox(("* %s susurra: %s"):format(who, text), l.p, 190, 170, 255)
+                line(l.p, ("%s* %s%s %ssusurra: %s%s"):format(star, nm, who, vb, tx, text))
             end
         end
         bubble(list, player, text, "whisper")
@@ -145,10 +165,10 @@ end
 
 local function ooc(player, text)
     text = clean(text)
-    if text == "" then return outputChatBox("Uso: /b <texto>  (chat OOC local)", player, 255, 200, 80) end
+    if text == "" then return notify(player, "Uso: /b <texto>  (chat OOC local, tecla B)", "info") end
     if not canSpeak(player) then return end
     for _, l in ipairs(listeners(player, RANGE.ooc)) do
-        outputChatBox(("(( [OOC] %s: %s ))"):format(nameOf(player), text), l.p, 130, 190, 255)
+        line(l.p, ("%s(( %sOOC %s%s: %s%s %s))"):format(hex(C.verb), hex(C.ooc), hex(C.name), nameOf(player), hex(C.oocText), text, hex(C.verb)))
     end
 end
 
@@ -156,15 +176,16 @@ end
 local function emote(player, text, isDo)
     text = clean(text)
     if text == "" then
-        return outputChatBox(isDo and "Uso: /do <descripcion>  (ej: /do La puerta esta cerrada con llave.)"
-            or "Uso: /me <accion>  (ej: /me saca su billetera del bolsillo.)", player, 255, 200, 80)
+        return notify(player, isDo and "Uso: /do <descripción>  (ej: /do La puerta está cerrada con llave.)"
+            or "Uso: /me <acción>  (ej: /me saca su billetera del bolsillo.)", "info")
     end
     if not canSpeak(player) then return end
     for _, l in ipairs(listeners(player, RANGE.say)) do
+        local d, r = l.d, RANGE.say
         if isDo then
-            outputChatBox(("* %s (( %s ))"):format(text, nameOf(player)), l.p, 120, 210, 160)
+            line(l.p, ("%s* %s %s(( %s ))"):format(hex(C.act, d, r), text, hex(C.actAuthor, d, r), nameOf(player)))
         else
-            outputChatBox(("* %s %s"):format(nameOf(player), (text:gsub("^%u", string.lower))), l.p, 255, 150 + math.floor(60 * l.d / RANGE.say), 190)
+            line(l.p, ("%s* %s%s %s%s"):format(hex(C.me, d, r), hex(C.name, d, r), nameOf(player), hex(C.me, d, r), (text:gsub("^%u", string.lower))))
         end
     end
 end
@@ -196,27 +217,30 @@ addCommandHandler("pm", function(player, _, id, ...)
     if not charId(player) then return end
     local text = clean(table.concat({ ... }, " "))
     if not id or text == "" then
-        return outputChatBox("Uso: /pm <id> <mensaje>  (OOC: usar esta informacion IC es MG)", player, 255, 200, 80)
+        return notify(player, "Uso: /pm <id> <mensaje>  (OOC: usar esta información en rol es MG)", "info")
     end
     local target = exports.rp_ids:getPlayerFromId(id)
     if not target or not charId(target) then
-        return outputChatBox("No hay ningun jugador con ese ID.", player, 255, 120, 120)
+        return notify(player, "No hay ningún jugador con ese ID.", "error")
     end
-    if target == player then return outputChatBox("No puedes enviarte un PM a ti mismo.", player, 255, 120, 120) end
+    if target == player then return notify(player, "No puedes enviarte un PM a ti mismo.", "warning") end
     local now = getTickCount()
     if lastUse[player] and now - lastUse[player] < COOLDOWN_MS then return end
     lastUse[player] = now
 
     local sid, tid = exports.rp_ids:getPlayerId(player), exports.rp_ids:getPlayerId(target)
-    outputChatBox(("[PM de %s (%d)] %s"):format(nameOf(player), sid, text), target, 255, 220, 90)
-    outputChatBox(("[PM para %s (%d)] %s"):format(nameOf(target), tid, text), player, 255, 190, 60)
+    local tag, vb, nm, tx = hex(C.pm), hex(C.verb), hex(C.name), hex(C.pmText)
+    line(target, ("%s[PM] %sde %s%s (%d)%s: %s%s"):format(tag, vb, nm, nameOf(player), sid, vb, tx, text))
+    line(player, ("%s[PM] %spara %s%s (%d)%s: %s%s"):format(tag, vb, nm, nameOf(target), tid, vb, tx, text))
+    notify(target, ("Nuevo PM de %s (%d). Lo tienes en el chat."):format(nameOf(player), sid), "info")
     for _, p in ipairs({ player, target }) do
         if not pmWarned[p] then
             pmWarned[p] = true
-            outputChatBox("Los PM son OOC: usar su informacion en rol (IC) es MG y se sanciona.", p, 255, 90, 90)
+            notify(p, "Los PM son OOC: usar su información en rol es MG y se sanciona.", "warning")
         end
     end
 
+    if not exports.rp_database:isReady() then return end   -- el PM ya se entregó; solo no queda en el historial
     dbExec(db(), "INSERT INTO chat_pm_log (sender_char, sender_name, target_char, target_name, message) VALUES (?, ?, ?, ?, ?)",
         charId(player), getPlayerName(player), charId(target), getPlayerName(target), text)
 end)
@@ -224,7 +248,7 @@ end)
 -- /pmlog <id o nombre> [cantidad]: PMs enviados o recibidos por un personaje (admin 1+)
 addCommandHandler("pmlog", function(player, _, query, count)
     if adminLevel(player) < 1 then return end
-    if not query then return outputChatBox("Uso: /pmlog <id o nombre> [cantidad 1-50]", player, 255, 200, 80) end
+    if not query then return notify(player, "Uso: /pmlog <id o nombre> [cantidad 1-50]", "info") end
     local target = exports.rp_ids:findPlayer(query)
     local name = target and getPlayerName(target) or tostring(query):gsub(" ", "_")
     local limit = math.max(1, math.min(50, tonumber(count) or 15))
@@ -232,7 +256,7 @@ addCommandHandler("pmlog", function(player, _, query, count)
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0)
         if not isElement(player) then return end
-        if not rows then return outputChatBox("Error consultando el historial.", player, 255, 120, 120) end
+        if not rows then return notify(player, "Error consultando el historial de PMs.", "error") end
         outputChatBox(("===== PMs de %s (ultimos %d) ====="):format((name:gsub("_", " ")), #rows), player, 255, 220, 90)
         if #rows == 0 then outputChatBox("Sin mensajes.", player, 200, 200, 200) end
         for i = #rows, 1, -1 do   -- del mas viejo al mas nuevo
@@ -246,5 +270,11 @@ addCommandHandler("pmlog", function(player, _, query, count)
 end)
 
 addEventHandler("onPlayerQuit", root, function()
+    lastUse[source], pmWarned[source] = nil, nil
+end)
+
+-- Al cambiar de personaje vuelve a avisar de que los PM son OOC
+addEvent("rp:onCharacterLogout", false)
+addEventHandler("rp:onCharacterLogout", root, function()
     lastUse[source], pmWarned[source] = nil, nil
 end)

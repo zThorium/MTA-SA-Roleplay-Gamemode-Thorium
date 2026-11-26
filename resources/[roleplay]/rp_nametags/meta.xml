@@ -1,11 +1,16 @@
 <meta>
-    <info author="Thorium" name="RP Nametags" description="Nombre e ID sobre la cabeza de los jugadores y barra /ame" version="1.1.0" type="script" />
+    <info author="Thorium" name="RP Nametags" description="Nombre e ID sobre la cabeza de los jugadores, barras de vida y chaleco, y etiqueta /ame" version="2.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_ids" />
+    <include resource="rp_notify" />
 
     <script src="s_ame.lua" type="server" />
-    <script src="c_nametags.lua" type="client" />
+    <script src="c_nametags.lua" type="client" cache="false" />
+
+    <!-- Fuentes Kenney Future (CC0), desde assets/kenney/interfaz/fuentes (ver CREDITOS.md) -->
+    <file src="fonts/kenney_future.ttf" />
+    <file src="fonts/kenney_future_narrow.ttf" />
 
     <export function="setAme" type="server" />
 </meta>

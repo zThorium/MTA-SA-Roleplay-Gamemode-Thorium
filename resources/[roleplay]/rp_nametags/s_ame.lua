@@ -1,6 +1,6 @@
 --[[
     rp_nametags / s_ame.lua
-    /ame [accion]: barra roja sobre la cabeza con la accion del personaje.
+    /ame [accion]: etiqueta sobre la cabeza con la accion del personaje (la dibuja c_nametags).
     Se guarda en element data "rp:ame" (se sincroniza a todos) y se borra sola.
 
     Export (servidor):
@@ -34,7 +34,7 @@ addCommandHandler("ame", function(player, _, ...)
 
     local text = table.concat({ ... }, " ")
     if text:gsub("%s", "") == "" then
-        return outputChatBox("Uso: /ame [accion]  (ej: /ame mira su reloj)", player, 255, 200, 80)
+        return exports.rp_notify:notify(player, "Uso: /ame [acción]  (ej: /ame mira su reloj)", "info")
     end
     setAme(player, text)
 end)
