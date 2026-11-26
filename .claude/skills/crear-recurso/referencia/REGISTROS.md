@@ -64,11 +64,11 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
 - Jugador / sesión: `rp:accountId`, `rp:characterId`, `rp:loaded`, `rp:body`, `rp:head`, `rp:needs`,
   `rp:hudHidden` (no lo toques: usa `setHudSuppressed`), `rp:downed`, `rp:carried`, `rp:cuffed`, `rp:tased`,
   `rp:faction`, `rp:policeDuty`, `rp:job`, `rp:jobShift`, `rp:race`, `rp:drivingTest`, `rp:packWeight`,
-  `rp:meth`, `rp:respect`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
-- Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:perf`, `rp:radio`, `rp:rides:ai`.
+  `rp:meth`, `rp:respect`, `rp:fireDuty`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
+- Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`.
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
 - Marcadores: `rp:marker` (estilo de `rp_markers`; ponlo solo con `setMarkerStyle`).
-  `rp:robberyStore`, `rp:restaurantClerk`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
+  `rp:robberyStore`, `rp:fireVictim`, `rp:restaurantClerk`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
 - Root: `rp:world` (hora y clima), `rp:events`.
 - Blips: `rp:radarEdge` (el blip se queda en el borde del minimapa).
 
@@ -82,7 +82,7 @@ no aparece. Iconos con PNG propio en `rp_hud/images/blips/`:
 | 10 | Burger Shot (`rp_restaurants`) |
 | 14 | Cluckin' Bell (`rp_restaurants`) |
 | 17 | tiendas 24/7 (`rp_robbery`) |
-| 22 | emergencias (`rp_emergency`) |
+| 22 | emergencias (`rp_emergency`), estación de bomberos (`rp_firefighters`) |
 | 29 | Well Stacked Pizza (`rp_restaurants`) |
 | 27 | talleres (`rp_vehicles`) |
 | 36 | autoescuela, agencia, sedes de trabajo, Vroom (`rp_driving`, `rp_agency`, `rp_jobs`, `rp_rides`) |
@@ -121,7 +121,7 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
-→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria
+→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters
 ```
 
 Un recurso nuevo va **al final** salvo que otro existente dependa de él. Aun así, declara las
@@ -131,7 +131,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 
 `rp:admin:`, `rp:adminpanel:`, `rp:agency:`, `rp:ammu:`, `rp:anims:`, `rp:atm:`, `rp:auth:`, `rp:bank:`,
 `rp:bikes:`, `rp:bp:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
-`rp:dealers:`, `rp:driving:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
+`rp:dealers:`, `rp:driving:`, `rp:firefighters:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
 `rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
 `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
 `rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,

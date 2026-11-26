@@ -82,6 +82,11 @@ HELP.KEYS = {
         { key = "\226\134\147", text = "Balizas" },
         { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas). En Vroom alterna app y mapa" },
     } },
+    { group = "Bomberos", items = {
+        { key = "E",   text = "En la estacion: vestuario (entrar o salir de servicio) y garaje (autobomba). En una emergencia: cargar a un civil y dejarlo en la zona segura" },
+        { key = "Clic izq.", text = "Con el extintor en la mano: apagar el foco al que apuntas" },
+        { key = "Clic izq. / Ctrl", text = "En la autobomba: disparar el canon de agua hacia donde mira la camara" },
+    } },
     { group = "Staff", items = {
         { key = "F10", text = "Panel de administracion (solo administradores)" },
         { key = "F9", text = "Gestor de recursos (solo super admin)" },
