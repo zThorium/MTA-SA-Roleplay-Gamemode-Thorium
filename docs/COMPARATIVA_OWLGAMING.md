@@ -91,7 +91,7 @@ de 400 líneas, el estado se busca por texto, todo en inglés, sin animación y 
 
 **Lo que se hizo en Thorium** (`rp_hud/c_iconbar.lua`, rama `feat/hud-iconos-clicables`):
 
-- **Fichas a la izquierda del dinero**, con el estilo elegido: cuadro negro redondeado con muesca arriba, nombre en mayúsculas e icono debajo.
+- **Fichas a la izquierda del dinero**, con el estilo elegido: cuadro negro redondeado de 30 px con muesca arriba e icono, como los de OwlGaming; el nombre sale en la tarjeta (`SHOW_LABEL = true` lo pone dentro de la ficha).
 - **Accesos rápidos** (fila de arriba): facción (F3, solo si tienes), inventario (I), teléfono (P), ayuda (F1) y
   ocultar HUD (F7). Estados en rojo que laten: **esposado** y **abatido**.
 - **Controles del vehículo** (segunda fila, solo en un vehículo, a la izquierda del arma, las estrellas y el nivel): motor (J), freno de mano (X), cerradura (L, el candado

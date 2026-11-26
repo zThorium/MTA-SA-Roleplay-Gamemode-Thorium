@@ -1,7 +1,7 @@
 --[[
     rp_hud / c_iconbar.lua
     Fichas clicables a la izquierda del dinero (idea del HUD de OwlGaming; codigo e iconos propios en SVG).
-    Cada ficha: cuadro negro redondeado con una muesca arriba, el nombre en mayusculas y el icono debajo.
+    Cada ficha: cuadro negro pequeno con una muesca arriba y el icono (el nombre, en la tarjeta).
       - Fila de arriba: accesos rapidos del personaje (faccion, inventario, telefono, ayuda, ocultar HUD)
         y estados que te limitan, en rojo (esposado, abatido).
       - Fila de abajo, solo en un vehiculo: motor, freno de mano, cerradura, cinturon, balizas y radio.
@@ -18,7 +18,7 @@
 local screenW, screenH = guiGetScreenSize()
 local s = math.max(0.9, math.min(1.3, screenH / 900))
 local MARGIN = math.floor(22 * s)
-local GAP = math.floor(6 * s)         -- separacion entre fichas
+local GAP = math.floor(4 * s)         -- separacion entre fichas
 
 addEvent("rp:hud:action", false)
 
@@ -196,11 +196,14 @@ local VEHICLE_BUTTONS = {
 ----------------------------------------------------------------
 -- Dibujo: fichas negras con muesca arriba, nombre en mayusculas y el icono debajo
 ----------------------------------------------------------------
-local TW = math.floor(56 * s)          -- ancho de la ficha
-local TB = math.floor(54 * s)          -- alto del cuerpo
-local NOTCH = math.floor(7 * s)        -- alto de la muesca de arriba
-local TH = TB + NOTCH                  -- alto total
-local ROW_GAP = math.floor(8 * s)
+-- Fichas pequenas, como las de OwlGaming: solo el icono; el nombre sale en la tarjeta al pasar el raton.
+-- Las medidas siguen la proporcion de la silueta SVG (56 x 61, muesca de 7,5).
+local TW = math.floor(30 * s)          -- ancho de la ficha
+local TH = math.floor(TW * 61 / 56)    -- alto total
+local NOTCH = math.floor(TH * 7.5 / 61 + 0.5)  -- alto de la muesca de arriba
+local TB = TH - NOTCH                  -- alto del cuerpo
+local ROW_GAP = math.floor(5 * s)
+local SHOW_LABEL = false               -- true = nombre en mayusculas dentro de la ficha (fichas grandes)
 
 -- Silueta de la ficha (blanca; se tine al dibujar): cuerpo redondeado y muesca centrada arriba
 local TILE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="112" height="122" viewBox="0 0 56 61">'
@@ -238,7 +241,7 @@ local function drawButton(b, st, x, y, now, cursor, mx, my)
     local h = hover[b.id]
     local p = pop[b.id] and (now - pop[b.id]) / 260 or 1
     local press = p < 1 and (1 - 0.08 * math.sin(p * math.pi)) or 1
-    local k = (1 + 0.06 * h) * press
+    local k = (1 + 0.15 * h) * press
     local w, hh = TW * k, TH * k
     local dx, dy = x + (TW - w) / 2, y + (TH - hh) / 2
     local pulse = alert and (0.55 + 0.45 * math.sin(now / 140)) or 1
@@ -263,29 +266,32 @@ local function drawButton(b, st, x, y, now, cursor, mx, my)
 
     -- Nombre arriba (se encoge si no cabe) e icono debajo
     local textCol = off and tocolor(150, 156, 166, 170) or tocolor(255, 255, 255, 255)
-    local label = tostring(b.label or "")
-    local f = font()
-    local scale = k
-    local tw = dxGetTextWidth(label, scale, f)
-    if tw > w - 6 * s then scale = scale * (w - 6 * s) / tw end
     local bodyY = dy + NOTCH * k
-    local labelH = dxGetFontHeight(scale, f)
-    dxDrawText(label, dx, bodyY + 3 * s, dx + w, bodyY + 3 * s + labelH, textCol, scale, f, "center", "top")
+    local labelH = 0
+    if SHOW_LABEL then
+        local label = tostring(b.label or "")
+        local f = font()
+        local scale = k
+        local tw = dxGetTextWidth(label, scale, f)
+        if tw > w - 6 * s then scale = scale * (w - 6 * s) / tw end
+        labelH = dxGetFontHeight(scale, f) + 4 * s
+        dxDrawText(label, dx, bodyY + 3 * s, dx + w, bodyY + 3 * s + labelH, textCol, scale, f, "center", "top")
+    end
 
     local tex = icon(value(b.icon, b.vehicle))
     if tex then
-        local is = math.min(w * 0.62, TB * k - labelH - 9 * s)
+        local is = math.min(w * 0.68, TB * k - labelH - 6 * s)
         local tint
         if off then tint = tocolor(150, 156, 166, 150)
         elseif b.kind == "toggle" then tint = tocolor(color[1], color[2], color[3], 255)
         else tint = tocolor(255, 255, 255, 255) end
-        dxDrawImage(dx + (w - is) / 2, bodyY + labelH + 4 * s + ((TB * k - labelH - 6 * s) - is) / 2, is, is, tex, 0, 0, 0, tint)
+        dxDrawImage(dx + (w - is) / 2, bodyY + labelH + ((TB * k - labelH) - is) / 2, is, is, tex, 0, 0, 0, tint)
     end
 
     -- Con el cursor visible: la tecla de cada accion en la esquina
     local key = value(b.key)
     if cursor and key and b.kind ~= "status" then
-        local ks = math.floor(18 * s)
+        local ks = math.floor(14 * s)
         drawKey(key, dx + w - ks * 0.7, dy + hh - ks * 0.7, ks, 240)
     end
 
