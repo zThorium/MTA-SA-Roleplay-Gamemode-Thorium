@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Thorium · Tab</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Lista de jugadores (Tab) -->
+    <section id="board" class="board" hidden>
+        <div class="board-glow"></div>
+        <header class="board-head">
+            <div class="brand">
+                <div class="brand-mark"><span>Th</span></div>
+                <div>
+                    <h1 id="server-name">Thorium Roleplay</h1>
+                    <p class="brand-sub">Los Santos · Registro de ciudadanos</p>
+                </div>
+            </div>
+            <div class="head-stats">
+                <div class="stat">
+                    <span class="stat-label"><i class="live-dot"></i>En la ciudad</span>
+                    <strong><span id="count">0</span><small> / <span id="max">0</span></small></strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">En facciones</span>
+                    <strong id="in-factions">0</strong>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Hora</span>
+                    <strong id="clock">00:00</strong>
+                </div>
+            </div>
+        </header>
+        <div class="cols">
+            <span class="c-id">ID</span>
+            <span class="c-who">Ciudadano</span>
+            <span class="c-fac">Facción</span>
+            <span class="c-lvl">Nivel</span>
+            <span class="c-ping">Ping</span>
+        </div>
+        <div id="list" class="list"></div>
+        <footer class="board-foot">
+            <span class="hint"><img class="key" src="keys/keyboard_tab.png" alt="">Mantener</span>
+            <span class="hint" id="scroll-hint"><img class="key" src="keys/mouse_scroll.png" alt="">Desplazar</span>
+            <span class="hint hint-cta">Escribe <kbd>/perfil</kbd> para personalizar tu fila</span>
+        </footer>
+    </section>
+
+    <!-- Editor del perfil (/perfil) -->
+    <section id="editor" class="editor" hidden>
+        <header class="ed-head">
+            <div>
+                <h2>Tu fila del Tab</h2>
+                <p class="ed-sub"><img class="key key-sm" src="keys/mouse_left.png" alt="">Elige con clic · así te verán todos al pulsar Tab</p>
+            </div>
+            <button class="close" id="ed-close" title="Cerrar (Esc)">×</button>
+        </header>
+
+        <div class="ed-preview">
+            <span class="ed-label">Vista previa</span>
+            <div id="ed-row" class="list list-preview"></div>
+        </div>
+
+        <div class="ed-body">
+            <div class="ed-col">
+                <h3>Color del nombre</h3>
+                <div id="ed-colors" class="swatches"></div>
+                <div class="ed-line">
+                    <input id="ed-hex" class="text" maxlength="7" spellcheck="false" placeholder="#f5a524">
+                    <label class="toggle"><input type="checkbox" id="ed-grad"><span></span>Degradado</label>
+                </div>
+                <div id="ed-grad-row" class="ed-grad" hidden>
+                    <span class="ed-label">Segundo color</span>
+                    <div id="ed-colors2" class="swatches"></div>
+                </div>
+
+                <h3>Letras animadas</h3>
+                <div id="ed-effects" class="grid grid-fx"></div>
+            </div>
+
+            <div class="ed-col">
+                <h3>Icono animado</h3>
+                <div id="ed-icons" class="grid grid-ico"></div>
+
+                <h3>Bandera</h3>
+                <div id="ed-flags" class="grid grid-flag"></div>
+
+                <h3>Foto pequeña</h3>
+                <div class="ed-line">
+                    <input id="ed-url" class="text grow" maxlength="400" spellcheck="false" placeholder="https://i.imgur.com/xxxx.png">
+                    <button class="btn" id="ed-upload">Subir</button>
+                    <button class="btn btn-ghost" id="ed-noavatar">Quitar</button>
+                </div>
+                <p class="ed-note">Enlace directo de imgur, ibb, postimg, discord, tenor o giphy. PNG, JPG, GIF o WEBP, máx. 200 KB. Los GIF se mueven.</p>
+            </div>
+        </div>
+
+        <footer class="ed-foot">
+            <button class="btn btn-ghost" id="ed-reset">Restablecer</button>
+            <button class="btn btn-main" id="ed-save">Guardar cambios</button>
+        </footer>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>

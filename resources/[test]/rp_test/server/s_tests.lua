@@ -190,6 +190,34 @@ test("nombre_de_personaje_duplicado_rechazado", function(t, ctx)
 end)
 
 ----------------------------------------------------------------
+-- Perfil del Tab (rp_scoreboard)
+----------------------------------------------------------------
+test("perfil_tab_guardar_y_leer", function(t, ctx)
+    if not ctx.characterId then return t.fail("sin personaje de prueba") end
+    -- Mismo upsert que saveRow de rp_scoreboard/server/s_scoreboard.lua (dos veces: inserta y actualiza)
+    local upsert = [[
+        INSERT INTO scoreboard_profiles (character_id, name_color, name_color2, name_effect, icon, flag, avatar, avatar_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE name_color = VALUES(name_color), name_color2 = VALUES(name_color2), name_effect = VALUES(name_effect),
+        icon = VALUES(icon), flag = VALUES(flag), avatar = VALUES(avatar), avatar_version = VALUES(avatar_version)
+    ]]
+    query(function(r1, _, _, c1, m1)
+        if not r1 then return t.fail(("upsert: [%s] %s"):format(tostring(c1), tostring(m1))) end
+        query(function(r2)
+            if not r2 then return t.fail("segundo upsert fallo") end
+            query(function(rows)
+                local p = rows and rows[1]
+                if not p then return t.fail("no se lee el perfil") end
+                if p.name_effect ~= "rainbow" or p.flag ~= "mx" or p.avatar ~= "" or tonumber(p.avatar_version) ~= 0 then
+                    return t.fail(("valores raros: efecto=%s bandera=%s"):format(tostring(p.name_effect), tostring(p.flag)))
+                end
+                t.pass("perfil insertado y actualizado")
+            end, "SELECT * FROM scoreboard_profiles WHERE character_id = ?", ctx.characterId)
+        end, upsert, ctx.characterId, "#ff4d6d", "", "rainbow", "fire", "mx", "", 0)
+    end, upsert, ctx.characterId, "#f5a524", "#ff6a3d", "shine", "crown", "cl", "data:image/png;base64,AA==", 1)
+end)
+
+----------------------------------------------------------------
 -- Inventario (rp_inventory)
 ----------------------------------------------------------------
 test("inventario_dar_y_quitar_items", function(t, ctx)

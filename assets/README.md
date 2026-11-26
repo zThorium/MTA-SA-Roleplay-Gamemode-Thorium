@@ -44,6 +44,7 @@ assets/
     sonidos/coins.wav             monedas al cobrar (sintetizado, rp_hud/tools/gen_sounds.ps1)
   fuentes/
     rubik/                        Rubik Regular, Medium y SemiBold (.ttf, subconjunto latino con tildes, ñ, ¿ ¡) · SIL OFL 1.1 (OFL.txt)
+  banderas/                       29 banderas 4:3 en SVG (<iso>.svg: Hispanoamérica, España, EE. UU., Brasil, Europa) · flag-icons de lipis, MIT (LICENSE.txt)
 ```
 
 Nombres de las teclas: `keyboard_<tecla>.png` (`keyboard_e`, `keyboard_f1`, `keyboard_space`,

@@ -30,6 +30,7 @@ ADMIN_CATALOG = {
             { cmd = "/darlicencia", args = "<id o nombre>", desc = "Entrega o rehabilita la licencia de conducir sin hacer las pruebas.", res = "rp_driving" },
             { cmd = "/forzarpayday", args = "[id o nombre]", desc = "Paga el sueldo (payday) al instante a un jugador; sin argumento, a ti.", res = "rp_payday" },
             { cmd = "/pmlog", args = "<id o nombre> [cantidad]", desc = "Historial de PMs (OOC) enviados o recibidos por un personaje, para revisar MG.", res = "rp_chat" },
+            { cmd = "/borrarperfiltab", args = "<id o nombre>", desc = "Restablece el perfil del Tab de un jugador (color, efecto, icono, bandera y foto); para fotos o estilos inapropiados.", res = "rp_scoreboard" },
             { cmd = "/darxp", args = "<id o nombre> <cantidad>", desc = "Da XP (RP) a un jugador; si llega al siguiente nivel, sube con la animacion.", res = "rp_levels" },
         },
     },
