@@ -159,6 +159,9 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_hud:setHudHidden(razon, bool)` (cliente) | oculta **solo** el HUD de `rp_hud` (minimapa, necesidades, velocímetro), como F7; chat y avisos siguen. Para recursos con HUD propio (ej. `rp_pizzeria`) |
 | `rp_hud:getTopRightBottom()` (cliente) | Y en px donde termina el bloque de arriba a la derecha (hora, dinero, banco, arma, estrellas, nivel). Pon tus paneles de esa esquina debajo, preguntando unas veces por segundo, no en cada frame (ej. `rp_robbery`) |
 | `rp_radio:setRadioSuppressed(razon, bool)`, `isRadioSuppressed()` | silencia `rp_radio` y la radio nativa |
+| `rp_phone:setMusicSuppressed(razon, bool)` (cliente) | pausa la música del teléfono (privada, altavoz y vehículo) mientras haya algún motivo |
+| `rp_hud:setNavRoute(puntos)` (cliente) | dibuja una ruta `{x1, y1, x2, y2, ...}` en el minimapa (`nil` la quita); la usa el GPS de `rp_map` |
+| `rp_map:getPlayerExplorationPercent(p)`, `revealPlayerArea(p, x, y, r)`, `getMapStats()` (servidor) | % de mapa explorado; descubrir un área del mapa F11 (misiones, eventos) |
 | `rp_jobs:playJobCinematic`, `stopJobCinematic`, `isJobCinematicPlaying` | cinemáticas cortas reutilizables |
 | `rp_mocap` (servidor `play`, cliente `playClip`) | mocap de personajes; ver `rp_mocap/MOCAP_CATALOGO.md` |
 | `rp_markers:setMarkerStyle(marker, { icon, label, color, beam, native })` | icono 3D y texto en un marcador de cilindro (servidor: sincronizado; cliente: marcadores de cliente). Iconos: `getMarkerIcons()`. Todo cilindro ya sale con el estilo moderno sin llamar a nada |

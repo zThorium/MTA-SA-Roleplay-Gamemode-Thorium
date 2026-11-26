@@ -70,6 +70,7 @@ HELP.KEYS = {
         { key = "T",   text = "Hablar por el chat" },
         { key = "I",   text = "Inventario" },
         { key = "P",   text = "Telefono (notas, contactos, banco, Fotogram, Vroom)" },
+        { key = "F11", text = "Mapa: lugares que descubres, marcadores, GPS con ruta por las calles y vista 3D (Esc cierra)" },
         { key = "E",   text = "Interactuar: tiendas, restaurantes, cajeros, casas, probadores y concesionario" },
         { key = "F3",  text = "Panel de tu faccion" },
     } },
@@ -112,6 +113,7 @@ HELP.COMMANDS = {
     { cmd = "/payday",         text = "Ver cuanto falta para tu sueldo" },
     { cmd = "/stats",          text = "Ver tus estadisticas (musculo, resistencia, sex appeal, armas, conduccion...)" },
     { cmd = "/hud",            text = "Mostrar u ocultar el HUD (F7). Opciones: /hud necesidades, mapa, velocimetro, sonidos" },
+    { cmd = "/gps",            text = "Cancelar la ruta del GPS (la pones desde el mapa, F11)" },
     { cmd = "/hud tutorial",   text = "Repite la guia del HUD: minimapa, vida, hambre, sed, energia, dinero..." },
     { cmd = "/silenciarnotis", text = "Silenciar el sonido de las notificaciones" },
 }

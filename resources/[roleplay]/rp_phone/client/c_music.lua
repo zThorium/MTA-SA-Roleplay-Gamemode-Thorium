@@ -54,9 +54,11 @@ local function setVolume(info, volume)
     end
 end
 
+local suppressed = {}   -- [motivo] = true: otros recursos piden callar la musica (p. ej. rp_map con el mapa F11 abierto)
+
 local function setPaused(info, paused)
     if info and isElement(info.sound) and setSoundPaused then
-        setSoundPaused(info.sound, paused == true)
+        setSoundPaused(info.sound, paused == true or next(suppressed) ~= nil)
     end
 end
 
@@ -396,3 +398,12 @@ addEventHandler("onClientResourceStop", resourceRoot, function()
     for player in pairs(playerSounds) do stopPlayerSound(player) end
     for vehicle in pairs(vehicleSounds) do stopVehicleSound(vehicle) end
 end)
+
+-- API: pausar toda la musica del telefono (privada, altavoces y vehiculos) mientras haya algun motivo.
+--   exports.rp_phone:setMusicSuppressed("mi_recurso", true)   la pausa
+--   exports.rp_phone:setMusicSuppressed("mi_recurso", false)  la reanuda cuando no queda ningun motivo
+function setMusicSuppressed(reason, on)
+    suppressed[tostring(reason or "?")] = on and true or nil
+    reconcile()
+    return true
+end

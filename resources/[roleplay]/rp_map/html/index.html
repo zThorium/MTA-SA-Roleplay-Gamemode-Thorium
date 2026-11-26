@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Mapa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="backdrop"></div>
+<div id="win" class="window hidden">
+    <!-- Barra superior: titulo, zona actual, buscador, 2D/3D y cerrar -->
+    <header id="top">
+        <div class="brand">
+            <div class="brand-mark">SA</div>
+            <div>
+                <div class="brand-title">Mapa</div>
+                <div class="brand-sub" id="top-zone">San Andreas</div>
+            </div>
+        </div>
+        <div class="search">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" d="M10.5 4a6.5 6.5 0 104.1 11.6L20 21"/></svg>
+            <input id="search" type="text" maxlength="40" placeholder="Buscar ciudades, barrios, lugares, marcadores..." autocomplete="off">
+            <div id="search-results" class="dropdown hidden"></div>
+        </div>
+        <div class="seg" id="mode-seg">
+            <button data-mode="2d" class="on">2D</button>
+            <button data-mode="3d">3D</button>
+        </div>
+        <div class="hint-keys">
+            <img src="images/keys/keyboard_f11.png" alt=""><img src="images/keys/keyboard_escape.png" alt=""><span>cerrar</span>
+        </div>
+        <button id="btn-close" class="icon-btn" title="Cerrar (F11 / Esc)">&times;</button>
+    </header>
+
+    <div id="body">
+        <!-- Panel lateral -->
+        <aside id="side">
+            <nav class="tabs" id="tabs">
+                <button data-tab="places" class="on">Lugares</button>
+                <button data-tab="markers">Marcadores</button>
+                <button data-tab="stats">Progreso</button>
+                <button data-tab="admin" id="tab-admin" class="hidden">Admin</button>
+            </nav>
+            <section class="tab-page" id="page-places">
+                <div class="side-title">Categorías <button class="link" id="cats-all">ver todas</button></div>
+                <div id="cats"></div>
+                <div class="side-title">Cerca de ti</div>
+                <div id="near"></div>
+            </section>
+            <section class="tab-page hidden" id="page-markers">
+                <div class="side-help">
+                    <img class="key-ico" src="images/keys/mouse_left.png" alt=""> Haz clic en el mapa y pulsa <b>Crear marcador</b>.
+                </div>
+                <label class="check"><input type="checkbox" id="fav-only"> Solo favoritos</label>
+                <div id="marker-list"></div>
+            </section>
+            <section class="tab-page hidden" id="page-stats">
+                <div id="stats"></div>
+            </section>
+            <section class="tab-page hidden" id="page-admin">
+                <div class="seg small" id="admin-seg">
+                    <button data-a="places" class="on">Lugares</button>
+                    <button data-a="cats">Categorías</button>
+                    <button data-a="sectors">Cuadrículas</button>
+                    <button data-a="settings">Ajustes</button>
+                    <button data-a="players">Jugadores</button>
+                </div>
+                <div id="admin-body"></div>
+            </section>
+        </aside>
+
+        <!-- Mapa -->
+        <main id="map-wrap">
+            <canvas id="map2d"></canvas>
+            <div id="layer"></div>
+            <div id="map3d" class="hidden"></div>
+            <div id="sector-tip" class="tip hidden"></div>
+            <div id="card" class="card hidden"></div>
+            <div class="zoom">
+                <button id="z-in" title="Acercar">+</button>
+                <button id="z-out" title="Alejar">&minus;</button>
+                <button id="z-me" title="Centrar en mí">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2" d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                </button>
+                <button id="z-grid" title="Mostrar/ocultar cuadrículas" class="on">#</button>
+            </div>
+            <div class="map-help" id="map-help">
+                <span><img src="images/keys/mouse_move.png" alt=""> mover</span>
+                <span><img src="images/keys/mouse_scroll.png" alt=""> zoom</span>
+                <span><img src="images/keys/mouse_left.png" alt=""> elegir</span>
+                <span id="help-3d" class="hidden"><img src="images/keys/mouse_right.png" alt=""> girar e inclinar</span>
+            </div>
+            <div id="pick-banner" class="pick hidden"></div>
+            <div id="nofile" class="nofile hidden">Faltan los datos del mapa (html/data). Un admin debe ejecutar <b>tools/generar-datos.ps1</b>.</div>
+        </main>
+    </div>
+
+    <!-- Panel inferior: coordenadas, distancia, GPS y progreso -->
+    <footer id="bottom">
+        <div class="b-item"><span class="b-lbl">Posición</span><span id="b-pos">-</span></div>
+        <div class="b-item"><span class="b-lbl">Rumbo</span><span id="b-head">-</span></div>
+        <div class="b-item"><span class="b-lbl">Cursor</span><span id="b-cursor">-</span></div>
+        <div class="b-item" id="b-gps-wrap"><span class="b-lbl">GPS</span><span id="b-gps">Sin destino</span>
+            <button id="b-gps-stop" class="mini hidden">Cancelar</button></div>
+        <div class="b-item grow"><span class="b-lbl">Explorado</span>
+            <div class="bar"><div id="b-prog-fill"></div></div><span id="b-prog">0%</span></div>
+    </footer>
+
+    <!-- Tutorial de primera vez -->
+    <div id="coach" class="coach hidden">
+        <div class="coach-card" id="coach-card">
+            <div class="coach-step" id="coach-step"></div>
+            <div class="coach-body"><img id="coach-img" alt=""><div id="coach-text"></div></div>
+            <div class="coach-btns"><button id="coach-skip" class="link">Saltar</button><button id="coach-next" class="primary">Siguiente</button></div>
+        </div>
+    </div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="data/roads.js"></script>
+<script src="data/buildings.js"></script>
+<script src="data/terrain.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/map2d.js"></script>
+<script src="js/map3d.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
