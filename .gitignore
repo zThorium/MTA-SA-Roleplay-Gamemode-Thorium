@@ -30,9 +30,6 @@ mtaserver_test.conf
 
 # Mapa del radar extraido de gta3.img (material de Rockstar, no se redistribuye)
 resources/[[]roleplay]/rp_hud/images/map.png
-# rp_map: radar unido y tema musical (material de Rockstar; se generan/copian en local, ver docs/MAPA.md)
-resources/[[]roleplay]/rp_map/html/data/map.jpg
-resources/[[]roleplay]/rp_map/sounds/map_theme.mp3
 luac.out
 
 # --- Docker (docs/DOCKER.md) ---
