@@ -13,6 +13,15 @@ function gymApplyDelta(player, dStamina, dMuscle, dFat, rebuild)
     local stamina, muscle, fat = clamp(stats.stamina + dStamina), clamp(stats.muscle + dMuscle), clamp(stats.fat + dFat)
 
     exports.rp_characters:setBodyStats(player, fat, muscle, stamina, rebuild)
+    -- Cada punto entero (1 % = 10 unidades) ganado, o de grasa perdido, se muestra un momento en pantalla
+    local changes = {}
+    for _, c in ipairs({ { "muscle", stats.muscle, muscle }, { "stamina", stats.stamina, stamina }, { "fat", stats.fat, fat } }) do
+        local diff = math.floor(c[3] / 10) - math.floor(c[2] / 10)
+        if (c[1] == "fat" and diff < 0) or (c[1] ~= "fat" and diff > 0) then
+            changes[#changes + 1] = { stat = c[1], value = c[3], diff = diff }
+        end
+    end
+    if #changes > 0 then triggerClientEvent(player, "rp:gym:statChange", resourceRoot, changes) end
     local reached = gymAccount(player, stats.fat - fat, stamina - stats.stamina, muscle - stats.muscle)
     if reached then saveProfile(player) end
     return reached

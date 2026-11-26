@@ -64,6 +64,7 @@ addCommandHandler("borrarmaquina", function(player, _, id)
     if not gymIsAdmin(player) then return gymNotify(player, NO_PERMISSION, "error") end
     id = tonumber(id)
     if not id or not gymMachineList()[id] then return gymNotify(player, "Uso: /borrarmaquina <id> (mira /maquinas)", "warning") end
+    if gymIsFixedId(id) then return gymNotify(player, "Es una maquina fija del gimnasio original: se cambia en GYM_FIXED (shared/s_config.lua).", "warning") end
     gymDestroyMachine(id)
     dbExec(gymDb(), "DELETE FROM gym_machines WHERE id = ?", id)
     gymNotify(player, ("Maquina %d eliminada."):format(id), "success")
@@ -210,6 +211,7 @@ addCommandHandler("borrarentrenador", function(player, _, id)
     if not gymIsAdmin(player) then return gymNotify(player, NO_PERMISSION, "error") end
     id = tonumber(id)
     if not id or not gymTrainerList()[id] then return gymNotify(player, "Uso: /borrarentrenador <id> (mira /entrenadores)", "warning") end
+    if gymIsFixedId(id) then return gymNotify(player, "Es el entrenador fijo del gimnasio original: se cambia en GYM_FIXED (shared/s_config.lua).", "warning") end
     gymDestroyTrainer(id)
     dbExec(gymDb(), "DELETE FROM gym_trainers WHERE id = ?", id)
     gymNotify(player, ("Entrenador %d eliminado."):format(id), "success")

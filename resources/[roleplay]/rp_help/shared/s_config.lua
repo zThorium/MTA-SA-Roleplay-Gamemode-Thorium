@@ -104,6 +104,7 @@ HELP.COMMANDS = {
     { cmd = "/aceptarfaccion", text = "Aceptar una invitacion a una faccion" },
     { cmd = "/salirfaccion",   text = "Salir de tu faccion" },
     { cmd = "/payday",         text = "Ver cuanto falta para tu sueldo" },
+    { cmd = "/stats",          text = "Ver tus estadisticas (musculo, resistencia, sex appeal, armas, conduccion...)" },
     { cmd = "/hud",            text = "Mostrar u ocultar el HUD (F7). Opciones: /hud necesidades, mapa, velocimetro, sonidos" },
     { cmd = "/hud tutorial",   text = "Repite la guia del HUD: minimapa, vida, hambre, sed, energia, dinero..." },
     { cmd = "/silenciarnotis", text = "Silenciar el sonido de las notificaciones" },

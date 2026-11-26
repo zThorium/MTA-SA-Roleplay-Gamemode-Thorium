@@ -73,7 +73,9 @@ addEventHandler("onClientRender", root, function()
     local n = gymNearInfo
     if n and not isPedInVehicle(localPlayer) then
         local line
-        if n.kind == "trainer" then
+        if n.kind == "door" then
+            line = ("[E] %s"):format(n.label)
+        elseif n.kind == "trainer" then
             line = ("[E] %s (%s)"):format(n.label, tostring(n.extra))
         else
             line = ("[E] Usar: %s"):format(n.label)

@@ -98,7 +98,8 @@ function gymSpawnMachine(row)
     local a = math.rad(row.rotation)
     local ox = s[1] * math.cos(a) - s[2] * math.sin(a)
     local oy = s[1] * math.sin(a) + s[2] * math.cos(a)
-    local obj = createObject(cfg.model, row.x + ox, row.y + oy, row.z + cfg.zOffset + s[3], 0, 0, row.rotation + s[4])
+    -- native: el interior original ya trae la maquina; solo se crean la zona y los objetos extra
+    local obj = not row.native and createObject(cfg.model, row.x + ox, row.y + oy, row.z + cfg.zOffset + s[3], 0, 0, row.rotation + s[4]) or nil
     local col = createColSphere(row.x, row.y, row.z, GYM.TRIGGER_RADIUS)
     -- Objetos extra (p. ej. la segunda mancuerna del par), desplazados respecto al principal segun el rumbo
     local extras = {}
@@ -108,7 +109,9 @@ function gymSpawnMachine(row)
         extras[#extras + 1] = createObject(e.model, row.x + ex, row.y + ey, row.z + cfg.zOffset + s[3] + (e.dz or 0),
             e.rx or 0, e.ry or 0, row.rotation + s[4] + (e.rz or 0))
     end
-    for _, el in ipairs({ obj, col, unpack(extras) }) do
+    local placed = { col, unpack(extras) }
+    if obj then placed[#placed + 1] = obj end
+    for _, el in ipairs(placed) do
         setElementInterior(el, row.interior)
         setElementDimension(el, row.dimension)
     end
