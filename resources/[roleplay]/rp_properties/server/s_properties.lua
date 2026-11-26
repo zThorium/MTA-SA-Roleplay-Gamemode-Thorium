@@ -97,6 +97,7 @@ local function spawnProperty(row)
     local exitMarker = createMarker(t.x, t.y, t.z - 1, "cylinder", 1.4, 245, 165, 36, 150)
     setElementInterior(exitMarker, t.interior)
     setElementDimension(exitMarker, dimensionOf(id))
+    exports.rp_markers:setMarkerStyle(exitMarker, { icon = "exit", label = "Salir" })
 
     props[id] = { row = row, pickup = pickup, col = col, exitCol = exitCol, exitMarker = exitMarker, exit = t }
 

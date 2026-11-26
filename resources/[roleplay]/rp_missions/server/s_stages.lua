@@ -30,6 +30,7 @@ end
 
 local function addTarget(inst, x, y, z, r, color, key)
     local mk = createMarker(x, y, z - 0.9, "cylinder", max(1.4, r * 2), color[1], color[2], color[3], 110)
+    exports.rp_markers:setMarkerStyle(mk, { icon = "arrow" })
     setElementDimension(mk, inst.dim)
     setElementInterior(mk, inst.def.interior or 0)
     showOnlyTo(inst, mk)

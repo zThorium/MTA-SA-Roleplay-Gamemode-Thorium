@@ -5,6 +5,7 @@
     <include resource="rp_notify" />
     <include resource="rp_login" />
     <include resource="rp_characters" />
+    <include resource="rp_markers" />
 
     <!-- La configuracion solo la lee el servidor (precio, puntos, tiempos) -->
     <script src="server/s_config.lua" type="server" />

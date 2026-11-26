@@ -100,6 +100,7 @@ local function buildShops()
     for _, shop in ipairs(shops) do
         local m = createMarker(shop.x, shop.y, shop.z - 1, "cylinder", shop.radius, 255, 170, 0, 90)
         shopMarkers[m] = shop
+        exports.rp_markers:setMarkerStyle(m, { icon = "wrench", label = shop.name and ("Taller " .. shop.name) or "Taller" })
         shopElements[#shopElements + 1] = m
         shopElements[#shopElements + 1] = createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 99999)
     end

@@ -6,6 +6,7 @@
     <include resource="rp_characters" />
     <include resource="rp_inventory" />
     <include resource="rp_shops" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_ammunation.lua" type="server" />

@@ -25,6 +25,7 @@ local function createEvidence(kind, x, y, z, data)
     local r, g, b = 240, 200, 40
     if kind == "blood" then r, g, b = 200, 20, 20 end
     local m = createMarker(x, y, z - 0.95, "cylinder", 0.7, r, g, b, 140)
+    exports.rp_markers:setMarkerStyle(m, { icon = "info", label = kind == "blood" and "Sangre" or "Casquillo", color = { r, g, b } })
     setElementVisibleTo(m, root, false)
     for _, o in ipairs(officersOnDuty()) do setElementVisibleTo(m, o, true) end
     data.kind, data.tick = kind, getTickCount()

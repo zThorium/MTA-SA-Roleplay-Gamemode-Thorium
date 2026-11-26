@@ -1,0 +1,54 @@
+<meta>
+    <info author="Thorium" name="RP Markers" description="Marcadores modernos animados (aros, pulso, haz, partículas) con insignia e icono 3D al acercarse" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <!-- /markerdemo: nivel de admin y aviso de error -->
+    <include resource="rp_login" />
+    <include resource="rp_notify" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="shared/s_style.lua" type="shared" />
+    <script src="server/s_markers.lua" type="server" />
+    <script src="client/c_markers.lua" type="client" cache="false" />
+
+    <file src="images/ring.png" />
+    <file src="images/dash.png" />
+    <file src="images/beam.png" />
+    <file src="images/glow.png" />
+    <file src="images/badge_bg.png" />
+    <file src="images/badge_ring.png" />
+    <file src="images/icons/info.png" />
+    <file src="images/icons/enter.png" />
+    <file src="images/icons/exit.png" />
+    <file src="images/icons/door.png" />
+    <file src="images/icons/shop.png" />
+    <file src="images/icons/money.png" />
+    <file src="images/icons/car.png" />
+    <file src="images/icons/gun.png" />
+    <file src="images/icons/job.png" />
+    <file src="images/icons/wrench.png" />
+    <file src="images/icons/fuel.png" />
+    <file src="images/icons/medical.png" />
+    <file src="images/icons/bike.png" />
+    <file src="images/icons/house.png" />
+    <file src="images/icons/key.png" />
+    <file src="images/icons/star.png" />
+    <file src="images/icons/food.png" />
+    <file src="images/icons/drink.png" />
+    <file src="images/icons/target.png" />
+    <file src="images/icons/flag.png" />
+    <file src="images/icons/person.png" />
+    <file src="images/icons/phone.png" />
+    <file src="images/icons/arrow.png" />
+    <file src="images/icons/bank.png" />
+    <file src="images/icons/police.png" />
+    <file src="images/icons/gym.png" />
+    <file src="images/icons/clothes.png" />
+    <file src="images/icons/license.png" />
+
+    <!-- Icono y texto de un marcador. Servidor: sincronizado a todos. Cliente: solo marcadores de cliente. -->
+    <export function="setMarkerStyle" type="server" />
+    <export function="setMarkerStyle" type="client" />
+    <export function="getMarkerIcons" type="server" />
+    <export function="getMarkerIcons" type="client" />
+</meta>

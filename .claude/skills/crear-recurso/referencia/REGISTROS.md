@@ -64,6 +64,7 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
   `rp:meth`, `rp:respect`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
 - Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:perf`, `rp:radio`, `rp:rides:ai`.
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
+- Marcadores: `rp:marker` (estilo de `rp_markers`; ponlo solo con `setMarkerStyle`).
   `rp:robberyStore`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
 - Root: `rp:world` (hora y clima), `rp:events`.
 - Blips: `rp:radarEdge` (el blip se queda en el borde del minimapa).

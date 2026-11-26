@@ -177,6 +177,7 @@ local function buildStations()
     for _, st in ipairs(stations) do
         local m = createMarker(st.x, st.y, st.z - 1, "cylinder", FUEL.MARKER_RADIUS, 255, 210, 40, 70)
         setElementData(m, "rp:fuelStation", st.name)
+        exports.rp_markers:setMarkerStyle(m, { icon = "fuel", label = st.name })
         stationOfMarker[m] = st
         st.marker = m
         stationElements[#stationElements + 1] = m

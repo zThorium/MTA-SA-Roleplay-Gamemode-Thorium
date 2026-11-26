@@ -6,6 +6,7 @@
     <include resource="rp_notify" />
     <include resource="rp_login" />
     <include resource="rp_characters" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_types.lua" type="shared" />
     <script src="server/s_seed_ls.lua" type="server" />

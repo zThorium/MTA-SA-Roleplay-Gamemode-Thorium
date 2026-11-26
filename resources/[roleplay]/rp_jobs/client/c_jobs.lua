@@ -282,6 +282,9 @@ addEventHandler("rp:jobs:wp", resourceRoot, function(data)
     if mtype then
         local size = data.small and 0.6 or (mtype == "checkpoint" and 4 or (mtype == "ring" and 6 or 1.4))
         wpMarker = createMarker(x, y, z - (mtype == "cylinder" and 0.95 or 0), mtype, size, c[1], c[2], c[3], mtype == "corona" and 160 or 120)
+        if mtype == "cylinder" and not data.small then
+            exports.rp_markers:setMarkerStyle(wpMarker, { icon = "arrow", label = type(data.label) == "string" and data.label or nil })
+        end
     end
     if data.blip ~= false and data.x then
         wpBlip = createBlip(data.x, data.y, data.z or 0, 0, 3, c[1], c[2], c[3], 255, 10, 99999)
@@ -393,6 +396,7 @@ local function createStaticPoints()
     for _, job in ipairs(JOBS) do
         local h, c = job.hq, job.color
         local m = createMarker(h.x, h.y, h.z - 1, "cylinder", 1.3, c[1], c[2], c[3], 110)
+        exports.rp_markers:setMarkerStyle(m, { icon = "job", label = job.name })
         setElementInterior(m, h.interior or 0)
         setElementDimension(m, h.dimension or 0)
         local b = createBlip(h.x, h.y, h.z, 56, 2, c[1], c[2], c[3], 255, 0, 300)
@@ -401,6 +405,7 @@ local function createStaticPoints()
     end
     for _, mk in ipairs(MARKETS) do
         local m = createMarker(mk.x, mk.y, mk.z - 1, "cylinder", 1.3, 245, 165, 36, 110)
+        exports.rp_markers:setMarkerStyle(m, { icon = "money", label = mk.name })
         local b = createBlip(mk.x, mk.y, mk.z, 52, 2, 245, 165, 36, 255, 0, 300)
         staticPoints[#staticPoints + 1] = { kind = "market", id = mk.id, x = mk.x, y = mk.y, z = mk.z, marker = m, blip = b,
             name = mk.icon .. " " .. mk.name }

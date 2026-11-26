@@ -394,7 +394,10 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
     -- Texto sobre la puerta exterior
     local e = AGENCY.ENTRANCE
     local m = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, 245, 165, 36, 90)
-    if m then objects[#objects + 1] = m end
+    if m then
+        exports.rp_markers:setMarkerStyle(m, { icon = "job", label = "Agencia de empleo" })
+        objects[#objects + 1] = m
+    end
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()

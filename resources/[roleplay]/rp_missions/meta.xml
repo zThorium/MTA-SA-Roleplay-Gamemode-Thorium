@@ -11,6 +11,7 @@
     <include resource="rp_injury" />
     <include resource="rp_hud" />
     <include resource="rp_radio" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="shared/s_missions_data.lua" type="shared" />

@@ -701,6 +701,8 @@ local function createVenues()
         setElementInterior(m1, e.interior); setElementDimension(m1, e.dimension)
         local m2 = createMarker(i.x, i.y, i.z - 0.1, "cylinder", 1.1, 245, 165, 36, 90)
         setElementInterior(m2, i.interior); setElementDimension(m2, i.dimension)
+        exports.rp_markers:setMarkerStyle(m1, { icon = "enter", label = v.name })
+        exports.rp_markers:setMarkerStyle(m2, { icon = "exit", label = "Salir" })
         addEventHandler("onMarkerHit", m1, function(el, sameDim)
             if getElementType(el) == "player" and sameDim and not isPedInVehicle(el) and characterOf(el) then
                 teleportPlayer(el, v.interiorSpawn, i.interior, i.dimension)
