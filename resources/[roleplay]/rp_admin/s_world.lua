@@ -32,6 +32,8 @@ WORLD_TYPES = {
     { key = "crossing",      many = "crossings",      res = "rp_train",      name = "Barrera de tren" },
     { key = "ticketbooth",   many = "ticketbooths",   res = "rp_train",      name = "Boleteria de tren", kind = "booth" },
     { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign" },
+    { key = "turnstile",     many = "turnstiles",     res = "rp_train",      name = "Torniquete de tren", kind = "gate" },
+    { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence" },
 }
 
 local NEARBY_RADIUS, NEARBY_MAX = 20, 500

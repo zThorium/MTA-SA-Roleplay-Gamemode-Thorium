@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>rp_train · torniquete</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="card" class="card hidden">
+        <div class="head">
+            <span class="dot"></span>
+            <span id="title">Torniquete</span>
+            <span id="station" class="station">Unity Station</span>
+        </div>
+
+        <div class="stage">
+            <div id="ticket" class="ticket">
+                <div class="main">
+                    <div class="brand">SA RAIL</div>
+                    <div class="kind">BOLETO DE TREN</div>
+                    <div class="trip">Viaje sencillo</div>
+                    <div class="price" id="price">$25</div>
+                    <div id="hole" class="hole"></div>
+                    <div id="stamp" class="stamp">VALIDADO</div>
+                </div>
+                <div id="stub" class="stub"><span>CONTROL</span></div>
+            </div>
+            <div id="punch" class="punch"></div>
+            <div id="empty" class="empty hidden">
+                <div class="empty-ico">?</div>
+                <div>No llevas ningún boleto</div>
+            </div>
+        </div>
+
+        <div id="prompt" class="prompt">
+            <img class="key" src="../images/keys/keyboard_e.png" alt="E">
+            <span id="promptText">Validar boleto</span>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
