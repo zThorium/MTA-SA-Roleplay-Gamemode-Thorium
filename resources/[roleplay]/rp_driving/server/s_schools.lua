@@ -303,13 +303,32 @@ addCommandHandler("crearautoescuela", function(player)
         x, y, z, rot, interior, dimension)
 end)
 
-addCommandHandler("borrarautoescuela", function(player, _, id)
-    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+-- Exports para la gramatica Owl de rp_admin (/nearbyschools, /gotoschool, /delschool...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(schools) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = row.interior, dimension = row.dimension, label = "Autoescuela" }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
     id = tonumber(id)
-    if not id or not schools[id] then return notify(player, "Uso: /borrarautoescuela <id> (ver /autoescuelas)", "warning") end
+    if not id or not schools[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM driving_schools WHERE id = ?", id)
     destroySchool(id)
     broadcastSchools()
+    return true
+end
+
+addCommandHandler("borrarautoescuela", function(player, _, id)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    id = tonumber(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarautoescuela <id> (ver /autoescuelas)", "warning") end
     notify(player, ("Autoescuela %d eliminada."):format(id), "success")
 end)
 

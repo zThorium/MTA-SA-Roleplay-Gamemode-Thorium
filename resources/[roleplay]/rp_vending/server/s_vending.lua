@@ -347,6 +347,27 @@ local function machinesNear(p, radius)
 end
 
 -- Sin id borra la mas cercana (a menos de DELETE_NEAR_RADIUS metros)
+-- Exports para la gramatica Owl de rp_admin (/nearbyvendings, /gotovending, /delvending...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(machines) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = row.interior, dimension = row.dimension, label = "Expendedora " .. tostring(row.kind) }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
+    id = tonumber(id)
+    if not id or not machines[id] then return false, "no existe" end
+    destroyMachine(id)
+    dbExec(db(), "DELETE FROM vending_machines WHERE id = ?", id)
+    return true
+end
+
 addCommandHandler("borrarexpendedora", function(p, _, id)
     if not isAdmin(p) then return notify(p, "No tienes permiso para usar este comando.", "error") end
     if id == nil then
@@ -357,9 +378,7 @@ addCommandHandler("borrarexpendedora", function(p, _, id)
         id = nearest.id
     end
     id = tonumber(id)
-    if not id or not machines[id] then return notify(p, "Uso: /borrarexpendedora [id] (sin id, la más cercana)", "warning") end
-    destroyMachine(id)
-    dbExec(db(), "DELETE FROM vending_machines WHERE id = ?", id)
+    if not id or not adminDelete(id) then return notify(p, "Uso: /borrarexpendedora [id] (sin id, la más cercana)", "warning") end
     notify(p, ("Expendedora #%d eliminada."):format(id), "success")
 end)
 

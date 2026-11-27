@@ -163,10 +163,18 @@ local function whisper(player, targetQuery, text)
     gesture(player, "PED", "IDLE_chat", 1800)
 end
 
+-- Silencio OOC puesto por un admin con /pmute (rp_admin guarda el fin como timestamp)
+local function isMuted(player)
+    local untilTs = getElementData(player, "rp:mutedUntil")
+    if not untilTs or untilTs <= getRealTime().timestamp then return false end
+    notify(player, ("Tus chats OOC estan silenciados por un admin (%d min mas)."):format(math.ceil((untilTs - getRealTime().timestamp) / 60)), "error")
+    return true
+end
+
 local function ooc(player, text)
     text = clean(text)
     if text == "" then return notify(player, "Uso: /b <texto>  (chat OOC local, tecla B)", "info") end
-    if not canSpeak(player) then return end
+    if isMuted(player) or not canSpeak(player) then return end
     for _, l in ipairs(listeners(player, RANGE.ooc)) do
         line(l.p, ("%s(( %sOOC %s%s: %s%s %s))"):format(hex(C.verb), hex(C.ooc), hex(C.name), nameOf(player), hex(C.oocText), text, hex(C.verb)))
     end
@@ -224,6 +232,7 @@ addCommandHandler("pm", function(player, _, id, ...)
         return notify(player, "No hay ningún jugador con ese ID.", "error")
     end
     if target == player then return notify(player, "No puedes enviarte un PM a ti mismo.", "warning") end
+    if isMuted(player) then return end
     local now = getTickCount()
     if lastUse[player] and now - lastUse[player] < COOLDOWN_MS then return end
     lastUse[player] = now

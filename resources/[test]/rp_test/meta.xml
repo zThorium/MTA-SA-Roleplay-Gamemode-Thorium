@@ -33,4 +33,5 @@
     <script src="server/s_tests_firefighters.lua" type="server" />
     <script src="server/s_tests_factions.lua" type="server" />
     <script src="server/s_tests_map.lua" type="server" />
+    <script src="server/s_tests_admin.lua" type="server" />
 </meta>

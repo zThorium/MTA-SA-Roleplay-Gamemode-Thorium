@@ -357,12 +357,31 @@ addCommandHandler("crearropa", function(player, _, kind, ...)
     end)
 end)
 
+-- Exports para la gramatica Owl de rp_admin (/nearbyclothingstores, /gotoclothingstore, /delclothingstore...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(stores) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = 0, dimension = 0, label = row.name }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
+    id = tonumber(id)
+    if not id or not stores[id] then return false, "no existe" end
+    dbExec(db(), "DELETE FROM clothing_stores WHERE id = ?", id)
+    destroyStore(id)
+    return true
+end
+
 addCommandHandler("borrarropa", function(player, _, id)
     if not isAdmin(player) then return denied(player) end
     id = tonumber(id)
-    if not id or not stores[id] then return notify(player, "Uso: /borrarropa <id>", "warning") end
-    dbExec(db(), "DELETE FROM clothing_stores WHERE id = ?", id)
-    destroyStore(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarropa <id>", "warning") end
     notify(player, ("Tienda de ropa #%d eliminada."):format(id), "success")
 end)
 

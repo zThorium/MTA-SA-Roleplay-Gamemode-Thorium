@@ -738,12 +738,31 @@ addCommandHandler("crearmesapool", function(player)
         x, y, z, rz, interior, dimension)
 end)
 
+-- Exports para la gramatica Owl de rp_admin (/nearbypooltables, /gotopooltable, /delpooltable...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(tables) do
+        local row = e
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = row.interior, dimension = row.dimension, label = "Mesa de pool" .. (e.native and " (del mapa)" or "") }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
+    id = tonumber(id)
+    if not id or not tables[id] then return false, "no existe" end
+    destroyTable(id)
+    dbExec(db(), "DELETE FROM pool_tables WHERE id = ?", id)
+    return true
+end
+
 addCommandHandler("borrarmesapool", function(player, _, idStr)
     if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
     local id = tonumber(idStr)
-    if not id or not tables[id] then return notify(player, "Uso: /borrarmesapool <id> (mira /mesaspool)", "warning") end
-    destroyTable(id)
-    dbExec(db(), "DELETE FROM pool_tables WHERE id = ?", id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarmesapool <id> (mira /mesaspool)", "warning") end
     notify(player, ("Mesa de pool %d borrada."):format(id), "success")
 end)
 

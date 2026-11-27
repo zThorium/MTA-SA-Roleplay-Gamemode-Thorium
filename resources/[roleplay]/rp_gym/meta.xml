@@ -72,4 +72,6 @@
     <file src="sounds/voz/ready.ogg" />
     <file src="sounds/voz/you_lose.ogg" />
     <file src="sounds/voz/you_win.ogg" />
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
 </meta>

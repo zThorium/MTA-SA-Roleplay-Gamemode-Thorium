@@ -25,4 +25,6 @@
     <file src="sounds/pos_print.wav" />
     <file src="sounds/pos_error.wav" />
     <file src="sounds/pos_ok.wav" />
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
 </meta>

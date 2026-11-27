@@ -276,14 +276,33 @@ addCommandHandler("crearatm", function(player)
     end)
 end)
 
-addCommandHandler("borraratm", function(player, _, id)
-    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+-- Exports para la gramatica Owl de rp_admin (/nearbyatms, /gotoatm, /delatm...)
+function adminElements()
+    local list = {}
+    for id, a in pairs(atms) do
+        if isElement(a.object) then
+            local x, y, z = getElementPosition(a.object)
+            list[#list + 1] = { id = id, x = x, y = y, z = z, interior = getElementInterior(a.object),
+                dimension = getElementDimension(a.object), label = "Cajero" }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
     id = tonumber(id)
     local atm = id and atms[id]
-    if not atm then return notify(player, "Uso: /borraratm <id>", "warning") end
+    if not atm then return false, "no existe" end
     for _, el in pairs(atm) do if isElement(el) then destroyElement(el) end end
     atms[id] = nil
     dbExec(db(), "DELETE FROM atms WHERE id = ?", id)
+    return true
+end
+
+addCommandHandler("borraratm", function(player, _, id)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    id = tonumber(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borraratm <id>", "warning") end
     notify(player, ("Cajero #%d eliminado."):format(id), "success")
 end)
 

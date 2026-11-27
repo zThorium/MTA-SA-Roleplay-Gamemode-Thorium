@@ -92,12 +92,31 @@ addCommandHandler("crearbarrera", function(player, _, flag)
         x, y, z, rot, side, int, dim)
 end)
 
+-- Exports para la gramatica Owl de rp_admin (/nearbycrossings, /gotocrossing, /delcrossing...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(crossings) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = row.interior, dimension = row.dimension, label = e.closed and "Barrera (cerrada)" or "Barrera (abierta)" }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
+    id = tonumber(id)
+    if not id or not crossings[id] then return false, "no existe" end
+    dbExec(db(), "DELETE FROM rail_crossings WHERE id = ?", id)
+    destroyCrossing(id)
+    return true
+end
+
 addCommandHandler("borrarbarrera", function(player, _, id)
     if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
     id = tonumber(id)
-    if not id or not crossings[id] then return notify(player, "Uso: /borrarbarrera <id> (mira /barreras)", "warning") end
-    dbExec(db(), "DELETE FROM rail_crossings WHERE id = ?", id)
-    destroyCrossing(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarbarrera <id> (mira /barreras)", "warning") end
     notify(player, ("Barrera #%d eliminada."):format(id), "success")
 end)
 

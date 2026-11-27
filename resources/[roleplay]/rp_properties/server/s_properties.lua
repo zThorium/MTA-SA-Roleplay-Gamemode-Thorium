@@ -446,13 +446,32 @@ addCommandHandler("crearcasa", function(player, _, kind, price, ...)
     end)
 end)
 
-addCommandHandler("borrarcasa", function(player, _, id)
-    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+-- Exports para la gramatica Owl de rp_admin (/nearbyhouses, /gotohouse, /delhouse...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(props) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = 0, dimension = 0, label = row.name .. (row.owner_id and (" (con dueno #" .. tostring(row.owner_id) .. ")") or " (en venta)") }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
     id = tonumber(id)
-    if not id or not props[id] then return notify(player, "Uso: /borrarcasa <id>", "warning") end
+    if not id or not props[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM properties WHERE id = ?", id)
     triggerEvent("rp:prop:deleted", root, id)
     destroyProperty(id)
+    return true
+end
+
+addCommandHandler("borrarcasa", function(player, _, id)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    id = tonumber(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarcasa <id>", "warning") end
     notify(player, ("Propiedad #%d eliminada."):format(id), "success")
 end)
 

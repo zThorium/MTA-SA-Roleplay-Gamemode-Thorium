@@ -29,26 +29,26 @@
     /kick y /ban necesitan que rp_admin este en el grupo Admin de acl.xml.
 ]]
 
-local LEVEL_ADMIN, LEVEL_SUPER = 1, 3
+LEVEL_ADMIN, LEVEL_SUPER = 1, 3   -- globales: los usan s_world.lua y s_owl.lua
 
 ----------------------------------------------------------------
 -- Utilidades
 ----------------------------------------------------------------
-local function db() return exports.rp_database:getConnection() end
-local function notify(p, text, kind) return exports.rp_notify:notify(p, text, kind or "info") end
-local function levelOf(p) return exports.rp_login:getPlayerAdminLevel(p) or 0 end
-local function nameOf(p) return (getPlayerName(p):gsub("_", " ")) end
-local function idOf(p) return exports.rp_ids:getPlayerId(p) or "?" end
-local function label(p) return ("%s (ID %s)"):format(nameOf(p), tostring(idOf(p))) end
+function db() return exports.rp_database:getConnection() end
+function notify(p, text, kind) return exports.rp_notify:notify(p, text, kind or "info") end
+function levelOf(p) return exports.rp_login:getPlayerAdminLevel(p) or 0 end
+function nameOf(p) return (getPlayerName(p):gsub("_", " ")) end
+function idOf(p) return exports.rp_ids:getPlayerId(p) or "?" end
+function label(p) return ("%s (ID %s)"):format(nameOf(p), tostring(idOf(p))) end
 
-local function guard(player, level)
+function guard(player, level)
     if levelOf(player) >= (level or LEVEL_ADMIN) then return true end
     notify(player, "No tienes permiso para usar este comando.", "error")
     return false
 end
 
 -- Busca al objetivo; avisa con el uso correcto si no se encuentra
-local function target(player, query, usage)
+function target(player, query, usage)
     if not query then notify(player, "Uso: " .. usage, "warning") return false end
     local t = exports.rp_ids:findPlayer(query)
     if not t then notify(player, "No se encontro un unico jugador con ese nombre o ID.", "warning") end
@@ -56,19 +56,19 @@ local function target(player, query, usage)
 end
 
 -- No se puede actuar sobre un admin de nivel superior (salvo uno mismo)
-local function outranks(player, t)
+function outranks(player, t)
     if player == t or levelOf(player) >= levelOf(t) then return true end
     notify(player, "Ese administrador tiene un nivel superior al tuyo.", "error")
     return false
 end
 
-local function hasCharacter(player, t)
+function hasCharacter(player, t)
     if exports.rp_characters:getPlayerCharacterId(t) then return true end
     notify(player, nameOf(t) .. " no tiene un personaje en juego.", "warning")
     return false
 end
 
-local function logAction(admin, command, t, details)
+function logAction(admin, command, t, details)
     local line = ("[rp_admin] %s (cuenta #%s) /%s%s%s"):format(getPlayerName(admin),
         tostring(exports.rp_login:getPlayerAccountId(admin) or "-"), command,
         t and (" -> " .. getPlayerName(t)) or "", details and (" | " .. details) or "")
@@ -109,7 +109,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
 end)
 
 -- Mueve a un jugador (o su vehiculo si lo conduce) a una posicion
-local function moveTo(p, x, y, z, interior, dimension)
+function moveTo(p, x, y, z, interior, dimension)
     local veh = getPedOccupiedVehicle(p)
     if veh and getVehicleController(veh) == p then
         setElementInterior(veh, interior)
@@ -129,7 +129,7 @@ local function moveTo(p, x, y, z, interior, dimension)
 end
 
 -- Punto 1.5 m a la derecha del jugador
-local function besides(p)
+function besides(p)
     local x, y, z = getElementPosition(p)
     local _, _, rot = getElementRotation(p)
     local r = math.rad(rot)
@@ -254,9 +254,11 @@ end)
 ----------------------------------------------------------------
 -- Expulsiones
 ----------------------------------------------------------------
-addCommandHandler("kick", function(player, _, query, ...)
+-- Prefijos de OwlGaming: p = jugador (alias), s = silencioso (sin aviso en el chat global)
+local function kickCommand(player, cmd, query, ...)
     if not guard(player) then return end
-    local t = target(player, query, "/kick <id o nombre> [motivo]")
+    local silent = cmd == "skick"
+    local t = target(player, query, "/" .. cmd .. " <id o nombre> [motivo]")
     if not t or t == player or not outranks(player, t) then return end
     local reason = table.concat({ ... }, " ")
     if reason == "" then reason = "Sin motivo" end
@@ -266,16 +268,21 @@ addCommandHandler("kick", function(player, _, query, ...)
         logAction(player, "kick_fallido", t, "sin permiso ACL")
         return notify(player, "No se pudo expulsar: agrega resource.rp_admin al grupo Admin en acl.xml.", "error")
     end
-    outputChatBox(("[Admin] %s fue expulsado del servidor. Motivo: %s"):format(who, reason), root, 255, 120, 120)
+    if not silent then outputChatBox(("[Admin] %s fue expulsado del servidor. Motivo: %s"):format(who, reason), root, 255, 120, 120) end
     notify(player, ("Expulsaste a %s. Motivo: %s"):format(who, reason), "success")
-end)
+end
+addCommandHandler("kick", kickCommand)
+addCommandHandler("pkick", kickCommand)
+addCommandHandler("skick", kickCommand)
 
-addCommandHandler("ban", function(player, _, query, hours, ...)
+local function banCommand(player, cmd, query, hours, ...)
     if not guard(player, LEVEL_SUPER) then return end
-    local t = target(player, query, "/ban <id o nombre> <horas, 0 = permanente> [motivo]")
+    local silent = cmd == "sban"
+    local usage = "/" .. cmd .. " <id o nombre> <horas, 0 = permanente> [motivo]"
+    local t = target(player, query, usage)
     hours = tonumber(hours)
     if not t then return end
-    if not hours or hours < 0 then return notify(player, "Uso: /ban <id o nombre> <horas, 0 = permanente> [motivo]", "warning") end
+    if not hours or hours < 0 then return notify(player, "Uso: " .. usage, "warning") end
     if t == player or not outranks(player, t) then return end
     local reason = table.concat({ ... }, " ")
     if reason == "" then reason = "Sin motivo" end
@@ -286,9 +293,12 @@ addCommandHandler("ban", function(player, _, query, hours, ...)
         return notify(player, "No se pudo banear: agrega resource.rp_admin al grupo Admin en acl.xml.", "error")
     end
     local length = hours == 0 and "permanentemente" or ("por %s h"):format(hours)
-    outputChatBox(("[Admin] %s fue baneado %s. Motivo: %s"):format(who, length, reason), root, 255, 120, 120)
+    if not silent then outputChatBox(("[Admin] %s fue baneado %s. Motivo: %s"):format(who, length, reason), root, 255, 120, 120) end
     notify(player, ("Baneaste a %s %s. Motivo: %s"):format(who, length, reason), "success")
-end)
+end
+addCommandHandler("ban", banCommand)
+addCommandHandler("pban", banCommand)
+addCommandHandler("sban", banCommand)
 
 ----------------------------------------------------------------
 -- Dinero (efectivo). Para la cuenta bancaria esta /dardinero (rp_bank).
@@ -370,7 +380,11 @@ local HELP = {
     { LEVEL_ADMIN, "Mundo: /crearatm /crearshop /crearcasa /crearropa /crearfaccion /dealer (y sus /borrar...)" },
     { LEVEL_ADMIN, "Debug: /debug [0-3] activa o apaga el debugscript de tu cliente" },
     { LEVEL_ADMIN, "Debug: /copiardebug [X] copia al portapapeles las ultimas X lineas del debug (antes /debug 3)" },
-    { LEVEL_SUPER, "Super admin: /setmoney /ban" },
+    { LEVEL_ADMIN, "Owl: /check /history /sendto /gethere /setint /setdim /recon /warn /jail /unjail /jailed /pmute /unmute /pkick /skick" },
+    { LEVEL_ADMIN, "Mundo (Owl): /nearby [radio] y por tipo /nearby<tipos> /goto<tipo> <id> /del<tipo> <id> /delthis<tipo>" },
+    { LEVEL_ADMIN, "  tipos: atm shop house clothingstore vending dealer robstore gymmachine trainer school pooltable crossing (plural + s)" },
+    { 2, "Admin senior: /findalts /findip /findserial" },
+    { LEVEL_SUPER, "Super admin: /setmoney /ban /pban /sban /oban /unban /delnearby<tipos>" },
 }
 
 -- /debug [0-3]: activa el debugscript del cliente del admin (0 = apagado, 3 = errores, avisos e info).

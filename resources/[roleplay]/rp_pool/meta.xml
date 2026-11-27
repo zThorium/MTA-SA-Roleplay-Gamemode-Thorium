@@ -26,4 +26,6 @@
 
     <export function="getPlayerPoolTable" type="server" />
     <export function="runSelfTest" type="server" />
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
 </meta>

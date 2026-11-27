@@ -1533,4 +1533,11 @@ SCHEMA = {
         PRIMARY KEY (setting_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_admin: jail OOC de administracion (minutos que faltan, persiste al reconectar) y silencio de chats OOC
+    [[
+    ALTER TABLE accounts
+        ADD COLUMN IF NOT EXISTS ojail_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS ojail_reason  VARCHAR(128) NULL,
+        ADD COLUMN IF NOT EXISTS mute_until    DATETIME NULL
+    ]],
 }

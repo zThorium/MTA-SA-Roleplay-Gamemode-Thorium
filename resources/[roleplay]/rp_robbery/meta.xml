@@ -30,4 +30,6 @@
     <export function="getStoreCount" type="server" />
     <export function="simulateNegotiation" type="server" />
     <export function="robberyStarsFor" type="server" />
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
 </meta>

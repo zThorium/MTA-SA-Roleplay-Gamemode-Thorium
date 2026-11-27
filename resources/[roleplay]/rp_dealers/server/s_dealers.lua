@@ -144,12 +144,31 @@ addCommandHandler("creartraficante", function(player, _, skin)
         skin, x, y, z, rot, interior, dimension)
 end)
 
+-- Exports para la gramatica Owl de rp_admin (/nearbydealers, /gotodealer, /deldealer...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(dealers) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = row.interior, dimension = row.dimension, label = "Traficante skin " .. tostring(row.ped_skin) }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
+    id = tonumber(id)
+    if not id or not dealers[id] then return false, "no existe" end
+    dbExec(db(), "DELETE FROM dealers WHERE id = ?", id)
+    destroyDealer(id)
+    return true
+end
+
 addCommandHandler("borrartraficante", function(player, _, id)
     if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
     id = tonumber(id)
-    if not id or not dealers[id] then return notify(player, "Uso: /borrartraficante <id> (ver /traficantes)", "warning") end
-    dbExec(db(), "DELETE FROM dealers WHERE id = ?", id)
-    destroyDealer(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrartraficante <id> (ver /traficantes)", "warning") end
     notify(player, ("Traficante #%d eliminado."):format(id), "success")
 end)
 

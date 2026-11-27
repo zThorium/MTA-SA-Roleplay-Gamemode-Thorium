@@ -60,12 +60,36 @@ addCommandHandler("crearmaquina", function(player, _, kindText, gym)
         kind, gym, x, y, z, rot, int, dim)
 end)
 
+-- Exports para la gramatica Owl de rp_admin (/nearbygymmachines, /nearbytrainers, /delgymmachine...)
+function adminElements(kind)
+    local list = {}
+    for id, e in pairs(kind == "trainer" and gymTrainerList() or gymMachineList()) do
+        local row = e.row
+        list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+            interior = row.interior, dimension = row.dimension, label = e.cfg and e.cfg.label or "" }
+    end
+    return list
+end
+
+function adminDelete(id, kind)
+    id = tonumber(id)
+    if kind == "trainer" then
+        if not id or not gymTrainerList()[id] then return false, "no existe" end
+        if gymIsFixedId(id) then return false, "es el entrenador fijo del gimnasio (GYM_FIXED)" end
+        gymDestroyTrainer(id)
+        dbExec(gymDb(), "DELETE FROM gym_trainers WHERE id = ?", id)
+        return true
+    end
+    if not id or not gymMachineList()[id] then return false, "no existe" end
+    gymDestroyMachine(id)
+    dbExec(gymDb(), "DELETE FROM gym_machines WHERE id = ?", id)
+    return true
+end
+
 addCommandHandler("borrarmaquina", function(player, _, id)
     if not gymIsAdmin(player) then return gymNotify(player, NO_PERMISSION, "error") end
     id = tonumber(id)
-    if not id or not gymMachineList()[id] then return gymNotify(player, "Uso: /borrarmaquina <id> (mira /maquinas)", "warning") end
-    gymDestroyMachine(id)
-    dbExec(gymDb(), "DELETE FROM gym_machines WHERE id = ?", id)
+    if not id or not adminDelete(id, "machine") then return gymNotify(player, "Uso: /borrarmaquina <id> (mira /maquinas)", "warning") end
     gymNotify(player, ("Maquina %d eliminada."):format(id), "success")
 end)
 

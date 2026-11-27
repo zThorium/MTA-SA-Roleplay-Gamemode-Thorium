@@ -10,10 +10,20 @@ Referencias: `rp_shops` (`/crearshop`, `/borrarshop`), `rp_bank` (`/crearatm`, `
 
 ## Reglas
 
-- Nombres **en español**, minúsculas, sin tildes ni guiones: `/crearatm`, `/borrarcasa`, `/vendercasa`.
-  Convención para admins: `/crear<cosa>`, `/borrar<cosa> <id>`, `/<cosas>` para listar.
+- Comandos **de jugador en español**, minúsculas, sin tildes ni guiones: `/vendercasa`, `/cerrarcasa`.
+- Comandos **de admin con la sintaxis de OwlGaming** (en inglés), que es la que conoce el staff que viene de Owl/Valhalla:
+  - Elementos que colocan los admins: **no escribas los comandos a mano**. Expón en el recurso los exports
+    `adminElements(kind)` (lista `{ id, x, y, z, interior, dimension, label }`) y `adminDelete(id, kind)` (`true` o `false, motivo`)
+    y añade una fila a `WORLD_TYPES` en `rp_admin/s_world.lua`. Con eso salen solos `/nearby<tipos>`, `/goto<tipo>`,
+    `/del<tipo>`, `/delthis<tipo>`, `/delnearby<tipos>` y el tipo aparece en `/nearby`. Ejemplo: `rp_bank` (`atm`).
+  - Crear: `/make<cosa>` o `/add<cosa>`. Cambiar un valor de un jugador: `/set<valor> <jugador> <valor>` (`/setint`, `/setdim`).
+    Dar/quitar: `/give<cosa>`, `/take<cosa>`. Buscar: `/find<cosa>`. Prefijos de sanción: `p` jugador (`/pkick`),
+    `s` sin aviso global (`/sban`), `o` cuenta desconectada (`/oban`).
+  - Los comandos de admin antiguos en español (`/crearatm`, `/borrarcasa`) se mantienen como alias; no los borres.
+- Niveles (`accounts.admin_level`): 1 admin, 2 admin senior (datos sensibles: serial, IP, multicuentas), 3 super admin (baneos, borrados masivos).
+  En `rp_admin` usa `guard(player, nivel)`.
 - Todo comando se registra en el servidor con `addCommandHandler`; el cliente nunca decide permisos.
-- Admin: `accounts.admin_level >= 1`. Hoy solo existe el nivel 1. Si un comando necesita otro nivel,
+- Admin: `accounts.admin_level >= 1`. Si un comando necesita otro nivel,
   usa una constante en el config del recurso y documéntala en `RECURSOS.md`.
 - Respuestas con `rp_notify`. `outputChatBox` solo para listados largos o chats (`/facciones`, `/f`, `/id`):
   - sin permiso → `"No tienes permiso para usar este comando.", "error"`

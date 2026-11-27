@@ -44,14 +44,33 @@ addCommandHandler("crearrobo", function(player, _, kind, ...)
     end)
 end)
 
-addCommandHandler("borrarrobo", function(player, _, id)
-    if not isAdmin(player) then return denied(player) end
+-- Exports para la gramatica Owl de rp_admin (/nearbyrobstores, /gotorobstore, /delrobstore...)
+function adminElements()
+    local list = {}
+    for id, e in pairs(STORES) do
+        local row = e.row
+        if row then
+            list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
+                interior = 0, dimension = 0, label = row.name }
+        end
+    end
+    return list
+end
+
+function adminDelete(id)
     id = tonumber(id)
     local store = id and STORES[id]
-    if not store then return notify(player, "Uso: /borrarrobo <id> (mira /robos)", "warning") end
+    if not store then return false, "no existe" end
     if store.robbery then endRobbery(store.robbery, "admin") end
     dbExec(db(), "DELETE FROM robbery_stores WHERE id = ?", id)
     destroyStore(id)
+    return true
+end
+
+addCommandHandler("borrarrobo", function(player, _, id)
+    if not isAdmin(player) then return denied(player) end
+    id = tonumber(id)
+    if not id or not adminDelete(id) then return notify(player, "Uso: /borrarrobo <id> (mira /robos)", "warning") end
     notify(player, ("Tienda robable #%d borrada."):format(id), "success")
 end)
 

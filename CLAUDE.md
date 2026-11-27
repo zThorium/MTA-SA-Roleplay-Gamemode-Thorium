@@ -58,7 +58,7 @@ Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos) y `rp_firefighters` (facción de bomberos: servicio en el vestuario, autobombas e incendios dinámicos con focos y civiles atrapados en sitios que colocan los admins con `/fdsitio`).
 Drogas: `rp_dealers` (traficantes skin 28/29/30; comprar con un policia mirando da estrella).
 Trámites: `rp_agency` (agencia de empleo: turnos, DNI `id_card` y alta en trabajos).
-Admin: `rp_admin` (`/freecam`), `rp_adminpanel` (`/adminpanel`, F10: dashboard, jugadores en 3D, cuentas, IAM/RBAC, auditoría y catálogo de comandos; añade ahí cada comando de admin nuevo). `rp_resmanager` (F9, solo super admin).
+Admin: `rp_admin` (`/freecam` y comandos con la **sintaxis de OwlGaming**: `/nearby<tipos>`, `/goto<tipo>`, `/del<tipo>`, `/check`, `/recon`, `/jail`, `/pmute`, `/oban`...; registro de tipos en `s_world.lua`, ver skill `comando-admin`), `rp_adminpanel` (`/adminpanel`, F10: dashboard, jugadores en 3D, cuentas, IAM/RBAC, auditoría y catálogo de comandos; añade ahí cada comando de admin nuevo). `rp_resmanager` (F9, solo super admin).
 
 **En PR abierto, aún no en `main`** (revisa el PR antes de tocar esas áreas):
 vehículos con llaves/interacción M/tuning y combustible (#6), panel de ayuda F1 con
