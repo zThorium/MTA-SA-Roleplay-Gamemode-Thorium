@@ -25,3 +25,22 @@ addEventHandler("rp:citizens:clock", resourceRoot, function()
 end)
 
 addEventHandler("onPlayerQuit", root, function() lastAsk[source] = nil end)
+
+----------------------------------------------------------------
+-- Admin: /gotoaircraft [ruta] (alias /irvuelo). Lleva al admin debajo de la proxima aeronave del trafico aereo
+-- y la marca en el radar. El servidor decide el permiso; el cliente calcula el vuelo (el horario solo existe alli).
+----------------------------------------------------------------
+local function notify(p, t, k) exports.rp_notify:notify(p, t, k) end
+local function isAdmin(p) return (exports.rp_login:getPlayerAdminLevel(p) or 0) >= 1 end
+
+local function gotoAircraft(player, _, ...)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    local query = table.concat({ ... }, " ")
+    if #query > 40 then return notify(player, "Uso: /gotoaircraft [parte del nombre de la ruta, ver /vuelos]", "warning") end
+    if getPedOccupiedVehicle(player) then removePedFromVehicle(player) end
+    setElementInterior(player, 0)
+    setElementDimension(player, 0)
+    triggerClientEvent(player, "rp:citizens:air:goto", resourceRoot, query)
+end
+addCommandHandler("gotoaircraft", gotoAircraft)
+addCommandHandler("irvuelo", gotoAircraft)

@@ -359,6 +359,109 @@ function citizenAirCount()
     return activeCount, #routes
 end
 
+----------------------------------------------------------------
+-- /gotoaircraft [ruta] (alias /irvuelo, solo admins: el servidor comprueba el permiso y manda este evento).
+-- Elige un vuelo que siga en el aire dentro de LEAD s, lleva al admin al suelo justo bajo el punto por donde
+-- pasara entonces y lo sigue en el radar con un blip hasta que sale del mapa (como mucho 3 min).
+----------------------------------------------------------------
+local GOTO = { LEAD = 30, BLIP_MS = 180000, MAP = 2950 }
+local follow   -- { blip, r, k, untilT, timer }
+
+local function stopFollow()
+    if not follow then return end
+    if isElement(follow.blip) then destroyElement(follow.blip) end
+    if isTimer(follow.timer) then killTimer(follow.timer) end
+    follow = nil
+end
+
+local function insideMap(x, y) return math.abs(x) < GOTO.MAP and math.abs(y) < GOTO.MAP end
+
+-- Mejor vuelo: con nombre, el primero que coincida; sin nombre, los de linea primero (son los dificiles de
+-- encontrar) y, entre ellos, el que mas tiempo le queda en el mapa
+local function pickFlight(query, t)
+    local best
+    for _, r in ipairs(routes) do
+        if query == "" or r.name:lower():find(query, 1, true) then
+            local ks = {}
+            if r.loop then
+                for j = 1, r.n do ks[#ks + 1] = j end
+            else
+                local tt = t + GOTO.LEAD
+                for k = math.floor((tt - r.offset - r.L / r.speed) / r.period), math.floor((tt - r.offset) / r.period) do ks[#ks + 1] = k end
+            end
+            for _, k in ipairs(ks) do
+                local s = flightS(r, k, t + GOTO.LEAD)
+                if s then
+                    local x, y, z = sampleAt(r, s)
+                    if insideMap(x, y) then
+                        -- tiempo que seguira dentro del mapa desde ese punto
+                        local left = 0
+                        if r.loop then left = math.huge else
+                            for ss = s, r.L, 50 do
+                                local xx, yy = sampleAt(r, ss)
+                                if not insideMap(xx, yy) then break end
+                                left = (ss - s) / r.speed
+                            end
+                        end
+                        local score = (r.loop and 0 or 1e6) + math.min(left, 1e5)
+                        if not best or score > best.score then
+                            best = { r = r, k = k, x = x, y = y, z = z, score = score }
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- Baja al admin al suelo (o al agua) cuando carga la colision de la zona
+local function landAt(x, y, zAir, tries)
+    tries = tries or 0
+    local gz = getGroundPosition(x, y, zAir)
+    local wz = getWaterLevel(x, y, (gz and gz ~= 0) and gz or 0)
+    if (gz and gz ~= 0) or wz or tries >= 10 then
+        local z = math.max(gz or 0, wz or -1000)
+        if z <= -1000 then z = 20 end
+        setElementPosition(localPlayer, x, y, z + 1)
+        setElementFrozen(localPlayer, false)
+        return
+    end
+    setTimer(landAt, 500, 1, x, y, zAir, tries + 1)
+end
+
+addEvent("rp:citizens:air:goto", true)
+addEventHandler("rp:citizens:air:goto", resourceRoot, function(query)
+    local t = airNow()
+    if not t then return exports.rp_notify:notify("Aun no llega la hora del servidor; prueba en unos segundos.", "warning") end
+    if #routes == 0 then return end
+    query = tostring(query or ""):lower()
+    local f = pickFlight(query, t)
+    if not f then
+        return exports.rp_notify:notify(query == "" and "Ningun vuelo cruza el mapa ahora mismo; prueba en un minuto o con /vuelos."
+            or "Ninguna ruta con ese nombre esta en el aire ahora (mira /vuelos).", "warning")
+    end
+    -- arriba primero (la colision del suelo aun no esta cargada) y luego al suelo
+    setElementFrozen(localPlayer, true)
+    setElementPosition(localPlayer, f.x, f.y, f.z - 60)
+    setTimer(landAt, 800, 1, f.x, f.y, f.z)
+
+    stopFollow()
+    follow = { r = f.r, k = f.k, untilT = getTickCount() + GOTO.BLIP_MS }
+    follow.blip = createBlip(f.x, f.y, f.z, 5, 2, 255, 255, 255, 255, 0, 99999)
+    follow.timer = setTimer(function()
+        local now = airNow()
+        local s = now and follow and flightS(follow.r, follow.k, now)
+        if not s or getTickCount() > follow.untilT then return stopFollow() end
+        local x, y, z = sampleAt(follow.r, s)
+        if not insideMap(x, y) then return stopFollow() end
+        setElementPosition(follow.blip, x, y, z)
+    end, 250, 0)
+
+    exports.rp_notify:notify(("%s pasara sobre ti en unos %d s, a %d m de altura. Lo tienes en el radar."):format(
+        f.r.name, GOTO.LEAD, math.floor(f.z)), "info")
+end)
+
 -- /vuelos: proximas aeronaves que pasaran cerca (diagnostico y para encontrarlas al probar)
 addCommandHandler("vuelos", function()
     local t = airNow()
