@@ -6,12 +6,12 @@
 
     Exports (servidor):
         getWorldState()        -> { hour, minute, weather, label, id, raining, night, since }
-        setWeatherState(name)  -> true | false (nombre invalido)
+        setWeatherState(name, instant, id) -> true | false (nombre o variante invalidos)
 
     Evento de servidor (para otros recursos):
         rp:events:onWorldChanged (weather, previous)   source = resourceRoot
 
-    elementData publico: root "rp:world" = { weather, label, raining }
+    elementData publico: root "rp:world" = { weather, label, raining, id }
 ]]
 
 addEvent("rp:events:onWorldChanged", false)
@@ -31,7 +31,7 @@ end
 
 local function publish()
     local def = WORLD.WEATHER[state.weather]
-    setElementData(root, "rp:world", { weather = state.weather, label = def.label, raining = def.rain })
+    setElementData(root, "rp:world", { weather = state.weather, label = def.label, raining = def.rain, id = state.id })
 end
 
 local function scheduleNext()
@@ -44,12 +44,18 @@ local function scheduleNext()
     end, secs * 1000, 1)
 end
 
-function setWeatherState(name, instant)
+function setWeatherState(name, instant, id)
     local def = WORLD.WEATHER[name]
     if not def then return false end
+    -- id opcional: una variante concreta del estado (la que el admin vio en /clima)
+    if id ~= nil then
+        local ok = false
+        for _, v in ipairs(def.ids) do if v == id then ok = true end end
+        if not ok then return false end
+    end
     local previous = state.weather
     state.weather = name
-    state.id = def.ids[math.random(#def.ids)]
+    state.id = id or def.ids[math.random(#def.ids)]
     state.since = getRealTime().timestamp
     if instant then setWeather(state.id) else setWeatherBlended(state.id) end
     publish()

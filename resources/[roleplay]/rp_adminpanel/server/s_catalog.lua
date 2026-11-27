@@ -112,7 +112,7 @@ ADMIN_CATALOG = {
             { cmd = "/terminarevento", args = "<n|todos>", desc = "Termina un evento activo (o todos) y limpia sus elementos.", res = "rp_events" },
             { cmd = "/eventosintensidad", args = "[0-3]", desc = "Intensidad del mundo vivo: 0 apagado (sin eventos ni escenas), 1 tranquilo, 2 normal, 3 movido.", res = "rp_events" },
             { cmd = "/eventosinfo", args = "", desc = "Presupuesto de drama, elementos en uso e intensidad del director de eventos.", res = "rp_events" },
-            { cmd = "/clima", args = "[nombre]", desc = "Cambia el clima compartido (sun, smog, cloudy, rain, storm, fog). Sin nombre muestra el actual.", res = "rp_events" },
+            { cmd = "/clima", args = "[nombre]", desc = "Vista previa del clima (solo la ves tu): flechas o rueda para elegir (sun, smog, cloudy, rain, storm, fog), arriba/abajo para la variante, Enter lo pone para todos y Retroceso cancela. Con nombre empieza en ese clima.", res = "rp_events" },
             { cmd = "/hora", args = "<0-23> [minutos]", desc = "Cambia la hora de juego (el reloj sigue avanzando desde ahi).", res = "rp_events" },
             { cmd = "/mercadoajuste", args = "<dz> <rotacion>", desc = "Calibra los puestos del mercadillo: metros que se suben (por si quedan enterrados) y rotacion extra 0/90/180/270 para que miren a la calle. Luego crea otro con /evento market.", res = "rp_events" },
             { cmd = "/crearbarrera", args = "[inv]", desc = "Crea una barrera de paso a nivel en tu posicion junto a la via (el brazo apunta hacia donde miras; inv lo baja al otro lado). Baja sola cuando pasa el tren.", res = "rp_train" },

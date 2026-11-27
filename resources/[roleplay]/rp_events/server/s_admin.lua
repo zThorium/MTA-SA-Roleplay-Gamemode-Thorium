@@ -7,7 +7,7 @@
         /terminarevento <n|todos>   termina un evento (o todos)
         /eventosintensidad [0-3]    0 apagado, 1 tranquilo, 2 normal, 3 movido
         /eventosinfo                presupuesto y elementos en uso
-        /clima [nombre]             cambia el clima (sin nombre: lista)
+        /clima [nombre]             vista previa del clima (solo para ti); Enter lo pone para todos
         /hora <h> [m]               cambia la hora de juego
 ]]
 
@@ -80,15 +80,31 @@ admin("eventosinfo", function(player)
         getBudget(), EVENTS.BUDGET_MAX, getElementTotal(), EVENTS.MAX_ELEMENTS, getIntensity()))
 end)
 
+-- /clima abre la vista previa en el cliente del admin (solo la ve el); con Enter confirma
+addEvent("rp:events:weatherConfirm", true)
+
 admin("clima", function(player, name)
-    if not name then
+    if name and not WORLD.WEATHER[name] then
         local names = {}
         for k, d in pairs(WORLD.WEATHER) do names[#names + 1] = k .. " (" .. d.label .. ")" end
         table.sort(names)
-        local w = getWorldState()
-        return say(player, "Clima actual: " .. w.weather .. ". Disponibles: " .. table.concat(names, ", "))
+        return say(player, "Clima desconocido. Disponibles: " .. table.concat(names, ", "))
     end
-    if setWeatherState(name) then say(player, "Clima cambiado a " .. name .. ".") else say(player, "Clima desconocido. /clima para ver la lista.") end
+    local w = getWorldState()
+    triggerClientEvent(player, "rp:events:weatherPreview", resourceRoot, name or w.weather, w.id)
+end)
+
+addEventHandler("rp:events:weatherConfirm", resourceRoot, function(name, id)
+    local player = client
+    if not player or not isAdmin(player) then return end
+    if type(name) ~= "string" or type(id) ~= "number" then return end
+    if setWeatherState(name, true, id) then
+        local def = WORLD.WEATHER[name]
+        notify(player, ("Clima cambiado a %s."):format(def.label), "success")
+        outputServerLog(("[rp_events] %s puso el clima %s (id %d)"):format(getPlayerName(player), name, id))
+    else
+        notify(player, "Clima no valido.", "error")
+    end
 end)
 
 admin("hora", function(player, h, m)

@@ -14,6 +14,17 @@
     <script src="server/s_director.lua" type="server" />
     <script src="server/s_admin.lua" type="server" />
     <script src="client/c_events.lua" type="client" cache="false" />
+    <script src="client/c_weather.lua" type="client" cache="false" />
+
+    <file src="images/keys/keyboard_arrows_horizontal.png" />
+    <file src="images/keys/keyboard_arrows_vertical.png" />
+    <file src="images/keys/mouse_scroll.png" />
+    <file src="images/keys/keyboard_enter.png" />
+    <file src="images/keys/keyboard_backspace.png" />
+    <file src="sounds/select_002.ogg" />
+    <file src="sounds/confirmation_001.ogg" />
+    <file src="sounds/back_001.ogg" />
+    <file src="sounds/maximize_003.ogg" />
 
     <export function="getWorldState" type="server" />
     <export function="setWeatherState" type="server" />
