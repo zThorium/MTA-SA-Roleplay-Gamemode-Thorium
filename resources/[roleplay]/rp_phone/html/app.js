@@ -35,6 +35,7 @@
         if (window.Music) Music.onShow(name);
         if (window.Gallery) Gallery.onShow(name);
         if (window.TinderApp) TinderApp.onShow(name);
+        if (window.Messages) Messages.onShow(name);
         if (name === "contact-add") send("rp:phone:ui:nearby");
     }
 
@@ -211,6 +212,11 @@
             del.type = "button";
             del.addEventListener("click", function (e) { e.stopPropagation(); send("rp:phone:ui:contactDelete", c.id); });
             li.appendChild(text);
+            var sms = el("button", "contact-sms", "💬");
+            sms.type = "button";
+            sms.title = "Enviar mensaje";
+            sms.addEventListener("click", function (e) { e.stopPropagation(); if (window.Messages) Messages.open(String(c.number), c.name); });
+            li.appendChild(sms);
             li.appendChild(del);
             list.appendChild(li);
         });

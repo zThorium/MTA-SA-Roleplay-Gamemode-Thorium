@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="social.css">
     <link rel="stylesheet" href="tinder.css">
+    <link rel="stylesheet" href="messages.css">
     <link rel="stylesheet" href="music.css">
     <link rel="stylesheet" href="gallery.css">
 </head>
@@ -26,6 +27,7 @@
                 </div>
                 <div class="apps">
                     <button type="button" class="app" data-open="phone"><span class="icon call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></span>Telefono</button>
+                    <button type="button" class="app" data-open="messages"><span class="icon sms">💬<i class="sms-badge" id="sms-badge" hidden></i></span>Mensajes</button>
                     <button type="button" class="app" data-open="notes"><span class="icon notes">📝</span>Notas</button>
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
@@ -237,6 +239,34 @@
                     <button type="button" data-tab="notifs" title="Notificaciones">♡<i class="fg-badge" id="fg-badge" hidden></i></button>
                     <button type="button" data-tab="profile" title="Perfil"><span class="fg-avatar xs" id="fg-tab-avatar"></span></button>
                 </nav>
+            </section>
+
+            <!-- Mensajes (html/messages.js, messages.css): SMS entre telefonos -->
+            <section class="view sms" id="view-messages">
+                <header><button type="button" class="back">‹ Inicio</button><h1>Mensajes</h1><button type="button" class="action" id="sms-new" title="Nuevo mensaje">✎</button></header>
+                <div class="sms-search"><input type="text" id="sms-filter" placeholder="Buscar" autocomplete="off"></div>
+                <div class="sms-list" id="sms-list"></div>
+
+                <!-- Nuevo mensaje -->
+                <div class="sms-panel" id="sms-pick" hidden>
+                    <header><button type="button" class="sms-link" id="sms-pick-cancel">Cancelar</button><h1>Nuevo mensaje</h1><span></span></header>
+                    <div class="sms-to"><span>Para:</span><input type="text" id="sms-to" inputmode="numeric" maxlength="8" placeholder="Número o elige un contacto" autocomplete="off"><button type="button" id="sms-to-go">Ir</button></div>
+                    <div class="sms-contacts" id="sms-contacts"></div>
+                </div>
+
+                <!-- Conversacion -->
+                <div class="sms-panel" id="sms-chat" hidden>
+                    <header class="sms-chat-head">
+                        <button type="button" class="sms-link" id="sms-chat-back">‹</button>
+                        <div class="sms-chat-who"><div class="sms-avatar" id="sms-chat-avatar"></div><strong id="sms-chat-name"></strong><small id="sms-chat-number"></small></div>
+                        <button type="button" class="sms-link" id="sms-chat-call" title="Llamar">📞</button>
+                    </header>
+                    <div class="sms-msgs" id="sms-msgs"></div>
+                    <form class="sms-compose" id="sms-compose">
+                        <input type="text" id="sms-input" maxlength="400" placeholder="Mensaje" autocomplete="off">
+                        <button type="submit" id="sms-send" title="Enviar">↑</button>
+                    </form>
+                </div>
             </section>
 
             <!-- Tinder (html/tinder.js, tinder.css): mazo, Le gustas, mensajes, chat y perfil -->
@@ -481,6 +511,7 @@
     <script src="app.js"></script>
     <script src="social.js"></script>
     <script src="tinder.js"></script>
+    <script src="messages.js"></script>
     <script src="music.js"></script>
     <script src="gallery.js"></script>
 </body>

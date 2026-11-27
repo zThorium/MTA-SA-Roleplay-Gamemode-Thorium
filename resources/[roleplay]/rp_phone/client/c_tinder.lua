@@ -53,6 +53,9 @@ encode = function(v)
     return "{" .. table.concat(out, ",") .. "}"
 end
 
+-- Para otras apps del telefono (c_messages.lua)
+Phone.encode, Phone.encodeString = encode, encodeString
+
 local function toJS(name, ...)
     if not Phone.isOpen() then return false end
     local args = {}

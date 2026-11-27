@@ -1693,4 +1693,25 @@ SCHEMA = {
         CONSTRAINT fk_tinder_messages_receiver FOREIGN KEY (receiver_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_phone (Mensajes): SMS entre los telefonos de los personajes. Borrar una conversacion solo la oculta
+    -- para quien la borra (hidden_sender / hidden_receiver)
+    [[
+    CREATE TABLE IF NOT EXISTS phone_messages (
+        id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        sender_id       INT UNSIGNED NOT NULL,
+        receiver_id     INT UNSIGNED NOT NULL,
+        sender_number   INT UNSIGNED NOT NULL,
+        receiver_number INT UNSIGNED NOT NULL,
+        body            VARCHAR(500) NOT NULL,
+        created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        read_at         DATETIME NULL,
+        hidden_sender   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        hidden_receiver TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        KEY idx_phone_messages_sender (sender_id, id),
+        KEY idx_phone_messages_receiver (receiver_id, read_at),
+        CONSTRAINT fk_phone_messages_sender FOREIGN KEY (sender_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_phone_messages_receiver FOREIGN KEY (receiver_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

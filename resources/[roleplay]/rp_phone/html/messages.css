@@ -1,0 +1,76 @@
+/* ================================================================
+ * rp_phone / messages.css  -  App Mensajes (ver messages.js)
+ * ================================================================ */
+.icon.sms { position: relative; background: linear-gradient(180deg, #5df27e, #1fbf45); }
+.sms-badge {
+    position: absolute; top: -5px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: #ff3040; color: #fff; font-size: 11px; font-style: normal; font-weight: 700; line-height: 18px;
+    text-align: center; box-shadow: 0 0 0 2px #fff;
+}
+.sms [hidden], .sms-badge[hidden] { display: none !important; }
+
+.view.sms { background: #fff; }
+.sms-search { padding: 0 12px 6px; }
+.sms-search input, .sms-to input, .sms-compose input {
+    width: 100%; padding: 8px 12px; border: 0; border-radius: 10px; background: #eeeef0; font: inherit; font-size: 14px; outline: none;
+}
+.sms-list { flex: 1; overflow-y: auto; }
+.sms-list::-webkit-scrollbar, .sms-msgs::-webkit-scrollbar, .sms-contacts::-webkit-scrollbar { width: 0; }
+
+.sms-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; }
+.sms-row:hover { background: #f5f5f7; }
+.sms-row .txt { flex: 1; min-width: 0; padding-bottom: 9px; border-bottom: 1px solid #ececee; }
+.sms-row .top { display: flex; justify-content: space-between; gap: 6px; }
+.sms-row strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sms-row time { flex: none; font-size: 12px; color: #8e8e93; }
+.sms-row small { display: block; margin-top: 2px; font-size: 13px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sms-row.unread small { color: #111; font-weight: 600; }
+.sms-row .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #0a7aff; visibility: hidden; }
+.sms-row.unread .dot { visibility: visible; }
+.sms-empty { padding: 40px 24px; text-align: center; font-size: 14px; color: #8e8e93; line-height: 1.5; }
+.sms-empty button { margin-top: 12px; padding: 9px 18px; border: 0; border-radius: 18px; background: #0a7aff; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+
+.sms-avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(180deg, #a8aeb8, #858b95); color: #fff; font-weight: 700; font-size: 18px; }
+
+/* Paneles (nuevo mensaje y conversacion) sobre la lista */
+.sms-panel { position: absolute; inset: 0; padding-top: 52px; display: flex; flex-direction: column; background: #fff; z-index: 5; animation: sms-in .2s ease-out; }
+@keyframes sms-in { from { transform: translateX(25%); opacity: 0; } to { transform: none; opacity: 1; } }
+.sms-link { border: 0; background: none; color: #0a7aff; font: inherit; font-size: 15px; cursor: pointer; justify-self: start; }
+.sms-to { display: flex; align-items: center; gap: 6px; padding: 4px 12px 8px; border-bottom: 1px solid #ececee; font-size: 14px; color: #8e8e93; }
+.sms-to button { border: 0; background: none; color: #0a7aff; font: inherit; font-weight: 600; cursor: pointer; }
+.sms-contacts { flex: 1; overflow-y: auto; }
+.sms-contacts .sms-row .txt { padding-bottom: 6px; }
+
+/* Conversacion */
+.sms-chat-head { grid-template-columns: 40px 1fr 40px; padding-bottom: 6px; border-bottom: 1px solid #ececee; }
+.sms-chat-head .sms-link:last-child { justify-self: end; font-size: 17px; }
+.sms-chat-who { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.sms-chat-who .sms-avatar { width: 36px; height: 36px; font-size: 15px; }
+.sms-chat-who strong { font-size: 13px; font-weight: 600; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sms-chat-who small { font-size: 10px; color: #8e8e93; }
+.sms-msgs { flex: 1; overflow-y: auto; padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 3px; }
+.sms-msgs .when { align-self: center; margin: 8px 0 4px; font-size: 11px; color: #8e8e93; }
+.sms-bubble { max-width: 76%; padding: 7px 12px; border-radius: 18px; font-size: 14px; line-height: 1.3; word-wrap: break-word; white-space: pre-wrap; animation: sms-pop .18s ease-out; }
+@keyframes sms-pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.sms-bubble.them { align-self: flex-start; background: #e9e9eb; color: #111; border-bottom-left-radius: 5px; }
+.sms-bubble.mine { align-self: flex-end; background: #0a7aff; color: #fff; border-bottom-right-radius: 5px; }
+.sms-bubble.failed { background: #ff3b30; }
+.sms-status { align-self: flex-end; margin-right: 4px; font-size: 10px; color: #8e8e93; }
+.sms-status.failed { color: #ff3b30; }
+.sms-compose { display: flex; align-items: center; gap: 6px; padding: 8px 10px 14px; border-top: 1px solid #ececee; }
+.sms-compose input { border-radius: 18px; border: 1px solid #d1d1d6; background: #fff; }
+.sms-compose button { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #0a7aff; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+.sms-compose button:disabled { background: #c7c7cc; cursor: default; }
+
+/* Aviso dentro del telefono cuando llega un SMS y estas en otra app */
+.sms-toast { position: absolute; top: 50px; left: 10px; right: 10px; z-index: 70; display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+    border-radius: 14px; background: rgba(245,245,247,.97); box-shadow: 0 6px 18px rgba(0,0,0,.25); font-size: 12px; cursor: pointer; animation: sms-drop .25s ease-out; }
+@keyframes sms-drop { from { transform: translateY(-30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sms-toast .sms-avatar { width: 30px; height: 30px; font-size: 13px; }
+.sms-toast b { display: block; font-size: 13px; }
+.sms-toast span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #333; }
+
+/* Contactos: boton de mensaje junto a cada contacto */
+.contact-sms { margin-left: auto; margin-right: 6px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #e8f9ec; color: #1fbf45; font-size: 14px; cursor: pointer; }
+.sms-toast[hidden] { display: none; }
