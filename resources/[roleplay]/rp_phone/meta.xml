@@ -1,5 +1,5 @@
 <meta>
-    <info author="Thorium" name="RP Phone" description="Telefono: notas, agenda, banco, Musica, Fotogram, Tinder y perfiles (tecla P)" version="1.2.0" type="script" />
+    <info author="Thorium" name="RP Phone" description="Telefono: notas, agenda, banco, Mensajes, Musica, Fotogram, Tinder y perfiles (tecla P)" version="1.2.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
     <aclrequest>
         <right name="function.fetchRemote" access="true" />
@@ -25,6 +25,7 @@
     <script src="server/s_tinder_lines.lua" type="server" />
     <script src="server/s_tinder.lua" type="server" />
     <script src="server/s_tinder_npcs.lua" type="server" />
+    <script src="server/s_messages.lua" type="server" />
     <script src="server/s_gallery.lua" type="server" />
     <script src="client/c_phone.lua" type="client" cache="false" />
     <script src="client/c_social.lua" type="client" cache="false" />
@@ -32,6 +33,7 @@
     <script src="client/c_camera.lua" type="client" cache="false" />
     <script src="client/c_gallery.lua" type="client" cache="false" />
     <script src="client/c_tinder.lua" type="client" cache="false" />
+    <script src="client/c_messages.lua" type="client" cache="false" />
     <script src="client/c_tinder_studio.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
@@ -48,6 +50,8 @@
     <file src="html/gallery.js" />
     <file src="html/tinder.css" />
     <file src="html/tinder.js" />
+    <file src="html/messages.css" />
+    <file src="html/messages.js" />
     <file src="html/img/keyboard_arrow_left.png" />
     <file src="html/img/keyboard_arrow_right.png" />
     <file src="html/img/keyboard_arrow_up.png" />

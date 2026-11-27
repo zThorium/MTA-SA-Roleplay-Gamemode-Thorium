@@ -70,3 +70,14 @@ test("tinder_chat_npc", function(t)
     if date.interest <= 85 then return t.fail("aceptar una cita debería subir el interés") end
     t.pass(r.npc .. ": \"" .. r.bubbles[1] .. "\"")
 end)
+
+-- App Mensajes (rp_phone/server/s_messages.lua): la tabla de SMS existe con sus columnas
+test("mensajes_tabla_sms", function(t)
+    query(function(rows, _, _, code, msg)
+        if not rows then return t.fail(("phone_messages: [%s] %s"):format(tostring(code), tostring(msg))) end
+        t.pass("phone_messages lista")
+    end, [[
+        SELECT COUNT(*) AS n FROM phone_messages
+        WHERE hidden_sender = 0 AND hidden_receiver = 0 AND read_at IS NULL AND sender_number > 0 AND receiver_number > 0
+    ]])
+end)
