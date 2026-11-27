@@ -128,6 +128,13 @@ TRAIN = {
     },
     FENCE_FORWARD = 1.5,            -- la reja aparece a esta distancia delante del admin
     FENCE_DROP = 1.0,               -- y esto por debajo de su centro (luego se ajusta en el editor)
+
+    -- Postes de metro (/crearpostemetro): modelo propio por estación (models/metro_pole_<nodo>.dff + metro_pole.col,
+    -- tools/build_metro_pole.py). El servidor crea el objeto con un modelo provisional y el cliente pone el suyo.
+    POLE_PLACEHOLDER = 1337,        -- se ve solo si el cliente no pudo cargar el modelo
+    POLE_FORWARD = 2.0,             -- aparece a esta distancia delante del admin
+    POLE_DROP = 1.0,                -- el origen del modelo es el pie del poste: del centro del admin al suelo
+    POLE_LOD_DISTANCE = 220,        -- se ve hasta aquí
 }
 
 -- Torniquete: dónde van el poste y el brazo a partir del centro del paso (x, y, z del jugador) y su

@@ -126,6 +126,8 @@ ADMIN_CATALOG = {
             { cmd = "/crearreja", args = "<tipo>", desc = "Pone una reja delante de ti para cerrar los lados de los torniquetes (1 barandilla, 2 reja de hierro, 3 malla, 4 malla alta, 5 valla baja; sin tipo, la lista). Congelada e irrompible; se abre el editor 3D. Borrar con /delstationfence <id>.", res = "rp_train" },
             { cmd = "/duplicar", args = "<cantidad> <x> <y> <z> [rot]", desc = "Con el editor 3D de tren abierto (cartel, torniquete o reja): prepara copias en fila, cada una a x, y, z metros de la anterior (ejes del mundo dibujados) y girada rot grados; se ven antes y se crean al guardar con Enter (max 20 copias, 10 m entre cada una). /duplicar 0 las quita. Mientras editas, el personaje queda congelado.", res = "rp_train" },
             { cmd = "/editarreja", args = "[id]", desc = "Editor 3D de una reja de estacion (sin id, la mas cercana a 15 m), mismas teclas que el cartel.", res = "rp_train" },
+            { cmd = "/crearpostemetro", args = "", desc = "Pone delante de ti el poste de metro (logo y letrero con el nombre) de la estacion mas cercana; se abre el editor 3D. Borrar con /delmetropole <id>.", res = "rp_train" },
+            { cmd = "/editarpostemetro", args = "[id]", desc = "Editor 3D de un poste de metro (sin id, el mas cercano a 15 m), mismas teclas que el cartel.", res = "rp_train" },
         },
     },
     {

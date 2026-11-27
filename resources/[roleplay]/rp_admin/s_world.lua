@@ -41,6 +41,7 @@ WORLD_TYPES = {
     { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign", create = "crearcartel" },
     { key = "turnstile",     many = "turnstiles",     res = "rp_train",      name = "Torniquete de tren", kind = "gate", create = "creartorniquete" },
     { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence", create = "crearreja" },
+    { key = "metropole",     many = "metropoles",     res = "rp_train",      name = "Poste de metro", kind = "pole", create = "crearpostemetro" },
     { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D", create = "create3dtext" },
     { key = "marker",        many = "markers",        res = "rp_markers",    name = "Marcador" },
 }

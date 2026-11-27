@@ -31,6 +31,16 @@
     <script src="client/c_booth.lua" type="client" cache="false" />
     <!-- Torniquetes: UI del boleto (html/) y paso cerrado -->
     <script src="client/c_gates.lua" type="client" cache="false" />
+    <!-- Postes de metro con el nombre de cada estación (/crearpostemetro; modelos de tools/build_metro_pole.py) -->
+    <script src="client/c_metropole.lua" type="client" cache="false" />
+    <file src="models/metro_pole.col" />
+    <file src="models/metro_pole.txd" />
+    <file src="models/metro_pole_331.dff" />
+    <file src="models/metro_pole_371.dff" />
+    <file src="models/metro_pole_597.dff" />
+    <file src="models/metro_pole_823.dff" />
+    <file src="models/metro_pole_59.dff" />
+    <file src="models/metro_pole_107.dff" />
 
     <!-- Campanas del cruce (ver CREDITOS.md) -->
     <file src="sounds/campanas.mp3" />

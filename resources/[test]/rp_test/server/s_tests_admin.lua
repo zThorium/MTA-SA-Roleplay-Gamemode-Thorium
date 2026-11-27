@@ -8,7 +8,7 @@
 local OWNERS = {
     { "rp_bank" }, { "rp_shops" }, { "rp_properties" }, { "rp_clothing" }, { "rp_vending" },
     { "rp_dealers" }, { "rp_robbery" }, { "rp_gym", "machine" }, { "rp_gym", "trainer" },
-    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" }, { "rp_markers" },
+    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" }, { "rp_train", "pole" }, { "rp_markers" },
 }
 
 test("admin_exports_de_elementos", function(t)

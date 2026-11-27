@@ -16,8 +16,12 @@
 
     - Reja: objeto del juego (TRAIN.FENCE_MODELS, columna model) congelado e irrompible para cerrar los lados.
 
-    Admin: /crearboleteria, /crearcartel, /creartorniquete y /crearreja [tipo] crean (cartel, torniquete y reja
-    se abren en el editor 3D, c_signeditor.lua); /editarcartel, /editartorniquete y /editarreja [id] los vuelven
+    - Poste de metro: objeto con el modelo de su estación (logo y nombre; data rp:train:pole = nodo), que pone
+      cada cliente (c_metropole.lua) con los DFF de tools/build_metro_pole.py.
+
+    Admin: /crearboleteria, /crearcartel, /creartorniquete, /crearreja [tipo] y /crearpostemetro crean (todos menos
+    la boletería se abren en el editor 3D, c_signeditor.lua); /editarcartel, /editartorniquete, /editarreja y
+    /editarpostemetro [id] los vuelven
     a colocar; listar, ir y borrar con la gramática Owl de rp_admin (/nearbyticketbooths, /delticketbooth <id>,
     /nearbytrainsigns, /nearbyturnstiles, /delturnstile <id>, /nearbystationfences, /delstationfence <id>...).
 ]]
@@ -26,7 +30,7 @@ addEvent("rp:onDatabaseReady", false)
 addEvent("rp:train:fixtureSave", true)
 
 local fixtures = {} -- [id] = { row, ped, shopId, el }
-local KIND_NAME = { booth = "Boletería", sign = "Cartel LED", gate = "Torniquete", fence = "Reja" }
+local KIND_NAME = { booth = "Boletería", sign = "Cartel LED", gate = "Torniquete", fence = "Reja", pole = "Poste de metro" }
 local gateById = {}  -- [elemento rp_traingate] = id
 local passes = {}    -- [id de personaje] = { station = nodo, untilTick } (boleto validado en un torniquete)
 local gateCooldown = {}
@@ -91,6 +95,16 @@ local function spawnFixture(row)
         setElementInterior(f.obj, row.interior)
         setElementDimension(f.obj, row.dimension)
         setElementData(f.obj, "rp:train:fence", true)
+    elseif row.kind == "pole" then
+        -- Poste de metro: objeto con modelo provisional; cada cliente le pone el modelo de su estación
+        -- (models/metro_pole_<nodo>.dff, c_metropole.lua) según el data rp:train:pole
+        f.obj = createObject(TRAIN.POLE_PLACEHOLDER, row.x, row.y, row.z, 0, 0, row.rot)
+        if not f.obj then return end
+        f.el = f.obj
+        setElementFrozen(f.obj, true)
+        setElementInterior(f.obj, row.interior)
+        setElementDimension(f.obj, row.dimension)
+        setElementData(f.obj, "rp:train:pole", row.station)
     elseif row.kind == "sign" then
         f.el = createElement("rp_trainsign", "rp_trainsign_" .. row.id)
         setElementPosition(f.el, row.x, row.y, row.z)
@@ -136,7 +150,7 @@ addEventHandler("onResourceStart", root, function(res)
 end)
 
 -- Abre el editor 3D (c_signeditor.lua) de un cartel o un torniquete en el cliente del admin
-local EDITABLE = { sign = true, gate = true, fence = true }
+local EDITABLE = { sign = true, gate = true, fence = true, pole = true }
 local function editFixture(player, id)
     local f = fixtures[id]
     if not f or not EDITABLE[f.row.kind] or not isElement(f.el) then return false end
@@ -192,10 +206,11 @@ local function create(player, kind, model)
     if not node then
         return notify(player, ("No hay ninguna estación a menos de %d m."):format(TRAIN.STATION_SNAP), "warning")
     end
-    local FORWARD = { sign = TRAIN.SIGN_FORWARD, gate = TRAIN.GATE_FORWARD, fence = TRAIN.FENCE_FORWARD }
+    local FORWARD = { sign = TRAIN.SIGN_FORWARD, gate = TRAIN.GATE_FORWARD, fence = TRAIN.FENCE_FORWARD, pole = TRAIN.POLE_FORWARD }
     local d = FORWARD[kind] or 1.2
     local fx, fy = x - math.sin(math.rad(rot)) * d, y + math.cos(math.rad(rot)) * d
-    local fz = kind == "sign" and z + TRAIN.SIGN_LIFT or kind == "fence" and z - TRAIN.FENCE_DROP or z
+    local fz = kind == "sign" and z + TRAIN.SIGN_LIFT or kind == "fence" and z - TRAIN.FENCE_DROP
+        or kind == "pole" and z - TRAIN.POLE_DROP or z
     -- boletería y cartel miran al admin; torniquete y reja miran hacia donde mira el admin
     local frot = (kind == "gate" or kind == "fence") and rot % 360 or (rot + 180) % 360
     model = model or 0
@@ -218,6 +233,8 @@ end
 addCommandHandler("crearboleteria", function(player) create(player, "booth") end)
 addCommandHandler("crearcartel", function(player) create(player, "sign") end)
 addCommandHandler("creartorniquete", function(player) create(player, "gate") end)
+-- Poste de metro con el nombre de la estación más cercana (modelo de tools/build_metro_pole.py)
+addCommandHandler("crearpostemetro", function(player) create(player, "pole") end)
 
 -- /crearreja [tipo]: sin tipo, lista los tipos
 addCommandHandler("crearreja", function(player, _, n)
@@ -245,6 +262,7 @@ end
 editCommand("sign", "editarcartel", "nearbytrainsigns")
 editCommand("gate", "editartorniquete", "nearbyturnstiles")
 editCommand("fence", "editarreja", "nearbystationfences")
+editCommand("pole", "editarpostemetro", "nearbymetropoles")
 
 ----------------------------------------------------------------
 -- Torniquetes: validar el boleto (desde fuera) y salir (desde el andén)
@@ -415,7 +433,7 @@ addEventHandler("rp:train:fixtureSave", resourceRoot, function(id, x, y, z, rot,
     r.x, r.y, r.z, r.rot = x, y, z, rot
     if r.kind == "gate" then
         placeGate(f)
-    elseif r.kind == "fence" then
+    elseif r.kind == "fence" or r.kind == "pole" then
         setElementPosition(f.obj, x, y, z)
         setElementRotation(f.obj, 0, 0, rot)
     else
