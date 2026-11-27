@@ -1,14 +1,14 @@
 --[[
     rp_nametags / c_nametags.lua
-    Sustituye los nametags de GTA por "Nombre Apellido" + ID sobre la cabeza, con barra
-    de vida y chaleco. Solo jugadores con personaje en juego, a menos de MAX_DISTANCE
-    metros y con línea de visión. También dibuja la etiqueta /ame.
+    Sustituye los nametags de GTA por "Nombre Apellido [ID]" sobre la cabeza (sin vida ni
+    chaleco). Solo jugadores con personaje en juego, a menos de MAX_DISTANCE metros y con
+    línea de visión. También dibuja la etiqueta /ame.
 
     Estilo (misma línea que rp_notify y las burbujas de rp_chat):
-      - Nombre en Rubik SemiBold (OFL) con sombra y el ID (Kenney Future) en una pastilla oscura.
+      - Nombre en Rubik SemiBold (OFL) con sombra y el ID entre corchetes.
+      - De servicio en su facción (exports.rp_factions:isPlayerOnDuty): el nombre va del
+        color de la facción y debajo se escribe su rango.
       - Formas suavizadas (sin dientes de sierra) con c_dx.lua.
-      - Barra de vida redondeada que cambia de verde a ámbar y rojo, con "rastro de daño"
-        (la parte perdida se queda en blanco un momento y se vacía después).
       - Aparece y desaparece con un fundido, sin saltos, al entrar o salir de la vista.
       - /ame: pastilla oscura con punto rosa (el color de /me), entra con un salto y una
         línea de luz que se abre desde el centro.
@@ -22,18 +22,28 @@ local function px(v) return v * S end
 local function font(file, size, fallback)
     return dxCreateFont("fonts/" .. file, math.floor(size * S + 0.5), false, "antialiased") or fallback
 end
-local F_NAME = font("rubik_semibold.ttf", 10, "default-bold")
-local F_ID = font("kenney_future.ttf", 7, "default-bold")
+-- Las fuentes del nametag se crean a su tamaño de cerca y solo se reducen con la distancia
+-- (escala <= 1): agrandar una fuente dx la emborrona, reducirla un poco no.
+local F_NAME = font("rubik_medium.ttf", 16, "default-bold")
+local F_ID = font("rubik_semibold.ttf", 19, "default-bold")
+local F_RANK = font("rubik_medium.ttf", 15, "default-bold")
 local F_AME = font("rubik_medium.ttf", 9.5, "default-bold")
 local NAME_H = dxGetFontHeight(1, F_NAME)
 local ID_H = dxGetFontHeight(1, F_ID)
+local TAG_MIN_SCALE = 0.8      -- tamaño a MAX_DISTANCE respecto al de cerca
+local RANK_GAP = 3             -- px entre la línea del nombre y la del rango
 
 local ME_COLOR = { 255, 150, 190 }
+local NAME_COLOR = { 245, 247, 250 }
+local ID_COLOR = { 255, 255, 255 }
+local RANK_COLOR = { 224, 228, 232 }   -- #E0E4E8
+-- Color del nombre por tipo de facción cuando el de la facción es poco legible
+local TYPE_NAME_COLOR = { policia = { 77, 166, 255 } }   -- #4DA6FF
 local streamed = {}   -- jugadores cercanos (se refresca con un timer, no cada frame)
 local vis = {}        -- [player] = alfa actual del nametag (fundido)
-local trail = {}      -- [player] = vida "fantasma" que se vacía tras un golpe
 local ameStart = {}   -- [player] = tick en que apareció su /ame
 local nameCache = {}  -- [player] = { text, idText, nameW, idW }
+local duty = {}       -- [player] = { color = {r,g,b}, rank = "..." } si está de servicio en su facción
 
 ----------------------------------------------------------------
 -- Utilidades de dibujo (las mismas de rp_notify)
@@ -58,21 +68,49 @@ local function lightLine(cx, y, half, thick, c, a)
     dxDrawPrimitive("trianglestrip", false, { cx, y, solid }, { cx + half, y, none }, { cx, y + thick, solid }, { cx + half, y + thick, none })
 end
 
--- Verde (llena) -> ámbar (media) -> rojo (poca)
-local function healthColor(ratio)
-    if ratio > 0.5 then
-        local k = (ratio - 0.5) / 0.5
-        return { 255 - (255 - 76) * k, 178 + (221 - 178) * k, 46 + (140 - 46) * k }
-    end
-    local k = ratio / 0.5
-    return { 255, 84 + (178 - 84) * k, 96 - (96 - 46) * k }
+local function hexToRGB(hex)
+    local r, g, b = tostring(hex or ""):match("^#?(%x%x)(%x%x)(%x%x)$")
+    if not r then return nil end
+    return { tonumber(r, 16), tonumber(g, 16), tonumber(b, 16) }
+end
+
+-- Mismo tono, pero con brillo al máximo y saturación <= 70 %: se lee de día y de noche
+local function readable(c)
+    local hi, lo = math.max(c[1], c[2], c[3]), math.min(c[1], c[2], c[3])
+    if hi == lo then return { 255, 255, 255 } end
+    local s = math.min((hi - lo) / hi, 0.7)
+    local out = {}
+    for i = 1, 3 do out[i] = math.floor(255 * (1 - s * (hi - c[i]) / (hi - lo)) + 0.5) end
+    return out
 end
 
 ----------------------------------------------------------------
--- Nametags nativos y lista de cercanos
+-- Nametags nativos, lista de cercanos y servicio de facción
 ----------------------------------------------------------------
+local function factionsRunning()
+    local res = getResourceFromName("rp_factions")
+    return res and getResourceState(res) == "running"
+end
+
+-- Color y rango solo si está de servicio (lo decide rp_factions); nil si no
+local function dutyInfo(player)
+    local ok, on = pcall(function() return exports.rp_factions:isPlayerOnDuty(player) end)
+    if not ok or not on then return nil end
+    local ok2, f = pcall(function() return exports.rp_factions:getPlayerFactionInfo(player) end)
+    if not ok2 or type(f) ~= "table" then return nil end
+    local rank = tostring(f.rank or "")
+    local c = hexToRGB(f.color)
+    local color = TYPE_NAME_COLOR[f.type] or (c and readable(c)) or NAME_COLOR
+    return { color = color, rank = rank ~= "" and rank or nil }
+end
+
 local function refreshStreamed()
     streamed = getElementsByType("player", root, true)
+    duty = {}
+    if not factionsRunning() then return end
+    for _, player in ipairs(streamed) do
+        if player ~= localPlayer then duty[player] = dutyInfo(player) end
+    end
 end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
@@ -89,7 +127,7 @@ addEventHandler("onClientPlayerJoin", root, function()
 end)
 
 addEventHandler("onClientPlayerQuit", root, function()
-    vis[source], trail[source], ameStart[source], nameCache[source] = nil, nil, nil, nil
+    vis[source], ameStart[source], nameCache[source], duty[source] = nil, nil, nil, nil
 end)
 
 addEventHandler("onClientPlayerChangeNick", root, function()
@@ -146,51 +184,40 @@ local function nameData(player)
     if c then return c end
     local id = getElementData(player, "id")
     local text = getPlayerName(player):gsub("_", " ")
-    local idText = id and tostring(id) or nil
+    local idText = id and ("[" .. tostring(id) .. "]") or nil
     c = { text = text, idText = idText, nameW = dxGetTextWidth(text, 1, F_NAME), idW = idText and dxGetTextWidth(idText, 1, F_ID) or 0 }
     nameCache[player] = c
     return c
 end
 
-local function drawBar(x, y, w, h, ratio, ghost, color, alpha)
-    roundRect(x, y, w, h, h / 2, tocolor(10, 12, 16, 190 * alpha))
-    if ghost and ghost > ratio then
-        roundRect(x, y, w * ghost, h, h / 2, tocolor(255, 255, 255, 190 * alpha))
-    end
-    roundRect(x, y, w * clamp(ratio, 0, 1), h, h / 2, rgba(color, 240 * alpha))
+-- Sombra paralela suave de 1 px (abajo a la derecha), sin contorno: las letras no se cierran.
+-- Posiciones redondeadas a píxel entero para que el texto quede nítido.
+local function shadowText(text, x, y, color, sc, fnt, alpha)
+    x, y = math.floor(x + 0.5), math.floor(y + 0.5)
+    dxDrawText(text, x + 1, y + 1, 0, 0, tocolor(0, 0, 0, 217 * alpha), sc, fnt, "left", "top")
+    dxDrawText(text, x, y, 0, 0, rgba(color, 255 * alpha), sc, fnt, "left", "top")
 end
 
-local function drawTag(player, sx, sy, dist, alpha, dt)
-    local sc = math.max(0.7, 1.2 - dist / MAX_DISTANCE)
+local function drawTag(player, sx, sy, dist, alpha)
+    local sc = math.max(TAG_MIN_SCALE, 1 - (1 - TAG_MIN_SCALE) * dist / MAX_DISTANCE)
     local d = nameData(player)
+    local f = duty[player]
 
-    -- Nombre + pastilla con el ID
-    local gap = px(6) * sc
-    local chipW = d.idText and (d.idW * sc + px(10) * sc) or 0
-    local total = d.nameW * sc + (d.idText and (gap + chipW) or 0)
+    -- Nombre (color de la facción si está de servicio) + [ID]
+    local gap = px(5) * sc
+    local total = d.nameW * sc + (d.idText and (gap + d.idW * sc) or 0)
     local x = sx - total / 2
     local nameY = sy - NAME_H * sc
-    dxDrawText(d.text, x + 1, nameY + 1, 0, 0, tocolor(0, 0, 0, 190 * alpha), sc, F_NAME, "left", "top")
-    dxDrawText(d.text, x, nameY, 0, 0, tocolor(245, 247, 250, 255 * alpha), sc, F_NAME, "left", "top")
+    shadowText(d.text, x, nameY, f and f.color or NAME_COLOR, sc, F_NAME, alpha)
     if d.idText then
-        local chipH = ID_H * sc + px(4) * sc
-        local cx = x + d.nameW * sc + gap
-        local cy = nameY + (NAME_H * sc - chipH) / 2
-        roundRect(cx, cy, chipW, chipH, chipH / 2, tocolor(12, 14, 20, 200 * alpha))
-        dxDrawText(d.idText, cx, cy, cx + chipW, cy + chipH, tocolor(170, 178, 192, 255 * alpha), sc, F_ID, "center", "center")
+        -- El ID va más grande que el nombre; se alinea por abajo con él
+        shadowText(d.idText, x + d.nameW * sc + gap, sy - ID_H * sc, ID_COLOR, sc, F_ID, alpha)
     end
 
-    -- Vida (con rastro de daño) y chaleco
-    local hp = clamp(getElementHealth(player) / 100, 0, 1)
-    local g = trail[player] or hp
-    if g < hp then g = hp else g = g + (hp - g) * clamp(dt / 450, 0, 1) end
-    trail[player] = g
-    local w, h = px(64) * sc, math.max(3, px(4.5) * sc)
-    local bx, by = sx - w / 2, sy + px(4) * sc
-    drawBar(bx, by, w, h, hp, g, healthColor(hp), alpha)
-    local armor = getPedArmor(player)
-    if armor > 0 then
-        drawBar(bx, by + h + px(3) * sc, w, math.max(2, h * 0.7), armor / 100, nil, { 170, 196, 230 }, alpha)
+    -- Rango debajo del nombre (solo de servicio)
+    if f and f.rank then
+        local w = dxGetTextWidth(f.rank, sc, F_RANK)
+        shadowText(f.rank, sx - w / 2, sy + math.max(2, px(RANK_GAP) * sc), RANK_COLOR, sc, F_RANK, alpha)
     end
 end
 
@@ -229,7 +256,7 @@ addEventHandler("onClientRender", root, function()
                 local sx, sy = getScreenFromWorldPosition(hx, hy, hz + 0.35)
                 if sx then
                     local alpha = (1 - math.max(0, (dist - MAX_DISTANCE * 0.7) / (MAX_DISTANCE * 0.3))) * easeOut(v)
-                    drawTag(player, sx, sy, dist, alpha, dt)
+                    drawTag(player, sx, sy, dist, alpha)
                 end
             end
         end

@@ -39,4 +39,5 @@
     <export function="getPlayerFactionId" type="client" />
     <export function="getPlayerFactionType" type="client" />
     <export function="getPlayerFactionInfo" type="client" />
+    <export function="isPlayerOnDuty" type="client" />
 </meta>

@@ -8,6 +8,7 @@
         exports.rp_factions:getPlayerFactionId(player)
         exports.rp_factions:getPlayerFactionType(player)
         exports.rp_factions:getPlayerFactionInfo(player)          { id, name, tag, type, color, rank, leader }
+        exports.rp_factions:isPlayerOnDuty(player [, which])      según FACTION_TYPES[tipo].dutyData; tipos sin servicio: false
 ]]
 
 local function data(player)
@@ -38,4 +39,10 @@ function getPlayerFactionInfo(player)
     local f = data(player)
     if not f then return false end
     return { id = tonumber(f.id), name = f.name, tag = f.tag, type = f.type, color = f.color, rank = f.rank, leader = f.leader }
+end
+
+function isPlayerOnDuty(player, which)
+    if not isPlayerInFaction(player, which) then return false end
+    local t = FACTION_TYPES[data(player).type]
+    return (t and t.dutyData and getElementData(player, t.dutyData) == true) and true or false
 end
