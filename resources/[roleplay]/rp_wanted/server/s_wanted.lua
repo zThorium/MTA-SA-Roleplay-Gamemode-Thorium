@@ -243,6 +243,8 @@ function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
             chaos = math.max(chaos, s.parole.chaos)
         end
         applyChaos(player, chaos)
+        -- la denuncia le da a la policia tu posicion (client/c_knowledge.lua)
+        if s.level > 0 then triggerClientEvent(player, "rp:wanted:reveal", resourceRoot) end
     end, (witnessed == "police" or policeNear(player, WANTED.WITNESS_RADIUS)) and WANTED.REPORT_DELAY
         or WANTED.CIVIL_REPORT_DELAY, 1)
     return true

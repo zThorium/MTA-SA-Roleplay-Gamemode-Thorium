@@ -4,7 +4,13 @@
     crea los elementos y nos hace syncer; aqui se manejan con sus controles,
     como el conductor IA de rp_rides y el trafico de rp_citizens.
 
-    Patrulla:   ROUTE  (A* por la red vial hasta el jugador, se recalcula)
+    La policia no ve la posicion real del jugador: usa lo que sabe
+    (client/c_knowledge.lua): su posicion si lo ve, la ultima proyectada si lo
+    acaba de perder y una busqueda por la zona si lo perdio del todo.
+
+    Patrulla:   ROUTE  (A* por la red vial hasta donde saben que esta, se recalcula)
+                SEARCH (lo perdieron: barren calles alrededor de la ultima posicion;
+                        si iba a pie, se bajan a buscarlo)
                 CHASE  (lo ve a menos de 60 m: va directo, predice hacia donde va;
                         desde 3 estrellas lo embiste)
                 STOP   (el jugador va a pie o se detuvo cerca: frena y se bajan)
@@ -76,16 +82,18 @@ end
 
 local pathPointAhead
 local function carSpawnPoint()
-    local px, py, pz = getElementPosition(localPlayer)
+    -- Si te perdieron de vista, los refuerzos llegan a donde te vieron por ultima vez
+    local px, py, pz, mode = knowledgeTarget(getTickCount())
+    local live = mode == "live"
     -- Va rapido en un vehiculo: la patrulla sale de frente en su ruta probable
     -- (GTA la genera por delante para cortarle el paso)
-    if pathPointAhead and getPedOccupiedVehicle(localPlayer) and math.random() < 0.6 then
+    if live and pathPointAhead and getPedOccupiedVehicle(localPlayer) and math.random() < 0.6 then
         local x, y, z, rot = pathPointAhead(WANTED_DISPATCH.SPAWN_MIN + 20, WANTED_DISPATCH.SPAWN_MAX + 40, true)
         if x then return x, y, z, (rot + 180) % 360 end
     end
     if loadRoadGraph() then
         -- Si va en vehiculo, mejor por delante (le sale al paso, como en GTA)
-        local v = getPedOccupiedVehicle(localPlayer)
+        local v = live and getPedOccupiedVehicle(localPlayer)
         local fx, fy = 0, 0
         if v then
             local vx, vy = getElementVelocity(v)
@@ -146,7 +154,7 @@ end
 
 -- Punto de la ruta probable entre minD y maxD metros, con el rumbo de la calle
 function pathPointAhead(minD, maxD, wantHidden)
-    local path = playerPath(getTickCount() + 1000)
+    local path = playerPath(getTickCount())
     if not path or #path < 2 then return nil end
     local fallback
     for i = 1, #path - 1 do
@@ -202,6 +210,8 @@ end
 addEvent("rp:wanted:spawnRequest", true)
 addEventHandler("rp:wanted:spawnRequest", resourceRoot, function(kind)
     local x, y, z, rot
+    -- Controles y pinchos van en tu ruta: solo si saben por donde vas
+    if (kind == "roadblock" or kind == "spikes") and knowledgeMode(getTickCount()) ~= "live" then return end
     if kind == "car" then
         x, y, z, rot = carSpawnPoint()
     elseif kind == "roadblock" then
@@ -344,8 +354,16 @@ local function driveCar(u, now)
             tx, ty = u.leaveTarget[1], u.leaveTarget[2]
         end
     else
+        -- Lo que sabe la policia: si esta patrulla te ve, ya saben donde estas
+        local los = dist < 70 and isLineOfSightClear(x, y, z + 1, px, py, pz + 0.5, true, false, false, true, false, true, false)
+        u.los = los
+        if los then knowledgeSeen(now) end
+        local kx, ky, _, mode = knowledgeTarget(now)
+        local live = mode == "live"
+        local kdist = getDistanceBetweenPoints2D(x, y, kx, ky)
+
         -- El jugador a pie (o detenido) cerca: frena y los policias se bajan
-        local stopNear = (not pveh and dist < 24) or (pveh and pspeed < 8 and dist < 16)
+        local stopNear = live and ((not pveh and dist < 24) or (pveh and pspeed < 8 and dist < 16))
         if stopNear then
             controls(driver, false, speed > 0.5, 0, true)
             if speed < 5 and now - (u.dismountAt or 0) > 3000 then
@@ -355,10 +373,34 @@ local function driveCar(u, now)
             return
         end
 
-        local los = dist < 70 and isLineOfSightClear(x, y, z + 1, px, py, pz + 0.5, true, false, false, true, false, true, false)
-        u.los = los
-        local icpt = u.role == "intercept" and pveh and dist > 30 and u.icpt
-        if icpt then
+        local icpt = live and u.role == "intercept" and pveh and dist > 30 and u.icpt
+        if mode == "search" then
+            -- SEARCH: te perdieron. Van a tu ultima posicion y despues barren calles cada vez mas lejos
+            local sp = knowledgeSearchPoint(u, now, x, y, false)
+            -- llegaron a donde te vieron a pie: se bajan a buscarte (una vez por cada vez que te pierden)
+            if knowledgeLastSeenOnFoot() and kdist < 25 and u.dismountSeq ~= u.spSeq then
+                controls(driver, false, speed > 0.5, 0, true)
+                if speed < 5 then
+                    u.dismountSeq = u.spSeq
+                    if u.isLocal then dismountLocal(u) else triggerServerEvent("rp:wanted:dismount", resourceRoot, v) end
+                end
+                return
+            end
+            if u.searchPlanned ~= sp or needPlan(u, now, 6000) then
+                if plan(u, sp[1], sp[2]) then u.searchPlanned = sp end
+            end
+            desired = WANTED_SEARCH.SPEED
+            if u.wp and #u.wp > 0 then
+                local turn, last
+                tx, ty, turn, last = routeTarget(u, x, y, speed)
+                if turn > 50 then desired = 30 elseif turn > 25 then desired = 45 end
+                if last then tx, ty = sp[1], sp[2] end
+            else
+                tx, ty = sp[1], sp[2]
+            end
+            local gap = obstacleAhead(v, m, speed, pveh)
+            if gap and gap < 9 then desired = math.min(desired, 15) end
+        elseif icpt then
             -- INTERCEPT: va a un punto de la ruta probable del jugador por donde
             -- pasara despues que la patrulla; al llegar se cruza y espera
             local d = getDistanceBetweenPoints2D(x, y, icpt[1], icpt[2])
@@ -408,11 +450,12 @@ local function driveCar(u, now)
             end
             u.wp = nil
         else
-            -- ROUTE: A* hasta el jugador, se recalcula cada 2.5 s
-            if needPlan(u, now) then plan(u, px, py) end
+            -- ROUTE: A* hasta donde saben que estas (o estaras), se recalcula cada 2.5 s
+            if needPlan(u, now) then plan(u, kx, ky) end
             -- Lejos y sin que se vea: se adelanta por su ruta hasta quedar cerca (GTA genera las
-            -- patrullas cerca del jugador; asi la persecucion no se pierde por la distancia)
-            if u.wp and dist > WANTED_DISPATCH.CATCHUP_DISTANCE and not isElementOnScreen(v)
+            -- patrullas cerca del jugador; asi la persecucion no se pierde por la distancia).
+            -- Solo mientras te ven: si te perdieron, no hacen trampa.
+            if live and u.wp and dist > WANTED_DISPATCH.CATCHUP_DISTANCE and not isElementOnScreen(v)
                 and now - (u.catchAt or 0) > 3000 then
                 u.catchAt = now
                 for j = u.idx, #u.wp do
@@ -435,9 +478,9 @@ local function driveCar(u, now)
                 local turn, last
                 tx, ty, turn, last = routeTarget(u, x, y, speed)
                 if turn > 50 then desired = 35 elseif turn > 25 then desired = 60 end
-                if last then tx, ty = px, py end
+                if last then tx, ty = kx, ky end
             else
-                tx, ty = px, py
+                tx, ty = kx, ky
             end
             local gap = obstacleAhead(v, m, speed, pveh)
             if gap and gap < 9 then desired = math.min(desired, 15) end
@@ -625,6 +668,32 @@ local function footCop(u, ped, now)
         return runTo(ped, x, y, x + (x - px), y + (y - py), false)
     end
 
+    local los = dist < 70 and isLineOfSightClear(x, y, z + 0.6, px, py, pz + 0.6, true, false, false, true, false, true, false)
+    if los then knowledgeSeen(now) end
+    local kx, ky, _, mode = knowledgeTarget(now)
+
+    -- Te perdieron de vista: van a donde te vieron y despues barren la zona a pie
+    if mode ~= "live" then
+        st.bustSince = nil
+        -- los controles de carretera y los pinchos no dejan su puesto
+        if u.kind == "roadblock" or u.kind == "spikes" then return releaseFoot(ped) end
+        -- te vieron por ultima vez en un vehiculo: vuelven a su patrulla para buscarte en auto
+        if not knowledgeLastSeenOnFoot() and car and carDist < 25 then
+            if carDist < 4 then releaseFoot(ped) return remount(u, ped, st, now) end
+            local cx, cy = getElementPosition(car)
+            return runTo(ped, x, y, cx, cy, true)
+        end
+        local sx, sy
+        if mode == "predict" then
+            sx, sy = kx, ky
+        else
+            local sp = knowledgeSearchPoint(st, now, x, y, true)
+            sx, sy = sp[1], sp[2]
+        end
+        if getDistanceBetweenPoints2D(x, y, sx, sy) < 2 then return releaseFoot(ped) end
+        return runTo(ped, x, y, sx, sy, mode == "predict")
+    end
+
     -- El jugador se escapa en un vehiculo (o se aleja mucho a pie): si su patrulla esta
     -- a menos de 25 m, corre a ella y sigue en auto; si no, sigue a pie (GTA)
     local escaping = (pveh and (pvSpeed > 8 or dist > 12)) or (not pveh and dist > 50)
@@ -635,7 +704,6 @@ local function footCop(u, ped, now)
         return runTo(ped, x, y, cx, cy, true)
     end
 
-    local los = isLineOfSightClear(x, y, z + 0.6, px, py, pz + 0.6, true, false, false, true, false, true, false)
     local weapon = getPedWeapon(ped)
     local armed = weapon >= 22
 
@@ -846,7 +914,10 @@ end)
 local function heliTick(u, now)
     local h = u.vehicle
     if not isElementSyncer(h) or isVehicleBlown(h) then return end
-    local px, py, pz = getElementPosition(localPlayer)
+    -- Vuela sobre donde saben que estas; si te perdieron (tunel, puente, techo), barre la zona con el foco
+    local px, py, pz, mode = knowledgeTarget(now)
+    local live = mode == "live"
+    local lightX, lightY, lightZ = px, py, pz
     local x, y, z = getElementPosition(h)
     local tx, ty, tz
     local dropping = false
@@ -861,7 +932,16 @@ local function heliTick(u, now)
         for _, o in pairs(units) do
             if o.kind == "swat" and o.rappel and o.drop == h then squad = o end
         end
-        if squad or wantsSwatDrop(u, now) then
+        if mode == "search" and not squad then
+            -- orbita amplia sobre la ultima posicion; el foco recorre la zona en espiral
+            local r = math.min(120, knowledgeSearchRadius(now) * 0.5)
+            local a = now / 1000 * 0.12 + (tonumber(u.id) or 0) * 2
+            tx, ty, tz = px + math.cos(a) * r, py + math.sin(a) * r, ground + 40
+            local b, lr = now / 1000 * 0.7, r * (0.4 + 0.6 * math.abs(math.sin(now / 7000)))
+            lightX, lightY = px + math.cos(b) * lr, py + math.sin(b) * lr
+            local gz = getGroundPosition(lightX, lightY, ground + 60)
+            lightZ = (gz and gz ~= 0) and gz + 1 or ground + 1
+        elseif squad or (live and wantsSwatDrop(u, now)) then
             dropping = true
             tx, ty, tz = px + 4, py + 4, ground + WANTED_HELI.HOVER_HEIGHT
             if not squad and getDistanceBetweenPoints2D(x, y, tx, ty) < 12 and math.abs(z - tz) < 5 then
@@ -873,7 +953,7 @@ local function heliTick(u, now)
             tx, ty = px + math.cos(a) * 22, py + math.sin(a) * 22
             tz = ground + 30
         end
-        if not dropping then heliGun(u, now, h, x, y, z, px, py, pz) end
+        if not dropping and live then heliGun(u, now, h, x, y, z, getElementPosition(localPlayer)) end
     end
     local dx, dy, dz = tx - x, ty - y, tz - z
     local d = math.sqrt(dx * dx + dy * dy + dz * dz)
@@ -884,16 +964,16 @@ local function heliTick(u, now)
         setElementVelocity(h, 0, 0, 0)
     end
     setElementAngularVelocity(h, 0, 0, 0)
-    setElementRotation(h, 0, 0, heading(px - x, py - y))
+    setElementRotation(h, 0, 0, heading(lightX - x, lightY - y))
     if setVehicleRotorSpeed then setVehicleRotorSpeed(h, 0.2) end
 
     -- Foco de noche
     if isNight() and not u.leaving then
         if not isElement(u.light) then
-            u.light = createSearchLight(x, y, z - 1, px, py, pz - 1, 0.25, 5, true)
+            u.light = createSearchLight(x, y, z - 1, lightX, lightY, lightZ - 1, 0.25, 5, true)
         else
             setSearchLightStartPosition(u.light, x, y, z - 1.2)
-            setSearchLightEndPosition(u.light, px, py, pz - 1)
+            setSearchLightEndPosition(u.light, lightX, lightY, lightZ - 1)
         end
     elseif isElement(u.light) then
         destroyElement(u.light)
@@ -1018,8 +1098,9 @@ end
 local function assignRoles(now)
     if now - roleAt < 1000 then return end
     roleAt = now
+    -- cortar el paso solo tiene sentido si saben por donde vas
     local pveh = getPedOccupiedVehicle(localPlayer)
-    local path = pveh and playerPath(now)
+    local path = pveh and knowledgeMode(now) == "live" and playerPath(now)
     local px, py = getElementPosition(localPlayer)
     local list = {}
     for _, u in pairs(units) do
@@ -1153,36 +1234,7 @@ local function checkSpikes()
     end
 end
 
-----------------------------------------------------------------
--- Avistamiento: cada segundo se le dice al servidor si algun policia te ve
-----------------------------------------------------------------
-local function copSees(el, px, py, pz, range)
-    local x, y, z = getElementPosition(el)
-    if getDistanceBetweenPoints3D(x, y, z, px, py, pz) > range then return false end
-    return isLineOfSightClear(x, y, z + 0.8, px, py, pz + 0.6, true, false, false, true, false, true, false)
-end
-
-local function policeSeesMe()
-    local px, py, pz = getElementPosition(localPlayer)
-    for _, ped in ipairs(getElementsWithinRange(px, py, pz, 70, "ped")) do
-        if getElementData(ped, "rp:cop") and not isPedDead(ped) and copSees(ped, px, py, pz, 70) then return true end
-    end
-    for _, v in ipairs(getElementsWithinRange(px, py, pz, 140, "vehicle")) do
-        if getElementData(v, "rp:copCar") and getVehicleController(v) and getVehicleController(v) ~= localPlayer then
-            -- el helicoptero ve desde mas lejos
-            local range = getVehicleType(v) == "Helicopter" and 140 or 70
-            if copSees(v, px, py, pz, range) then return true end
-        end
-    end
-    for _, pl in ipairs(getElementsWithinRange(px, py, pz, 70, "player")) do
-        if pl ~= localPlayer and WANTED_POLICE_SKINS[getElementModel(pl)] and copSees(pl, px, py, pz, 70) then return true end
-    end
-    return false
-end
-
-setTimer(function()
-    if level > 0 and policeSeesMe() then triggerServerEvent("rp:wanted:seen", resourceRoot) end
-end, 1000, 0)
+-- El avistamiento (rp:wanted:seen) y la ultima posicion conocida estan en client/c_knowledge.lua
 
 ----------------------------------------------------------------
 -- Lancha (persecucion por mar): en el agua no hay red vial; va directa hacia donde estara el jugador.
@@ -1216,8 +1268,12 @@ local function boatTick(u, now)
     if u.leaving or not levelCfg() then
         tx, ty = x + (x - px), y + (y - py)   -- se aleja del jugador
     else
-        -- hacia donde estara el jugador en ~1,5 s (MTA: velocidad en unidades por 1/50 s)
-        local vx, vy = getElementVelocity(getPedOccupiedVehicle(localPlayer) or localPlayer)
+        -- hacia donde saben que estas; si te ven, a donde estaras en ~1,5 s (MTA: velocidad en unidades por 1/50 s)
+        local kx, ky, _, mode = knowledgeTarget(now)
+        local vx, vy = 0, 0
+        if mode == "live" then vx, vy = getElementVelocity(getPedOccupiedVehicle(localPlayer) or localPlayer) end
+        px, py = kx, ky
+        dist = getDistanceBetweenPoints2D(x, y, px, py)
         tx, ty = px + vx * 75, py + vy * 75
         if level < WANTED_BOAT.RAM_LEVEL and dist < WANTED_BOAT.CHASE_DIST * 2 then
             -- ronda: apunta a un punto a CHASE_DIST del jugador, girando a su alrededor
