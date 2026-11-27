@@ -1,0 +1,2 @@
+# Los scripts de shell se ejecutan en Linux (Docker): siempre con finales de linea LF, aunque Git en Windows use autocrlf
+*.sh text eol=lf
