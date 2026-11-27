@@ -1,5 +1,12 @@
 # Auditoría de rp_pickupfx
 
+## 2026-11-27 · mejorar (rendimiento en PCs de bajos recursos)
+- **Motivo**: Fabián pide que los efectos no generen lag en PCs de bajos recursos.
+- **Nota**: 100 → 100.
+- **Cambios**: tres niveles de calidad (`QUALITY`): arranca según "Calidad de efectos" de los ajustes de MTA del jugador y baja sola un nivel si los FPS medios caen de `MIN_FPS` (relativo al `fpslimit` del servidor) durante `FPS_WINDOW_MS`; nunca sube sola. En calidad baja: sin chispas, haz ni onda, halo más pequeño, menos elementos con efectos y animación solo de cerca (CLI-02). Fuera de cada fotograma: animación solo a menos de `animDistance`; en `rp_pickupfx` el estado "recogido" llega por `onClientElementDataChange` y el alfa se toca solo al cambiar; en `rp_3dtext` la línea de visión del texto se comprueba cada `LOS_MS` y hay tope de iconos con efectos.
+- **Estrella**: estilos con tamaño propio (`scale`, `fxScale`, `fxDistance`, `zOffset`); la estrella de policía es 2,2 veces el original, 1 m más alta (`zOffset`), con brillos 2,2 veces más grandes y visibles a 70 m, para verla desde un auto.
+- **Probar en juego**: con "Calidad de efectos" baja en los ajustes de MTA, los pickups giran y brillan sin chispas ni haz; con `/debugscript 3`, si el PC baja de 30 FPS sale `calidad de efectos baja a N`; comparar FPS con y sin `stop rp_pickupfx` en una calle con muchas casas.
+
 ## 2026-11-27 · mejorar (copia animada como rp_3dtext)
 - **Motivo**: Fabián quiere en todos los pickups lo mismo que en el icono de `rp_3dtext`: más pequeño, con giro propio y que suba y baje.
 - **Nota**: 100 → 100.

@@ -138,8 +138,40 @@ end
 ----------------------------------------------------------------
 -- Efectos
 ----------------------------------------------------------------
+----------------------------------------------------------------
+-- Calidad: segun los ajustes de MTA del jugador y, si van bajos, segun los FPS reales
+----------------------------------------------------------------
+local level, Q = 3, nil
+local fpsFrames, fpsSince = 0, 0
+
+local function setLevel(n)
+    level = math.max(1, math.min(#TEXT3D.QUALITY, n))
+    Q = TEXT3D.QUALITY[level]
+    for i = #sparks, Q.maxSparks + 1, -1 do sparks[i] = nil end
+end
+
+local function initialLevel()
+    local fx = (dxGetStatus() or {}).SettingFXQuality or 2
+    if fx <= 0 then return 1 elseif fx == 1 then return 2 end
+    return 3
+end
+
+local function watchFps(now)
+    fpsFrames = fpsFrames + 1
+    local elapsed = now - fpsSince
+    if elapsed < TEXT3D.FPS_WINDOW_MS then return end
+    local fps = fpsFrames * 1000 / elapsed
+    fpsFrames, fpsSince = 0, now
+    local limit = getFPSLimit() or 0
+    local minFps = limit > 0 and math.min(TEXT3D.MIN_FPS, limit * 0.75) or TEXT3D.MIN_FPS
+    if fps < minFps and level > 1 then
+        setLevel(level - 1)
+        outputDebugString(("[rp_3dtext] %.0f FPS: calidad de efectos baja a %d"):format(fps, level), 3)
+    end
+end
+
 local function spawnSpark(ic)
-    if #sparks >= TEXT3D.MAX_SPARKS then return end
+    if #sparks >= Q.maxSparks then return end
     local life = 1.1 + math.random() * 0.9
     sparks[#sparks + 1] = {
         cx = ic.x, cy = ic.y, z = ic.gz + 0.05 + math.random() * 0.2,
@@ -176,7 +208,7 @@ end
 local function drawIconFx(ic, iz, t, k)
     local g = TEXT3D.GOLD
     -- columna de luz del suelo al icono
-    if glowBeam then
+    if glowBeam and Q.beam then
         dxDrawMaterialLine3D(ic.x, ic.y, ic.gz, ic.x, ic.y, iz + 0.45, glowBeam, 0.6, tocolor(g[1], g[2], g[3], 70 * k))
     end
     -- halo que respira
@@ -190,6 +222,7 @@ local function drawIconFx(ic, iz, t, k)
         local r = 0.6
         dxDrawMaterialLine3D(ic.x - r, ic.y, z, ic.x + r, ic.y, z, glowRing, r * 2,
             tocolor(g[1], g[2], g[3], 150 * k), ic.x, ic.y, z + 1)
+        if not Q.wave then return end
         local p = (t * 0.6 + ic.phase) % 1
         local rw = 0.4 + p * 0.9
         dxDrawMaterialLine3D(ic.x - rw, ic.y, z, ic.x + rw, ic.y, z, glowRing, rw * 2,
@@ -205,33 +238,45 @@ local function render()
     local now = getTickCount()
     local dt = math.min((now - (lastTick or now)) / 1000, 0.1)
     lastTick = now
+    watchFps(now)
     local t = now / 1000
     local cx, cy, cz = getCameraMatrix()
     local px, py, pz = getElementPosition(localPlayer)
+    local fxCount = 0
 
     for o, ic in pairs(icons) do
         if isElement(o) then
-            -- animacion del icono
-            local iz = ic.z + math.sin(t * C.BOB_SPEED + ic.phase) * C.BOB_HEIGHT
-            setElementPosition(o, ic.x, ic.y, iz, false)
-            setElementRotation(o, 0, 0, (t * C.SPIN_DEG_S + ic.phase * 57) % 360)
-
+            -- animacion del icono (solo de cerca: lejos no se aprecia y cuesta igual)
             local camDist = getDistanceBetweenPoints3D(cx, cy, cz, ic.x, ic.y, ic.z)
-            if camDist <= C.FX_DISTANCE then
+            local iz = ic.z
+            if camDist <= Q.animDistance then
+                iz = ic.z + math.sin(t * C.BOB_SPEED + ic.phase) * C.BOB_HEIGHT
+                setElementPosition(o, ic.x, ic.y, iz, false)
+                setElementRotation(o, 0, 0, (t * C.SPIN_DEG_S + ic.phase * 57) % 360)
+            end
+
+            if camDist <= C.FX_DISTANCE and fxCount < Q.maxFx then
+                fxCount = fxCount + 1
                 local k = math.min(1, (C.FX_DISTANCE - camDist) / 8)
                 drawIconFx(ic, iz, t, k)
-                ic.acc = ic.acc + dt * C.SPARKS_PER_S * k
+                ic.acc = ic.acc + dt * C.SPARKS_PER_S * Q.sparkRate * k
                 while ic.acc >= 1 do
                     ic.acc = ic.acc - 1
                     spawnSpark(ic)
                 end
             end
 
-            -- tarjeta de texto
+            -- tarjeta de texto (la linea de vision se comprueba cada LOS_MS, no en cada fotograma)
             local dist = getDistanceBetweenPoints3D(px, py, pz, ic.x, ic.y, ic.z)
             local tz = ic.z + C.BOB_HEIGHT + C.TEXT_OFFSET_Z
-            local want = dist <= C.DRAW_DISTANCE
-                and isLineOfSightClear(cx, cy, cz, ic.x, ic.y, tz, true, false, false, true, false, false, false)
+            local want = false
+            if dist <= C.DRAW_DISTANCE then
+                if not ic.losAt or now - ic.losAt >= C.LOS_MS then
+                    ic.losAt = now
+                    ic.los = isLineOfSightClear(cx, cy, cz, ic.x, ic.y, tz, true, false, false, true, false, false, false)
+                end
+                want = ic.los
+            end
             if want and not ic.near then
                 local snd = playSound3D("sounds/glass_001.ogg", ic.x, ic.y, ic.z)
                 if snd then
@@ -262,6 +307,8 @@ end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
     setupGraphics()
+    setLevel(initialLevel())
+    fpsSince = getTickCount()
     refresh()
     refreshTimer = setTimer(refresh, 1000, 0)
     addEventHandler("onClientRender", root, render)
