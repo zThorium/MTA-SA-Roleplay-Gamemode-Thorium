@@ -71,7 +71,7 @@ HELP.KEYS = {
         { key = "I",   text = "Inventario" },
         { key = "P",   text = "Telefono (notas, contactos, banco, Fotogram, Vroom)" },
         { key = "F11", text = "Mapa: lugares que descubres, clic en un punto para poner ruta GPS y vista 3D (Esc cierra)" },
-        { key = "E",   text = "Interactuar: tiendas, restaurantes, cajeros, casas, probadores y concesionario" },
+        { key = "E",   text = "Interactuar: tiendas, restaurantes, cajeros, casas, probadores y concesionario. Junto a una banca, silla o sofa del mapa: sentarse (E otra vez para levantarse)" },
         { key = "F3",  text = "Panel de tu faccion" },
     } },
     { group = "Vehiculos", items = {

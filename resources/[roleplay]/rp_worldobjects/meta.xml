@@ -1,0 +1,27 @@
+<meta>
+    <info author="Thorium" name="RP World Objects" description="Interaccion con los objetos del mapa original de GTA SA: sentarse en bancas, sillas y sofas con E" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_injury" />
+    <include resource="rp_police" />
+    <include resource="rp_hud" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="shared/s_data.lua" type="shared" />
+    <script src="shared/s_objects.lua" type="shared" />
+
+    <script src="server/s_worldobjects.lua" type="server" />
+
+    <script src="client/c_worldobjects.lua" type="client" cache="false" />
+
+    <file src="images/keys/keyboard_e.png" />
+    <file src="fonts/rubik_medium.ttf" />
+    <file src="sounds/impactSoft_medium_000.ogg" />
+
+    <export function="isPlayerSeated" type="server" />
+    <export function="standPlayer" type="server" />
+    <export function="getWorldObjectStats" type="server" />
+</meta>

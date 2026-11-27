@@ -100,6 +100,7 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_levels:giveXP(p, n, motivo)`, `getPlayerLevel(p)`, `getPlayerXP(p)` | |
 | `rp_injury:isPlayerDowned(p)`, `downPlayer(p)`, `revivePlayer(p)`; cliente `isLocalPlayerDowned()` | |
 | `rp_police:isCuffed(p)`, `isOnDuty(p)` | |
+| `rp_worldobjects:isPlayerSeated(p)`, `standPlayer(p)` (levanta sin animación), `getWorldObjectStats()` | sentado en una banca o silla del mapa; levántalo antes de teletransportarlo o animarlo |
 | `rp_missions:getPlayerMission(p)` | id de instancia o `false` |
 | `rp_races:getPlayerRace(p)` | id o `false` |
 | `rp_robbery:isPlayerRobbing(p)` | |
