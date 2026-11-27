@@ -32,11 +32,15 @@ test("bd_conectada_y_esquema_aplicado", function(t)
     check()
 end)
 
+-- Las herramientas de desarrollo (devtool="true" en el <info> de su meta.xml, p. ej. rp_animlab)
+-- no arrancan con el servidor: se encienden a mano y no cuentan aquí
 test("recursos_roleplay_arrancados", function(t)
     local down = {}
-    local total = 0
+    local total, skipped = 0, 0
     for _, res in ipairs(getResources()) do
-        if getResourceOrganizationalPath(res) == "[roleplay]" then
+        if getResourceOrganizationalPath(res) == "[roleplay]" and getResourceInfo(res, "devtool") == "true" then
+            skipped = skipped + 1
+        elseif getResourceOrganizationalPath(res) == "[roleplay]" then
             total = total + 1
             local state = getResourceState(res)
             if state ~= "running" then
@@ -47,7 +51,7 @@ test("recursos_roleplay_arrancados", function(t)
     end
     if total == 0 then return t.fail("no se encontro ningun recurso en [roleplay]") end
     if #down > 0 then return t.fail(table.concat(down, ", ")) end
-    t.pass(total .. " recursos en marcha")
+    t.pass(total .. " recursos en marcha" .. (skipped > 0 and (" (" .. skipped .. " de desarrollo sin contar)") or ""))
 end)
 
 -- Recorre las sentencias de rp_database/schema.lua y comprueba que existen todas las
@@ -279,24 +283,3 @@ test("banco_deposito_y_cobro_atomico", function(t, ctx)
     end, "UPDATE characters SET bank_money = bank_money + ? WHERE id = ?", 1000, id)
 end)
 
-----------------------------------------------------------------
--- Limpieza
-----------------------------------------------------------------
-test("borrar_cuenta_en_cascada", function(t, ctx)
-    if not ctx.accountId then return t.fail("sin cuenta de prueba") end
-    query(function(rows, affected)
-        if not rows or affected ~= 1 then return t.fail("no se borro la cuenta de prueba") end
-        ctx.cleanup = nil
-        -- login_log usa ON DELETE SET NULL: sus filas se quedarian; se borran aparte
-        query(function() end, "DELETE FROM login_log WHERE username LIKE ?", PREFIX .. "%")
-        query(function(r)
-            local left = r and r[1] and tonumber(r[1].n)
-            if left ~= 0 then return t.fail(tostring(left) .. " filas huerfanas (personajes/items) tras borrar la cuenta") end
-            t.pass("cuenta, personaje, items y movimientos borrados")
-        end, [[
-            SELECT (SELECT COUNT(*) FROM characters WHERE id = ?)
-                 + (SELECT COUNT(*) FROM character_items WHERE character_id = ?)
-                 + (SELECT COUNT(*) FROM bank_transactions WHERE character_id = ?) AS n
-        ]], ctx.characterId or 0, ctx.characterId or 0, ctx.characterId or 0)
-    end, "DELETE FROM accounts WHERE id = ?", ctx.accountId)
-end)

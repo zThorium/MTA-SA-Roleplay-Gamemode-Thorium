@@ -326,6 +326,7 @@ UI_ACTIONS.form_fine = function(officer, d)
         end
     end)
     factionLog(("%s multo a %s con $%d: %s"):format(oname, dname(target), amount, reason))
+    triggerEvent("rp:achievements:progress", officer, "police_fines", 1)   -- logros (rp_achievements)
 end
 
 UI_ACTIONS.form_arrest = function(officer, d)
@@ -358,6 +359,7 @@ UI_ACTIONS.form_arrest = function(officer, d)
     if fine > 0 then chargeFine(targetId, fine, "Multa del arresto: " .. reason, oname, target) end
     notify(officer, ("%s queda encarcelado %d min."):format(dname(target), minutes), "success")
     factionLog(("%s arresto a %s (%d min): %s"):format(oname, dname(target), minutes, reason))
+    triggerEvent("rp:achievements:progress", officer, "police_arrests", 1)   -- logros (rp_achievements)
 end
 
 ----------------------------------------------------------------

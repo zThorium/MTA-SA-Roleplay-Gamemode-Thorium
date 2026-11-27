@@ -61,6 +61,7 @@ luego deciden la estructura:
 | ¿Qué pasa si el jugador sale, cambia de personaje, queda abatido o se reinicia el recurso a mitad? | Limpieza y rehidratación |
 | ¿Qué teclas, comandos y blips usa? | Comprobar que no chocan (`REGISTROS.md`) |
 | ¿Da XP o progreso? | `rp_levels:giveXP` |
+| ¿Qué hechos merecen logro (esfuerzo repetido, habilidad, progreso, momento único) y cuáles se podrían farmear? ¿O no tiene ninguno? | Logros obligatorios con sentido (`INT-09`, `docs/LOGROS.md`) |
 
 ## Fase 2 · Nombre, dependencias y estructura
 
@@ -180,6 +181,12 @@ Repasa esta lista; cada "sí" es una línea de código que falta:
 - [ ] ¿Solo para una facción o rol? → `rp_factions:getPlayerFaction` / `hasFactionPermission(p, "clave")`.
 - [ ] ¿Afecta a hambre/sed/energía? → `rp_needs:addNeed(p, "hunger"|"thirst"|"energy", n)`.
 - [ ] ¿Da progreso? → `rp_levels:giveXP(p, n, "motivo")`.
+- [ ] **Logros (obligatorio, `INT-09`)**. ¿Hay hechos que merezcan logro (esfuerzo repetido, ganar o
+      hacerlo perfecto, progreso con techo, momento único)? → `triggerEvent("rp:achievements:progress", p, "stat", n)`
+      en el servidor **tras validar y cobrar**, y la estadística (reutiliza una si ya existe) y el logro en
+      `rp_achievements/shared/s_achievements.lua`, con umbrales de bronce a platino según el ritmo real del
+      recurso y condiciones contra el farmeo. Si el recurso no tiene ninguno (infraestructura, admin,
+      algo pasivo o trivial), no se inventan: anota `INT-09: N/A, motivo` en la auditoría. Criterio en `docs/LOGROS.md`.
 - [ ] ¿Usa un vehículo? → los personales son de `rp_vehicles` (llaves, combustible); los temporales
       los creas tú, con dueño en una tabla Lua, y los destruyes al terminar/salir.
 - [ ] ¿Choca con estar abatido, esposado (`rp_police:isCuffed`), en misión (`rp_missions:getPlayerMission`),
@@ -228,6 +235,7 @@ Repasa esta lista; cada "sí" es una línea de código que falta:
 - [ ] Dimensión, teclas y blips sin choques (`REGISTROS.md`).
 - [ ] `scripts/test.sh` en `FIN OK`; consola limpia en `restart`.
 - [ ] Reglas de experiencia `UX-01..10` revisadas (`docs/EXPERIENCIA_JUEGO.md`); assets con `CREDITOS.md`.
+- [ ] Logros (`INT-09`): añadidos con sentido y probados con `/verlogros`, o `N/A` justificado en la auditoría.
 - [ ] Docs actualizadas (fase 8) y aviso a Fabián de lo que debe probar en el cliente.
 - [ ] Sin secretos, IPs, emails ni material de Rockstar en el repo.
 

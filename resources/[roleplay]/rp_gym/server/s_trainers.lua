@@ -197,6 +197,10 @@ local function endFight(f, result)
         p.style = t.cfg.id
         saveProfile(player)
         setPedFightingStyle(player, t.cfg.id)
+        -- Logros (rp_achievements, modo max): estilos aprendidos
+        local learned = 0
+        for _, col in ipairs({ "boxing", "kungfu", "kickboxing" }) do if tonumber(p[col]) == 1 then learned = learned + 1 end end
+        triggerEvent("rp:achievements:progress", player, "gym_styles", learned)
         exports.rp_notify:popup(player, "Nuevo estilo de combate", t.cfg.name .. ": has derrotado al entrenador.", "success")
     elseif result == "lose" then
         setElementHealth(player, math.max(getElementHealth(player), 30))

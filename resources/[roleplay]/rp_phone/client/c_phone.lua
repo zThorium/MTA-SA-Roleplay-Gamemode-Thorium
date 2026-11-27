@@ -81,8 +81,8 @@ end)
 -- Telefono -> servidor
 ----------------------------------------------------------------
 addEventHandler("rp:phone:ui:close", root, close)
--- Apps de otros recursos: se cierra el telefono y se abre la app (p. ej. Vroom de rp_rides)
-local EXTERNAL_APPS = { vroom = "rp:rides:openApp" }
+-- Apps de otros recursos: se cierra el telefono y se abre la app (p. ej. Vroom de rp_rides, Logros de rp_achievements)
+local EXTERNAL_APPS = { vroom = "rp:rides:openApp", logros = "rp:achievements:openApp" }
 addEventHandler("rp:phone:ui:openApp", root, function(app)
     local event = EXTERNAL_APPS[app]
     if not event then return end

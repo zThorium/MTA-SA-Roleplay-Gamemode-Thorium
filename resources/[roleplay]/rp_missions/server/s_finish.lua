@@ -51,6 +51,7 @@ local function persist(inst, p, xp, cash, respect, success, elapsed)
         dbExec(M.db(), [[INSERT INTO mission_progress (character_id, mission_key, completions, best_ms) VALUES (?, ?, 1, ?)
             ON DUPLICATE KEY UPDATE completions = completions + 1, best_ms = LEAST(COALESCE(best_ms, VALUES(best_ms)), VALUES(best_ms))]],
             cid, inst.def.key, elapsed)
+        triggerEvent("rp:achievements:progress", p, "missions_done", 1)   -- logros (rp_achievements)
     end
     return respect
 end

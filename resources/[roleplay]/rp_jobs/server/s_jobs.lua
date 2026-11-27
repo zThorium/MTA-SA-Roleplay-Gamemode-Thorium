@@ -102,6 +102,7 @@ function Jobs.xp(player, amount)
     s.tasks = s.tasks + 1
     saveStats(player, s.job, amount, 1, 0)
     local after = levelFromXP(st.xp)
+    triggerEvent("rp:achievements:progress", player, "job_level", after)   -- logros (rp_achievements, modo max)
     if after > before then
         exports.rp_notify:popup(player, "¡Subiste de nivel!", ("Ahora eres nivel %d como %s. Cobras un %d%% más."):format(
             after, JOBS_BY_ID[s.job].name, math.floor((after - 1) * JOBS_CONFIG.LEVEL_PAY_BONUS * 100 + 0.5)), "success", 7000)

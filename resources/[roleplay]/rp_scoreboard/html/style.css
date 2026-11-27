@@ -294,6 +294,14 @@ h1 {
     animation: fxRainbow 4s linear infinite;
 }
 @keyframes fxRainbow { to { background-position: 300% 0; } }
+/* Oro: se desbloquea con los logros (hito 7 de rp_achievements) */
+.fx-gold {
+    background-image: linear-gradient(100deg, #b8860b 0%, #ffd36b 30%, #fff6d0 45%, #ffc440 60%, #b8860b 100%) !important;
+    background-size: 250% 100% !important;
+    -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 4px rgba(255, 196, 64, .55));
+    animation: fxShine 3.2s linear infinite;
+}
 .fx-glow { animation: fxGlow 1.8s ease-in-out infinite; }
 @keyframes fxGlow {
     0%, 100% { text-shadow: 0 0 2px var(--fx), 0 0 6px var(--fx); }
@@ -408,6 +416,9 @@ h3 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: upp
 .opt .opt-name { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .opt .name { font-size: 14px; padding: 0; }
 .opt-none { font-size: 11px; color: var(--muted); }
+.opt.locked > :not(.opt-lock) { filter: grayscale(1) brightness(.55); }
+.opt.locked { cursor: not-allowed; }
+.opt-lock { position: absolute; right: 2px; top: 1px; font-size: 10px; }
 .opt .flag { width: 26px; height: 19px; animation: none; }
 .opt[data-tip]:hover::after {
     content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);

@@ -179,6 +179,7 @@ addEventHandler("rp:dealer:buy", resourceRoot, function(spot, colorIndex)
             return notify(player, "No se pudo entregar el vehiculo. Se te devolvio el dinero.", "error")
         end
         dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'purchase', ?, ?)", characterId, entry.price, entry.name)
+        triggerEvent("rp:achievements:progress", player, "vehicles_bought", 1)   -- logros (rp_achievements)
 
         guardFall(vehicle, d[1], d[2], d[3])
         triggerClientEvent(player, "rp:dealer:near", resourceRoot, false)

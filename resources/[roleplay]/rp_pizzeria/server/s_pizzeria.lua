@@ -459,6 +459,8 @@ function handlers.pickup(S)
     exports.rp_jobs:giveExternalJobXP(p, 8 + math.floor(final / 10))
     S.earned, S.served = S.earned + paid, S.served + 1
     S.level = levelOf(p)
+    triggerEvent("rp:achievements:progress", p, "pizza_delivered", 1)            -- logros (rp_achievements)
+    if final >= 95 then triggerEvent("rp:achievements:progress", p, "pizza_perfect", 1) end
 
     local reaction = final >= 85 and "love" or final >= 70 and "happy" or final >= 50 and "neutral" or "complain"
     local sc = o.score

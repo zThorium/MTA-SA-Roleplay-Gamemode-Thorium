@@ -524,6 +524,7 @@ local function startPursuit(R, breach)
     end
     wanted("holdPursuit", R.player, false)
     triggerClientEvent(R.player, "rp:robbery:pursuit", resourceRoot, breach and true or false)
+    if (R.loot or 0) > 0 then triggerEvent("rp:achievements:progress", R.player, "robberies", 1) end   -- logros
     endRobbery(R, "pursuit")
 end
 

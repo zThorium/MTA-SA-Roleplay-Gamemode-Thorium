@@ -1,0 +1,63 @@
+<meta>
+    <info author="Thorium" name="RP Logros" description="Logros por personaje con medallas de bronce, plata, oro y platino; puntos e hitos con recompensa que alimentan todos los sistemas" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <!-- Los demás recursos NO dependen de este: avisan con triggerEvent("rp:achievements:progress", ...) -->
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_ids" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="rp_levels" />
+    <!-- Solo para leer al entrar lo que ya se tenía (licencia y % del mapa) -->
+    <include resource="rp_driving" />
+    <include resource="rp_map" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="shared/s_achievements.lua" type="shared" />
+    <script src="server/s_achievements.lua" type="server" />
+    <script src="server/s_rewards.lua" type="server" />
+    <script src="server/s_listeners.lua" type="server" />
+    <script src="server/s_admin.lua" type="server" />
+
+    <!-- c_dx.lua: copia idéntica de rp_notify (formas suavizadas). Fuentes desde ":rp_notify/fonts/..." -->
+    <script src="client/c_dx.lua" type="client" cache="false" />
+    <script src="client/c_toast.lua" type="client" cache="false" />
+    <script src="client/c_panel.lua" type="client" cache="false" />
+
+    <!-- Aviso de medalla: texturas propias (assets/propios/texturas/detector) y sonidos de la paleta -->
+    <file src="images/fx/glow.png" />
+    <file src="images/fx/sparkle.png" />
+    <file src="images/fx/ring.png" />
+    <file src="sounds/confirmation_002.ogg" />
+    <file src="sounds/confirmation_003.ogg" />
+    <file src="sounds/reveal_rare.wav" />
+    <file src="sounds/reveal_legendary.wav" />
+    <file src="sounds/sparkle.wav" />
+    <file src="sounds/bong_001.ogg" />
+
+    <!-- Panel CEF -->
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/fonts/kenney_future.ttf" />
+    <file src="html/images/glow.png" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/sounds/pluck_001.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/coins.wav" />
+
+    <export function="progress" type="server" />
+    <export function="setStat" type="server" />
+    <export function="unlock" type="server" />
+    <export function="getPlayerPoints" type="server" />
+    <export function="hasAchievement" type="server" />
+    <export function="getPlayerAchievements" type="server" />
+    <export function="getAchievementStats" type="server" />
+</meta>

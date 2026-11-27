@@ -21,7 +21,12 @@ function gymApplyDelta(player, dStamina, dMuscle, dFat, rebuild)
             changes[#changes + 1] = { stat = c[1], value = c[3], diff = diff }
         end
     end
-    if #changes > 0 then triggerClientEvent(player, "rp:gym:statChange", resourceRoot, changes) end
+    if #changes > 0 then
+        triggerClientEvent(player, "rp:gym:statChange", resourceRoot, changes)
+        -- Logros (rp_achievements, modo max): músculo y resistencia 0-1000
+        triggerEvent("rp:achievements:progress", player, "gym_muscle", muscle)
+        triggerEvent("rp:achievements:progress", player, "gym_stamina", stamina)
+    end
     local reached = gymAccount(player, stats.fat - fat, stamina - stats.stamina, muscle - stats.muscle)
     if reached then saveProfile(player) end
     return reached

@@ -196,6 +196,7 @@ function buyToy(player, toyKey, multiplier, adjust, callback)
             rx = a.rx, ry = a.ry, rz = a.rz, sx = a.sx, sy = a.sy, sz = a.sz, worn = wear and 1 or 0 })
         owned[player][id] = row
         if wear then attach(player, row) end
+        triggerEvent("rp:achievements:progress", player, "clothes_bought", 1)   -- logros (rp_achievements)
         notify(player, wear and ("Compraste %s por $%d. Ya lo llevas puesto."):format(def.name, price)
             or ("Compraste %s por $%d. Quitate otro accesorio para ponertelo."):format(def.name, price), "success")
         if callback then callback() end

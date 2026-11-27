@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Logros</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window" id="window">
+        <header>
+            <div class="brand">
+                <div class="brand-ico">🏆</div>
+                <div>
+                    <h1>Logros</h1>
+                    <div class="hint">Cada medalla suma puntos · los puntos desbloquean recompensas</div>
+                </div>
+            </div>
+            <div class="medal-counts" id="medal-counts"></div>
+            <div class="points"><span class="label">Puntos de logro</span><strong id="points">0</strong></div>
+            <button class="close" id="btn-close" title="Cerrar (Esc)">×</button>
+        </header>
+
+        <!-- Hitos: la barra de recompensas -->
+        <section class="milestones" id="milestones">
+            <div class="track" id="track"><div class="track-fill" id="track-fill"></div></div>
+            <div class="reward" id="reward"></div>
+        </section>
+
+        <nav class="tabs" id="tabs"></nav>
+
+        <section class="view">
+            <div class="grid" id="grid"></div>
+            <div class="empty" id="empty">Nada por aquí todavía.</div>
+        </section>
+
+        <div class="coach" id="coach">
+            <div class="coach-box">
+                <b class="coach-title">Cómo funcionan los logros</b>
+                <p>Todo lo que haces en la ciudad cuenta: trabajar, conducir, explorar... Cada logro tiene
+                   <span class="m1">bronce</span>, <span class="m2">plata</span>, <span class="m3">oro</span> y
+                   <span class="m4">platino</span>, y cada medalla te da puntos.</p>
+                <p>Con los puntos llegas a los <b>hitos</b> de esta barra. Cuando uno brille, haz clic y pulsa
+                   <b>Reclamar</b> para cobrar tu recompensa.</p>
+                <button class="btn primary" id="coach-ok">Entendido</button>
+            </div>
+        </div>
+        <div class="toast" id="toast"></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

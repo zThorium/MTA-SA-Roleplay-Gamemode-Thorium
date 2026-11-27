@@ -186,6 +186,10 @@ local function applyChaos(player, chaos)
         radioPolice(player, level)
     elseif level == 0 and not s.busted then
         notify(player, "Perdiste a la policia.", "success")
+        -- Logros (rp_achievements): escapar de verdad (no al morir ni al quedar abatido)
+        if not isPedDead(player) and not getElementData(player, "rp:downed") then
+            triggerEvent("rp:achievements:progress", player, "wanted_escapes", 1)
+        end
     end
 end
 

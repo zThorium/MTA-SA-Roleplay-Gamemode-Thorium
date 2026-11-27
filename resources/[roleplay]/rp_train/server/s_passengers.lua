@@ -112,7 +112,7 @@ addEventHandler("rp:train:board", resourceRoot, function(car)
         if not ok then return notify(p, why or "No se pudo usar el boleto.", "error") end
     end
 
-    local r = { t = t, car = car, seat = seat }
+    local r = { t = t, car = car, seat = seat, from = station }
     riders[p] = r
     local ox, oy, oz = seatOffset(seat)
     attachElements(p, car, ox, oy, oz)
@@ -139,8 +139,11 @@ addEventHandler("rp:train:alight", resourceRoot, function(x, y, z)
         local along, side = TrainTrack.carFrame(r.car, x, y)
         ok = math.abs(along) <= TRAIN.CAR_HALF_LENGTH and math.abs(side) <= TRAIN.ALIGHT_SIDE + 1.5 and math.abs(z - cz) <= 4
     end
+    local from = r.from
     if ok then release(p, x, y, z + 1) else releaseBeside(p) end
     notify(p, ("Bajaste en %s."):format(station), "success")
+    -- Logros (rp_achievements): solo cuenta un viaje a otra estación
+    if from ~= station then triggerEvent("rp:achievements:progress", p, "train_trips", 1) end
 end)
 
 -- Hooks de s_train.lua. Los avisos por megafonía (campanilla + voz, c_passengers.lua) solo los oyen

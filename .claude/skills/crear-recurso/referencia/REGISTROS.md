@@ -72,6 +72,8 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
 - Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
   trenes (`rp_train`): `rp:train`, `rp:train:wagon`, `rp:train:of`, `rp:train:idx`, `rp:train:v`, `rp:train:passenger`, `rp:train:dwell`, `rp:train:horn`.
 - Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
+- Objeto en la mano (no arma): `rp:heldItem` en el jugador = id del item (lo pone el recurso que lo maneja; `rp_inventory` lo marca con ✓ y su botón dice «Guardar»). Hoy: `rp_metaldetector` (`metal_detector_<n>`); al quitarlo, borra solo si el valor es tuyo.
+- Detector de metales (`rp_metaldetector`): `rp:mdShop` en el ped vendedor.
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
 - Objetos: `rp:text3d` (texto de `rp_3dtext`, icono 1239).
 - Pickups: `rp:pickupUsed` (recogido y esperando reaparecer; `rp_pickupfx` no lo hace brillar).
@@ -129,8 +131,11 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
-→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map → rp_worldobjects → rp_interact
+→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map → rp_worldobjects → rp_interact → rp_metaldetector → rp_achievements
 ```
+
+Herramientas de desarrollo que no arrancan con el servidor (p. ej. `rp_animlab`): no van en `mtaserver.conf` y llevan
+`devtool="true"` en el `<info>` de su `meta.xml`, para que `rp_test` no las exija en marcha.
 
 Un recurso nuevo va **al final** salvo que otro existente dependa de él. Aun así, declara las
 dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinicia a mano.
@@ -138,9 +143,9 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 ## Prefijos de eventos en uso
 
 `rp:admin:`, `rp:adminpanel:`, `rp:agency:`, `rp:ammu:`, `rp:anims:`, `rp:atm:`, `rp:auth:`, `rp:bank:`,
-`rp:bikes:`, `rp:bp:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
+`rp:achievements:`, `rp:bikes:`, `rp:bp:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
 `rp:dealers:`, `rp:driving:`, `rp:firefighters:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
-`rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:interact:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
+`rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:interact:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`, `rp:metaldetector:`,
 `rp:map:`, `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
 `rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
 `rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:vending:`, `rp:wanted:`.

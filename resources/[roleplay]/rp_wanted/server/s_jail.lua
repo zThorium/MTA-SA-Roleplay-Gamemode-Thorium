@@ -67,6 +67,7 @@ function jailPlayer(player, seconds, bail, chaos)
     popup(player, "Carcel", ("Condena: %d:%02d. Puedes salir antes pagando la fianza de $%d con /fianza.")
         :format(math.floor(j.left / 60), j.left % 60, j.bail), "warning")
     outputServerLog(("[rp_wanted] %s encarcelado %d s (fianza $%d)"):format(getPlayerName(player), j.left, j.bail))
+    triggerEvent("rp:achievements:progress", player, "jailed", 1)   -- logros (rp_achievements)
     return true
 end
 

@@ -99,6 +99,7 @@ queda visible y buscable (`grep -rn "estandar:"`). Sin motivo no vale.
 | INT-06 | R | auto | Teclas globales sin chocar con otro recurso (E es contextual y compartida). |
 | INT-07 | I | manual | Se reutilizan los sistemas de la GM en vez de duplicarlos: dinero (BD-06), inventario (`rp_inventory`), identidad (`rp_characters`, `rp_ids`), búsqueda (`rp_wanted`), facciones, XP (`rp_levels`), necesidades. API en `.claude/skills/crear-recurso/referencia/API.md`. |
 | INT-08 | I | manual | Textos al jugador en español con tildes correctas; tono de rol. |
+| INT-09 | I | manual | **Logros con sentido**: si el recurso tiene hechos que merecen logro (esfuerzo repetido, habilidad, progreso, momentos únicos), los avisa con `triggerEvent("rp:achievements:progress", jugador, stat, n)` en el servidor tras validarlos y los registra en `rp_achievements/shared/s_achievements.lua`, con condiciones contra el farmeo. Si no tiene (infraestructura, admin, algo pasivo o trivial), no se inventan y la auditoría anota `INT-09: N/A, motivo`. Criterio en `docs/LOGROS.md`. |
 
 ## CLI · Cliente
 

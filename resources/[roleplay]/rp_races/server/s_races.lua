@@ -410,6 +410,11 @@ endRace = function(race)
                 givePlayerMoney(E.player, mny)
                 pcall(function() exports.rp_characters:saveCharacter(E.player) end)
                 pcall(function() exports.rp_levels:giveXP(E.player, xp, "carrera") end)
+                -- Logros (rp_achievements): carrera terminada y victoria (con al menos otro corredor)
+                if E.finished then
+                    triggerEvent("rp:achievements:progress", E.player, "races_finished", 1)
+                    if i == 1 and total > 1 then triggerEvent("rp:achievements:progress", E.player, "races_won", 1) end
+                end
             end
         end
         local lapsDone = (E.lap - 1)

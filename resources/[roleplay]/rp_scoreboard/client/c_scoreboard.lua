@@ -16,6 +16,7 @@ local refreshTimer, hideTimer
 local avatarAsked = {}      -- [player] = version pedida
 
 addEvent("rp:scoreboard:avatar", true)
+addEvent("rp:scoreboard:unlocks", true)
 addEvent("rp:scoreboard:ui:save", false)
 addEvent("rp:scoreboard:ui:avatar", false)
 addEvent("rp:scoreboard:ui:clearAvatar", false)
@@ -162,6 +163,12 @@ addCommandHandler("perfil", function()
     guiSetInputEnabled(true)
     focusBrowser(browser)
     callJS(("RP.openEditor(%s)"):format(toJSON(rowOf(localPlayer), true):sub(2, -2)))
+    triggerServerEvent("rp:scoreboard:unlocks", resourceRoot)   -- candados de las opciones de logros
+end)
+
+addEventHandler("rp:scoreboard:unlocks", resourceRoot, function(locked)
+    if mode ~= "editor" or type(locked) ~= "table" then return end
+    callJS(("RP.setLocked(%s)"):format(toJSON(locked, true):sub(2, -2)))
 end)
 
 addEventHandler("rp:scoreboard:ui:save", root, function(json)

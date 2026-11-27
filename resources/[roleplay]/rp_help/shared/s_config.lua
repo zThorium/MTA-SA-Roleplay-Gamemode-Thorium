@@ -84,6 +84,12 @@ HELP.KEYS = {
         { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas) y sobre una persona, el de interaccion (saludar, dar dinero u objetos, documentos, reanimar, cachear). En Vroom alterna app y mapa" },
         { key = "E / Retroceso", text = "Aceptar o rechazar lo que te propone otra persona (darte la mano, un objeto, subir a su coche, cachearte)" },
     } },
+    { group = "Detector de metales", items = {
+        { key = "E",   text = "Junto al vendedor del puesto 'Equipo de playa' (muelle de Santa Maria): tienda de detectores y pala. Los detectores mejores se desbloquean subiendo de nivel de buscador" },
+        { key = "I",   text = "Usa el detector desde el inventario para sacarlo o guardarlo" },
+        { key = "E",   text = "Camina por la arena siguiendo los pitidos: el numero de la pantalla dice que metal es (bajo = hierro, alto = oro o plata). En 'Cavar aqui', cada E es una palada: pulsala cuando la marca este en la zona verde. Lo encontrado se vende en el Puesto del buscador" },
+        { key = "Retroceso", text = "Dejar de cavar (el objeto sigue ahi)" },
+    } },
     { group = "Bomberos", items = {
         { key = "E",   text = "En la estacion: vestuario (entrar o salir de servicio) y garaje (autobomba). En una emergencia: cargar a un civil y dejarlo en la zona segura" },
         { key = "Clic izq.", text = "Con el extintor en la mano: apagar el foco al que apuntas" },
@@ -117,6 +123,11 @@ HELP.COMMANDS = {
     { cmd = "/gps",            text = "Cancelar la ruta del GPS (la pones desde el mapa, F11)" },
     { cmd = "/hud tutorial",   text = "Repite la guia del HUD: minimapa, vida, hambre, sed, energia, dinero..." },
     { cmd = "/silenciarnotis", text = "Silenciar el sonido de las notificaciones" },
+    { cmd = "/detector",       text = "Tu nivel de buscador (XP, objetos encontrados, dinero ganado) y la coleccion del detector de metales" },
+    { cmd = "/hallazgos",      text = "La coleccion del detector de metales: lo que ya encontraste y lo que te falta" },
+    { cmd = "/mdprop, /mdpose", text = "Ajustar como se ve el detector en la mano (solo en tu pantalla; para pruebas)" },
+    { cmd = "/logros",         text = "Tus logros: medallas de bronce, plata, oro y platino, puntos y recompensas por reclamar (tambien en la app Logros del telefono)" },
+    { cmd = "/probarlogro",    text = "Muestra el aviso de medalla en tu pantalla (no da nada)" },
 }
 
 -- Guia para jugadores nuevos: pasos en orden

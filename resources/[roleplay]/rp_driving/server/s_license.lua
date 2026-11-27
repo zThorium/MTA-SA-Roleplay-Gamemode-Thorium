@@ -120,6 +120,7 @@ function issueLicense(player, characterId, tries)
         getLicenseRow(characterId, function()
             if not isElement(player) or characterOf(player) ~= characterId then return end
             giveLicenseItem(player, characterId)
+            triggerEvent("rp:achievements:progress", player, "driving_license", 1)   -- logros (rp_achievements)
             exports.rp_notify:popup(player, "¡Licencia de conducir!",
                 "Aprobaste todas las pruebas. Tu licencia esta en el inventario (I): la policia puede pedirtela. Sigue mejorando tus medallas para subir su distincion.", "success", 12000)
             showCard(player, characterId, "own")

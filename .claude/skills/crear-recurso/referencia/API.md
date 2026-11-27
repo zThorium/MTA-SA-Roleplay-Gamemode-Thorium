@@ -98,6 +98,8 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 |---|---|
 | `rp_needs:addNeed(p, "hunger"|"thirst"|"energy", n)`, `getNeed`, `getNeeds`, `addSanity`, `getSanity` | |
 | `rp_levels:giveXP(p, n, motivo)`, `getPlayerLevel(p)`, `getPlayerXP(p)` | |
+| `triggerEvent("rp:achievements:progress", p, "stat", n)` | **logros** (`rp_achievements`): avisa un hecho lograble tras validarlo en el servidor; sin `<include>` (si el recurso está parado, no pasa nada). Estadística nueva = entrada en `ACH.STATS` + logro en `ACH.CATALOG` (`docs/LOGROS.md`) |
+| `rp_achievements:hasAchievement(p, "ach:<clave>[:<1-4>]"\|"points:<n>"\|"milestone:<n>")`, `getPlayerPoints(p)`, `getPlayerAchievements(p)` | leer logros (cosméticos de `rp_scoreboard`: `requires`) |
 | `rp_injury:isPlayerDowned(p)`, `downPlayer(p)`, `revivePlayer(p)`; cliente `isLocalPlayerDowned()` | |
 | `rp_police:isCuffed(p)`, `isOnDuty(p)` | |
 | `rp_police:getPlayerActions(oficial, objetivo)`, `doPlayerAction(oficial, objetivo, id)` | acciones policiales sobre una persona (las del menú K); las usa `rp_interact` |
@@ -110,6 +112,7 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_jobs:getPlayerJob(p)`, `setPlayerJob(p, id, force)`, `isPlayerOnShift(p)`, `getPlayerJobLevel(p)`, `showJobLocation(p, id)`, `getMarketPrice(...)` | API completa en `docs/TRABAJOS.md` |
 | `rp_jobs:startExternalShift(p, id)`, `endExternalShift(p, motivo)`, `payExternalJob(p, base, concepto)`, `giveExternalJobXP(p, n)` | trabajos externos (`external = "rp_x"` en `JOBS`): otro recurso juega el turno y `rp_jobs` lleva puesto, XP y pagos. Ejemplo: `rp_pizzeria` |
 | `rp_pizzeria:isPlayerOnPizzaShift(p)` | si está de turno en la pizzería |
+| `rp_metaldetector:isPlayerDetecting(p)`, `getMetalDetectorLoot()`, `getPlayerDetectorLevel(p)` | si lleva un detector en la mano; tabla de botín; nivel de buscador (1-5) |
 | `rp_backpacks:getBackpack(p)`, `getPackWeight(p)` | |
 
 ## Facciones y policía

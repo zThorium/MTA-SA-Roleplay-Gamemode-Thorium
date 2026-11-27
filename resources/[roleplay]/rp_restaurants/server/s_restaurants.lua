@@ -210,6 +210,7 @@ addEventHandler("rp:restaurants:buy", resourceRoot, function(id, index)
     end
     takePlayerMoney(p, meal.price)
     exports.rp_characters:saveCharacter(p)
+    triggerEvent("rp:achievements:progress", p, "meals_eaten", 1)   -- logros (rp_achievements)
 
     startEating(p, loc, meal)
 end)
