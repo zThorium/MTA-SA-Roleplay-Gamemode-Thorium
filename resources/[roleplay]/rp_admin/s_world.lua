@@ -34,6 +34,7 @@ WORLD_TYPES = {
     { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign" },
     { key = "turnstile",     many = "turnstiles",     res = "rp_train",      name = "Torniquete de tren", kind = "gate" },
     { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence" },
+    { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D" },
 }
 
 local NEARBY_RADIUS, NEARBY_MAX = 20, 500
@@ -80,7 +81,8 @@ local function notRunning(player, t)
 end
 
 local function deleteOne(player, t, id, cmd)
-    local ok, done, why = pcall(call, running(t), "adminDelete", id, t.kind)
+    -- el admin va como 3er argumento para los recursos que auditan quien borra (rp_3dtext)
+    local ok, done, why = pcall(call, running(t), "adminDelete", id, t.kind, player)
     if not ok or not done then
         notify(player, ("No se pudo borrar %s #%d%s"):format(t.name:lower(), id, why and (": " .. why) or "."), "error")
         return false

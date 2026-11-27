@@ -1714,4 +1714,43 @@ SCHEMA = {
         CONSTRAINT fk_phone_messages_receiver FOREIGN KEY (receiver_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_3dtext: textos 3D que colocan los admins (/create3dtext). Borrar no elimina la fila:
+    -- se marca deleted_at/deleted_by para poder auditar quien lo hizo y cuando
+    [[
+    CREATE TABLE IF NOT EXISTS text3d (
+        id                    INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        text                  VARCHAR(255) NOT NULL,
+        x                     FLOAT        NOT NULL,
+        y                     FLOAT        NOT NULL,
+        z                     FLOAT        NOT NULL,
+        interior              INT          NOT NULL DEFAULT 0,
+        dimension             INT          NOT NULL DEFAULT 0,
+        created_by_account_id INT UNSIGNED NULL,
+        created_by_account    VARCHAR(64)  NOT NULL,
+        created_by_name       VARCHAR(64)  NOT NULL,
+        created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at            DATETIME     NULL,
+        deleted_at            DATETIME     NULL,
+        deleted_by_account_id INT UNSIGNED NULL,
+        deleted_by_name       VARCHAR(64)  NULL,
+        PRIMARY KEY (id),
+        KEY idx_text3d_active (deleted_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_3dtext: historial de cada texto 3D (crear, editar, borrar) con el admin y la hora
+    [[
+    CREATE TABLE IF NOT EXISTS text3d_log (
+        id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        text3d_id        INT UNSIGNED NOT NULL,
+        action           ENUM('create','edit','delete') NOT NULL,
+        text             VARCHAR(255) NOT NULL,
+        admin_account_id INT UNSIGNED NULL,
+        admin_account    VARCHAR(64)  NOT NULL,
+        admin_name       VARCHAR(64)  NOT NULL,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_text3d_log_text (text3d_id, id),
+        CONSTRAINT fk_text3d_log_text FOREIGN KEY (text3d_id) REFERENCES text3d (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

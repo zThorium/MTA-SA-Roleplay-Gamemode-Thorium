@@ -1,0 +1,25 @@
+<meta>
+    <info author="Thorium" name="RP 3D Text" description="Textos 3D con icono de info animado que colocan los admins, guardados en BD y auditables" version="1.1.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_3dtext.lua" type="server" />
+    <script src="client/c_3dtext.lua" type="client" cache="false" />
+
+    <!-- Shaders: icono dorado animado y brillos (halo, haz, anillo, chispas) -->
+    <file src="fx/icon.fx" />
+    <file src="fx/glow.fx" />
+    <file src="fx/mta-helper.fx" />
+    <!-- Assets de la biblioteca del repo (ver CREDITOS.md) -->
+    <file src="fonts/rubik_medium.ttf" />
+    <file src="fonts/kenney_future.ttf" />
+    <file src="sounds/glass_001.ogg" />
+
+    <!-- Gramatica Owl de rp_admin: /nearby3dtexts, /goto3dtext, /del3dtext, /delthis3dtext... -->
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
+</meta>

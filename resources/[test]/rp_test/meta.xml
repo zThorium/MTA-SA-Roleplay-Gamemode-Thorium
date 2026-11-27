@@ -24,6 +24,7 @@
     <include resource="rp_npcrel" />
     <include resource="rp_interact" />
     <include resource="rp_police" />
+    <include resource="rp_3dtext" />
 
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
@@ -42,4 +43,5 @@
     <script src="server/s_tests_npcrel.lua" type="server" />
     <script src="server/s_tests_interact.lua" type="server" />
     <script src="server/s_tests_tinder.lua" type="server" />
+    <script src="server/s_tests_3dtext.lua" type="server" />
 </meta>

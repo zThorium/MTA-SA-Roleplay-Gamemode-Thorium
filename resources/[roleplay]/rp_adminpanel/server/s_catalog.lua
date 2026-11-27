@@ -65,6 +65,9 @@ ADMIN_CATALOG = {
         items = {
             { cmd = "/agenciacola", args = "", desc = "Muestra en el chat la cola de la agencia de empleo y el estado de cada mostrador.", res = "rp_agency" },
             { cmd = "/agenciareset", args = "", desc = "Vacia la cola de turnos de la agencia y libera los mostradores.", res = "rp_agency" },
+            { cmd = "/create3dtext", args = "<texto>", desc = "Crea un texto 3D con el icono de info en tu posicion (interior y dimension incluidos); se lee solo de cerca. Usa \\n para saltar de linea. Queda registrado quien lo creo y cuando.", res = "rp_3dtext" },
+            { cmd = "/edit3dtext", args = "<id> <texto>", desc = "Cambia el texto de un texto 3D (queda en su historial).", res = "rp_3dtext" },
+            { cmd = "/3dtextinfo", args = "<id>", desc = "Auditoria de un texto 3D: texto, quien lo creo, edito o borro y a que hora (tambien los borrados). Borrar: /del3dtext, /delthis3dtext; listar: /nearby3dtexts.", res = "rp_3dtext" },
             { cmd = "/crearshop", args = "<nombre>", desc = "Crea una tienda con NPC en tu posicion.", res = "rp_shops" },
             { cmd = "/creartraficante", args = "[28|29|30]", desc = "Crea un traficante de drogas (marihuana, cocaina, LSD) en tu posicion.", res = "rp_dealers" },
             { cmd = "/borrartraficante", args = "<id>", desc = "Elimina un traficante.", res = "rp_dealers" },
@@ -186,8 +189,8 @@ ADMIN_CATALOG = {
         id = "owl_mundo", name = "Elementos del mundo (sintaxis Owl)",
         items = {
             { cmd = "/nearby", args = "[radio]", desc = "Todo lo cercano (por defecto 20 m) con su tipo e ID: cajeros, tiendas, casas, expendedoras, traficantes, maquinas, mesas, barreras... y vehiculos.", res = "rp_admin" },
-            { cmd = "/nearby<tipos>", args = "[radio]", desc = "Lista solo un tipo: /nearbyatms /nearbyshops /nearbyhouses /nearbyclothingstores /nearbyvendings /nearbydealers /nearbyrobstores /nearbygymmachines /nearbytrainers /nearbyschools /nearbypooltables /nearbycrossings.", res = "rp_admin" },
-            { cmd = "/goto<tipo>", args = "<id>", desc = "Ir hasta un elemento: /gotoatm /gotoshop /gotohouse /gotoclothingstore /gotovending /gotodealer /gotorobstore /gotogymmachine /gototrainer /gotoschool /gotopooltable /gotocrossing.", res = "rp_admin" },
+            { cmd = "/nearby<tipos>", args = "[radio]", desc = "Lista solo un tipo: /nearbyatms /nearbyshops /nearbyhouses /nearbyclothingstores /nearbyvendings /nearbydealers /nearbyrobstores /nearbygymmachines /nearbytrainers /nearbyschools /nearbypooltables /nearbycrossings /nearby3dtexts.", res = "rp_admin" },
+            { cmd = "/goto<tipo>", args = "<id>", desc = "Ir hasta un elemento: /gotoatm /gotoshop /gotohouse /gotoclothingstore /gotovending /gotodealer /gotorobstore /gotogymmachine /gototrainer /gotoschool /gotopooltable /gotocrossing /goto3dtext.", res = "rp_admin" },
             { cmd = "/del<tipo>", args = "<id>", desc = "Borra un elemento de la BD y del mundo (/delatm, /delhouse, /delshop...). Los /borrar... en espanol siguen funcionando.", res = "rp_admin" },
             { cmd = "/delthis<tipo>", args = "", desc = "Borra el elemento de ese tipo mas cercano a menos de 5 m (/delthisatm, /delthishouse...).", res = "rp_admin" },
             { cmd = "/delnearby<tipos>", args = "[radio]", desc = "Borra todos los de ese tipo a menos del radio (por defecto 5 m, maximo 20). Solo super admin.", res = "rp_admin" },
