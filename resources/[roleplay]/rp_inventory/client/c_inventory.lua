@@ -9,6 +9,7 @@ local screenW, screenH = guiGetScreenSize()
 local browserGui, browser, ready = nil, nil, false
 local visible = false
 local lastData = nil
+local pushNearby   -- se define abajo (columnas "Cerca de ti" y "Personaje")
 
 addEvent("rp:inv:update", true)
 addEvent("rp:inv:ui:close", false)
@@ -104,6 +105,10 @@ local function open()
     showCursor(true)
     guiSetInputEnabled(true)
     render()
+    if ready then
+        executeBrowserJavascript(browser, "RP.opened()")
+        pushNearby()
+    end
     -- Solo pedimos datos si aun no llegaron (normalmente ya estan sincronizados)
     if not lastData then triggerServerEvent("rp:inv:request", resourceRoot) end
 end
@@ -144,12 +149,69 @@ end)
 ----------------------------------------------------------------
 -- Dar a jugadores cercanos y tirar al suelo arrastrando
 ----------------------------------------------------------------
-local GIVE_RANGE = 3   -- el servidor vuelve a validarlo
+local GIVE_RANGE = 3          -- el servidor vuelve a validarlo
+local GROUND_RANGE = 2.8      -- columna "Cerca de ti" (el servidor deja recoger hasta 3 m)
 addEvent("rp:inv:ui:give", false)
 addEvent("rp:inv:ui:dropAt", false)
+addEvent("rp:inv:ui:pickup", false)
 
-local function pushNearby()
+-- Referencia estable de cada objeto del suelo para el CEF (no se pueden pasar elementos al JS)
+local groundRef, groundByRef, nextRef = setmetatable({}, { __mode = "k" }), {}, 0
+local function refOf(obj)
+    if not groundRef[obj] then
+        nextRef = nextRef + 1
+        groundRef[obj] = nextRef
+    end
+    groundByRef[groundRef[obj]] = obj
+    return groundRef[obj]
+end
+
+local function pushGround()
+    local px, py, pz = getElementPosition(localPlayer)
+    local list = {}
+    groundByRef = {}
+    for _, obj in ipairs(getElementsByType("object", resourceRoot, true)) do
+        local data = getElementData(obj, "rp:ground")
+        if data and getElementDimension(obj) == getElementDimension(localPlayer) then
+            local x, y, z = getElementPosition(obj)
+            if getDistanceBetweenPoints3D(px, py, pz, x, y, z) <= GROUND_RANGE then
+                list[#list + 1] = { ref = refOf(obj), id = data.id, name = data.name, icon = data.icon, iconImg = data.iconImg, amount = data.amount }
+            end
+        end
+    end
+    table.sort(list, function(a, b) return a.ref < b.ref end)
+    executeBrowserJavascript(browser, ("RP.ground(%s[0])"):format(toJSON(list, true)))
+end
+
+addEventHandler("rp:inv:ui:pickup", root, function(ref)
+    local obj = groundByRef[tonumber(ref) or -1]
+    if isElement(obj) then triggerServerEvent("rp:inv:pickup", resourceRoot, obj) end
+end)
+
+-- Columna "Personaje": vida, blindaje y el arma del inventario que lleva equipada
+local function pushCharacter()
+    local weaponItem
+    for _, it in ipairs(lastData and lastData.items or {}) do
+        local def = not it.bp and ITEMS[it.id]
+        local w = def and def.weapon
+        if w and getPedWeapon(localPlayer, getSlotFromWeapon(w)) == w then
+            weaponItem = it.id
+            break
+        end
+    end
+    local info = {
+        name = (getPlayerName(localPlayer):gsub("_", " ")),
+        health = math.floor(getElementHealth(localPlayer)),
+        armor = math.floor(getPedArmor(localPlayer)),
+        weaponItem = weaponItem,
+    }
+    executeBrowserJavascript(browser, ("RP.character(%s[0])"):format(toJSON(info, true)))
+end
+
+pushNearby = function()
     if not (isOpen() and ready) then return end
+    pushGround()
+    pushCharacter()
     local x, y, z = getElementPosition(localPlayer)
     local dim, int = getElementDimension(localPlayer), getElementInterior(localPlayer)
     local list = {}
@@ -165,7 +227,7 @@ local function pushNearby()
     end
     executeBrowserJavascript(browser, ("RP.nearby(%s[0])"):format(toJSON(list, true)))
 end
-setTimer(pushNearby, 700, 0)
+setTimer(pushNearby, 500, 0)
 
 addEventHandler("rp:inv:ui:give", root, function(itemId, amount, targetId)
     amount, targetId = tonumber(amount), tonumber(targetId)

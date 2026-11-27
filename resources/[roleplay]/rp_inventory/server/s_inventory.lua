@@ -437,7 +437,7 @@ function spawnGroundItem(itemId, amount, x, y, z, dimension, interior, contents)
     setElementCollisionsEnabled(object, false)
     setElementDimension(object, dimension or 0)
     setElementInterior(object, interior or 0)
-    setElementData(object, "rp:ground", { id = itemId, name = def.name .. (contents and " (con contenido)" or ""), icon = def.icon, amount = amount })
+    setElementData(object, "rp:ground", { id = itemId, name = def.name .. (contents and " (con contenido)" or ""), icon = def.icon, iconImg = def.iconImg, amount = amount })
     ground[object] = { itemId = itemId, amount = amount, contents = contents }
     setTimer(function()
         if isElement(object) then ground[object] = nil; destroyElement(object) end

@@ -2,37 +2,64 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Inventario</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main class="window" id="window">
-        <header>
-            <div class="title">
-                <h1>Inventario</h1>
-                <p class="hint"><kbd>I</kbd> / <kbd>Esc</kbd> cerrar · arrastra un objeto <b>fuera</b> de la ventana para dejarlo en el suelo</p>
-            </div>
-            <div class="weight">
-                <div class="weight-top"><span>Peso</span><span id="weight-label">0 / 15 kg</span></div>
-                <div class="bar"><div id="weight-bar"></div></div>
-                <div class="weight-sub" id="weight-sub"></div>
-            </div>
-            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
-        </header>
+    <div class="shade"></div>
 
-        <div class="content">
-            <section class="grid" id="grid"></section>
-            <aside class="details" id="details"></aside>
-        </div>
+    <header class="topbar">
+        <h1>Inventario</h1>
+        <p class="hints">
+            <span><img class="key-ico" src="keys/mouse_left.png" alt=""> ×2 usar</span>
+            <span><img class="key-ico" src="keys/mouse_right.png" alt=""> opciones</span>
+            <span><img class="key-ico" src="keys/mouse_move.png" alt=""> arrastra fuera para tirar · <kbd>Mayús</kbd> solo 1</span>
+            <span><kbd>I</kbd> <kbd>Esc</kbd> cerrar</span>
+        </p>
+        <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+    </header>
+
+    <main class="layout">
+        <!-- Cerca de ti: objetos del suelo (arrastrar al inventario = recoger) y personas (soltar encima = dar) -->
+        <section class="panel col-near" id="panel-near">
+            <h2 class="col-title">Cerca de ti</h2>
+            <div class="scroll">
+                <div class="grid grid-3" id="ground"></div>
+                <h3 class="sub-title">Personas</h3>
+                <div id="people"></div>
+            </div>
+        </section>
+
+        <!-- Inventario: pestañas por categoria, peso y casillas (mas las de la mochila) -->
+        <section class="panel col-inv" id="panel-inv">
+            <div class="inv-head">
+                <nav class="tabs" id="tabs"></nav>
+                <div class="weight">
+                    <span id="weight-label">0/15 KG</span>
+                    <div class="bar"><div id="weight-bar"></div></div>
+                </div>
+            </div>
+            <div class="scroll" id="inv-scroll">
+                <div class="grid grid-6" id="grid"></div>
+                <div id="bp-zone"></div>
+            </div>
+        </section>
+
+        <!-- Personaje: lo que llevas puesto o equipado -->
+        <section class="panel col-char" id="panel-char">
+            <h2 class="col-title">Personaje</h2>
+            <div class="char-name" id="char-name"></div>
+            <div class="stats">
+                <div class="stat"><span>Vida</span><div class="bar"><div id="hp-bar" class="hp"></div></div></div>
+                <div class="stat"><span>Blindaje</span><div class="bar"><div id="ar-bar" class="ar"></div></div></div>
+            </div>
+            <div class="equip" id="equip"></div>
+        </section>
     </main>
 
-    <!-- Fuera de la ventana: sigue visible mientras arrastras (la ventana se vuelve translucida) -->
-    <aside class="nearby" id="nearby">
-        <h3>Cerca de ti</h3>
-        <div id="nearby-list"></div>
-        <p class="nearby-hint">Arrastra un objeto sobre una persona o pulsa <b>Dar</b>.</p>
-    </aside>
-
+    <div class="tooltip" id="tooltip"></div>
+    <div class="menu" id="menu"></div>
     <div class="ghost" id="ghost"></div>
     <script src="app.js"></script>
 </body>
