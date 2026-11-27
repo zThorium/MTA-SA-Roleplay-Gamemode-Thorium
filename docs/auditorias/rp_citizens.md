@@ -1,5 +1,59 @@
 # Auditoría de rp_citizens
 
+## 2026-11-27 · mejorar · foco: tráfico aéreo (fase 2)
+- **Qué cambia en el juego**: el cielo tiene tráfico. Vuelos de línea entre Los Santos, San Fierro y Las Venturas en los dos sentidos (AT-400, Shamal, Andromada, Nevada), avionetas por la costa sur, una fumigadora sobre los campos de Red County, avionetas dando vueltas en Verdant Meadows y helicópteros de noticias (centro de LS y SF), turísticos (Vinewood, el Strip) y de patrulla policial (Ganton-East LS). **Todos los jugadores ven el mismo avión en el mismo sitio.**
+- **Diseño**: tráfico **determinista** en `c_air.lua`. Cada ruta (`ROUTES`) es una curva Catmull-Rom con horario fijo (sale cada `period` s, o circuito cerrado con `n` aeronaves); la posición en la ruta se calcula en cada fotograma con la hora del servidor, sin acumular nada, así que no se desincroniza ni gasta red: el servidor solo da la hora (`s_clock.lua`, evento `rp:citizens:clock`, máx. una petición cada 2 s por jugador y otra cada 10 min). Cada cliente crea su copia solo a menos de 700 m (máx. 6, las más cercanas). El modelo de cada vuelo sale de un hash del número de vuelo: el mismo en todos los clientes. Sin colisión y sin congelar (posición, rotación y velocidad real en cada fotograma) para que suenen el motor, giren hélices y rotores y haya efecto Doppler; piloto con el acelerador pisado, tren de aterrizaje recogido y luces de noche. Alabeo de giro coordinado (atan(v·ω/g)), máx. 25° en reactores, 35° en avionetas y 15° en helicópteros. `setVehiclesLODDistance` sube la distancia de dibujado de aviones y trenes a 500 m (solo si era menor; se restaura al parar).
+- **Integración**: sigue el interruptor `/poblacion` con `citizenPopulationEnabled()` (nuevo, sin la suspensión de pasajero: el tráfico aéreo ya es el mismo para todos), personaje cargado y fuera de interiores. El helicóptero de patrulla lleva `rp:copCar` (`rp_wanted`; a 140 m de altura queda fuera del radio de testigo). `/poblacioninfo` cuenta las aeronaves; `/vuelos` dice cuándo pasa cerca cada ruta (para probar).
+- **Verificación**: sintaxis con `lua5.1.dll`; la geometría y el horario se ejecutaron con funciones de MTA simuladas: altura mínima de cada ruta (reactores ≥ 249 m, fumigadora 110 m, helicópteros ≥ 140 m), alabeo y velocidad; 15 min simulados en el aeropuerto de LS: 14 aeronaves de 6 rutas, máx. 2 a la vez, 0 elementos sin borrar.
+- **Nota**: 82 → 82 (se documentó `/vuelos`, DOC-03).
+- **Reglas manuales revisadas**: SEG-02/SEG-03 (el único evento remoto nuevo solo devuelve la hora y está limitado por jugador; `client` y limpieza en `onPlayerQuit`), CLI-03 (`onClientPreRender` con ≤ 6 aeronaves; el horario se revisa cada 500 ms), CIC-04/CIC-06 (timers cancelados y LOD restaurado al parar).
+- **Pendiente**: despegues y aterrizajes con reserva de pista (fase 4), helicóptero policial que persigue con foco según `rp_wanted` (fase 3, servidor). Las alturas de las rutas se eligieron por encima de edificios y montes conocidos; si alguna atraviesa algo en juego, se ajusta en `ROUTES`. Sin colisión: un jugador en avión las atraviesa.
+- **Probar en juego**: `/vuelos` en el aeropuerto de LS, en el centro de LS y en el Strip para saber cuándo pasa cada una. Comprobar que **suena el motor** y giran rotores y hélices, que el alabeo va **hacia dentro** de la curva (si no, `BANK_SIGN = -1`), que no hay tirones al moverse, que la distancia a la que aparecen no se nota (si «surgen» de la nada, bajar `CREATE_DIST`) y que dos jugadores en el mismo sitio ven el mismo avión a la vez. `/debugscript 3` limpio.
+
+<details><summary>scripts/auditar-recurso.sh rp_citizens --md</summary>
+
+### Auditoría automática (2026-11-27, commit 0c8e0ed)
+
+**Nota: 82/100** · OK 26 · FALLA B 0 · FALLA I 2 · AVISO 4
+
+| Estado | Grav. | Regla | Qué | Evidencia |
+|---|---|---|---|---|
+| FALLA | I | EST-02 | Scripts de cliente con cache="false" | meta.xml:22 c_nodes_veh.lua ; meta.xml:23 c_nodes_ped.lua ; meta.xml:24 c_citizens.lua ; meta.xml:31 c_editor.lua ; meta.xml:33 c_sync.lua ; meta.xml:35 c_scenes.lua |
+| FALLA | I | EST-03 | Dependencias declaradas con &lt;include&gt; (u opcionales comprobadas) | sin include: rp_wanted |
+| AVISO | I | EST-04 | meta.xml y archivos coinciden | lua sin declarar: resources/[roleplay]/rp_citizens/backups/c_citizens_pre_ia_conduccion.lua ; resources/[roleplay]/rp_citizens/backups/c_citizens_pre_radio.lua |
+| AVISO | R | INT-04 | Avisos con rp_notify (no outputChatBox) | 49 outputChatBox: revisar si son avisos de acciones |
+| AVISO | I | CLI-01 | Las teclas ignoran chat/consola/cursor | resources/[roleplay]/rp_citizens/c_editor.lua |
+| AVISO | I | PRU-01 | Pruebas en rp_test | usa la BD y rp_test no lo menciona |
+| OK | B | EST-01 | meta.xml con info y min_mta_version |  |
+| OK | I | EST-05 | Prefijos s_/c_ según carpeta |  |
+| OK | R | EST-06 | Cabecera de comentario en cada .lua |  |
+| OK | B | EST-07 | Registrado en mtaserver.conf tras sus dependencias |  |
+| OK | B | SEG-01 | Handlers de eventos remotos usan client |  |
+| OK | B | SEG-05 | Sin secretos, IPs privadas ni emails |  |
+| OK | B | SEG-06 | Sin loadstring |  |
+| OK | B | BD-01 | Sin dbConnect propio |  |
+| OK | B | BD-02 | Sin dbPoll(-1) sin justificar |  |
+| OK | B | BD-03 | SQL parametrizado (sin concatenar) |  |
+| OK | B | BD-04 | Esquema solo en rp_database/schema.lua |  |
+| OK | I | BD-05 | Espera a la BD al arrancar |  |
+| OK | I | CIC-01 | Estado por jugador se limpia en onPlayerQuit |  |
+| OK | I | CIC-02 | Estado por personaje se limpia en rp:onCharacterLogout |  |
+| OK | I | CIC-04 | Los timers se pueden cancelar |  |
+| OK | I | CIC-05 | El cliente devuelve cámara/controles/HUD al parar |  |
+| OK | B | INT-01 | HUD y radio solo con setHudSuppressed/setRadioSuppressed |  |
+| OK | I | INT-02 | Hora y clima solo desde rp_events |  |
+| OK | I | INT-03 | Eventos propios con prefijo "rp:" |  |
+| OK | R | INT-06 | Teclas sin choques con otros recursos | k z |
+| OK | R | CLI-02 | onClientRender sin trabajo pesado por frame |  |
+| OK | I | CLI-04 | El cliente no copia config compartida al cargar |  |
+| OK | B | DOC-01 | Fila en RECURSOS.md |  |
+| OK | I | DOC-02 | Exports documentados en RECURSOS.md |  |
+| OK | I | DOC-03 | Comandos en RECURSOS.md, panel de admin o ayuda |  |
+| OK | R | DOC-04 | Registro de auditoría en docs/auditorias/ |  |
+| N/A | B | INT-05 | Dimensiones propias sin choques |  |
+
+</details>
+
 ## 2026-11-27 · mejorar · foco: tráfico marítimo (fase 1)
 - **Qué cambia en el juego**: aparecen **barcos ambientales** en bahías, costa y ríos de todo San Andreas (lanchas y yates en las marinas, pesqueros en los puertos, botes en los ríos) y **guardacostas**, más frecuentes con estrellas. Navegan por las rutas originales del juego, giran con suavidad, flotan sobre el nivel real del agua con un leve vaivén, frenan y pitan si te cruzas, huyen a toda máquina si los embistes o les disparas, quedan a la deriva si matas al piloto y se pueden robar a nado.
 - **Fase 1 · datos**: `rp_map/tools/MapData.cs` (`CitizenNodes`) genera un tercer conjunto `BOAT` con los nodos viales que tienen el bit 7 (barcos) del `.DAT`, sin carriles ni semáforos, en `c_nodes_boat.lua` (1.596 nodos, 3.316 enlaces). `c_nodes_veh.lua` y `c_nodes_ped.lua` salen idénticos (mismos índices: el editor `/nodos` no se ve afectado).

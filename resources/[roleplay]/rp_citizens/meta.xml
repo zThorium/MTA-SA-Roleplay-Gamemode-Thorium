@@ -25,6 +25,9 @@
     <!-- Trafico maritimo: barcos ambientales sobre los nodos de barcos de GTA SA (c_nodes_boat.lua) -->
     <script src="c_nodes_boat.lua" type="client" cache="false" />
     <script src="c_boats.lua" type="client" cache="false" />
+    <!-- Trafico aereo: aviones y helicopteros con horario fijo segun la hora del servidor (s_clock.lua) -->
+    <script src="s_clock.lua" type="server" />
+    <script src="c_air.lua" type="client" cache="false" />
     <script src="c_editor.lua" type="client" />
     <!-- Pasajeros y conductor ven el mismo trafico -->
     <script src="c_sync.lua" type="client" />
