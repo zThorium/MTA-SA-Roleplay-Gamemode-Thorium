@@ -12,6 +12,8 @@
         el motor, giren las helices y los rotores y haya efecto Doppler.
     Modelo de movimiento: cada ruta tiene una tabla tiempo -> distancia recorrida (velocidad por tramo), asi que
     la posicion sale SIEMPRE de la hora (nada se acumula) y no se desincroniza.
+      - Vuelos de aeropuerto: despegan y aterrizan en las pistas que capturan los admins (/setrunway, runways.json),
+        con reserva de pista resuelta en el horario.
     Siguen el interruptor de la poblacion (/poblacion) y piden personaje cargado, fuera de interiores.
 ]]
 
@@ -88,10 +90,18 @@ local ROUTES = {
 -- Reloj del servidor
 ----------------------------------------------------------------
 local clockOffset   -- ms del servidor = getTickCount() + clockOffset
+local pendingRunways   -- pistas recibidas que aun no se aplicaron (las aplica airTick: rehace las rutas)
 
 addEvent("rp:citizens:clockRecv", true)
-addEventHandler("rp:citizens:clockRecv", resourceRoot, function(serverMs)
+addEventHandler("rp:citizens:clockRecv", resourceRoot, function(serverMs, runways)
     if type(serverMs) == "number" then clockOffset = serverMs - getTickCount() end
+    if type(runways) == "table" then pendingRunways = runways end
+end)
+
+-- Un admin cambio una pista (/setrunway, /delrunway)
+addEvent("rp:citizens:runways", true)
+addEventHandler("rp:citizens:runways", resourceRoot, function(runways)
+    if type(runways) == "table" then pendingRunways = runways end
 end)
 
 -- Segundos del servidor (con decimales), o nil si aun no llego la hora
@@ -113,6 +123,7 @@ local function catmull(p0, p1, p2, p3, t)
             + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t3)
     end
     r[4] = p1[4] + (p2[4] - p1[4]) * t   -- velocidad: lineal entre puntos
+    r[5] = p1[5] + (p2[5] - p1[5]) * t   -- tren de aterrizaje (0 recogido, 1 bajado): lineal
     return r
 end
 
@@ -132,7 +143,7 @@ local function buildCurve(pts, loop)
         for s = 0, steps - 1 do P[#P + 1] = catmull(at(i - 1), a, b, at(i + 2), s / steps) end
     end
     local e = loop and P[1] or pts[n]
-    P[#P + 1] = { e[1], e[2], e[3], e[4] }
+    P[#P + 1] = { e[1], e[2], e[3], e[4], e[5] }
     local D = { 0 }
     for i = 2, #P do
         D[i] = D[i - 1] + math.sqrt((P[i][1] - P[i - 1][1]) ^ 2 + (P[i][2] - P[i - 1][2]) ^ 2 + (P[i][3] - P[i - 1][3]) ^ 2)
@@ -176,7 +187,7 @@ local function timeAtS(r, s)
     return r.T[lo] + (r.T[hi] - r.T[lo]) * (seg > 0 and (s - r.D[lo]) / seg or 0)
 end
 
--- Punto de la curva a la distancia s: x, y, z, velocidad
+-- Punto de la curva a la distancia s: x, y, z, velocidad, tren de aterrizaje (0..1)
 local function sampleAt(r, s)
     local P, D = r.P, r.D
     if r.loop then s = s % r.L else s = math.max(0, math.min(r.L, s)) end
@@ -184,7 +195,8 @@ local function sampleAt(r, s)
     local seg = D[hi] - D[lo]
     local k = seg > 0 and (s - D[lo]) / seg or 0
     local a, b = P[lo], P[hi]
-    return a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k, a[4] + (b[4] - a[4]) * k
+    return a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k, a[4] + (b[4] - a[4]) * k,
+        a[5] + (b[5] - a[5]) * k
 end
 
 local function heading(dx, dy) return -math.deg(math.atan2(dx, dy)) end
@@ -272,43 +284,179 @@ local function boatPath(from, to)
 end
 
 local routes = {}
+local RUNWAYS = {}   -- pistas capturadas por los admins (s_clock.lua / runways.json): [id] = { name, x1, y1, x2, y2, z, small }
+
+-- Ruta lista para el horario a partir de su definicion y sus puntos (x, y, z [, velocidad [, tren]])
+local function newRoute(def, pts, name, offset)
+    local r = {}
+    for k, v in pairs(def) do r[k] = v end
+    r.name, r.offset = name, offset
+    local full = {}
+    for i, p in ipairs(pts) do full[i] = { p[1], p[2], p[3], p[4] or def.speed, p[5] or 0 } end
+    r.P, r.D, r.L = buildCurve(full, def.loop)
+    if def.shuttle then
+        -- acelera al salir y frena al llegar: v(s) = min(crucero, sqrt(v0^2 + 2 a d)) desde cada extremo
+        for i, p in ipairs(r.P) do
+            local d = math.min(r.D[i], r.L - r.D[i])
+            p[4] = math.min(def.speed, math.sqrt(1 + 2 * CFG.SHUTTLE_ACCEL * d))
+        end
+    end
+    buildTimes(r)
+    return r
+end
+
+----------------------------------------------------------------
+-- Vuelos de aeropuerto: despegan y aterrizan en las pistas capturadas. Con una sola pista hay salidas y
+-- llegadas internacionales (entran y salen por fuera del mapa); con varias, ademas vuelos entre ellas.
+-- Reserva de pista: las horas de salida se eligen al generar el horario para que dos vuelos nunca usen la
+-- misma pista a la vez (mismo resultado en todos los clientes: datos y orden iguales).
+----------------------------------------------------------------
+local AIRPORT = {
+    PERIOD = 480,        -- s entre salidas de cada ruta de aeropuerto
+    CRUISE = 320,        -- m de altura de crucero entre aeropuertos
+    MARGIN = 15,         -- s libres entre dos usos de la misma pista
+    BIG = { 577, 519, 577, 592 },   -- AT-400, Shamal, AT-400, Andromada
+    SMALL = { 593, 511 },           -- Dodo, Beagle
+}
+
+local function runwayAxis(rw)
+    local dx, dy = rw.x2 - rw.x1, rw.y2 - rw.y1
+    local len = math.max(1, math.sqrt(dx * dx + dy * dy))
+    return dx / len, dy / len, len
+end
+
+-- Punto sobre el eje de la pista a d m de la cabecera (negativo = antes), h m sobre la pista
+local function onAxis(rw, d, h, v, gear)
+    local ux, uy = runwayAxis(rw)
+    return { rw.x1 + ux * d, rw.y1 + uy * d, rw.z + h, v, gear }
+end
+
+-- Carrera de despegue desde la cabecera: rueda, rota al 62-80 % de la pista y sube
+local function takeoffPts(rw)
+    local _, _, len = runwayAxis(rw)
+    local k, hk = rw.small and 0.55 or 1, rw.small and 0.6 or 1
+    return { onAxis(rw, 0, 0, 3, 1), onAxis(rw, len * 0.3, 0, 32 * k, 1), onAxis(rw, len * 0.62, 0, 58 * k, 1),
+        onAxis(rw, len * 0.8, 3 * hk, 66 * k, 1), onAxis(rw, len + 500, 100 * hk, 72 * k, 1), onAxis(rw, len + 1800, 200 * hk, 78 * k, 0) }
+end
+
+-- Aproximacion alineada con la pista (senda de ~3 grados), toma de contacto pasada la cabecera y frenada
+local function landingPts(rw)
+    local _, _, len = runwayAxis(rw)
+    local k, hk = rw.small and 0.55 or 1, rw.small and 0.6 or 1
+    return { onAxis(rw, -7500, 420 * hk, 80 * k, 0), onAxis(rw, -4000, 220 * hk, 76 * k, 0), onAxis(rw, -1500, 85 * hk, 68 * k, 1),
+        onAxis(rw, -300, 17 * hk, 63 * k, 1), onAxis(rw, math.min(200, len * 0.2), 0, 58 * k, 1),
+        onAxis(rw, len * 0.6, 0, 24 * k, 1), onAxis(rw, len - 40, 0, 5, 1) }
+end
+
+local function append(dst, src) for _, p in ipairs(src) do dst[#dst + 1] = p end return dst end
+
+-- Tiempo que una ruta ocupa cada pista: desde el inicio hasta pasar 30 m de altura (despegue) y desde que baja
+-- de 30 m hasta el final (aterrizaje)
+local function runwayWindows(r)
+    local w = {}
+    if r.depRw then
+        local i = 1
+        while i < #r.P and r.P[i][3] < r.depRw.z + 30 do i = i + 1 end
+        w[#w + 1] = { rw = r.depId, a = 0, b = r.T[i] }
+    end
+    if r.arrRw then
+        local i = #r.P
+        while i > 1 and r.P[i][3] < r.arrRw.z + 30 do i = i - 1 end
+        w[#w + 1] = { rw = r.arrId, a = r.T[i], b = r.dur }
+    end
+    return w
+end
+
+-- Choca la ventana [a, b] (mod P) con alguna reservada de la misma pista?
+local function windowClash(list, a, b, P, margin)
+    for _, o in ipairs(list) do
+        for shift = -1, 1 do
+            local oa, ob = o.a + shift * P, o.b + shift * P
+            if a < ob + margin and oa < b + margin then return true end
+        end
+    end
+    return false
+end
+
+local function buildAirportRoutes()
+    local ids = {}
+    for id, rw in pairs(RUNWAYS) do
+        if type(rw) == "table" and tonumber(rw.x1) and tonumber(rw.x2) then ids[#ids + 1] = id end
+    end
+    table.sort(ids)
+    local list = {}
+    local function plan(name, depId, arrId, pts, small)
+        local def = { name = name, kind = "plane", period = AIRPORT.PERIOD, speed = 70, airport = true,
+            models = small and AIRPORT.SMALL or AIRPORT.BIG }
+        local r = newRoute(def, pts, name, 0)
+        r.depId, r.depRw, r.arrId, r.arrRw = depId, depId and RUNWAYS[depId], arrId, arrId and RUNWAYS[arrId]
+        list[#list + 1] = r
+    end
+    for _, id in ipairs(ids) do
+        local rw = RUNWAYS[id]
+        local ux, uy, len = runwayAxis(rw)
+        -- internacional: despega y se va por fuera del mapa siguiendo el eje; llega por el eje desde fuera
+        plan("Salida " .. rw.name, id, nil, append(takeoffPts(rw),
+            { onAxis(rw, len + 6000, AIRPORT.CRUISE, 80, 0), onAxis(rw, len + 14000, AIRPORT.CRUISE + 40, 80, 0) }), rw.small)
+        plan("Llegada " .. rw.name, nil, id, append({ onAxis(rw, -15000, AIRPORT.CRUISE + 80, 80, 0) }, landingPts(rw)), rw.small)
+    end
+    for _, a in ipairs(ids) do
+        for _, b in ipairs(ids) do
+            local A, B = RUNWAYS[a], RUNWAYS[b]
+            -- entre aeropuertos solo si los dos admiten el mismo tipo de avion
+            if a ~= b and (A.small and true or false) == (B.small and true or false) then
+                local pts = takeoffPts(A)
+                local last, first = pts[#pts], landingPts(B)[1]
+                if getDistanceBetweenPoints2D(last[1], last[2], first[1], first[2]) > 2000 then
+                    pts[#pts + 1] = { (last[1] + first[1]) / 2, (last[2] + first[2]) / 2, AIRPORT.CRUISE, 80, 0 }
+                end
+                plan(A.name .. " - " .. B.name, a, b, append(pts, landingPts(B)), A.small)
+            end
+        end
+    end
+    -- reserva de pista: la primera hora de salida (cada 5 s) en la que ninguna ventana choca
+    local reserved = {}
+    for _, r in ipairs(list) do
+        local wins = runwayWindows(r)
+        local chosen = 0
+        for off = 0, AIRPORT.PERIOD - 5, 5 do
+            local ok = true
+            for _, w in ipairs(wins) do
+                reserved[w.rw] = reserved[w.rw] or {}
+                if windowClash(reserved[w.rw], (w.a + off) % AIRPORT.PERIOD, (w.a + off) % AIRPORT.PERIOD + (w.b - w.a),
+                    AIRPORT.PERIOD, AIRPORT.MARGIN) then ok = false break end
+            end
+            if ok then chosen = off break end
+        end
+        r.offset = chosen
+        for _, w in ipairs(wins) do
+            local a = (w.a + chosen) % AIRPORT.PERIOD
+            table.insert(reserved[w.rw], { a = a, b = a + (w.b - w.a) })
+        end
+        routes[#routes + 1] = r
+    end
+end
 
 local function prepareRoutes()
     routes = {}
     for _, def in ipairs(ROUTES) do
-        local function add(pts, offset, suffix)
-            local r = {}
-            for k, v in pairs(def) do r[k] = v end
-            r.name, r.offset = def.name .. suffix, offset
-            local full = {}
-            for i, p in ipairs(pts) do full[i] = { p[1], p[2], p[3], p[4] or def.speed } end
-            r.P, r.D, r.L = buildCurve(full, def.loop)
-            if def.shuttle then
-                -- acelera al salir y frena al llegar: v(s) = min(crucero, sqrt(v0^2 + 2 a d)) desde cada extremo
-                for i, p in ipairs(r.P) do
-                    local d = math.min(r.D[i], r.L - r.D[i])
-                    p[4] = math.min(def.speed, math.sqrt(1 + 2 * CFG.SHUTTLE_ACCEL * d))
-                end
-            end
-            buildTimes(r)
-            routes[#routes + 1] = r
-        end
         if def.shuttle then
             local path = boatPath(def.from, def.to)
             if path and #path >= 2 then
-                add(path, def.offset or 0, "")
+                routes[#routes + 1] = newRoute(def, path, def.name, def.offset or 0)
             else
                 outputDebugString("[rp_citizens] sin camino por mar para la ruta " .. def.name, 2)
             end
         else
-            add(def.pts, def.offset or 0, "")
+            routes[#routes + 1] = newRoute(def, def.pts, def.name, def.offset or 0)
             if def.both and not def.loop then
                 local rev = {}
                 for i = #def.pts, 1, -1 do rev[#rev + 1] = def.pts[i] end
-                add(rev, (def.offset or 0) + def.period / 2, " (vuelta)")
+                routes[#routes + 1] = newRoute(def, rev, def.name .. " (vuelta)", (def.offset or 0) + def.period / 2)
             end
         end
     end
+    buildAirportRoutes()
 end
 
 ----------------------------------------------------------------
@@ -419,6 +567,33 @@ local function placeAircraft(a, t)
             end
         end
     end
+    if a.r.airport then
+        -- tren de aterrizaje segun el tramo (bajado en pista y en la aproximacion)
+        local down = select(5, sampleAt(a.r, s)) > 0.5
+        if down ~= a.gear then
+            a.gear = down
+            setVehicleLandingGearDown(a.vehicle, down)
+        end
+        -- la z de la ruta es la de las ruedas: nunca por debajo de la pista y + la altura del modelo
+        if not a.base and isElementStreamedIn(a.vehicle) then
+            local b = getElementDistanceFromCentreOfMassToBaseOfModel(a.vehicle)
+            if b and b > 0.3 and b < 8 then a.base = b end
+        end
+        local rw = (s < a.r.L / 2) and a.r.depRw or a.r.arrRw
+        if rw and z < rw.z then z = rw.z end
+        z = z + (a.base or 2.5)
+        -- sin rodaje: aparece en la cabecera y se va al final de la pista con un fundido de 3 s
+        local tau = timeAtS(a.r, s)
+        local fade = 1
+        if a.r.depRw then fade = math.min(fade, tau / 3) end
+        if a.r.arrRw then fade = math.min(fade, (a.r.dur - tau) / 3) end
+        local alpha = math.floor(clamp(fade, 0, 1) * 255)
+        if alpha ~= a.alpha then
+            a.alpha = alpha
+            setElementAlpha(a.vehicle, alpha)
+            if isElement(a.pilot) then setElementAlpha(a.pilot, alpha) end
+        end
+    end
     setElementPosition(a.vehicle, x, y, z)
     setElementRotation(a.vehicle, pitch, roll, rz)
     setElementVelocity(a.vehicle, vx / 50, vy / 50, vz / 50)   -- MTA: unidades por 1/50 s
@@ -458,6 +633,15 @@ end
 
 -- Revisa el horario: crea las naves que pasan cerca y quita las que se alejaron o terminaron
 local function airTick()
+    -- pistas nuevas: se rehace el horario (igual en todos los clientes) y se quitan las naves actuales
+    if pendingRunways then
+        local changed = toJSON(pendingRunways) ~= toJSON(RUNWAYS)
+        RUNWAYS, pendingRunways = pendingRunways, nil
+        if changed then
+            clearAir()
+            prepareRoutes()
+        end
+    end
     local t = airNow()
     if not t or not allowed() then
         if activeCount > 0 then clearAir() end
