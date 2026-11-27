@@ -6,23 +6,24 @@
     pero el hueso 1 sigue la cabeza de CJ, que la animacion de andar balancea por su cuenta. Quieto
     coinciden; al moverse el accesorio se separa de la cabeza custom y vuelve al pararse.
 
-    Solucion (en cada cliente, para todos los personajes visibles): con el personaje quieto se mide
-    una vez la relacion K entre el marco del hueso 1 y el objeto cabeza (K = B1 * H^T). Despues, en
-    cada fotograma y DESPUES de bone_attach, el marco del hueso 1 se reconstruye a partir del objeto
-    cabeza (B1' = K * H) y el accesorio se recoloca con sus offsets de siempre. Asi va rigido con la
-    cabeza custom y los ajustes guardados significan lo mismo (estando quieto el resultado es igual).
+    Solucion: con el personaje quieto se mide una vez la relacion entre el hueso 1 y el hueso 2
+    (B1 = K * N, origen o1 = on + p * N). Con ella los offsets guardados (relativos al hueso 1) se
+    pasan al hueso 2 y el accesorio se vuelve a pegar con bone_attach al CUELLO, igual que la cabeza.
+    Asi lo mueve el mismo codigo y en el mismo momento que la cabeza: va rigido con ella sin
+    recolocarlo a mano cada fotograma. Estando quieto el resultado es el mismo que en el hueso 1.
 
-    Lo usan los accesorios del servidor (elementData "rp:toy") y las vistas previas del estudio
-    (HeadLink.track). El gizmo pide el mismo marco con HeadLink.getFrame para dibujar los ejes.
+    (Version anterior: cada fotograma leia la matriz del objeto cabeza y recolocaba el accesorio
+    encima de bone_attach; provocaba destellos de la cabeza con texturas gigantes.)
+
+    La conversion es solo local (cada cliente); el servidor sigue guardando hueso 1 y sus offsets.
+    El gizmo pide el marco del hueso 1 reconstruido con HeadLink.getFrame para dibujar los ejes.
 ]]
 
 HeadLink = {}
 
-local HEAD_BONE = 1
+local HEAD_BONE, NECK_BONE = 1, 2
 local tracked = {}    -- [objeto] = true (vistas previas locales)
-local toys = {}       -- [objeto] = true (accesorios del servidor visibles)
-local calib = {}      -- [ped] = { head = objeto cabeza, R = 3x3, p = {x,y,z} }
-local headOf = {}     -- [ped] = objeto cabeza (cache, se refresca cada poco)
+local calib = {}      -- [ped] = { K = 3x3, p = {x,y,z} }
 
 ----------------------------------------------------------------
 -- Matematica (convencion de bone_attach: matrices por filas)
@@ -61,36 +62,29 @@ local function mul(a, b)
     return r
 end
 
-local function unit(x, y, z)
-    local l = math.sqrt(x * x + y * y + z * z)
-    if l < 1e-6 or l ~= l then return nil end
-    return { x / l, y / l, z / l }
-end
-
--- Matriz del objeto cabeza sin escala: filas = ejes, p = posicion
-local function headFrame(head)
-    local m = getElementMatrix(head)
-    if not m then return nil end
-    local r1, r2, r3 = unit(m[1][1], m[1][2], m[1][3]), unit(m[2][1], m[2][2], m[2][3]), unit(m[3][1], m[3][2], m[3][3])
-    if not (r1 and r2 and r3) then return nil end
-    return { r1, r2, r3 }, { m[4][1], m[4][2], m[4][3] }
-end
-
-----------------------------------------------------------------
--- Calibracion por personaje
-----------------------------------------------------------------
-local function getHead(ped)
-    local h = headOf[ped]
-    if h == nil then
-        local res = getResourceFromName("rp_heads")
-        h = false
-        if res and getResourceState(res) == "running" then
-            local ok, obj = pcall(function() return exports.rp_heads:getPedHead(ped) end)
-            if ok and isElement(obj) then h = obj end
-        end
-        headOf[ped] = h
+local function isNum(...)
+    for i = 1, select("#", ...) do
+        local v = select(i, ...)
+        if type(v) ~= "number" or v ~= v then return false end
     end
-    return h and isElement(h) and h or nil
+    return true
+end
+
+-- Marco de un hueso de bone_attach: origen {x,y,z} y filas, o nil
+local function boneFrame(ped, bone)
+    local x, y, z, rx, ry, rz = exports.bone_attach:getBonePositionAndRotation(ped, bone)
+    if not isNum(x, y, z, rx, ry, rz) then return nil end
+    return { x, y, z }, matrixFromEuler(rx, ry, rz)
+end
+
+----------------------------------------------------------------
+-- Calibracion por personaje (hueso 1 respecto al hueso 2, en reposo)
+----------------------------------------------------------------
+local function hasCustomHead(ped)
+    local res = getResourceFromName("rp_heads")
+    if not res or getResourceState(res) ~= "running" then return false end
+    local ok, obj = pcall(function() return exports.rp_heads:getPedHead(ped) end)
+    return ok and isElement(obj)
 end
 
 local function isRestPose(ped)
@@ -100,84 +94,81 @@ local function isRestPose(ped)
     return (vx * vx + vy * vy + vz * vz) < 0.0004
 end
 
-local function tryCalibrate(ped, head)
+local function tryCalibrate(ped)
     local c = calib[ped]
-    if c and c.head == head then return c end
-    if not isRestPose(ped) then return nil end
-    local bx, by, bz, brx, bry, brz = exports.bone_attach:getBonePositionAndRotation(ped, HEAD_BONE)
-    if not bx or bx ~= bx or brx ~= brx then return nil end
-    local H, hp = headFrame(head)
-    if not H then return nil end
-    local B = matrixFromEuler(brx, bry, brz)
-    local R = {}   -- K = B * H^T
-    for i = 1, 3 do R[i] = { dot(B[i], H[1]), dot(B[i], H[2]), dot(B[i], H[3]) } end
-    local d = { bx - hp[1], by - hp[2], bz - hp[3] }
-    c = { head = head, R = R, p = { dot(d, H[1]), dot(d, H[2]), dot(d, H[3]) } }
+    if c then return c end
+    if not isElementStreamedIn(ped) or not isRestPose(ped) then return nil end
+    local o1, B = boneFrame(ped, HEAD_BONE)
+    local on, N = boneFrame(ped, NECK_BONE)
+    if not (o1 and on) then return nil end
+    local K = {}   -- K = B * N^T
+    for i = 1, 3 do K[i] = { dot(B[i], N[1]), dot(B[i], N[2]), dot(B[i], N[3]) } end
+    local d = { o1[1] - on[1], o1[2] - on[2], o1[3] - on[3] }
+    c = { K = K, p = { dot(d, N[1]), dot(d, N[2]), dot(d, N[3]) } }
     calib[ped] = c
     return c
 end
 
--- Marco del hueso «Cabeza» pegado a la cabeza custom: origen {x,y,z} y filas B, o nil
+-- Marco del hueso «Cabeza» reconstruido desde el cuello: origen {x,y,z} y filas B, o nil (gizmo)
 function HeadLink.getFrame(ped, bone)
-    if bone ~= HEAD_BONE or not isElement(ped) then return nil end
-    local head = getHead(ped)
-    if not head then return nil end
-    local c = tryCalibrate(ped, head)
+    if bone ~= HEAD_BONE or not isElement(ped) or not hasCustomHead(ped) then return nil end
+    local c = tryCalibrate(ped)
     if not c then return nil end
-    local H, hp = headFrame(head)
-    if not H then return nil end
-    local B = mul(c.R, H)
+    local on, N = boneFrame(ped, NECK_BONE)
+    if not on then return nil end
+    local p = c.p
     local o = {
-        hp[1] + c.p[1] * H[1][1] + c.p[2] * H[2][1] + c.p[3] * H[3][1],
-        hp[2] + c.p[1] * H[1][2] + c.p[2] * H[2][2] + c.p[3] * H[3][2],
-        hp[3] + c.p[1] * H[1][3] + c.p[2] * H[2][3] + c.p[3] * H[3][3],
+        on[1] + p[1] * N[1][1] + p[2] * N[2][1] + p[3] * N[3][1],
+        on[2] + p[1] * N[1][2] + p[2] * N[2][2] + p[3] * N[3][2],
+        on[3] + p[1] * N[1][3] + p[2] * N[2][3] + p[3] * N[3][3],
     }
-    return o, B
+    return o, mul(c.K, N)
+end
+
+----------------------------------------------------------------
+-- Pasar un accesorio del hueso 1 al cuello (solo si su dueno lleva cabeza custom)
+----------------------------------------------------------------
+function HeadLink.relink(obj)
+    if not isElement(obj) then return false end
+    local ped, bone, x, y, z, rx, ry, rz = exports.bone_attach:getElementBoneAttachmentDetails(obj)
+    if not ped or bone ~= HEAD_BONE or not isElement(ped) or not hasCustomHead(ped) then return false end
+    local c = tryCalibrate(ped)
+    if not c then return false end
+    local K, p = c.K, c.p
+    local nx = p[1] + x * K[1][1] + y * K[2][1] + z * K[3][1]
+    local ny = p[2] + x * K[1][2] + y * K[2][2] + z * K[3][2]
+    local nz = p[3] + x * K[1][3] + y * K[2][3] + z * K[3][3]
+    local erx, ery, erz = eulerFromMatrix(mul(matrixFromEuler(rx, ry, rz), K))
+    if not isNum(nx, ny, nz, erx, ery, erz) then return false end
+    return exports.bone_attach:attachElementToBone(obj, ped, NECK_BONE, nx, ny, nz, erx, ery, erz)
 end
 
 function HeadLink.track(obj) if isElement(obj) then tracked[obj] = true end end
 function HeadLink.untrack(obj) tracked[obj] = nil end
 
-----------------------------------------------------------------
--- Recolocar cada fotograma, despues de bone_attach (prioridad baja)
-----------------------------------------------------------------
-local function place(obj)
-    local ped, bone, x, y, z, rx, ry, rz = exports.bone_attach:getElementBoneAttachmentDetails(obj)
-    if not ped or bone ~= HEAD_BONE or not isElementStreamedIn(ped) then return end
-    local o, B = HeadLink.getFrame(ped, bone)
-    if not o then return end
-    local px = o[1] + x * B[1][1] + y * B[2][1] + z * B[3][1]
-    local py = o[2] + x * B[1][2] + y * B[2][2] + z * B[3][2]
-    local pz = o[3] + x * B[1][3] + y * B[2][3] + z * B[3][3]
-    local erx, ery, erz = eulerFromMatrix(mul(matrixFromEuler(rx, ry, rz), B))
-    if px == px and py == py and pz == pz and erx == erx and ery == ery and erz == erz then
-        setElementPosition(obj, px, py, pz)
-        setElementRotation(obj, erx, ery, erz)
-    end
-end
-
-addEventHandler("onClientPedsProcessed", root, function()
-    for obj in pairs(toys) do
-        if isElement(obj) then place(obj) else toys[obj] = nil end
+-- Revisa los accesorios visibles (y las vistas previas) cada medio segundo: los que el servidor
+-- acaba de (re)pegar al hueso 1 o los de personajes que aun no se habian calibrado.
+local function refresh()
+    for _, obj in ipairs(getElementsByType("object", root, true)) do
+        if getElementData(obj, "rp:toy") then HeadLink.relink(obj) end
     end
     for obj in pairs(tracked) do
-        if isElement(obj) then place(obj) else tracked[obj] = nil end
+        if isElement(obj) then HeadLink.relink(obj) else tracked[obj] = nil end
     end
-end, true, "low-10")
-
--- Lista de accesorios visibles y cache de cabezas (cambian poco: cada medio segundo basta)
-local function refresh()
-    toys = {}
-    for _, obj in ipairs(getElementsByType("object", root, true)) do
-        if getElementData(obj, "rp:toy") then toys[obj] = true end
-    end
-    headOf = {}
-    for ped, c in pairs(calib) do
-        if not isElement(ped) or not isElement(c.head) then calib[ped] = nil end
+    for ped in pairs(calib) do
+        if not isElement(ped) or not isElementStreamedIn(ped) then calib[ped] = nil end
     end
 end
 setTimer(refresh, 500, 0)
 addEventHandler("onClientResourceStart", resourceRoot, refresh)
+
 addEventHandler("onClientElementStreamIn", root, function()
-    if getElementType(source) == "object" and getElementData(source, "rp:toy") then toys[source] = true end
+    if getElementType(source) == "object" and getElementData(source, "rp:toy") then HeadLink.relink(source) end
 end)
+
+-- El servidor vuelve a pegar el accesorio al hueso 1 al guardarlo: convertirlo enseguida
+-- (prioridad baja: despues del handler de bone_attach que guarda los datos nuevos)
+addEvent("boneAttach_attach", true)   -- ya lo crea bone_attach; por si arranca despues
+addEventHandler("boneAttach_attach", root, function(element)
+    if isElement(element) and getElementData(element, "rp:toy") then HeadLink.relink(element) end
+end, true, "low-10")

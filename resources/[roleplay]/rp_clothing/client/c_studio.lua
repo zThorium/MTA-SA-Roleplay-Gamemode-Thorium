@@ -68,6 +68,7 @@ local function applyPreview()
     local v = p.values
     setObjectScale(p.obj, v.sx, v.sy, v.sz)
     exports.bone_attach:attachElementToBone(p.obj, localPlayer, v.bone, v.x, v.y, v.z, v.rx, v.ry, v.rz)
+    HeadLink.relink(p.obj)   -- cabeza custom: al cuello, como la cabeza
 end
 
 local function clearPreview()
