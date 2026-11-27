@@ -1,4 +1,44 @@
 {
+    "cesar":  {
+                  "modo":  "biblioteca",
+                  "titulo":  "PROVISIONAL - Fish biblioteca \u0027Chico\u0027 (espanol latino joven). Sustituir por clon del doblaje de Cesar",
+                  "id":  "76919aa82fe04381b44e3473326e2a08"
+              },
+    "anunciadora_metrotren":  {
+                                  "modo":  "zero-shot",
+                                  "titulo":  "Anunciadora estilo Metrotren (clonada de una grabacion de megafonia)",
+                                  "muestras":  [
+                                                   "muestras/anunciadora_metrotren/metro_01.wav",
+                                                   "muestras/anunciadora_metrotren/metro_02.wav",
+                                                   "muestras/anunciadora_metrotren/metro_03.wav",
+                                                   "muestras/anunciadora_metrotren/metro_04.wav",
+                                                   "muestras/anunciadora_metrotren/metro_05.wav",
+                                                   "muestras/anunciadora_metrotren/metro_06.wav",
+                                                   "muestras/anunciadora_metrotren/metro_07.wav",
+                                                   "muestras/anunciadora_metrotren/metro_08.wav",
+                                                   "muestras/anunciadora_metrotren/metro_09.wav",
+                                                   "muestras/anunciadora_metrotren/metro_10.wav"
+                                               ]
+                              },
+    "anunciadora_tren":  {
+                             "modo":  "modelo",
+                             "titulo":  "Anunciadora de estación (biblioteca pública de Fish: Verity)",
+                             "id":  "692eb1e1023242219dc8caae8c56fb12"
+                         },
+    "sweet_en":  {
+                     "modo":  "zero-shot",
+                     "titulo":  "GTA SA - Sweet (ingles)",
+                     "muestras":  [
+                                      "muestras/sweet_gta/sweet_005.wav",
+                                      "muestras/sweet_gta/sweet_008.wav",
+                                      "muestras/sweet_gta/sweet_010.wav",
+                                      "muestras/sweet_gta/sweet_013.wav",
+                                      "muestras/sweet_gta/sweet_015.wav",
+                                      "muestras/sweet_gta/sweet_024.wav",
+                                      "muestras/sweet_gta/sweet_025.wav",
+                                      "muestras/sweet_gta/sweet_027.wav"
+                                  ]
+                 },
     "sweet":  {
                   "modo":  "zero-shot",
                   "titulo":  "GTA SA - Sweet (espanol latino)",
@@ -15,20 +55,6 @@
                                    "muestras/sweet_es/sweet_es_047.wav"
                                ]
               },
-    "sweet_en":  {
-                     "modo":  "zero-shot",
-                     "titulo":  "GTA SA - Sweet (ingles)",
-                     "muestras":  [
-                                      "muestras/sweet_gta/sweet_005.wav",
-                                      "muestras/sweet_gta/sweet_008.wav",
-                                      "muestras/sweet_gta/sweet_010.wav",
-                                      "muestras/sweet_gta/sweet_013.wav",
-                                      "muestras/sweet_gta/sweet_015.wav",
-                                      "muestras/sweet_gta/sweet_024.wav",
-                                      "muestras/sweet_gta/sweet_025.wav",
-                                      "muestras/sweet_gta/sweet_027.wav"
-                                  ]
-                 },
     "ryder":  {
                   "modo":  "zero-shot",
                   "titulo":  "GTA SA - Ryder (espanol latino)",
@@ -44,15 +70,5 @@
                                    "muestras/ryder/ryder_306_075.wav",
                                    "muestras/ryder/ryder_306_078.wav"
                                ]
-              },
-    "cesar":  {
-                  "modo":  "biblioteca",
-                  "titulo":  "PROVISIONAL - Fish biblioteca \u0027Chico\u0027 (espanol latino joven). Sustituir por clon del doblaje de Cesar",
-                  "id":  "76919aa82fe04381b44e3473326e2a08"
-              },
-    "anunciadora_tren":  {
-                             "modo":  "modelo",
-                             "titulo":  "Anunciadora de estación (biblioteca pública de Fish: Verity)",
-                             "id":  "692eb1e1023242219dc8caae8c56fb12"
-                         }
+              }
 }

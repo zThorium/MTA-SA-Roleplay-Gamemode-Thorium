@@ -6,7 +6,7 @@ description: Genera audios con las voces de personajes de GTA San Andreas (Sweet
 # Voces de GTA SA (Fish Audio)
 
 Clona la voz de un personaje a partir de clips reales del juego y genera lineas nuevas (mp3/wav) con TTS.
-Voces registradas: ver `voces.json` o `scripts/voz.ps1 voces`. Hoy: **sweet** (espanol latino, 10 clips del doblaje), **sweet_en** (ingles original) y **anunciadora_tren** (voz publica "Verity" de la biblioteca de Fish, por `id`; megafonia de `rp_train`).
+Voces registradas: ver `voces.json` o `scripts/voz.ps1 voces`. Hoy: **sweet** (espanol latino, 10 clips del doblaje), **sweet_en** (ingles original) **anunciadora_tren** (voz publica "Verity" de la biblioteca de Fish, por `id`) y **anunciadora_metrotren** (clonada de 10 fragmentos de una grabacion de megafonia de Metrotren, limpiados con `afftdn`; la que usa `rp_train`).
 
 ## Uso rapido
 
