@@ -22,6 +22,9 @@
     <script src="c_nodes_veh.lua" type="client" />
     <script src="c_nodes_ped.lua" type="client" />
     <script src="c_citizens.lua" type="client" />
+    <!-- Trafico maritimo: barcos ambientales sobre los nodos de barcos de GTA SA (c_nodes_boat.lua) -->
+    <script src="c_nodes_boat.lua" type="client" cache="false" />
+    <script src="c_boats.lua" type="client" cache="false" />
     <script src="c_editor.lua" type="client" />
     <!-- Pasajeros y conductor ven el mismo trafico -->
     <script src="c_sync.lua" type="client" />

@@ -3883,7 +3883,10 @@ end)
 
 -- Diagnostico: /poblacioninfo
 addCommandHandler("poblacioninfo", function()
-    outputChatBox(("Peatones: %d  Autos: %d  Nodos: %d peatonales, %d viales"):format(pedCount, carCount, #PED_NODES / 3, #VEH_NODES / 3), 120, 200, 255)
+    local boats, boatNodes = 0, 0
+    if citizenBoatCount then boats, boatNodes = citizenBoatCount() end
+    outputChatBox(("Peatones: %d  Autos: %d  Barcos: %d  Nodos: %d peatonales, %d viales, %d de barcos"):format(
+        pedCount, carCount, boats, #PED_NODES / 3, #VEH_NODES / 3, boatNodes), 120, 200, 255)
 end)
 
 ----------------------------------------------------------------

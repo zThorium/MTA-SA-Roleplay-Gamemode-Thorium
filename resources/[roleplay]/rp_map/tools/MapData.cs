@@ -282,6 +282,7 @@ public static class MapData
     // (archivos "prev": la red anterior) conservan su indice, porque el editor /nodos guarda cambios en SQL
     // por indice; el resto se anade detras. Convenciones (reproducen exactamente la red de LS original):
     //   - viales: sin barcos (bit 7) ni solo emergencias (bit 8); peatonales: todos
+    //   - barcos (c_nodes_boat.lua): solo los viales con el bit 7, sin carriles ni semaforos
     //   - enlaces ordenados de menor a mayor; solo hacia nodos incluidos
     //   - carriles i->k: derechos del navi node si el tramo va en su direccion, izquierdos si no
     //   - offset (CCarPathLink de gta-reversed, carril de 5 m, carril mas a la derecha): sin carriles 2.5
@@ -304,14 +305,16 @@ public static class MapData
         var log = new StringBuilder();
         var areas = LoadAreas(pathsDir);
         string prevSrc = "\n" + string.Join("\n", prevFiles.Where(File.Exists).Select(f => File.ReadAllText(f).Replace("\r\n", "\n")));
-        var sets = new[] { new { Name = "VEH", Veh = true }, new { Name = "PED", Veh = false } };
+        var sets = new[] { new { Name = "VEH", Veh = true, Boat = false }, new { Name = "PED", Veh = false, Boat = false },
+            new { Name = "BOAT", Veh = true, Boat = true } };
         foreach (var set in sets)
         {
             // Nodos incluidos: (area, nodo) -> indice Lua
             var order = new List<int[]>();
             var idx = new Dictionary<long, int>();
             Func<int, int, long> key = (a, n) => ((long)a << 16) | (uint)n;
-            Func<PNode, bool> included = n => n.Veh == set.Veh && (!set.Veh || (n.Flags & 0x180) == 0);
+            Func<PNode, bool> included = n => n.Veh == set.Veh &&
+                (set.Boat ? (n.Flags & 0x80) != 0 : (!set.Veh || (n.Flags & 0x180) == 0));
 
             var prev = LuaFlat(prevSrc, set.Name + "_NODES");
             if (prev != null)
@@ -375,7 +378,7 @@ public static class MapData
                     int ba = ar.LinkArea[link], bn = ar.LinkNode[link], t;
                     if (ba >= 64 || areas[ba] == null || !idx.TryGetValue(key(ba, bn), out t)) continue;
                     int ln = 1, off = 25, light = 0;   // sin navi node: doble sentido de 1 carril
-                    if (set.Veh)
+                    if (set.Veh && !set.Boat)
                     {
                         var b = areas[ba].Nodes[bn];
                         int nl = ar.NaviLink[link], na = nl >> 10, ni = nl & 0x3FF;
@@ -403,11 +406,19 @@ public static class MapData
             }
 
             var lua = new StringBuilder();
-            string file = set.Veh ? "c_nodes_veh.lua" : "c_nodes_ped.lua";
+            string file = set.Boat ? "c_nodes_boat.lua" : set.Veh ? "c_nodes_veh.lua" : "c_nodes_ped.lua";
             lua.AppendLine("--[[ rp_citizens / " + file + " (GENERADO por tools/generar-nodos.ps1 desde data/Paths/NODES*.DAT de GTA SA,");
-            lua.AppendLine("    todo San Andreas; no editar a mano: usa el editor /nodos, que guarda los cambios en SQL)");
-            if (set.Veh)
+            if (set.Boat)
             {
+                lua.AppendLine("    todo San Andreas; no editar a mano: se regenera con el script)");
+                lua.AppendLine("    BOAT_NODES: x, y, z planos (nodo i -> indices 3i-2..3i). BOAT_LINKS[i]: vecinos del nodo i.");
+                lua.AppendLine("    Rutas de los barcos ambientales (bit 7 de los nodos viales del juego), ver c_boats.lua. ]]");
+                lua.Append("BOAT_NODES = {").Append(nodes).AppendLine("}");
+                lua.Append("BOAT_LINKS = {").Append(links).AppendLine("}");
+            }
+            else if (set.Veh)
+            {
+                lua.AppendLine("    todo San Andreas; no editar a mano: usa el editor /nodos, que guarda los cambios en SQL)");
                 lua.AppendLine("    VEH_NODES: x, y, z planos (nodo i -> indices 3i-2..3i). VEH_LINKS[i]: vecinos del nodo i.");
                 lua.AppendLine("    VEH_LANES[i][k]: carriles en sentido i -> VEH_LINKS[i][k] (0 = prohibido, sentido unico).");
                 lua.AppendLine("    VEH_OFFSET[i][k]: metros a la derecha de la linea central para ese sentido.");
@@ -420,6 +431,7 @@ public static class MapData
             }
             else
             {
+                lua.AppendLine("    todo San Andreas; no editar a mano: usa el editor /nodos, que guarda los cambios en SQL)");
                 lua.AppendLine("    PED_NODES: x, y, z planos (nodo i -> indices 3i-2..3i). PED_LINKS[i]: vecinos del nodo i. ]]");
                 lua.Append("PED_NODES = {").Append(nodes).AppendLine("}");
                 lua.Append("PED_LINKS = {").Append(links).AppendLine("}");
