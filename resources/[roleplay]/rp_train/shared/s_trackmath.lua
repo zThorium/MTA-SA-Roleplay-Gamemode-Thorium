@@ -116,3 +116,13 @@ function TrainTrack.project(x, y, hint)
     end
     return bestD, math.sqrt(bestDist)
 end
+
+-- Posición de (x, y) respecto a un vagón: a lo largo de su eje y a su lado (m, con signo).
+-- Lo usan servidor y cliente para subir y bajar del tren (shared/s_trackmath.lua).
+function TrainTrack.carFrame(car, x, y)
+    local cx, cy = getElementPosition(car)
+    local _, _, rz = getElementRotation(car)
+    local fx, fy = -math.sin(math.rad(rz)), math.cos(math.rad(rz))
+    local dx, dy = x - cx, y - cy
+    return dx * fx + dy * fy, dx * fy - dy * fx
+end

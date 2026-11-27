@@ -92,8 +92,10 @@ addCommandHandler("crearbarrera", function(player, _, flag)
         x, y, z, rot, side, int, dim)
 end)
 
--- Exports para la gramatica Owl de rp_admin (/nearbycrossings, /gotocrossing, /delcrossing...)
-function adminElements()
+-- Exports para la gramatica Owl de rp_admin (/nearbycrossings, /gotocrossing, /delcrossing...).
+-- kind = "booth" | "sign": boleterías y carteles LED (s_stations.lua); sin kind, barreras.
+function adminElements(kind)
+    if kind then return stationAdminElements(kind) end
     local list = {}
     for id, e in pairs(crossings) do
         local row = e.row
@@ -105,7 +107,8 @@ function adminElements()
     return list
 end
 
-function adminDelete(id)
+function adminDelete(id, kind)
+    if kind then return stationAdminDelete(id, kind) end
     id = tonumber(id)
     if not id or not crossings[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM rail_crossings WHERE id = ?", id)

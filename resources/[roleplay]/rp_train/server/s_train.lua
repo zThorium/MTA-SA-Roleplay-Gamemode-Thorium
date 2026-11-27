@@ -15,6 +15,12 @@
       rp:train:v); los demás lo ven por la sincronización normal de MTA. El servidor solo lee su posición.
     El sentido de marcha se fija con setTrainDirection (velocidad siempre positiva): así la locomotora
     tira de los vagones y el juego los coloca detrás.
+
+    En cada estación espera STATION_STOP_MS; cuando faltan DEPART_HORN_MS para salir toca el claxon
+    (rp:train:horn, lo suena el cliente). Mientras está en el andén la locomotora lleva rp:train:dwell
+    = nombre de la estación (los pasajeros suben y bajan solo entonces, s_passengers.lua). La llegada
+    estimada del tren de pasajeros a cada estación se publica en rp:train:eta (resourceRoot) para los
+    carteles LED.
 ]]
 
 local trains = {}
@@ -28,6 +34,13 @@ local playerPos, playerEl, playerCount = {}, {}, 0
 local function heading(ux, uy) return math.deg(math.atan2(-ux, uy)) end
 
 local function trainLength(t) return (#t.cars + 1) * TRAIN.CARRIAGE_GAP end
+
+-- Llega al andén (también al aparecer en su estación de salida)
+local function stopAtStation(t, st, now)
+    t.v, t.dwellUntil, t.leaving, t.horned = 0, now + TRAIN.STATION_STOP_MS, st, nil
+    if isElement(t.loco) then setElementData(t.loco, "rp:train:dwell", st.name) end
+    if onTrainArrive then onTrainArrive(t, st) end -- s_passengers.lua
+end
 
 local function nearPlayer(x, y)
     if not x then return false end
@@ -104,9 +117,6 @@ local function createTrain(def)
     end
     local t = { def = def, d = TrainTrack.wrap(origin and origin.d or def.start or 0), v = 0, dir = TRAIN.CLOCKWISE,
                 cars = {}, wagons = {}, back = 0 }
-    if origin then -- espera en el andén y sale
-        t.dwellUntil, t.leaving = getTickCount() + TRAIN.STATION_STOP_MS, origin
-    end
     -- Se crean sobre nodos exactos de la vía principal (ver placeTrain) y luego se ajustan
     local _, _, _, ux, uy = TrainTrack.point(t.d)
     local x, y, z = TrainTrack.nodePoint(t.d)
@@ -138,6 +148,8 @@ local function createTrain(def)
     setDirection(t)
     setElementData(t.loco, "rp:train", true)
     setElementData(t.loco, "rp:train:v", 0)
+    setElementData(t.loco, "rp:train:passenger", def.passenger == true)
+    if origin then stopAtStation(t, origin, getTickCount()) end -- espera en el andén y sale
     t.sentV = 0
     for i, veh in ipairs(t.wagons) do setTrainPosition(veh, TrainTrack.gameD(t.d - (i - 1) * TRAIN.CARRIAGE_GAP)) end
     t.px, t.py = TrainTrack.point(t.d)
@@ -160,8 +172,17 @@ end
 
 local function updateSpeed(t, now, dt)
     if t.dwellUntil then
-        if now < t.dwellUntil then t.v = 0 return end
+        if now < t.dwellUntil then
+            t.v = 0
+            if not t.horned and t.dwellUntil - now <= TRAIN.DEPART_HORN_MS then -- aviso de salida
+                t.horned = true
+                setElementData(t.loco, "rp:train:horn", now)
+            end
+            return
+        end
         t.dwellUntil = nil
+        setElementData(t.loco, "rp:train:dwell", false)
+        if onTrainDepart then onTrainDepart(t) end
     end
     if t.leaving then
         local gone = TrainTrack.ahead(t.leaving.d, t.d)
@@ -169,9 +190,7 @@ local function updateSpeed(t, now, dt)
     end
     local st, dist = nextStation(t)
     if st and dist < 4 and t.v < 3 then -- llegó: espera en el andén
-        t.v, t.dwellUntil, t.leaving = 0, now + TRAIN.STATION_STOP_MS, st
-        setElementData(t.loco, "rp:train:arrived", now) -- el cliente toca el claxon de llegada
-        return
+        return stopAtStation(t, st, now)
     end
     local target = TRAIN.SPEED
     if st then target = math.min(target, math.sqrt(2 * TRAIN.BRAKE * math.max(0, dist - 2)) + 0.5) end
@@ -246,6 +265,63 @@ local function tickTrain(t, now, dt)
     end
 end
 
+--[[
+    Llegada estimada del tren t a la estación s, en segundos, y si ya está en su andén.
+    Crucero hasta allí, más por cada parada intermedia la espera y lo que se pierde frenando y
+    arrancando, más la frenada final. Aproximado: los carteles se corrigen cada ETA_MS.
+]]
+local STOP_COST = TRAIN.STATION_STOP_MS / 1000 + TRAIN.SPEED / (2 * TRAIN.ACCEL) + TRAIN.SPEED / (2 * TRAIN.BRAKE)
+local function etaTo(t, s, now)
+    local wait = t.dwellUntil and math.max(0, (t.dwellUntil - now) / 1000) or 0
+    if t.dwellUntil and t.leaving == s then return wait, true end
+    local dist = TrainTrack.ahead(t.d, s.d)
+    local stops = 0
+    for _, o in ipairs(stations) do
+        if o ~= s and o ~= t.leaving and TrainTrack.ahead(t.d, o.d) < dist then stops = stops + 1 end
+    end
+    return wait + dist / TRAIN.SPEED + stops * STOP_COST + TRAIN.SPEED / (2 * TRAIN.BRAKE), false
+end
+
+-- { ["nodo de estación"] = { segundos, 1 si está en el andén, próxima estación } } del tren de pasajeros más cercano
+local function computeEta(now)
+    local out = {}
+    for _, s in ipairs(stations) do
+        local best, bestDwell
+        for _, t in ipairs(trains) do
+            if t.def.passenger then
+                local sec, dwell = etaTo(t, s, now)
+                if not best or sec < best then best, bestDwell = sec, dwell end
+            end
+        end
+        if best then out[tostring(s.node)] = { math.floor(best + 0.5), bestDwell and 1 or 0, s.nextName } end
+    end
+    return out
+end
+
+-- Export: llegada estimada a cada estación (carteles y pruebas). { ["nodo"] = { seg, enAndén 0/1, próxima } }
+function getTrainEta() return computeEta(getTickCount()) end
+
+-- Para s_passengers.lua y s_stations.lua
+function getTrainOfWagon(veh)
+    for _, t in ipairs(trains) do
+        for _, w in ipairs(t.wagons) do if w == veh then return t end end
+    end
+end
+
+function getTrainNextStop(t) local st = nextStation(t) return st and st.name end
+
+-- Estación más cercana a (x, y) a menos de r metros: nodo, nombre y distancia
+function getNearestStation(x, y, r)
+    local best, bestD
+    for _, s in ipairs(stations) do
+        local d = getDistanceBetweenPoints2D(x, y, s.x, s.y)
+        if d <= r and (not bestD or d < bestD) then best, bestD = s, d end
+    end
+    if best then return best.node, best.name, bestD end
+end
+
+function getStationName(node) return TRAIN.STATION_NAMES[node] end
+
 -- Lo usan los cruces: ¿algún tren ocupa el tramo [d - antes, d + después]?
 function isTrackOccupied(d, before, after)
     for _, t in ipairs(trains) do
@@ -304,6 +380,7 @@ local function buildRoute()
         route[#route + 1] = s
     end
     table.sort(route, function(a, b) return a.km < b.km end)
+    for i, s in ipairs(route) do s.nextName = route[i % #route + 1].name end
     local names = {}
     for i, s in ipairs(route) do names[i] = ("%s (%.1f km)"):format(s.name, s.km) end
     return table.concat(names, " > ")
@@ -321,6 +398,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
         for _, t in ipairs(trains) do tickTrain(t, now, dt) end
         updateCrossings()
     end, TRAIN.TICK_MS, 0)
+    setTimer(function() setElementData(resourceRoot, "rp:train:eta", computeEta(getTickCount())) end, TRAIN.ETA_MS, 0)
     outputDebugString(("[rp_train] %d trenes en la vía (%.0f m, %d estaciones)"):format(#trains, TrainTrack.length(), #stations), 3)
     outputDebugString("[rp_train] recorrido: " .. routeText, 3)
 end)

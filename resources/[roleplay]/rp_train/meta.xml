@@ -5,6 +5,9 @@
     <include resource="rp_database" />
     <include resource="rp_notify" />
     <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="rp_shops" />
 
     <!-- Via principal (tracks.dat de GTA SA) y su geometria: el cliente la usa para devolver a la via 0 un vagon que el juego enganche a la paralela -->
     <script src="shared/s_track.lua" type="shared" />
@@ -14,17 +17,28 @@
     <script src="server/s_train.lua" type="server" />
     <!-- Barreras de los cruces (/crearbarrera, /borrarbarrera, /barreras) -->
     <script src="server/s_crossings.lua" type="server" />
+    <!-- Boleterías y carteles LED de las estaciones (/crearboleteria, /crearcartel) -->
+    <script src="server/s_stations.lua" type="server" />
+    <!-- Pasajeros con boleto: subir y bajar solo en el andén -->
+    <script src="server/s_passengers.lua" type="server" />
 
     <script src="client/c_train.lua" type="client" cache="false" />
+    <script src="client/c_passengers.lua" type="client" cache="false" />
+    <script src="client/c_stations.lua" type="client" cache="false" />
 
     <!-- Campanas del cruce (ver CREDITOS.md) -->
     <file src="sounds/campanas.mp3" />
-    <!-- Claxon al llegar a cada estación (ver CREDITOS.md) -->
+    <!-- Claxon 10 s antes de salir de cada estación (ver CREDITOS.md) -->
     <file src="sounds/claxon.mp3" />
+    <!-- Teclas dibujadas (Kenney, CC0) y máscara de LED del cartel -->
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/mouse_move.png" />
+    <file src="images/led_dot.png" />
 
     <export function="getTrainState" type="server" />
     <export function="getTrackLength" type="server" />
     <export function="getTrainRoute" type="server" />
+    <export function="getTrainEta" type="server" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
 </meta>

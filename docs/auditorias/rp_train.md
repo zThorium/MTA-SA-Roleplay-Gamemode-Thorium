@@ -1,5 +1,65 @@
 # Auditoría de rp_train
 
+## 2026-11-26 · mejorar (pasajeros, boleterías, carteles LED)
+- **Foco**: boleterías donde comprar el boleto, viajar como pasajero bajando solo en estaciones, carteles LED con la llegada estimada y claxon cuando faltan 10 s para salir.
+- **Nota**: 98/100 → 98/100 (OK 27 → 31, FALLA B 0, FALLA I 0, AVISO 1)
+- **Cambios**:
+  - P5 Claxon de salida: el tren espera 20 s en cada andén y, cuando faltan `DEPART_HORN_MS` (10 s), suena `sounds/claxon.mp3` en 3D (`rp:train:horn`, sustituye al claxon de llegada). Mientras espera, la locomotora lleva `rp:train:dwell` = estación.
+  - P5 Boleterías: `/crearboleteria` pone una empleada en la estación más cercana que vende el item nuevo `train_ticket` con el menú de `rp_shops` (`addTempShop`, que acepta un saludo opcional; precio, cobro y peso los valida `rp_shops`). Se vuelven a registrar si se reinicia `rp_shops`. Tabla nueva `train_fixtures` (BD-04, solo hacia adelante).
+  - P5 Pasajeros (`s_passengers.lua` / `c_passengers.lua`): E junto a un vagón del tren de pasajeros parado en el andén; el servidor comprueba personaje, abatido/esposado, que el tren esté en el andén, distancia al vagón (`TrainTrack.carFrame`), plazas y el boleto, que se gasta (SEG-02). Viaja sentado y oculto dentro del vagón, sin controles, con cámara que gira con el ratón. Solo baja con E en el andén; el cliente propone el suelo más alto junto al vagón y el servidor lo valida (si no, lo deja junto al vagón).
+  - P5 Carteles LED (`/crearcartel`, `c_stations.lua`): render target por cartel cercano (se libera al alejarse) con máscara de puntos repetida (`images/led_dot.png`) y texto que se desplaza: «PRÓXIMO TREN EN m:ss · DIRECCIÓN …», «EL TREN ESTÁ LLEGANDO» o «TREN EN ANDÉN · SALE EN n s». El servidor publica `rp:train:eta` cada 2 s (crucero + paradas intermedias + frenadas); export `getTrainEta`.
+  - P1 Ciclo de vida: el pasajero se suelta junto al vagón al cambiar de personaje, quedar abatido o parar el recurso; al morir, donde esté; `onPlayerQuit` limpia el estado (CIC-01/02). El cliente devuelve la cámara al parar (CIC-05).
+  - P2 Integración: listar y borrar boleterías y carteles con la gramática Owl de `rp_admin` (`ticketbooth`, `trainsign`, con `kind`); comandos nuevos en el catálogo de `rp_adminpanel`.
+  - P4 Experiencia: aviso con la E dibujada para subir y bajar y el ratón dibujado al viajar (UX-01, Kenney CC0 copiados de `assets/`, UX-10); una sola indicación a la vez (UX-02); saludo de la empleada con el precio y el paso siguiente; cuenta atrás de la salida en el aviso y en el cartel (UX-07).
+  - P3 Pruebas: `train_tabla_boleterias_y_carteles`, `train_boleto_en_catalogo`, `train_llegada_estimada` y los tipos `booth`/`sign` en `admin_exports_de_elementos` (PRU-01). `scripts/test.sh`: todas las de `rp_train` y admin pasan; fallan las de Fotogram y `rp_animlab` porque en esta copia faltan archivos que no están en git (`rp_phone/config.music.lua`, `.ifp` de `rp_animlab`/`rp_mocap`), ajeno a este cambio.
+- **Reglas manuales revisadas**: SEG-02 ✔ (`client` y todo revalidado en el servidor), SEG-04 ✔ (el boleto se gasta antes de subir; el cobro es de `rp_shops`), BD-06 ✔, CIC-03 ✔ (carteles y boleterías se recrean al arrancar; el estado de viaje se reenvía en cada parada), CIC-06 ✔, INT-07 ✔ (E contextual: solo actúa junto a un vagón o viajando), CLI-03 ✔ (búsqueda de vagón cada 250 ms; por frame solo los carteles cercanos y el aviso), UX-01/02/06/07/10 ✔, UX-03 no aplica (tres pasos, cada uno con su aviso).
+- **Pendiente**: el pasajero va oculto dentro del vagón (no hay asientos modelados en el 570); la cámara sigue al vagón y no al sentido de marcha; la llegada estimada es aproximada (se corrige cada 2 s); sin blip de estación en el minimapa.
+- **Probar en juego**: `/crearboleteria` y `/crearcartel` en Unity Station; comprar el boleto (sin dinero → error); E junto a un vagón con el tren en marcha (no deja), parado sin boleto (pide comprarlo) y con boleto (sube, se gasta); mirar con el ratón; intentar bajar en marcha; bajar en Market (queda en el andén); claxon a los 10 s de la salida; el cartel cuenta atrás y se lee de día y de noche; `restart rp_train` con un pasajero dentro (queda junto al vagón con controles y cámara); `/debugscript 3` limpio.
+
+<details><summary>Informe automático</summary>
+
+### Auditoría automática (2026-11-26, commit 7a642fc)
+
+**Nota: 98/100** · OK 31 · FALLA B 0 · FALLA I 0 · AVISO 1
+
+| Estado | Grav. | Regla | Qué | Evidencia |
+|---|---|---|---|---|
+| AVISO | I | CIC-04 | Los timers se pueden cancelar | usa setTimer y nunca killTimer/isTimer |
+| OK | B | EST-01 | meta.xml con info y min_mta_version |  |
+| OK | I | EST-02 | Scripts de cliente con cache="false" |  |
+| OK | I | EST-03 | Dependencias declaradas con &lt;include&gt; (u opcionales comprobadas) |  |
+| OK | I | EST-04 | meta.xml y archivos coinciden |  |
+| OK | I | EST-05 | Prefijos s_/c_ según carpeta |  |
+| OK | R | EST-06 | Cabecera de comentario en cada .lua |  |
+| OK | B | EST-07 | Registrado en mtaserver.conf tras sus dependencias |  |
+| OK | B | SEG-01 | Handlers de eventos remotos usan client |  |
+| OK | B | SEG-05 | Sin secretos, IPs privadas ni emails |  |
+| OK | B | SEG-06 | Sin loadstring |  |
+| OK | B | BD-01 | Sin dbConnect propio |  |
+| OK | B | BD-02 | Sin dbPoll(-1) sin justificar |  |
+| OK | B | BD-03 | SQL parametrizado (sin concatenar) |  |
+| OK | B | BD-04 | Esquema solo en rp_database/schema.lua |  |
+| OK | I | BD-05 | Espera a la BD al arrancar |  |
+| OK | I | CIC-01 | Estado por jugador se limpia en onPlayerQuit |  |
+| OK | I | CIC-02 | Estado por personaje se limpia en rp:onCharacterLogout |  |
+| OK | I | CIC-05 | El cliente devuelve cámara/controles/HUD al parar |  |
+| OK | B | INT-01 | HUD y radio solo con setHudSuppressed/setRadioSuppressed |  |
+| OK | I | INT-02 | Hora y clima solo desde rp_events |  |
+| OK | I | INT-03 | Eventos propios con prefijo "rp:" |  |
+| OK | R | INT-04 | Avisos con rp_notify (no outputChatBox) | 1 outputChatBox |
+| OK | R | INT-06 | Teclas sin choques con otros recursos |  |
+| OK | I | CLI-01 | Las teclas ignoran chat/consola/cursor |  |
+| OK | R | CLI-02 | onClientRender sin trabajo pesado por frame |  |
+| OK | I | CLI-04 | El cliente no copia config compartida al cargar |  |
+| OK | B | DOC-01 | Fila en RECURSOS.md |  |
+| OK | I | DOC-02 | Exports documentados en RECURSOS.md |  |
+| OK | I | DOC-03 | Comandos en RECURSOS.md, panel de admin o ayuda |  |
+| OK | R | DOC-04 | Registro de auditoría en docs/auditorias/ |  |
+| OK | I | PRU-01 | Pruebas en rp_test |  |
+| N/A | B | INT-05 | Dimensiones propias sin choques |  |
+
+</details>
+
 ## 2026-11-26 · arreglar (vagones)
 - **Síntoma** (prueba de Fabián): al iniciar, locomotora y vagón solapados; la locomotora se va y el vagón se queda siempre en el andén. Ya pasaba antes de esta rama (primera captura).
 - **Causa raíz**: el enganche de trenes de MTA (`attachTrailerToVehicle`) no arrastraba los vagones; el foro de MTA reconoce problemas de sincronización de remolques desde hace años. Además, al crear cada pieza en el nodo más cercano, dos piezas podían caer en el mismo nodo.

@@ -270,7 +270,7 @@ end)
 -- Tiendas temporales (sin SQL): otro recurso (p. ej. el mercadillo de rp_events)
 -- convierte uno de sus NPC en vendedor durante un rato. Usan el mismo menu y la misma
 -- compra validada por el servidor; el precio sale SIEMPRE de este catalogo.
---   addTempShop(ped, nombre, { item = precio, ... }) -> id (negativo) | false
+--   addTempShop(ped, nombre, { item = precio, ... } [, saludo]) -> id (negativo) | false
 --   removeTempShop(id)
 -- El NPC no se destruye aqui: lo gestiona quien lo creo (si desaparece, la tienda se quita sola).
 ----------------------------------------------------------------
@@ -291,7 +291,7 @@ function removeTempShop(id)
     return true
 end
 
-function addTempShop(ped, name, catalog)
+function addTempShop(ped, name, catalog, greeting)
     if not isElement(ped) or getElementType(ped) ~= "ped" or type(catalog) ~= "table" then return false end
     local items = {}
     for itemId, price in pairs(catalog) do
@@ -317,7 +317,7 @@ function addTempShop(ped, name, catalog)
         if getElementType(el) ~= "player" or not sameDim then return end
         if not exports.rp_characters:getPlayerCharacterId(el) then return end
         nearby[el] = id
-        exports.rp_notify:bubble(el, ped, "¡Buen provecho! Pulsa E para ver lo que vendo.", 4500)
+        exports.rp_notify:bubble(el, ped, type(greeting) == "string" and greeting or "¡Buen provecho! Pulsa E para ver lo que vendo.", 4500)
         triggerClientEvent(el, "rp:shop:near", resourceRoot, id, name)
     end)
     addEventHandler("onColShapeLeave", col, function(el)

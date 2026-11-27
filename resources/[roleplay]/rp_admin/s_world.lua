@@ -30,6 +30,8 @@ WORLD_TYPES = {
     { key = "school",        many = "schools",        res = "rp_driving",    name = "Autoescuela" },
     { key = "pooltable",     many = "pooltables",     res = "rp_pool",       name = "Mesa de pool" },
     { key = "crossing",      many = "crossings",      res = "rp_train",      name = "Barrera de tren" },
+    { key = "ticketbooth",   many = "ticketbooths",   res = "rp_train",      name = "Boleteria de tren", kind = "booth" },
+    { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign" },
 }
 
 local NEARBY_RADIUS, NEARBY_MAX = 20, 500

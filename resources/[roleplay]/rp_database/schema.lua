@@ -1540,4 +1540,20 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS ojail_reason  VARCHAR(128) NULL,
         ADD COLUMN IF NOT EXISTS mute_until    DATETIME NULL
     ]],
+    -- rp_train: boleterias (empleado que vende boletos) y carteles LED con la llegada del tren, que colocan los admins
+    [[
+    CREATE TABLE IF NOT EXISTS train_fixtures (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        kind       VARCHAR(8)   NOT NULL,
+        station    SMALLINT UNSIGNED NOT NULL,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        rot        FLOAT        NOT NULL DEFAULT 0,
+        interior   TINYINT UNSIGNED  NOT NULL DEFAULT 0,
+        dimension  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
