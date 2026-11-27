@@ -1558,9 +1558,38 @@ local REAL_DIST, DUMMY_DIST = 55, 80
 
 -- Modo fantasma: sin colision con otros autos unos segundos (para deshacer solapes y atascos).
 -- Se vuelve solido cuando ya no hay ningun auto cerca (ver carTick).
+-- Solo deja de chocar con los demas vehiculos y con el jugador: el suelo y el mapa siguen siendo solidos.
+-- Antes se apagaba TODA la colision (setElementCollisionsEnabled) de un auto con fisica y conductor
+-- (el wiki de MTA avisa que eso da fallos): el auto se hundia o quedaba flotando y, al volver a ser solido
+-- metido en el asfalto o en otro auto, la fisica lo expulsaba hacia arriba y salia volando.
+local function ghostWith(vehicle, s)
+    s.ghostWith = s.ghostWith or {}
+    for _, o in ipairs(vehSnap) do
+        if o ~= vehicle and not s.ghostWith[o] and isElement(o) then
+            setElementCollidableWith(vehicle, o, false)
+            s.ghostWith[o] = true
+        end
+    end
+    if not s.ghostWith[localPlayer] then
+        setElementCollidableWith(vehicle, localPlayer, false)
+        s.ghostWith[localPlayer] = true
+    end
+end
+
 function ghostCar(vehicle, s, ms)
     s.ghost, s.ghostUntil = true, getTickCount() + ms
-    setElementCollisionsEnabled(vehicle, false)
+    ghostWith(vehicle, s)
+end
+
+-- Vuelve a chocar con todo lo que se habia desactivado en ghostCar
+function unghostCar(vehicle, s)
+    s.ghost = nil
+    if s.ghostWith and isElement(vehicle) then
+        for o in pairs(s.ghostWith) do
+            if isElement(o) then setElementCollidableWith(vehicle, o, true) end
+        end
+    end
+    s.ghostWith = nil
 end
 
 -- Hay otro auto de la poblacion (o el del jugador si withPlayer) a menos de "radius" m?
@@ -1614,7 +1643,7 @@ end
 
 function makeDummy(vehicle, s, speedMs)
     clearSignal(vehicle, s)
-    s.ghost = nil
+    unghostCar(vehicle, s)
     s.lod = "dummy"
     s.dSpeed = speedMs or 0
     s.dTarget = s.dSpeed
@@ -2281,6 +2310,9 @@ end
 
 local function stageGuards(vehicle, s, f, now)
     local speed, x, y, rx, ry, rz, m, fwd = f.speed, f.x, f.y, f.rx, f.ry, f.rz, f.m, f.fwd
+    -- En el aire (lo detecta el antivuelo de carWatchdog): no se baja nadie; el antivuelo lo endereza y
+    -- lo devuelve al suelo (o lo retira si sigue volando). Antes el conductor saltaba del auto en pleno vuelo.
+    if s.airSince then s.tiltSince = nil return true end
     -- Volcado: el conductor huye y el auto queda abandonado
     if m[3][3] < 0.3 then abandonCar(vehicle, s) return false end
     -- Inclinado sobre dos ruedas (montado sobre otro auto) y casi parado: tambien se abandona
@@ -3773,9 +3805,10 @@ local function carTick()
                         if overlapsVehicle(v, 0.4, true) then
                             s.ghostUntil = now + 1000
                         else
-                            s.ghost = nil
-                            setElementCollisionsEnabled(v, true)
+                            unghostCar(v, s)
                         end
+                    else
+                        ghostWith(v, s)   -- los vehiculos que acaban de cargarse tampoco lo tocan
                     end
                 elseif overlapsVehicle(v, -0.4, false) then
                     -- dos autos superpuestos mas de 2 s: uno pasa a fantasma
