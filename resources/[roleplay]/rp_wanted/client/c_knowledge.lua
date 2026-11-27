@@ -17,7 +17,6 @@
               knowledgeSearchPoint, knowledgeLastSeenOnFoot
 ]]
 
-local S = WANTED_SEARCH
 local K = { seenAt = 0, seq = 0 }   -- lkp = {x, y, z}, vel = {vx, vy}, onFoot
 local wantedLevel = 0
 
@@ -34,8 +33,8 @@ end
 function knowledgeMode(now)
     if not K.lkp then return "live" end
     local age = now - K.seenAt
-    if age < S.GRACE then return "live" end
-    if age < S.GRACE + S.PREDICT_MS then return "predict" end
+    if age < WANTED_SEARCH.GRACE then return "live" end
+    if age < WANTED_SEARCH.GRACE + WANTED_SEARCH.PREDICT_MS then return "predict" end
     return "search"
 end
 
@@ -47,7 +46,7 @@ function knowledgeTarget(now)
         return x, y, z, mode
     end
     -- velocidad de MTA: unidades por 1/50 s
-    local t = math.min(now - K.seenAt, S.GRACE + S.PREDICT_MS) / 1000 * 50
+    local t = math.min(now - K.seenAt, WANTED_SEARCH.GRACE + WANTED_SEARCH.PREDICT_MS) / 1000 * 50
     local p, v = K.lkp, K.vel
     return p[1] + v[1] * t, p[2] + v[2] * t, p[3], mode
 end
@@ -56,8 +55,8 @@ function knowledgeLastSeenOnFoot() return K.onFoot == true end
 
 -- Radio de busqueda: crece con el tiempo sin verte
 function knowledgeSearchRadius(now)
-    local lost = math.max(0, now - K.seenAt - S.GRACE - S.PREDICT_MS)
-    return S.RADIUS_MIN + (S.RADIUS_MAX - S.RADIUS_MIN) * math.min(1, lost / S.GROW_MS)
+    local lost = math.max(0, now - K.seenAt - WANTED_SEARCH.GRACE - WANTED_SEARCH.PREDICT_MS)
+    return WANTED_SEARCH.RADIUS_MIN + (WANTED_SEARCH.RADIUS_MAX - WANTED_SEARCH.RADIUS_MIN) * math.min(1, lost / WANTED_SEARCH.GROW_MS)
 end
 
 -- Punto de busqueda de una unidad o policia (st guarda su estado). El primero
@@ -65,13 +64,13 @@ end
 -- nodos de calle para los vehiculos, alrededor de la ultima posicion a pie.
 function knowledgeSearchPoint(st, now, x, y, onFoot)
     local sp = st.sp
-    local reached = sp and getDistanceBetweenPoints2D(x, y, sp[1], sp[2]) < (onFoot and 3 or S.POINT_REACHED)
-    if sp and st.spSeq == K.seq and not reached and now - st.spAt < S.POINT_TIMEOUT then return sp end
+    local reached = sp and getDistanceBetweenPoints2D(x, y, sp[1], sp[2]) < (onFoot and 3 or WANTED_SEARCH.POINT_REACHED)
+    if sp and st.spSeq == K.seq and not reached and now - st.spAt < WANTED_SEARCH.POINT_TIMEOUT then return sp end
     local cx, cy, cz = knowledgeTarget(now)
     if st.spSeq ~= K.seq then
         sp = { cx, cy, cz }
     elseif onFoot then
-        local a, r = math.random() * math.pi * 2, 6 + math.random() * (S.FOOT_RADIUS - 6)
+        local a, r = math.random() * math.pi * 2, 6 + math.random() * (WANTED_SEARCH.FOOT_RADIUS - 6)
         sp = { cx + math.cos(a) * r, cy + math.sin(a) * r, cz }
     else
         local R = knowledgeSearchRadius(now)
@@ -112,7 +111,7 @@ end
 -- Cada SIGHT_TICK se mira; al servidor se le avisa como mucho una vez por segundo
 -- (el decaimiento solo empieza tras WANTED.EVADE_TIME sin avistamientos)
 local seenSentAt = 0
-setTimer(function()
+local function sightTick()
     if wantedLevel <= 0 then return end
     local now = getTickCount()
     if policeSeesMe() then
@@ -122,13 +121,13 @@ setTimer(function()
             triggerServerEvent("rp:wanted:seen", resourceRoot)
         end
     end
-end, S.SIGHT_TICK, 0)
+end
 
 -- Disparar con un policia cerca delata la posicion
 addEventHandler("onClientPlayerWeaponFire", localPlayer, function()
     if wantedLevel <= 0 then return end
     local px, py, pz = getElementPosition(localPlayer)
-    for _, ped in ipairs(getElementsWithinRange(px, py, pz, S.SHOT_REVEAL_RADIUS, "ped")) do
+    for _, ped in ipairs(getElementsWithinRange(px, py, pz, WANTED_SEARCH.SHOT_REVEAL_RADIUS, "ped")) do
         if getElementData(ped, "rp:cop") and not isPedDead(ped) then return knowledgeSeen() end
     end
 end)
@@ -148,4 +147,6 @@ end)
 addEventHandler("onClientResourceStart", resourceRoot, function()
     wantedLevel = tonumber(getElementData(localPlayer, "rp:wanted")) or 0
     if wantedLevel > 0 then knowledgeSeen() end
+    -- la config compartida se lee aqui: al cargar el script aun puede no existir (CLI-04)
+    setTimer(sightTick, WANTED_SEARCH.SIGHT_TICK, 0)
 end)
