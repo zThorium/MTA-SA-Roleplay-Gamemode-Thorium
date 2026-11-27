@@ -144,6 +144,37 @@ local function insertProperty(name, kind, price, x, y, z, callback)
     end, db(), "INSERT INTO properties (name, type, price, x, y, z) VALUES (?, ?, ?, ?, ?, ?)", name, kind, price, x, y, z)
 end
 
+-- Siembra atomica: no inserta si ya hay una propiedad con ese nombre en esa puerta. loadProperties
+-- puede correr dos veces seguidas (arranque + rp:onDatabaseReady de un reinicio de rp_database) y
+-- ambas veian la tabla vacia: asi nacieron las casas 139-146, copias de la 1-8.
+local function seedProperty(name, kind, price, x, y, z)
+    dbQuery(function(qh)
+        local ok, affected, id = dbPoll(qh, 0)
+        if ok and (tonumber(affected) or 0) > 0 then
+            spawnProperty({ id = id, name = name, type = kind, price = price, x = x, y = y, z = z, locked = 1 })
+        end
+    end, db(), [[
+        INSERT INTO properties (name, type, price, x, y, z)
+        SELECT ?, ?, ?, ?, ?, ? FROM DUAL
+        WHERE NOT EXISTS (SELECT 1 FROM properties WHERE name = ? AND ABS(x - ?) < 0.5 AND ABS(y - ?) < 0.5)
+    ]], name, kind, price, x, y, z, name, x, y)
+end
+
+-- Borra las copias que dejo esa carrera: misma puerta y nombre que otra, sin dueno y sin nada
+-- asociado (muebles, miembros, estilo). Si las dos estan libres se queda la de id menor; nunca
+-- se borra una con dueno.
+local DEDUPE_SQL = [[
+    DELETE b FROM properties b
+    JOIN properties a ON a.id <> b.id AND a.name = b.name
+        AND ABS(a.x - b.x) < 0.5 AND ABS(a.y - b.y) < 0.5 AND ABS(a.z - b.z) < 1
+        AND (a.owner_id IS NOT NULL OR a.id < b.id)
+    WHERE b.owner_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM property_furniture f WHERE f.property_id = b.id)
+        AND NOT EXISTS (SELECT 1 FROM property_members m WHERE m.property_id = b.id)
+        AND NOT EXISTS (SELECT 1 FROM property_style s WHERE s.property_id = b.id)
+        AND NOT EXISTS (SELECT 1 FROM furniture_log l WHERE l.property_id = b.id)
+]]
+
 ----------------------------------------------------------------
 -- Casas de Los Santos a partir de los datos de GTA (s_seed_ls.lua)
 ----------------------------------------------------------------
@@ -201,11 +232,23 @@ function seedLosSantos(existing)
     return count
 end
 
+local selectAndSpawn   -- se define abajo
+
 function loadProperties()
+    dbQuery(function(qh)
+        local _, removed = dbPoll(qh, 0)
+        if (tonumber(removed) or 0) > 0 then
+            outputDebugString(("[rp_properties] %d propiedades duplicadas (sin dueno) eliminadas"):format(removed), 2)
+        end
+        selectAndSpawn()
+    end, db(), DEDUPE_SQL)
+end
+
+selectAndSpawn = function()
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0) or {}
         if #rows == 0 then
-            for _, s in ipairs(SEED) do insertProperty(s[1], s[2], s[3], s[4], s[5], s[6]) end
+            for _, s in ipairs(SEED) do seedProperty(s[1], s[2], s[3], s[4], s[5], s[6]) end
             return
         end
         -- Primera vez con los datos de GTA: agrega las casas de todo Los Santos
