@@ -1,5 +1,14 @@
 # Auditoría de rp_citizens
 
+## 2026-11-27 · arreglar · síntoma: autos que salen volando o levitan al cielo, aparecen encima de otro o solapados
+- **Causa raíz**:
+  1. Los autos lejanos (dummies) no tienen colisión y pueden quedar solapados. Al acercarse el jugador recuperan la física (`makeReal`) y, si estaban dentro de otro, la física los expulsa: salen volando o quedan con el parachoques encima del otro. El chequeo que los pasaba a fantasma medía la **distancia entre centros** (4,8 m al hacerse sólido, 4,2 m al dejar de ser fantasma, 2,4 m para detectar solapes), menos que el largo de un auto (~4,6 m; un bus 12 m), y solo miraba autos de la población y el del jugador, no los de otros jugadores ni los aparcados.
+  2. El antivuelo (`carWatchdog`) busca el suelo solo 6 m hacia abajo (`groundAt`): un auto que ya había subido más dejaba de contar como «en el aire» y nada lo frenaba ni lo retiraba.
+- **Arreglo**: `overlapsVehicle` compara las **cajas reales** de los modelos (ejes separadores en planta) contra todos los vehículos cargados (lista una vez por tick en `refreshSnapshots`) y el jugador a pie; sustituye a `nearOtherCar` en los tres sitios. El antivuelo busca el suelo hasta 80 m más abajo cuando el auto está cargado; si no hay nada, cuenta como vuelo (se endereza, baja y a los 2,5 s se retira).
+- **Evidencia**: prueba en Lua 5.1 de `boxesOverlap` con 8 casos (autos en fila a 4,2 m ahora sí se tocan; bus de 12 m con un auto a 6 m del centro ahora sí; carriles vecinos no).
+- **Nota**: 76 → 78.
+- **Probar en juego**: acercarse rápido a zonas con tráfico denso y a autos aparcados o de otros jugadores en la calle; atascos en cruces. No deben salir disparados ni quedar subidos uno sobre otro; un auto que salga volando debe bajar o desaparecer en ~2,5 s.
+
 ## 2026-11-27 · arreglar · síntoma: los autos giran de golpe 45-90 grados y luego siguen como si nada
 - **Causa raíz**: la ruta de los autos retrocedía unos metros en dos casos:
   1. En tramos cortos (< ~13 m) cada arco de `computeTurnPoints` usa hasta el 60 % del tramo, así que dos arcos seguidos se solapan: el inicio de la curva nueva (E) quedaba hasta ~2,7 m detrás del final de la anterior (X). `planSegment` lo añadía igual.

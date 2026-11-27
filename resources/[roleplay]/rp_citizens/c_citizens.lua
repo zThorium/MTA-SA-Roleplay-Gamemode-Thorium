@@ -1564,14 +1564,45 @@ function ghostCar(vehicle, s, ms)
 end
 
 -- Hay otro auto de la poblacion (o el del jugador si withPlayer) a menos de "radius" m?
-function nearOtherCar(vehicle, radius, withPlayer)
-    local x, y = getElementPosition(vehicle)
-    local r2 = radius * radius
-    for _, o in ipairs(carSnap) do
-        if o[1] ~= vehicle and (o[2] - x) ^ 2 + (o[3] - y) ^ 2 < r2 then return true end
+-- Caja del vehiculo en planta: centro, ejes (derecha y frente) y medio ancho / medio largo reales del modelo
+local function vehicleBox(v)
+    local x, y, z = getElementPosition(v)
+    local m = getElementMatrix(v)
+    local x0, y0, _, x1, y1 = getElementBoundingBox(v)
+    if not x0 then x0, y0, x1, y1 = -1.1, -2.4, 1.1, 2.4 end   -- modelo aun sin cargar: auto tipico
+    local rx, ry, fx, fy = m[1][1], m[1][2], m[2][1], m[2][2]
+    local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    return x + rx * cx + fx * cy, y + ry * cx + fy * cy, z, rx, ry, fx, fy, (x1 - x0) / 2, (y1 - y0) / 2
+end
+
+-- Se solapan las cajas de dos vehiculos (separacion menor que "margin" m; margin < 0 = se meten mas de eso)?
+-- Prueba de ejes separadores sobre las cajas orientadas, en planta (sin contar los que estan a otra altura).
+local function boxesOverlap(a, b, margin)
+    if math.abs(a[3] - b[3]) > 3.5 then return false end
+    local dx, dy = b[1] - a[1], b[2] - a[2]
+    for _, ax in ipairs({ { a[4], a[5] }, { a[6], a[7] }, { b[4], b[5] }, { b[6], b[7] } }) do
+        local ux, uy = ax[1], ax[2]
+        local r = a[8] * math.abs(a[4] * ux + a[5] * uy) + a[9] * math.abs(a[6] * ux + a[7] * uy)
+                + b[8] * math.abs(b[4] * ux + b[5] * uy) + b[9] * math.abs(b[6] * ux + b[7] * uy)
+        if math.abs(dx * ux + dy * uy) >= r + margin then return false end
     end
-    if withPlayer and playerSnap[2] and playerSnap[1] ~= vehicle and (playerSnap[2] - x) ^ 2 + (playerSnap[3] - y) ^ 2 < r2 then
-        return true
+    return true
+end
+
+-- Hay algun vehiculo cargado (poblacion, jugadores, aparcados) que toque a este? Con withPlayer, tambien el
+-- jugador a pie. Antes se media la distancia entre centros (2.4-4.8 m), menos que el largo de un auto: un auto
+-- recuperaba la colision metido en otro, la fisica lo expulsaba y salia volando o quedaba subido encima.
+function overlapsVehicle(vehicle, margin, withPlayer)
+    local a = { vehicleBox(vehicle) }
+    for _, o in ipairs(vehSnap) do
+        if o ~= vehicle and isElement(o) and getVehicleTowedByVehicle(vehicle) ~= o then
+            local ox, oy = getElementPosition(o)
+            if (ox - a[1]) ^ 2 + (oy - a[2]) ^ 2 < 400 and boxesOverlap(a, { vehicleBox(o) }, margin) then return true end
+        end
+    end
+    if withPlayer and not getPedOccupiedVehicle(localPlayer) then
+        local px, py, pz = getElementPosition(localPlayer)
+        if boxesOverlap(a, { px, py, pz, 1, 0, 0, 1, 0.4, 0.4 }, margin) then return true end
     end
     return false
 end
@@ -1988,10 +2019,11 @@ end
 -- (una sola lectura por tick en vez de N x N para los dummies)
 ----------------------------------------------------------------
 local sirenList = {}
-carSnap, playerSnap = {}, { false }
+carSnap, playerSnap, vehSnap = {}, { false }, {}
 
 function refreshSnapshots(now)
     carSnap = {}
+    vehSnap = getElementsByType("vehicle", root, true)   -- vehiculos cargados (para overlapsVehicle)
     for v in pairs(cars) do
         if isElement(v) then
             local x, y = getElementPosition(v)
@@ -3276,6 +3308,12 @@ local function carWatchdog(v, s, now)
             s.airAt = now
             s.baseZ = s.baseZ or vehicleBaseZ(v)
             local gz = groundAt(x, y, z)
+            -- groundAt solo mira 6 m hacia abajo: un auto que ya subio mas dejaba de contar como "en el aire"
+            -- y se iba al cielo. Con su colision cargada, se busca el suelo mas abajo; sin nada en 80 m, vuela.
+            if not gz and isElementStreamedIn(v) then
+                local hit, _, _, hz = processLineOfSight(x, y, z, x, y, z - 80, true, false, false, false, false, true, false, false)
+                gz = hit and hz or z - 80
+            end
             if gz and z - gz - s.baseZ > 1.3 then
                 s.airSince = s.airSince or now
                 if now - s.airSince > 600 then
@@ -3724,7 +3762,7 @@ local function carTick()
             if s.lod == "dummy" and d < REAL_DIST then
                 makeReal(v, s)
                 -- los dummies no chocan entre si: al hacerse solido puede quedar encima de otro auto
-                if nearOtherCar(v, 4.8, true) then ghostCar(v, s, 4000) end
+                if overlapsVehicle(v, 0.5, true) then ghostCar(v, s, 4000) end
             elseif s.lod ~= "dummy" and d > DUMMY_DIST and not isElementOnScreen(v) and not s.test then
                 makeDummy(v, s, speedOf(v) / 3.6)
             end
@@ -3732,14 +3770,14 @@ local function carTick()
                 if s.ghost then
                     -- vuelve a ser solido cuando no queda ningun auto encima
                     if now > s.ghostUntil then
-                        if nearOtherCar(v, 4.2, true) then
+                        if overlapsVehicle(v, 0.4, true) then
                             s.ghostUntil = now + 1000
                         else
                             s.ghost = nil
                             setElementCollisionsEnabled(v, true)
                         end
                     end
-                elseif nearOtherCar(v, 2.4, false) then
+                elseif overlapsVehicle(v, -0.4, false) then
                     -- dos autos superpuestos mas de 2 s: uno pasa a fantasma
                     s.overlapSince = s.overlapSince or now
                     if now - s.overlapSince > 2000 then ghostCar(v, s, 5000) s.overlapSince = nil end
