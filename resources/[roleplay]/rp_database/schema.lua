@@ -1540,4 +1540,12 @@ SCHEMA = {
         ADD COLUMN IF NOT EXISTS ojail_reason  VARCHAR(128) NULL,
         ADD COLUMN IF NOT EXISTS mute_until    DATETIME NULL
     ]],
+    -- rp_citizens: red de caminos de todo San Andreas. net = version de la red a la que se refieren los indices
+    -- (1 = solo Los Santos, 2 = todo el mapa); s_paths.lua reubica una vez los nodos nuevos del editor de la red 1
+    [[
+    ALTER TABLE path_nodes ADD COLUMN IF NOT EXISTS net TINYINT UNSIGNED NOT NULL DEFAULT 1
+    ]],
+    [[
+    ALTER TABLE path_links ADD COLUMN IF NOT EXISTS net TINYINT UNSIGNED NOT NULL DEFAULT 1
+    ]],
 }

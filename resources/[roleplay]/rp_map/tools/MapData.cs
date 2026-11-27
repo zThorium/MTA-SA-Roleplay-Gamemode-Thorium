@@ -277,6 +277,160 @@ public static class MapData
         return log.ToString();
     }
 
+    // ------------------------------------------------------------------ Red de rp_citizens
+    // Genera rp_citizens/c_nodes_veh.lua y c_nodes_ped.lua con TODO San Andreas. Los nodos que ya existian
+    // (archivos "prev": la red anterior) conservan su indice, porque el editor /nodos guarda cambios en SQL
+    // por indice; el resto se anade detras. Convenciones (reproducen exactamente la red de LS original):
+    //   - viales: sin barcos (bit 7) ni solo emergencias (bit 8); peatonales: todos
+    //   - enlaces ordenados de menor a mayor; solo hacia nodos incluidos
+    //   - carriles i->k: derechos del navi node si el tramo va en su direccion, izquierdos si no
+    //   - offset (CCarPathLink de gta-reversed, carril de 5 m, carril mas a la derecha): sin carriles 2.5
+    //     (0 si el tramo no tiene ninguno); sentido unico 2.5*(n-1); doble sentido 2.5 + ancho/16 + 5*(n-1)
+    //   - semaforo: bits 16-17 de las banderas del navi node
+    static string R1(double v) { return Math.Round(v, 1, MidpointRounding.AwayFromZero).ToString(IC); }
+
+    static float[] LuaFlat(string src, string name)
+    {
+        int i = src.IndexOf("\n" + name + " = {", StringComparison.Ordinal);
+        if (i < 0) return null;
+        i = src.IndexOf('{', i) + 1;
+        int j = src.IndexOf('}', i);
+        return src.Substring(i, j - i).Split(new[] { ',', '\n', '\r', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => float.Parse(s, IC)).ToArray();
+    }
+
+    public static string CitizenNodes(string pathsDir, string[] prevFiles, string outDir)
+    {
+        var log = new StringBuilder();
+        var areas = LoadAreas(pathsDir);
+        string prevSrc = "\n" + string.Join("\n", prevFiles.Where(File.Exists).Select(f => File.ReadAllText(f).Replace("\r\n", "\n")));
+        var sets = new[] { new { Name = "VEH", Veh = true }, new { Name = "PED", Veh = false } };
+        foreach (var set in sets)
+        {
+            // Nodos incluidos: (area, nodo) -> indice Lua
+            var order = new List<int[]>();
+            var idx = new Dictionary<long, int>();
+            Func<int, int, long> key = (a, n) => ((long)a << 16) | (uint)n;
+            Func<PNode, bool> included = n => n.Veh == set.Veh && (!set.Veh || (n.Flags & 0x180) == 0);
+
+            var prev = LuaFlat(prevSrc, set.Name + "_NODES");
+            if (prev != null)
+            {
+                var grid = new Dictionary<long, List<int[]>>();
+                for (int a = 0; a < 64; a++)
+                {
+                    if (areas[a] == null) continue;
+                    for (int n = 0; n < areas[a].Nodes.Length; n++)
+                    {
+                        var p = areas[a].Nodes[n];
+                        if (!included(p)) continue;
+                        long k = Key(p.X, p.Y, 2);
+                        List<int[]> l; if (!grid.TryGetValue(k, out l)) grid[k] = l = new List<int[]>(); l.Add(new[] { a, n });
+                    }
+                }
+                for (int i = 0; i < prev.Length / 3; i++)
+                {
+                    float x = prev[i * 3], y = prev[i * 3 + 1], z = prev[i * 3 + 2];
+                    int[] best = null; double bd = 0.31;
+                    for (int gx = -1; gx <= 1; gx++) for (int gy = -1; gy <= 1; gy++)
+                    {
+                        List<int[]> l; if (!grid.TryGetValue(Key(x + gx * 2, y + gy * 2, 2), out l)) continue;
+                        foreach (var c in l)
+                        {
+                            var p = areas[c[0]].Nodes[c[1]];
+                            double d = Math.Abs(p.X - x) + Math.Abs(p.Y - y) + Math.Abs(p.Z - z);
+                            if (d < bd && !idx.ContainsKey(key(c[0], c[1]))) { bd = d; best = c; }
+                        }
+                    }
+                    if (best == null) throw new Exception(string.Format("{0}: el nodo {1} de la red anterior no esta en los .DAT; no se regenera para no romper los indices de path_nodes", set.Name, i + 1));
+                    idx[key(best[0], best[1])] = order.Count + 1;
+                    order.Add(best);
+                }
+            }
+            int prevCount = order.Count;
+            for (int a = 0; a < 64; a++)
+            {
+                if (areas[a] == null) continue;
+                for (int n = 0; n < areas[a].Nodes.Length; n++)
+                {
+                    if (!included(areas[a].Nodes[n]) || idx.ContainsKey(key(a, n))) continue;
+                    idx[key(a, n)] = order.Count + 1;
+                    order.Add(new[] { a, n });
+                }
+            }
+
+            var nodes = new StringBuilder(); var links = new StringBuilder();
+            var lanes = new StringBuilder(); var offs = new StringBuilder(); var lights = new StringBuilder();
+            int edges = 0;
+            for (int i = 0; i < order.Count; i++)
+            {
+                var ar = areas[order[i][0]]; var p = ar.Nodes[order[i][1]];
+                string sep = i == 0 ? "" : (i % 40 == 0 ? ",\n" : ",");
+                nodes.Append(sep).Append(R1(p.X)).Append(',').Append(R1(p.Y)).Append(',').Append(R1(p.Z));
+                var outs = new List<int[]>();   // destino, carriles, offset*10, semaforo
+                for (int k = 0; k < (int)(p.Flags & 0xF); k++)
+                {
+                    int link = p.LinkStart + k;
+                    if (link >= ar.LinkArea.Length) break;
+                    int ba = ar.LinkArea[link], bn = ar.LinkNode[link], t;
+                    if (ba >= 64 || areas[ba] == null || !idx.TryGetValue(key(ba, bn), out t)) continue;
+                    int ln = 1, off = 25, light = 0;   // sin navi node: doble sentido de 1 carril
+                    if (set.Veh)
+                    {
+                        var b = areas[ba].Nodes[bn];
+                        int nl = ar.NaviLink[link], na = nl >> 10, ni = nl & 0x3FF;
+                        if (na < 64 && areas[na] != null && ni < areas[na].Navis.Length)
+                        {
+                            var nv = areas[na].Navis[ni];
+                            int left = (int)((nv.Flags >> 8) & 7), right = (int)((nv.Flags >> 11) & 7), width = (int)(nv.Flags & 0xFF);
+                            bool along = (b.X - p.X) * nv.DirX + (b.Y - p.Y) * nv.DirY >= 0;
+                            ln = along ? right : left;
+                            int other = along ? left : right;
+                            double o = ln == 0 ? (left + right == 0 ? 0 : 2.5) : other == 0 ? 2.5 * (ln - 1) : 2.5 + width / 16.0 + 5 * (ln - 1);
+                            off = (int)Math.Round(o * 10, MidpointRounding.AwayFromZero);
+                            light = (int)((nv.Flags >> 16) & 3);
+                        }
+                    }
+                    if (!outs.Any(o => o[0] == t)) outs.Add(new[] { t, ln, off, light });   // el .DAT repite algun enlace
+                }
+                outs.Sort((u, v) => u[0].CompareTo(v[0]));
+                edges += outs.Count;
+                sep = i == 0 ? "" : (i % 60 == 0 ? ",\n" : ",");
+                links.Append(sep).Append('{').Append(string.Join(",", outs.Select(o => o[0].ToString(IC)))).Append('}');
+                lanes.Append(sep).Append('{').Append(string.Join(",", outs.Select(o => o[1].ToString(IC)))).Append('}');
+                offs.Append(sep).Append('{').Append(string.Join(",", outs.Select(o => (o[2] / 10.0).ToString(IC)))).Append('}');
+                lights.Append(sep).Append('{').Append(string.Join(",", outs.Select(o => o[3].ToString(IC)))).Append('}');
+            }
+
+            var lua = new StringBuilder();
+            string file = set.Veh ? "c_nodes_veh.lua" : "c_nodes_ped.lua";
+            lua.AppendLine("--[[ rp_citizens / " + file + " (GENERADO por tools/generar-nodos.ps1 desde data/Paths/NODES*.DAT de GTA SA,");
+            lua.AppendLine("    todo San Andreas; no editar a mano: usa el editor /nodos, que guarda los cambios en SQL)");
+            if (set.Veh)
+            {
+                lua.AppendLine("    VEH_NODES: x, y, z planos (nodo i -> indices 3i-2..3i). VEH_LINKS[i]: vecinos del nodo i.");
+                lua.AppendLine("    VEH_LANES[i][k]: carriles en sentido i -> VEH_LINKS[i][k] (0 = prohibido, sentido unico).");
+                lua.AppendLine("    VEH_OFFSET[i][k]: metros a la derecha de la linea central para ese sentido.");
+                lua.AppendLine("    VEH_LIGHT[i][k]: 1/2 si el tramo i -> k termina en un semaforo (0 = sin semaforo). ]]");
+                lua.Append("VEH_NODES = {").Append(nodes).AppendLine("}");
+                lua.Append("VEH_LINKS = {").Append(links).AppendLine("}");
+                lua.Append("VEH_LANES = {").Append(lanes).AppendLine("}");
+                lua.Append("VEH_OFFSET = {").Append(offs).AppendLine("}");
+                lua.Append("VEH_LIGHT = {").Append(lights).AppendLine("}");
+            }
+            else
+            {
+                lua.AppendLine("    PED_NODES: x, y, z planos (nodo i -> indices 3i-2..3i). PED_LINKS[i]: vecinos del nodo i. ]]");
+                lua.Append("PED_NODES = {").Append(nodes).AppendLine("}");
+                lua.Append("PED_LINKS = {").Append(links).AppendLine("}");
+            }
+            File.WriteAllText(Path.Combine(outDir, file), lua.ToString(), new UTF8Encoding(false));
+            log.AppendLine(string.Format("{0}: {1} nodos ({2} de la red anterior, {3} nuevos), {4} enlaces dirigidos -> {5}",
+                set.Name, order.Count, prevCount, order.Count - prevCount, edges, file));
+        }
+        return log.ToString();
+    }
+
     delegate void EdgeFn(Area ar, int link, PNode a, PNode b, int fwd, int back);
 
     static void ForEachEdge(Area[] areas, bool flip, EdgeFn fn)

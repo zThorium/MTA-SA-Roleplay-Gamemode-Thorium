@@ -19,7 +19,7 @@ bun tools/trafico/audit.js --bbox 2600,-2100,2800,-1800   # solo una zona
 bun tools/trafico/audit.js --no-fillet                    # sin el redondeo de esquinas (para medir cuanto aporta)
 ```
 
-Lee `c_nodes_ls.lua` y aplica los cambios del editor `/nodos` (ultimo `backups/paths_*.txt`). Cada maniobra es una
+Lee `c_nodes_veh.lua` (todo San Andreas) y aplica los cambios del editor `/nodos` (ultimo `backups/paths_*.txt`). Cada maniobra es una
 terna `A -> B -> C` (entra por A a B y sale por C) con contexto de ~40 m antes y ~45 m despues. Puntuacion: radio minimo
 < 4 m +100, < 4.5 m +70, < 6 m +20; el simulador se pierde +90, no llega +60, desvio > 3 m +40..80; tramo < 4 m con giro
 >= 30 grados +15. Un radio minimo de ~4.5 m es lo que puede girar un auto.

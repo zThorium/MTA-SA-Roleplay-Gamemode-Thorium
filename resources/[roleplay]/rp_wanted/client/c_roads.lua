@@ -1,6 +1,6 @@
 --[[
     rp_wanted / c_roads.lua
-    Red vial de Los Santos (la misma de rp_citizens, con los cambios del editor)
+    Red vial de todo San Andreas (la misma de rp_citizens, con los cambios del editor)
     y busqueda de rutas A* sobre el grafo dirigido de carriles
     (copia de rp_rides/client/c_graph.lua: las patrullas planean su ruta cada pocos segundos).
 ]]
