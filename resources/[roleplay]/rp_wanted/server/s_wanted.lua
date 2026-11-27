@@ -622,13 +622,18 @@ function spawnSpray(i, spot)
     end
 end
 
-addEventHandler("onPlayerQuit", root, function() sprayCooldown[source] = nil dutyNotice[source] = nil end)
+local garageAsk = {}   -- [player] = tick de la ultima peticion de rp:wanted:garages
+addEventHandler("onPlayerQuit", root, function() sprayCooldown[source] = nil dutyNotice[source] = nil garageAsk[source] = nil end)
 
 -- Portones de los garajes Pay 'n' Spray: getGarageBoundingBox solo existe en el
 -- cliente, que nos dice que garajes contienen los puntos; aqui se abren.
 addEvent("rp:wanted:garages", true)
 addEventHandler("rp:wanted:garages", resourceRoot, function(ids)
-    if type(ids) ~= "table" then return end
+    -- SEG-01: solo un cliente real, una peticion cada 5 s y una lista corta (los Pay 'n' Spray son pocos)
+    if not isElement(client) or type(ids) ~= "table" or #ids > 10 then return end
+    local now = getTickCount()
+    if garageAsk[client] and now - garageAsk[client] < 5000 then return end
+    garageAsk[client] = now
     for _, id in ipairs(ids) do
         id = tonumber(id)
         if id and id >= 0 and id <= 49 and id == math.floor(id) and not isGarageOpen(id) then setGarageOpen(id, true) end
