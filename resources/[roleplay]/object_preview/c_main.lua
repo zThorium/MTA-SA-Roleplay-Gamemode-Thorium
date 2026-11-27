@@ -1,3 +1,8 @@
+-- Thorium: los mensajes informativos de object_preview llenaban /debugscript 3 al generar miniaturas
+-- (rp_furniture, rp_mapeditor). Pon OBJPREV_VERBOSE = true para volver a verlos; los errores siguen saliendo.
+local OBJPREV_VERBOSE = false
+local function objPrevInfo(msg) if OBJPREV_VERBOSE then outputDebugString(msg) end end
+
 -- 
 -- c_main.lua
 --
@@ -20,7 +25,7 @@ function objectPreview:create(element,rotX,rotY,rotZ,projPosX,projPosY,projSizeX
 		projPosX, projPosY, projSizeX, projSizeY = projPosX / scx, projPosY / scy, projSizeX / scx, projSizeY / scy
 	end
 	local elementType = getElementType(element)
-	outputDebugString('objPrev: Identified element as: '..tostring(elementType))
+	objPrevInfo('objPrev: Identified element as: '..tostring(elementType))
 	if elementType =="ped" or elementType =="player" then 
 		elementType = "ped"
 	end
@@ -70,13 +75,13 @@ function objectPreview:create(element,rotX,rotY,rotZ,projPosX,projPosY,projSizeX
 			outputDebugString('objPrev: Can not create a preview. MRT in shaders not supported')
 			return false
 		end
-		outputDebugString('objPrev: Creating fx_pre_'..elementType..'.fx')
+		objPrevInfo('objPrev: Creating fx_pre_'..elementType..'.fx')
 		new.shader[1] = dxCreateShader("fx/fx_pre_"..elementType..".fx", 0, 0, false, "all")
 		if not glRenderTarget then
 			glRenderTarget = dxCreateRenderTarget( scx, scy, true )
 		end
 	else
-		outputDebugString('objPrev: Creating fx_pre_'..elementType..'_noMRT.fx')
+		objPrevInfo('objPrev: Creating fx_pre_'..elementType..'_noMRT.fx')
 		new.shader[1] = dxCreateShader("fx/fx_pre_"..elementType.."_noMRT.fx", 0, 0, false, "all")	
 	end
 	if not new.shader[1] then 
@@ -104,7 +109,7 @@ function objectPreview:create(element,rotX,rotY,rotZ,projPosX,projPosY,projSizeX
 	end
 	addEventHandler( "onClientPreRender", root, new.onPreRender, true, "low-5" )
     setmetatable(new, objectPreview_mt)
-	outputDebugString('objPrev: Created ID: '..new.renID..' for: '..tostring(elementType)) 
+	objPrevInfo('objPrev: Created ID: '..new.renID..' for: '..tostring(elementType)) 
 	return new
 end
 
@@ -136,7 +141,7 @@ function objectPreview:destroy()
 		end
 		self.shader = nil
 	end
-	outputDebugString('objPrev: Destroyed ID: '..renID) 
+	objPrevInfo('objPrev: Destroyed ID: '..renID) 
 	self.element = nil
 end
 
@@ -147,14 +152,14 @@ function objectPreview:createTextureReplace(texElement, texName)
 			outputDebugString('objPrev: Can not create a preview. MRT in shaders not supported')
 			return false
 		end
-		outputDebugString('objPrev: Creating fx_pre_'..self.elementType..'_replace.fx')
+		objPrevInfo('objPrev: Creating fx_pre_'..self.elementType..'_replace.fx')
 		elementNr = #self.shader + 1
 		self.shader[elementNr] = dxCreateShader("fx/fx_pre_"..self.elementType.."_replace.fx", 0, 0, false, "all")
 		if not glRenderTarget then
 			glRenderTarget = dxCreateRenderTarget( scx, scy, true )
 		end
 	else
-		outputDebugString('objPrev: Creating fx_pre_'..self.elementType..'_replace_noMRT.fx')
+		objPrevInfo('objPrev: Creating fx_pre_'..self.elementType..'_replace_noMRT.fx')
 		self.shader[elementNr] = dxCreateShader("fx/fx_pre_"..self.elementType.."_replace_noMRT.fx", 0, 0, false, "all")	
 	end
 	if not self.shader[elementNr] then 
@@ -183,7 +188,7 @@ function objectPreview:destroyTextureReplace(elementNr)
 			engineRemoveShaderFromWorldTexture(self.shader[elementNr], "*", self.element)
 			destroyElement(self.shader[elementNr])
 			self.shader[elementNr] = nil
-			outputDebugString('objPrev: Removed texture replace for ID: '..renID)
+			objPrevInfo('objPrev: Removed texture replace for ID: '..renID)
 			return true
 		end
 	end
@@ -429,7 +434,7 @@ addEventHandler( "onClientHUDRender", root, function()
 	if (isMRTUsed == false) and glRenderTarget then
 		destroyElement( glRenderTarget )
 		glRenderTarget = nil
-		outputDebugString('objPrev : no MRT objects visible - destroyed RT')
+		objPrevInfo('objPrev : no MRT objects visible - destroyed RT')
 	end
 end, true, "low-10" )
 

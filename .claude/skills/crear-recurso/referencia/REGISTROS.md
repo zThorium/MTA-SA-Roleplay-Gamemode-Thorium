@@ -24,6 +24,7 @@ grep -rhoE 'setElementData\([^,]+, *"rp:[^"]+"' --include=*.lua "resources/[role
 | 23000 + n | `rp_shootingrange` | una por jugador dentro del campo de tiro (`DIM_BASE + 1..500`) |
 | 25000 + id | `rp_restaurants` | Burger Shot, Cluckin' Bell y pizzerías |
 | 26000 + slot | `rp_pizzeria` | una por turno de pizzero (`DIM_BASE + 1..500`, interior 5) |
+| 27000 + id | `rp_mapeditor` | borrador de cada proyecto de mapa (`DIMENSION_BASE + id`); la dimensión de publicación la elige el builder |
 | 30001 | `rp_agency` | agencia de empleo |
 | 65000 | `rp_pickupfx` | solo en el cliente: aparca los pickups originales mientras se ve su copia animada |
 

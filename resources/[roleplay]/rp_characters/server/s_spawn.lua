@@ -57,11 +57,18 @@ function saveCharacter(player, toHospital)
 
     local x, y, z = getElementPosition(player)
     local _, _, rot = getElementRotation(player)
+    local int, dim = getElementInterior(player), getElementDimension(player)
+    -- Posicion real mientras el jugador esta en una herramienta que lo mueve (rp_mapeditor):
+    -- elementData de servidor "rp:savePos" = { x, y, z, rot, interior, dimension }
+    local hold = getElementData(player, "rp:savePos")
+    if type(hold) == "table" and tonumber(hold[1]) then
+        x, y, z, rot, int, dim = hold[1], hold[2], hold[3], hold[4] or rot, hold[5] or 0, hold[6] or 0
+    end
     -- La skin sale de la fila (no del modelo actual) para no guardar una prenda en prueba
     return dbExec(db(),
         "UPDATE characters SET skin = ?, money = ?, health = ?, armor = ?, pos_x = ?, pos_y = ?, pos_z = ?, rotation = ?, interior = ?, dimension = ? WHERE id = ?",
         tonumber(row.skin) or getElementModel(player), getPlayerMoney(player), getElementHealth(player), getPedArmor(player),
-        x, y, z, rot, getElementInterior(player), getElementDimension(player), row.id)
+        x, y, z, rot, int, dim, row.id)
 end
 
 -- Respawn en el hospital con la vida completa (lo usa rp_injury tras desangrarse)

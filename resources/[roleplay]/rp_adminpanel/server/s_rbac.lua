@@ -16,6 +16,8 @@
     nuevo en PERMS hay que asignarlo a mano desde la pestana IAM.
 ]]
 
+addEvent("rp:adminpanel:permsChanged", false)
+
 SUPER_LEVEL = 3
 ROLE_NAMES = { [0] = "Jugador", [1] = "Admin", [2] = "Admin senior", [3] = "Super admin" }
 
@@ -32,6 +34,8 @@ PERMS = {
     { key = "vehicles.create", group = "Vehiculos", label = "Crear vehiculos con dueno (/makeveh)", min = 3 },
     { key = "commands.view",  group = "Panel",    label = "Ver el catalogo de comandos",   min = 1 },
     { key = "iam.manage",     group = "IAM",       label = "Gestionar rangos, permisos y niveles (solo super admin)", min = 3, locked = true },
+    -- players = true: se puede dar como excepcion a una cuenta sin rango de admin (rol builder)
+    { key = "world.build",    group = "Mundo",     label = "Editor de mapas (rol builder, /mapeditor)", min = 3, players = true },
 }
 PERM_BY_KEY = {}
 for _, p in ipairs(PERMS) do PERM_BY_KEY[p.key] = p end
@@ -47,10 +51,12 @@ function hasPermission(player, perm)
     if not isElement(player) or not PERM_BY_KEY[perm] then return false end
     local level = levelOf(player)
     if level >= SUPER_LEVEL then return true end
-    if level < 1 or PERM_BY_KEY[perm].locked then return false end
+    local def = PERM_BY_KEY[perm]
+    if def.locked or (level < 1 and not def.players) then return false end
     local id = exports.rp_login:getPlayerAccountId(player)
     local o = id and overrides[id]
     if o and o[perm] ~= nil then return o[perm] end
+    if level < 1 then return false end
     return rolePerms[level] and rolePerms[level][perm] == true or false
 end
 
@@ -91,6 +97,8 @@ function setOverride(accountId, perm, state)
     else
         return false
     end
+    -- otros recursos (rp_mapeditor) reaccionan al momento si una cuenta pierde un permiso
+    triggerEvent("rp:adminpanel:permsChanged", root, accountId, perm)
     return true
 end
 

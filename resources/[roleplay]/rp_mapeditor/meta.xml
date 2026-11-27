@@ -1,0 +1,81 @@
+<meta>
+    <info author="Thorium" name="rp_mapeditor" version="1.0.0" type="script" description="Editor de mapas en el juego (super admin y rol builder): proyectos en BD, borrador, publicación por versiones" />
+
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_login" />
+    <include resource="rp_notify" />
+    <include resource="rp_characters" />
+    <include resource="rp_adminpanel" />
+    <include resource="rp_markers" />
+    <include resource="rp_hud" />
+    <include resource="object_preview" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="shared/s_rules.lua" type="shared" />
+
+    <script src="server/s_models.lua" type="server" />
+    <script src="server/s_core.lua" type="server" />
+    <script src="server/s_spawn.lua" type="server" />
+    <script src="server/s_projects.lua" type="server" />
+    <script src="server/s_session.lua" type="server" />
+    <script src="server/s_elements.lua" type="server" />
+    <script src="server/s_mapfile.lua" type="server" />
+    <script src="server/s_commands.lua" type="server" />
+
+    <script src="client/c_world.lua" type="client" cache="false" />
+    <script src="client/c_camera.lua" type="client" cache="false" />
+    <script src="client/c_ui.lua" type="client" cache="false" />
+    <script src="client/c_thumbs.lua" type="client" cache="false" />
+    <script src="client/c_editor.lua" type="client" cache="false" />
+    <script src="client/c_input.lua" type="client" cache="false" />
+    <script src="client/c_draw.lua" type="client" cache="false" />
+
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="html/models.js" />
+    <file src="html/categories.js" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/sounds/drop_001.ogg" />
+    <file src="html/sounds/drop_002.ogg" />
+    <file src="html/sounds/drop_003.ogg" />
+    <file src="html/sounds/confirmation_001.ogg" />
+    <file src="html/sounds/confirmation_003.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/pluck_001.ogg" />
+    <file src="html/sounds/question_001.ogg" />
+    <file src="html/sounds/scroll_001.ogg" />
+
+    <file src="images/keys/keyboard_1.png" />
+    <file src="images/keys/keyboard_2.png" />
+    <file src="images/keys/keyboard_3.png" />
+    <file src="images/keys/keyboard_a.png" />
+    <file src="images/keys/keyboard_backspace.png" />
+    <file src="images/keys/keyboard_ctrl.png" />
+    <file src="images/keys/keyboard_d.png" />
+    <file src="images/keys/keyboard_delete.png" />
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/keyboard_enter.png" />
+    <file src="images/keys/keyboard_f.png" />
+    <file src="images/keys/keyboard_h.png" />
+    <file src="images/keys/keyboard_q.png" />
+    <file src="images/keys/keyboard_r.png" />
+    <file src="images/keys/keyboard_s.png" />
+    <file src="images/keys/keyboard_shift.png" />
+    <file src="images/keys/keyboard_w.png" />
+    <file src="images/keys/mouse_left.png" />
+    <file src="images/keys/mouse_right.png" />
+    <file src="images/keys/mouse_scroll.png" />
+
+    <export function="getPublishedMaps" type="server" />
+    <export function="getMapPoints" type="server" />
+    <export function="isMapPublished" type="server" />
+    <export function="validateMapElement" type="server" />
+    <export function="parseMapFile" type="server" />
+    <export function="rowsToMapFile" type="server" />
+</meta>
