@@ -1860,8 +1860,9 @@ local function pedalsFor(fwd, target, inCurve)
         brake = fwd > 1 and 1 or 0
     elseif err > 1 then
         accel = math.min(1, 0.3 + err / 12)
-    elseif err < (inCurve and -3 or -6) then
-        brake = math.min(1, (-err - (inCurve and 3 or 6)) / 15 + 0.2)
+    elseif err < -3 then
+        -- zona muerta corta: empieza a frenar suave antes, en vez de llegar pasado y frenar a fondo
+        brake = math.min(1, (-err - 3) / 15 + 0.2)
     end
     return accel, brake, false
 end
@@ -2520,7 +2521,8 @@ local function stageAhead(vehicle, s, f, now)
     end
 
     -- Sensores: frente (vehiculos/peatones/objetos) y bigotes laterales (solo paredes)
-    local reach = 8 + speed * 0.3
+    -- alcance >= distancia de frenada comoda: ve la cola con tiempo para frenar suave
+    local reach = 10 + speed * 0.55
     local frontHit, obstacle, gap = ray(vehicle, m, 0, reach, false)
     -- abanico: dos rayos de +-8 grados ven lo que queda medio carril al lado (motos, peatones)
     for _, a in ipairs({ 8, -8 }) do
@@ -2762,11 +2764,18 @@ local function stageDecide(vehicle, s, f, now)
     local isPlayerThing = obstacle and (obstacle == localPlayer or obstacle == getPedOccupiedVehicle(localPlayer))
     if obstacle then
         local otherSpeed = isElement(obstacle) and getElementType(obstacle) ~= "ped" and speedOf(obstacle) or 0
-        local safeGap = (4 + speed * 0.12) * (s.style and s.style.gap or 1)
-        if gap and gap < safeGap then target = 0 else target = math.min(target, otherSpeed + 3) end
-        -- tiempo hasta el choque: si se cierra demasiado rapido, frena a fondo
+        -- Velocidad segura (modelo de Gipps): la maxima con la que aun puede quedarse a s0 m del de
+        -- delante frenando suave (b m/s2), dejando ademas T s de separacion. Asi se acerca frenando
+        -- de a poco y mantiene la distancia en la fila, en vez de llegar mas rapido y frenar a fondo.
+        local g = s.style and s.style.gap or 1
+        local s0, T, b = 3.5 * g, 1.2 * g, 3.0
+        local vl = otherSpeed / 3.6
+        local free = (gap or 0) - s0 - (speed / 3.6) * T
+        target = math.min(target, math.sqrt(math.max(0, vl * vl + 2 * b * free)) * 3.6)
+        if gap and gap < s0 then target = 0 end
+        -- tiempo hasta el choque: solo una emergencia real frena a fondo
         local closing = (speed - otherSpeed) / 3.6
-        if gap and closing > 1 and gap / closing < 2.0 then target = 0 end
+        if gap and closing > 1 and gap / closing < 1.2 then target = 0 end
 
         -- Tras una marcha atras corta: intenta rodear el obstaculo en vez de repetir lo mismo
         if s.afterReverse then
