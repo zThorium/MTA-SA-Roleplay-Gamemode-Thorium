@@ -6,11 +6,12 @@
 TRAIN = {
     -- Trenes en la vía principal. station = nodo de la estación donde sale (espera en el andén y arranca);
     -- sin station, start = metros desde el nodo 1 de la vía (0..~18135).
-    -- Modelos: 538 Brown Streak (pasajeros) + 570 vagón; 537 Freight + 569 plataforma / 590 caja.
+    -- Modelos: 538 Brown Streak (pasajeros) + 570 vagón. Solo circulan trenes de pasajeros (sin el de
+    -- carga 537); dos, en lados opuestos del bucle, para que la espera en el andén sea la mitad.
     -- passenger = true: lleva pasajeros con boleto y aparece en los carteles LED de las estaciones.
     TRAINS = {
         { model = 538, carriages = { 570, 570, 570 }, station = 331, passenger = true }, -- sale de Unity Station (Los Santos)
-        { model = 537, carriages = { 569, 590, 569, 590 }, station = 597 },  -- carga: al otro lado del bucle (San Fierro)
+        { model = 538, carriages = { 570, 570, 570 }, station = 597, passenger = true }, -- al otro lado del bucle (Cranberry, San Fierro)
     },
     -- Recorrido completo (bucle LS-SF-LV de tracks.dat) contado desde esta estación:
     -- Unity → Market → Cranberry → Yellow Bell → Sobell → Linden → Unity
@@ -29,7 +30,7 @@ TRAIN = {
     CAR_CATCHUP = 4,          -- m/s máximos de corrección para recuperar su sitio (suave, sin saltos)
     DRIVER_SKIN = 255,        -- maquinista
 
-    SPEED = 22,               -- crucero (~80 km/h)
+    SPEED = 33.3,             -- crucero (120 km/h)
     ACCEL = 0.9,              -- arranque (m/s²)
     BRAKE = 0.8,              -- frenada hacia la estación (m/s²)
     STATION_STOP_MS = 20000,  -- espera en cada estación, como en el juego
@@ -43,12 +44,12 @@ TRAIN = {
 
     -- Bocina (cliente, solo con el tren cargado en tu juego)
     HORN_CHECK_MS = 250,
-    HORN_AHEAD = 110,         -- mira hasta esta distancia por delante del tren
+    HORN_AHEAD = 170,         -- mira hasta esta distancia por delante del tren (~5 s a 120 km/h)
     HORN_WIDTH = 3.2,         -- ancho de vía a cada lado
     HORN_MS = 1400,           -- duración de cada toque
 
     -- Cruces
-    CROSSING_APPROACH = 170,  -- metros antes del cruce en que bajan las barreras
+    CROSSING_APPROACH = 260,  -- metros antes del cruce en que bajan las barreras (~8 s a 120 km/h)
     CROSSING_CLEAR = 20,      -- metros que deja atrás la cola antes de subirlas
     CROSSING_SNAP = 40,       -- una barrera a más de esto de la vía no se acepta
     BARRIER_MODEL = 968,      -- brazo de barrera
