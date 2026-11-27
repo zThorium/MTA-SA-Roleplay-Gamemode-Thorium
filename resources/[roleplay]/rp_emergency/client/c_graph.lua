@@ -1,6 +1,6 @@
 --[[
     rp_emergency / c_graph.lua
-    Red vial de Los Santos: la misma de rp_citizens (con los cambios del editor /nodos).
+    Red vial de todo San Andreas: la misma de rp_citizens (con los cambios del editor /nodos).
     Aqui se calcula la ruta de la ambulancia con A* sobre el grafo dirigido de carriles
     (respeta sentidos y nunca da la vuelta en U en un nodo) y se convierte en puntos de
     conduccion por el carril derecho, con curvas Bezier en cada cruce, igual que el

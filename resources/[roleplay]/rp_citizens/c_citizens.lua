@@ -4,7 +4,7 @@
       - Cada jugador ve su propia poblacion (sin trafico de red, como en PS2).
       - Solo existen pocos NPC y solo cerca del jugador: aparecen fuera de
         camara y desaparecen al alejarse.
-      - Siguen la red de caminos original de GTA SA (c_nodes_ls.lua).
+      - Siguen la red de caminos original de GTA SA, todo el mapa (c_nodes_veh.lua / c_nodes_ped.lua).
       - Cada NPC es una maquina de estados finita con un tick de IA barato.
 
     Peatones:  WALK -> IDLE -> WALK ... | FLEE (disparos, arma apuntada, golpes)
@@ -55,6 +55,11 @@ local POP = {
         peds = { 16, 27, 50, 153, 155, 167, 179, 201, 206, 260, 261, 268, 7, 20, 44 },
         cars = { 413, 414, 422, 440, 456, 478, 482, 498, 499, 543, 554, 578, 600, 418, 459, 609 },
     },
+    -- Campo y pueblos (Red County, Flint, Whetstone, Tierra Robada, Bone County): granjeros y pickups
+    rural = {
+        peds = { 31, 32, 33, 34, 128, 129, 130, 131, 132, 133, 157, 158, 159, 160, 161, 162, 196, 197, 198, 199, 200, 201, 202 },
+        cars = { 422, 478, 543, 554, 600, 531, 440, 466, 489, 500, 579, 495, 455, 499, 475, 404 },
+    },
 }
 
 local ZONE_PROFILE = {
@@ -66,7 +71,28 @@ local ZONE_PROFILE = {
     ["Mulholland Intersection"] = "rich",
     ["Ocean Docks"] = "industrial", ["Los Santos International"] = "industrial", ["Commerce"] = "industrial",
     ["Verdant Bluffs"] = "industrial", ["Linden Side"] = "industrial",
+    -- San Fierro
+    ["Financial"] = "rich", ["Calton Heights"] = "rich", ["Paradiso"] = "rich", ["Palisades"] = "rich",
+    ["Juniper Hill"] = "rich", ["Avispa Country Club"] = "rich", ["Missionary Hill"] = "rich",
+    ["Ocean Flats"] = "ghetto", ["Juniper Hollow"] = "ghetto",
+    ["Doherty"] = "industrial", ["Easter Basin"] = "industrial", ["Easter Bay Airport"] = "industrial",
+    ["Easter Bay Chemicals"] = "industrial", ["Foster Valley"] = "industrial",
+    -- Las Venturas
+    ["The Strip"] = "rich", ["Rockshore West"] = "rich", ["Prickle Pine"] = "rich", ["Yellow Bell Golf Course"] = "rich",
+    ["Old Venturas Strip"] = "ghetto",
+    ["Las Venturas Airport"] = "industrial", ["LVA Freight Depot"] = "industrial", ["Whitewood Estates"] = "industrial",
 }
+
+-- Fuera de las tres ciudades (getZoneName con citiesonly) la poblacion es de campo
+local CITIES = { ["Los Santos"] = true, ["San Fierro"] = true, ["Las Venturas"] = true }
+
+-- Perfil de poblacion de un punto y nombre de su zona
+local function zoneProfile(x, y, z)
+    local zone = getZoneName(x, y, z, false)
+    local profile = ZONE_PROFILE[zone]
+    if not profile then profile = CITIES[getZoneName(x, y, z, true)] and "default" or "rural" end
+    return profile, zone
+end
 
 -- Bandas por barrio: parte de los peatones son de la banda local
 local GANGS = {
@@ -79,8 +105,8 @@ local GANGS = {
 local function pick(list) return list[math.random(#list)] end
 
 local function population(x, y, z)
-    local zone = getZoneName(x, y, z, false)
-    return POP[ZONE_PROFILE[zone] or "default"], zone
+    local profile, zone = zoneProfile(x, y, z)
+    return POP[profile], zone
 end
 
 local function pickPedSkin(x, y, z)
@@ -97,6 +123,7 @@ local BIKES = {
     ghetto = { 462, 463, 468, 586 },
     rich = { 461, 521, 522, 581 },
     industrial = { 462, 463, 468, 586 },
+    rural = { 463, 468, 471, 586 },
 }
 local BIKE_CHANCE = 0.15
 
@@ -113,8 +140,7 @@ local POLICE_BIKE = { 523, 284 }
 
 local function pickCarModel(x, y, z)
     if math.random() < BIKE_CHANCE then
-        local zone = getZoneName(x, y, z, false)
-        return pick(BIKES[ZONE_PROFILE[zone] or "default"])
+        return pick(BIKES[(zoneProfile(x, y, z))])
     end
     return pick(population(x, y, z).cars)
 end
@@ -1019,6 +1045,8 @@ local function intersect(px, py, dx, dy, qx, qy, ex, ey)
     if math.abs(den) < 0.05 then return nil end
     local t = ((qx - px) * ey - (qy - py) * ex) / den
     if t < 0 or t > 30 then return nil end
+    -- tambien por delante de q en su direccion (si no, la Bezier se pasa del final de la curva y vuelve atras)
+    if ((qx - px) * dy - (qy - py) * dx) / den < 0 then return nil end
     return px + dx * t, py + dy * t
 end
 
@@ -1224,6 +1252,22 @@ local function planSegment(s)
     local sx, sy, sz
     if last then
         sx, sy, sz = last[1], last[2], last[3]
+        -- En tramos cortos los arcos de dos nodos seguidos se solapan y el inicio de la curva nueva queda
+        -- detras del final de la anterior: la ruta retrocedia unos metros y el auto giraba de golpe 45-90
+        -- grados hacia ese punto antes de seguir. Esos puntos se quitan; su giro, cruce, semaforo y maniobra
+        -- pasan al siguiente punto que se conserva (o al ultimo de la ruta).
+        local ax0, ay0 = nodePos(VEH_NODES, A)
+        local ux, uy = dir(ax0, ay0, bx0, by0)
+        while pts[1] and (pts[1][1] - sx) * ux + (pts[1][2] - sy) * uy < 0.5 do
+            local drop = table.remove(pts, 1)
+            local keep = pts[1] or last
+            keep[4] = math.max(keep[4] or 0, drop[4] or 0)
+            for f = 5, 7 do if drop[f] and not keep[f] then keep[f] = drop[f] end end
+        end
+        if not pts[1] then
+            s.prev, s.node = B, C
+            return true
+        end
     else
         local ax, ay, az = nodePos(VEH_NODES, A)
         local bx, by = nodePos(VEH_NODES, B)
@@ -3866,11 +3910,11 @@ function citizenAdopt(ped)
     return true
 end
 
--- Barrio de un punto: perfil ("ghetto", "rich", "industrial", "default"), nombre de zona y
+-- Barrio de un punto: perfil ("ghetto", "rich", "industrial", "rural", "default"), nombre de zona y
 -- skins de la banda local (o nil). Lo usa c_hangouts.lua.
 function citizenZoneInfo(x, y, z)
-    local zone = getZoneName(x, y, z, false)
-    return ZONE_PROFILE[zone] or "default", zone, GANGS[zone]
+    local profile, zone = zoneProfile(x, y, z)
+    return profile, zone, GANGS[zone]
 end
 
 function citizenProfileSkin(profile)

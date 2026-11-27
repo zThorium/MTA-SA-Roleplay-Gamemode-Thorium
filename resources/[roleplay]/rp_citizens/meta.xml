@@ -1,7 +1,7 @@
 <meta>
     <!--
-        Poblacion ambiental del lado del cliente. c_nodes_ls.lua se genero desde
-        data/paths/NODES*.DAT de GTA SA (red de caminos original, solo Los Santos).
+        Poblacion ambiental del lado del cliente. c_nodes_veh.lua y c_nodes_ped.lua se generan desde
+        data/Paths/NODES*.DAT de GTA SA (red de caminos original, todo San Andreas) con tools/generar-nodos.ps1.
         Los cambios hechos con el editor (/nodos) se guardan en path_nodes / path_links.
     -->
     <info author="Thorium" name="RP Citizens" description="Peatones y trafico con maquina de estados sobre la red de caminos de GTA SA" version="1.1.0" type="script" />
@@ -19,7 +19,8 @@
     <script src="s_sync.lua" type="server" />
     <!-- Telemetria de conduccion (admins): telemetry/*.jsonl, ver tools/trafico -->
     <script src="s_telemetry.lua" type="server" />
-    <script src="c_nodes_ls.lua" type="client" />
+    <script src="c_nodes_veh.lua" type="client" />
+    <script src="c_nodes_ped.lua" type="client" />
     <script src="c_citizens.lua" type="client" />
     <script src="c_editor.lua" type="client" />
     <!-- Pasajeros y conductor ven el mismo trafico -->

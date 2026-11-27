@@ -242,7 +242,10 @@
         var down = null;
         renderer.domElement.addEventListener("pointerdown", function (ev) { down = { x: ev.clientX, y: ev.clientY, b: ev.button }; });
         renderer.domElement.addEventListener("pointerup", function (ev) {
-            if (down && down.b === 0 && Math.abs(ev.clientX - down.x) + Math.abs(ev.clientY - down.y) < 5) pick(ev);
+            var still = down && Math.abs(ev.clientX - down.x) + Math.abs(ev.clientY - down.y) < 5;
+            if (still && down.b === 0) pick(ev);
+            // clic derecho sin arrastrar (arrastrar con derecho desplaza la cámara): quita el destino
+            else if (still && down.b === 2 && hooks.onRightClick) hooks.onRightClick();
             down = null;
         });
         window.addEventListener("resize", resize);

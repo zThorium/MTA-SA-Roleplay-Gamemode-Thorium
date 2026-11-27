@@ -1,4 +1,4 @@
-// Carga la red vial de GTA SA (c_nodes_ls.lua) y le aplica los cambios del editor /nodos
+// Carga la red vial de GTA SA, todo el mapa (c_nodes_veh.lua) y le aplica los cambios del editor /nodos
 // (ultimo respaldo resources/[roleplay]/rp_citizens/backups/paths_*.txt, que es una copia de path_nodes/path_links).
 // Todos los indices son de Lua (base 1); los arreglos JS tienen una posicion 0 vacia para no mezclarlos.
 const fs = require('fs');
@@ -19,7 +19,7 @@ function luaTable(src, name) {
 }
 
 function loadNetwork(opts = {}) {
-  const src = '\n' + fs.readFileSync(path.join(RES, 'c_nodes_ls.lua'), 'utf8').split('\r\n').join('\n');
+  const src = '\n' + fs.readFileSync(path.join(RES, 'c_nodes_veh.lua'), 'utf8').split('\r\n').join('\n');
   const flat = luaTable(src, 'VEH_NODES');
   const net = {
     n: flat.length / 3,

@@ -1,11 +1,15 @@
 --[[
     rp_citizens / s_paths.lua
     Guarda en SQL los cambios del editor de rutas (/nodos) y los reparte en vivo
-    a todos los clientes. La red original viene de c_nodes_ls.lua; aqui solo se
+    a todos los clientes. La red original viene de c_nodes_veh.lua / c_nodes_ped.lua; aqui solo se
     guardan las diferencias (nodos movidos, nuevos, borrados y enlaces).
 ]]
 
-local BASE = { v = 5687, p = 12537 }   -- nodos de c_nodes_ls.lua
+local BASE = { v = 21560, p = 37650 }  -- nodos de c_nodes_veh.lua / c_nodes_ped.lua (los imprime tools/generar-nodos.ps1)
+-- Red 1 (solo Los Santos, c_nodes_ls.lua): sus indices siguen igual en la red 2, pero los nodos que el
+-- editor creo despues de ella (idx > OLD_BASE) chocan con los nuevos del mapa y se mueven detras de BASE.
+local OLD_BASE = { v = 5687, p = 12537 }
+local NET = 2
 local nextIdx = { v = BASE.v, p = BASE.p }
 local cache = { nodes = {}, links = {} } -- copia en memoria para enviar a quien entra
 
@@ -45,6 +49,7 @@ local function backup(force)
     lastBackup = now
     local rt = getRealTime()
     local name = ("backups/paths_%04d%02d%02d_%02d%02d%02d.txt"):format(rt.year + 1900, rt.month + 1, rt.monthday, rt.hour, rt.minute, rt.second)
+    if fileExists(name) then name = name:gsub("%.txt$", "_b.txt") end   -- dos respaldos en el mismo segundo (migracion)
     local f = fileCreate(name)
     if not f then return end
     for _, n in pairs(cache.nodes) do fileWrite(f, ("N %s %d %.3f %.3f %.3f %d\n"):format(n.t, n.i, n.x, n.y, n.z, n.d)) end
@@ -55,35 +60,66 @@ end
 local function saveNode(t, i, x, y, z, deleted)
     cache.nodes[nodeKey(t, i)] = { t = t, i = i, x = x, y = y, z = z, d = deleted and 1 or 0 }
     dbExec(db(), [[
-        INSERT INTO path_nodes (type, idx, x, y, z, deleted) VALUES (?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE x = VALUES(x), y = VALUES(y), z = VALUES(z), deleted = VALUES(deleted)
-    ]], t, i, x, y, z, deleted and 1 or 0)
+        INSERT INTO path_nodes (type, idx, x, y, z, deleted, net) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE x = VALUES(x), y = VALUES(y), z = VALUES(z), deleted = VALUES(deleted), net = VALUES(net)
+    ]], t, i, x, y, z, deleted and 1 or 0, NET)
 end
 
 local function saveLink(t, a, b, removed)
     if a > b then a, b = b, a end
     cache.links[linkKey(t, a, b)] = { t = t, a = a, b = b, r = removed and 1 or 0 }
-    dbExec(db(), "INSERT INTO path_links (type, a, b, removed) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE removed = VALUES(removed)",
-        t, a, b, removed and 1 or 0)
+    dbExec(db(), "INSERT INTO path_links (type, a, b, removed, net) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE removed = VALUES(removed), net = VALUES(net)",
+        t, a, b, removed and 1 or 0, NET)
 end
 
 ----------------------------------------------------------------
 -- Carga
 ----------------------------------------------------------------
+-- Pasa a la red 2 las filas guardadas con indices de la red 1 (una sola vez: luego todas tienen net = 2).
+-- Desplazar solo hacia arriba conserva a < b en los enlaces y no choca con nada (detras de BASE no hay filas).
+local function migrate(done)
+    local steps = {}
+    for t, old in pairs(OLD_BASE) do
+        local shift = BASE[t] - old
+        steps[#steps + 1] = { "UPDATE path_nodes SET idx = idx + ? WHERE type = ? AND net = 1 AND idx > ?", shift, t, old }
+        steps[#steps + 1] = { "UPDATE path_links SET a = a + IF(a > ?, ?, 0), b = b + IF(b > ?, ?, 0) WHERE type = ? AND net = 1",
+            old, shift, old, shift, t }
+    end
+    steps[#steps + 1] = { "UPDATE path_nodes SET net = ? WHERE net = 1", NET }
+    steps[#steps + 1] = { "UPDATE path_links SET net = ? WHERE net = 1", NET }
+    local function run(k)
+        if not steps[k] then return done() end
+        dbQuery(function(qh)
+            if not dbPoll(qh, 0) then return outputDebugString("[rp_citizens] Fallo al pasar las rutas a la red de todo el mapa", 1) end
+            run(k + 1)
+        end, db(), unpack(steps[k]))
+    end
+    run(1)
+end
+
 local function load()
+    cache.nodes, cache.links = {}, {}
+    nextIdx.v, nextIdx.p = BASE.v, BASE.p
+    local oldNet = false
     dbQuery(function(qh)
         for _, r in ipairs(dbPoll(qh, 0) or {}) do
             local i = tonumber(r.idx)
             cache.nodes[nodeKey(r.type, i)] = { t = r.type, i = i, x = r.x, y = r.y, z = r.z, d = tonumber(r.deleted) }
             if i > nextIdx[r.type] then nextIdx[r.type] = i end
+            oldNet = oldNet or tonumber(r.net) == 1
         end
         dbQuery(function(qh2)
             for _, r in ipairs(dbPoll(qh2, 0) or {}) do
                 local a, b = tonumber(r.a), tonumber(r.b)
                 cache.links[linkKey(r.type, a, b)] = { t = r.type, a = a, b = b, r = tonumber(r.removed) }
+                oldNet = oldNet or tonumber(r.net) == 1
+            end
+            backup(true)   -- con oldNet, este respaldo guarda los indices de la red 1
+            if oldNet then
+                outputDebugString("[rp_citizens] Pasando los cambios de rutas a la red de todo el mapa...")
+                return migrate(load)
             end
             outputDebugString("[rp_citizens] Cambios de rutas cargados")
-            backup(true)
         end, db(), "SELECT * FROM path_links")
     end, db(), "SELECT * FROM path_nodes")
 end

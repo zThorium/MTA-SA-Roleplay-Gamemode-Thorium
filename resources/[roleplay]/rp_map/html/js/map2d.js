@@ -417,6 +417,11 @@
                 if (hooks.onClick) hooks.onClick(w[0], w[1], sectorAt(w[0], w[1]));
             }
         });
+        // Clic derecho: quita el destino marcado
+        wrap.addEventListener("contextmenu", function (ev) {
+            ev.preventDefault();
+            if (active && hooks.onRightClick) hooks.onRightClick();
+        });
         wrap.addEventListener("wheel", function (ev) {
             if (!active) return;
             ev.preventDefault();

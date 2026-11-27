@@ -34,7 +34,7 @@ Se generan desde la instalación local de GTA SA (la ruta se lee del registro de
 | Archivo | Origen | ¿En el repo? |
 |---|---|---|
 | `html/data/map.jpg` | 144 tiles del radar (`gta3.img`, mismo lector que `rp_hud/tools/RadarExtract.cs`), 3072 px | Sí (subido a petición del dueño del repo) |
-| `html/data/roads.js`, `client/c_roads.lua` | `data/Paths/NODES0-63.DAT`: 28 991 nodos de calle y 29 810 tramos, 11 524 de ellos de un solo sentido (calzadas separadas). El sentido sale de los carriles de los navi nodes; el script elige solo la convención comprobando que en las autovías la calzada contraria quede a la izquierda (13 478 casos frente a 1988) | Sí (datos derivados, como `rp_citizens/c_nodes_ls.lua`) |
+| `html/data/roads.js`, `client/c_roads.lua` | `data/Paths/NODES0-63.DAT`: 28 991 nodos de calle y 29 810 tramos, 11 524 de ellos de un solo sentido (calzadas separadas). El sentido sale de los carriles de los navi nodes; el script elige solo la convención comprobando que en las autovías la calzada contraria quede a la izquierda (13 478 casos frente a 1988) | Sí (datos derivados, como `rp_citizens/c_nodes_veh.lua`) |
 | `html/data/buildings.js` | IDE + IPL de texto + IPL binarios de `gta3.img` + caja de colisión de cada modelo (`.col`). Se descartan los LOD, el terreno, las carreteras, la vegetación y las piezas inclinadas | Sí |
 | `html/data/terrain.js`, `shared/s_land.lua` | Relieve por vértice de 50 m (media de la altura de calles y edificios) y máscara de tierra y agua del radar | Sí |
 

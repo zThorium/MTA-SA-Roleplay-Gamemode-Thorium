@@ -1,6 +1,6 @@
 --[[
     rp_rides / c_graph.lua
-    Red vial de Los Santos (la misma de rp_citizens, con los cambios del editor)
+    Red vial de todo San Andreas (la misma de rp_citizens, con los cambios del editor)
     y busqueda de rutas A* sobre el grafo dirigido de carriles.
 ]]
 

@@ -18,7 +18,7 @@ Alcance: lectura de `rp_citizens` (c_citizens.lua 1550 líneas, c_editor.lua, s_
 ## 2. Cómo funciona hoy
 
 ### 2.1 Red de rutas
-- `c_nodes_ls.lua` (706 KB): `VEH_NODES/LINKS/LANES/OFFSET/LIGHT` y `PED_NODES/LINKS`, generados desde NODES*.DAT de GTA SA. Solo Los Santos.
+- `c_nodes_ls.lua` (706 KB): `VEH_NODES/LINKS/LANES/OFFSET/LIGHT` y `PED_NODES/LINKS`, generados desde NODES*.DAT de GTA SA. Solo Los Santos. (Hoy: `c_nodes_veh.lua` / `c_nodes_ped.lua`, todo el mapa.)
 - Rejilla espacial de celdas de 100 m para buscar nodos cercanos (`buildGrid`, `nearestNode`, `randomNodeAround`).
 - El editor `/nodos` guarda diferencias en `path_nodes`/`path_links` (SQL) y las reparte en vivo (`s_paths.lua`). Los enlaces nuevos asumen 1 carril y 2.5 m de offset.
 - Cada enlace a→b tiene nº de carriles y desplazamiento a la derecha; semáforo por enlace (`getLight`).
@@ -73,7 +73,7 @@ Alcance: lectura de `rp_citizens` (c_citizens.lua 1550 líneas, c_editor.lua, s_
 | 12 | Cada jugador ve una ciudad distinta | Todo es local; no sirve para escenas compartidas (policías, accidentes, rol) |
 | 13 | Tras abandonar el auto el NPC "huye" y desaparece | Sin respuesta emocional ni testigos |
 | 14 | 4 copias de la lógica de conducción | `ray`, `tryDetour`, pure pursuit, A*, grafo duplicados entre recursos |
-| 15 | Solo Los Santos | Grafo generado solo para LS (el resto del mapa queda sin tráfico) |
+| 15 | ~~Solo Los Santos~~ (resuelto) | El grafo cubre todo San Andreas: `c_nodes_veh.lua` / `c_nodes_ped.lua` generados con `rp_citizens/tools/generar-nodos.ps1` (los índices de LS no cambian) |
 
 ## 4. Plan priorizado (impacto vs. esfuerzo)
 
