@@ -8,7 +8,7 @@
 local OWNERS = {
     { "rp_bank" }, { "rp_shops" }, { "rp_properties" }, { "rp_clothing" }, { "rp_vending" },
     { "rp_dealers" }, { "rp_robbery" }, { "rp_gym", "machine" }, { "rp_gym", "trainer" },
-    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" },
+    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" }, { "rp_markers" },
 }
 
 test("admin_exports_de_elementos", function(t)
@@ -36,4 +36,44 @@ test("admin_columnas_jail_y_mute", function(t)
         if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
         t.pass("accounts.ojail_minutes, ojail_reason y mute_until accesibles")
     end, "SELECT ojail_minutes, ojail_reason, mute_until FROM accounts LIMIT 1")
+end)
+
+-- Vista ALT: tabla de creadores (alta, nombres con FIND_IN_SET como en s_inspect.lua y baja)
+test("admin_creadores_de_elementos", function(t)
+    query(function(_, affected, _, code, msg)
+        if not affected or affected < 1 then return t.fail(("insert: [%s] %s"):format(tostring(code), tostring(msg))) end
+        query(function(rows)
+            local r = rows and rows[1]
+            if not r or r.admin_name ~= "rptest" then return t.fail("no se leyo el creador guardado") end
+            query(function(_, del)
+                if del ~= 1 then return t.fail("no se borro la fila de prueba") end
+                t.pass("creador guardado, leido y borrado")
+            end, "DELETE FROM admin_world_creators WHERE type_key = 'rptest' AND element_id = 987654321")
+        end, "SELECT admin_name FROM admin_world_creators WHERE type_key = 'rptest' AND FIND_IN_SET(element_id, ?)", "1,987654321")
+    end, [[INSERT INTO admin_world_creators (type_key, element_id, account_id, admin_name) VALUES ('rptest', 987654321, NULL, 'rptest')
+           ON DUPLICATE KEY UPDATE admin_name = VALUES(admin_name)]])
+end)
+
+-- Editor de mover (c_move.lua): todo recurso de WORLD_TYPES exporta adminMove y rechaza un id que no existe
+test("admin_exports_mover", function(t)
+    for _, o in ipairs(OWNERS) do
+        local res = getResourceFromName(o[1])
+        if not res or getResourceState(res) ~= "running" then return t.fail(o[1] .. " no esta running") end
+        local ok, done = pcall(call, res, "adminMove", 987654321, o[2], 0, 0, 3, 0)
+        if not ok then return t.fail(o[1] .. " no exporta adminMove") end
+        if done ~= false then return t.fail(o[1] .. ":adminMove de un id inexistente no devolvio false") end
+    end
+    t.pass(("%d tipos con adminMove"):format(#OWNERS))
+end)
+
+-- Marcadores movibles (rp_markers/s_points.lua): tabla marker_points y placePoint sin movimiento
+test("admin_marcadores_movibles", function(t)
+    local res = getResourceFromName("rp_markers")
+    if not res or getResourceState(res) ~= "running" then return t.fail("rp_markers no esta running") end
+    local x, y, z = exports.rp_markers:placePoint("rptest_punto", 1, 2, 3)
+    if x ~= 1 or y ~= 2 or z ~= 3 then return t.fail("placePoint cambio un punto que nadie movio") end
+    query(function(rows, _, _, code, msg)
+        if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
+        t.pass("marker_points accesible")
+    end, "SELECT id, marker_key, base_x, x FROM marker_points LIMIT 1")
 end)

@@ -694,15 +694,32 @@ local function teleportPlayer(player, to, interior, dimension)
     end, 280, 1)
 end
 
-local function createVenues()
-    for _, v in ipairs(POOL.VENUES) do
+-- Posicion efectiva de una puerta (la de POOL.VENUES o la que movio un admin, rp_markers).
+-- `follow` (donde apareces al cruzarla) se desplaza lo mismo que la puerta.
+local function placeDoor(p, key, follow)
+    p.base = p.base or { p.x, p.y, p.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint(key, p.base[1], p.base[2], p.base[3]) end)
+    if not (ok and x) then x, y, z = p.base[1], p.base[2], p.base[3] end
+    p.x, p.y, p.z = x, y, z
+    follow.base = follow.base or { follow.x, follow.y, follow.z }
+    follow.x, follow.y, follow.z = follow.base[1] + x - p.base[1], follow.base[2] + y - p.base[2], follow.base[3] + z - p.base[3]
+end
+
+local function createVenue(n, v)
+    for _, el in ipairs(v.els or {}) do if isElement(el) then destroyElement(el) end end
+    do
+        placeDoor(v.exterior, "venue" .. n .. "_ext", v.exteriorSpawn)
+        placeDoor(v.interior, "venue" .. n .. "_int", v.interiorSpawn)
         local e, i = v.exterior, v.interior
         local m1 = createMarker(e.x, e.y, e.z - 0.1, "cylinder", 1.3, 245, 165, 36, 90)
         setElementInterior(m1, e.interior); setElementDimension(m1, e.dimension)
         local m2 = createMarker(i.x, i.y, i.z - 0.1, "cylinder", 1.1, 245, 165, 36, 90)
         setElementInterior(m2, i.interior); setElementDimension(m2, i.dimension)
+        v.els = { m1, m2 }
         exports.rp_markers:setMarkerStyle(m1, { icon = "enter", label = v.name })
         exports.rp_markers:setMarkerStyle(m2, { icon = "exit", label = "Salir" })
+        exports.rp_markers:registerMarker(m1, "venue" .. n .. "_ext", { label = v.name .. " · entrada", point = { e.x, e.y, e.z } })
+        exports.rp_markers:registerMarker(m2, "venue" .. n .. "_int", { label = v.name .. " · salida", point = { i.x, i.y, i.z } })
         addEventHandler("onMarkerHit", m1, function(el, sameDim)
             if getElementType(el) == "player" and sameDim and not isPedInVehicle(el) and characterOf(el) then
                 teleportPlayer(el, v.interiorSpawn, i.interior, i.dimension)
@@ -715,6 +732,18 @@ local function createVenues()
         end)
     end
 end
+
+local function createVenues()
+    for n, v in ipairs(POOL.VENUES) do createVenue(n, v) end
+end
+
+-- Un admin movio una puerta con el editor (rp_admin): rehacer esa sala
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    local n = tonumber(tostring(key):match("^venue(%d+)_"))
+    if n and POOL.VENUES[n] then createVenue(n, POOL.VENUES[n]) end
+end)
 
 ----------------------------------------------------------------
 -- Admin
@@ -745,7 +774,8 @@ function adminElements()
         local row = e
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = "Mesa de pool" .. (e.native and " (del mapa)" or "") }
+                interior = row.interior, dimension = row.dimension, label = "Mesa de pool" .. (e.native and " (del mapa)" or ""),
+                rot = tonumber(e.rz) or 0, element = e.object }
         end
     end
     return list
@@ -756,6 +786,21 @@ function adminDelete(id)
     if not id or not tables[id] then return false, "no existe" end
     destroyTable(id)
     dbExec(db(), "DELETE FROM pool_tables WHERE id = ?", id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): solo mesas propias y sin partida
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local T = id and tables[id]
+    if not T then return false, "no existe" end
+    if T.native then return false, "es una mesa del mapa original" end
+    if T.status ~= "idle" then return false, "hay una partida en la mesa" end
+    local interior, dimension = T.interior, T.dimension
+    dbExec(db(), "UPDATE pool_tables SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    destroyTable(id)
+    local N = spawnTable({ id = id, x = x, y = y, z = z, rotation = rot, interior = interior, dimension = dimension, native = 0 })
+    triggerClientEvent(root, "rp:pool:tables", resourceRoot, { tableInfo(N) }, { stateOf(N) })
     return true
 end
 

@@ -453,7 +453,13 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = 0, dimension = 0, label = row.name .. (row.owner_id and (" (con dueno #" .. tostring(row.owner_id) .. ")") or " (en venta)") }
+                interior = 0, dimension = 0, label = row.name .. (row.owner_id and (" (con dueno #" .. tostring(row.owner_id) .. ")") or " (en venta)"),
+                ownerId = tonumber(row.owner_id), createdAt = row.created_at,
+                info = ("tipo %s, $%s%s"):format(tostring(row.type), tostring(row.price),
+                    row.source == "enex" and ", entrada del mapa original" or ""),
+                noRot = true, element = e.pickup,
+                exit = e.exit and { x = e.exit.x, y = e.exit.y, z = e.exit.z, interior = e.exit.interior, dimension = dimensionOf(id),
+                    rot = tonumber(e.exit.rot) or 0, element = e.exitMarker } }
         end
     end
     return list
@@ -465,6 +471,27 @@ function adminDelete(id)
     dbExec(db(), "DELETE FROM properties WHERE id = ?", id)
     triggerEvent("rp:prop:deleted", root, id)
     destroyProperty(id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT). part = "exit" mueve la salida dentro del interior
+-- (se guarda como interior propio: int_id/ix/iy/iz/irot); si no, la puerta de la calle (sin giro).
+function adminMove(id, _, x, y, z, rot, _, part)
+    id = tonumber(id)
+    local p = id and props[id]
+    if not p then return false, "no existe" end
+    local row = p.row
+    if part == "exit" then
+        local t = interiorOf(row)
+        if not t then return false, "tipo de interior desconocido" end
+        row.int_id, row.ix, row.iy, row.iz, row.irot = t.interior, x, y, z - 1, rot   -- interiorOf suma 1 a iz
+        dbExec(db(), "UPDATE properties SET int_id = ?, ix = ?, iy = ?, iz = ?, irot = ? WHERE id = ?",
+            row.int_id, row.ix, row.iy, row.iz, row.irot, id)
+    else
+        row.x, row.y, row.z = x, y, z
+        dbExec(db(), "UPDATE properties SET x = ?, y = ?, z = ? WHERE id = ?", x, y, z, id)
+    end
+    spawnProperty(row)
     return true
 end
 

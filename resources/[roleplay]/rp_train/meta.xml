@@ -81,4 +81,5 @@
     <export function="getTrainEta" type="server" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

@@ -435,7 +435,8 @@ function stationAdminElements(kind)
             local fence = kind == "fence" and TrainFenceModel(tonumber(row.model))
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
                 interior = row.interior, dimension = row.dimension,
-                label = ("%s (%s)"):format(fence and fence.name or KIND_NAME[kind], getStationName(row.station) or "?") }
+                label = ("%s (%s)"):format(fence and fence.name or KIND_NAME[kind], getStationName(row.station) or "?"),
+                rot = tonumber(row.rot) or 0, element = f.obj or f.post or f.ped or f.el }
         end
     end
     return list
@@ -447,5 +448,19 @@ function stationAdminDelete(id, kind)
     if not f or f.row.kind ~= kind then return false, "no existe" end
     dbExec(db(), "DELETE FROM train_fixtures WHERE id = ?", id)
     destroyFixture(id)
+    return true
+end
+
+-- La llama adminMove (s_crossings.lua) desde el editor de rp_admin (vista ALT)
+function stationAdminMove(id, kind, x, y, z, rot)
+    id = tonumber(id)
+    local f = id and fixtures[id]
+    if not f or f.row.kind ~= kind then return false, "no existe" end
+    local row = f.row
+    rot = rot % 360
+    dbExec(db(), "UPDATE train_fixtures SET x = ?, y = ?, z = ?, rot = ? WHERE id = ?", x, y, z, rot, id)
+    destroyFixture(id)
+    row.x, row.y, row.z, row.rot = x, y, z, rot
+    spawnFixture(row)
     return true
 end

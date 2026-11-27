@@ -393,6 +393,12 @@ end, 1000, 0)
 -- Sedes y puntos de venta
 ----------------------------------------------------------------
 local function createStaticPoints()
+    for _, p in ipairs(staticPoints) do
+        if isElement(p.marker) then destroyElement(p.marker) end
+        if isElement(p.blip) then destroyElement(p.blip) end
+    end
+    staticPoints = {}
+    jobsResolvePoints()   -- un admin pudo moverlas con el editor (rp_markers)
     for _, job in ipairs(JOBS) do
         -- Los trabajos externos (p. ej. rp_pizzeria) crean su propia sede
         if not job.external then
@@ -526,6 +532,13 @@ end)
 ----------------------------------------------------------------
 -- Ciclo de vida
 ----------------------------------------------------------------
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner ~= getResourceName(resource) then return end
+    createStaticPoints()
+    refreshOwnBlip()
+end)
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
     createStaticPoints()
     refreshOwnBlip()

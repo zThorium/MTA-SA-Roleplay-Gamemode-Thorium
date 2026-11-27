@@ -12,8 +12,18 @@
     <script src="s_commands.lua" type="server" />
     <script src="s_world.lua" type="server" />
     <script src="s_owl.lua" type="server" />
+    <script src="s_inspect.lua" type="server" />
+    <script src="s_move.lua" type="server" />
     <script src="c_freecam.lua" type="client" />
     <script src="c_debug.lua" type="client" cache="false" />
+    <script src="c_inspect.lua" type="client" cache="false" />
+    <script src="c_move.lua" type="client" cache="false" />
+    <file src="images/tecla_alt.png" />
+    <file src="images/tecla_enter.png" />
+    <file src="images/tecla_retroceso.png" />
+    <file src="images/tecla_mayus.png" />
+    <file src="images/raton_izq.png" />
+    <file src="images/raton_der.png" />
 
     <export function="isFreecamActive" type="client" />
 </meta>

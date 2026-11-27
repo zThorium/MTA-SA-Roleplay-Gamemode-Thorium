@@ -101,7 +101,8 @@ function adminElements(kind)
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = e.closed and "Barrera (cerrada)" or "Barrera (abierta)" }
+                interior = row.interior, dimension = row.dimension, label = e.closed and "Barrera (cerrada)" or "Barrera (abierta)",
+                rot = tonumber(row.rot) or 0, element = e.base }
         end
     end
     return list
@@ -113,6 +114,20 @@ function adminDelete(id, kind)
     if not id or not crossings[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM rail_crossings WHERE id = ?", id)
     destroyCrossing(id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT). Con `kind` es una pieza de estacion (s_stations.lua)
+function adminMove(id, kind, x, y, z, rot)
+    if kind then return stationAdminMove(id, kind, x, y, z, rot) end
+    id = tonumber(id)
+    local c = id and crossings[id]
+    if not c then return false, "no existe" end
+    local row = c.row
+    row.x, row.y, row.z, row.rot = x, y, z, rot
+    dbExec(db(), "UPDATE rail_crossings SET x = ?, y = ?, z = ?, rot = ? WHERE id = ?", x, y, z, rot, id)
+    destroyCrossing(id)
+    spawnCrossing(row)
     return true
 end
 

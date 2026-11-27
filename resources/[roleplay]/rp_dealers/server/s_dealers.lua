@@ -151,7 +151,8 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = "Traficante skin " .. tostring(row.ped_skin) }
+                interior = row.interior, dimension = row.dimension, label = "Traficante skin " .. tostring(row.ped_skin),
+                rot = tonumber(row.rotation) or 0, element = e.ped }
         end
     end
     return list
@@ -162,6 +163,18 @@ function adminDelete(id)
     if not id or not dealers[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM dealers WHERE id = ?", id)
     destroyDealer(id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): guarda y vuelve a crear el traficante
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local d = id and dealers[id]
+    if not d then return false, "no existe" end
+    local row = d.row
+    row.x, row.y, row.z, row.rotation = x, y, z, rot
+    dbExec(db(), "UPDATE dealers SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    spawnDealer(row)
     return true
 end
 

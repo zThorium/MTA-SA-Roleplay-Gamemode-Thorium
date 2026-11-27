@@ -144,7 +144,14 @@ addEventHandler("onClientRender", root, function()
     dxDrawText(text, x, y, x + w, y + 36, tocolor(242, 244, 248), 1.1, "default-bold", "center", "center")
 end)
 
+addEvent("rp:markers:moved")
+-- Un admin movio el mostrador: recalcular su posicion (rp_markers)
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then rangeResolveDesk() end
+end)
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
+    rangeResolveDesk()
     bindKey("e", "down", function()
         if not nearDesk or not canInteract() then return end
         triggerServerEvent("rp:range:open", resourceRoot)

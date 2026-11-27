@@ -564,17 +564,36 @@ end)
 -- Pay 'n' Spray: borra la busqueda si ningun policia te ve entrar
 ----------------------------------------------------------------
 local sprayCooldown = {}
+local spawnSpray   -- mas abajo
 
 addEventHandler("onResourceStart", resourceRoot, function()
     outputServerLog("[rp_wanted] Busqueda policial iniciada (/busquedainfo, /delitosdebug)")
     for _, p in ipairs(getElementsByType("player")) do
         if characterOf(p) then loadMaxLevel(p, characterOf(p)) end
     end
-    for _, spot in ipairs(WANTED.SPRAYS) do
+    for i, spot in ipairs(WANTED.SPRAYS) do spawnSpray(i, spot) end
+end)
+
+-- Un admin movio un Pay 'n' Spray con el editor (rp_admin): rehacerlo en el sitio nuevo
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    local i = tonumber(tostring(key):match("^spray(%d+)$"))
+    if i and WANTED.SPRAYS[i] then spawnSpray(i, WANTED.SPRAYS[i]) end
+end)
+
+-- Marcador + blip de un Pay 'n' Spray. Posicion: la de WANTED.SPRAYS o la movida por un admin (rp_markers)
+function spawnSpray(i, spot)
+    for _, el in ipairs(spot.els or {}) do if isElement(el) then destroyElement(el) end end
+    spot.base = spot.base or { spot.x, spot.y, spot.z }
+    local ok, nx, ny, nz = pcall(function() return exports.rp_markers:placePoint("spray" .. i, spot.base[1], spot.base[2], spot.base[3]) end)
+    if ok and nx then spot.x, spot.y, spot.z = nx, ny, nz end
+    do
         local marker = createMarker(spot.x, spot.y, spot.z - 1, "cylinder", 4, 245, 165, 36, 60)
         setElementData(marker, "rp:spray", spot.name, false)
         exports.rp_markers:setMarkerStyle(marker, { icon = "car", label = spot.name })
-        createBlip(spot.x, spot.y, spot.z, 63, 2, 255, 255, 255, 255, 0, 400)
+        exports.rp_markers:registerMarker(marker, "spray" .. i, { label = spot.name, point = { spot.x, spot.y, spot.z } })
+        spot.els = { marker, createBlip(spot.x, spot.y, spot.z, 63, 2, 255, 255, 255, 255, 0, 400) }
         addEventHandler("onMarkerHit", marker, function(player, sameDim)
             if not sameDim or getElementType(player) ~= "player" then return end
             local vehicle = getPedOccupiedVehicle(player)
@@ -601,7 +620,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
             end
         end)
     end
-end)
+end
 
 addEventHandler("onPlayerQuit", root, function() sprayCooldown[source] = nil dutyNotice[source] = nil end)
 

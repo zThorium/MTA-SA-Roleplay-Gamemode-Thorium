@@ -19,4 +19,5 @@
     <file src="html/app.js" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

@@ -289,7 +289,11 @@ function FD.placePoint(kind, x, y, z, rot, silent)
     local style = POINT_STYLE[kind]
     if style then
         pt.marker = createMarker(x, y, z - 1, "cylinder", 1.2, 235, 90, 40, 140)
-        pcall(function() exports.rp_markers:setMarkerStyle(pt.marker, { icon = style.icon, label = style.label, color = { 235, 90, 40 } }) end)
+        pcall(function()
+            exports.rp_markers:setMarkerStyle(pt.marker, { icon = style.icon, label = style.label, color = { 235, 90, 40 } })
+            -- Movible con el editor de rp_admin; se guarda en fire_points (rp:markers:moved, abajo)
+            exports.rp_markers:registerMarker(pt.marker, kind, { label = style.label, point = { x, y, z }, ownerSaves = true })
+        end)
     end
     if kind == "locker" then
         local b = FIRE.STATION_BLIP
@@ -299,6 +303,16 @@ function FD.placePoint(kind, x, y, z, rot, silent)
     if silent then return end          -- al arrancar, los clientes los piden con requestPoints
     triggerClientEvent(root, "rp:firefighters:points", resourceRoot, FD.pointsForClient())
 end
+
+-- Un admin movio un punto con el editor (rp_admin): se guarda como con /fdmover
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, kind, x, y, z, admin)
+    if owner ~= getResourceName(resource) or not POINT_STYLE[kind] or not x then return end
+    local rot = points[kind] and points[kind].rot or 0
+    dbExec(FD.db(), "REPLACE INTO fire_points (kind, x, y, z, rot) VALUES (?, ?, ?, ?, ?)", kind, x, y, z, rot)
+    FD.placePoint(kind, x, y, z, rot)
+    FD.log(("%s movio el punto %s con el editor"):format(isElement(admin) and getPlayerName(admin) or "?", kind))
+end)
 
 function FD.pointsForClient()
     local out = {}

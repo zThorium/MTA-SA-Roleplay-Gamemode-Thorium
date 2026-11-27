@@ -903,21 +903,38 @@ addEventHandler("rp:races:acceptInvite", root, function()
     tryJoin(client, races[inv.race])
 end)
 
+-- Marcador del menu de una pista. Va en la salida de la pista salvo que un admin lo haya movido
+-- con el editor (rp_markers); mover el marcador NO mueve la pista.
+local worldMarkers = {}
+local function createWorldMarker(i, t)
+    for _, el in ipairs(worldMarkers[i] or {}) do if isElement(el) then destroyElement(el) end end
+    local s = t.start
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint("track" .. i, s[1], s[2], s[3]) end)
+    if not (ok and x) then x, y, z = s[1], s[2], s[3] end
+    local m = createMarker(x, y, z - 1, "cylinder", RACE.MARKER_SIZE, 255, 190, 30, 140)
+    setElementDimension(m, 0)
+    local b = createBlip(x, y, z, 53, 2, 255, 255, 255, 255, 0, 700)
+    setElementData(m, "rp:raceTrack", i, false)
+    exports.rp_markers:setMarkerStyle(m, { icon = "flag", label = t.name })
+    exports.rp_markers:registerMarker(m, "track" .. i, { label = "Carrera · " .. t.name, point = { x, y, z } })
+    worldMarkers[i] = { m, b }
+    addEventHandler("onMarkerHit", m, function(hit, matching)
+        if not matching or getElementType(hit) ~= "player" or isPedInVehicle(hit) then return end
+        openMenu(hit, i)
+    end)
+end
+
 local function createWorldMarkers()
-    for i, t in ipairs(RACE_TRACKS) do
-        local s = t.start
-        local m = createMarker(s[1], s[2], s[3] - 1, "cylinder", RACE.MARKER_SIZE, 255, 190, 30, 140)
-        setElementDimension(m, 0)
-        local b = createBlip(s[1], s[2], s[3], 53, 2, 255, 255, 255, 255, 0, 700)
-        setElementData(m, "rp:raceTrack", i, false)
-        exports.rp_markers:setMarkerStyle(m, { icon = "flag", label = t.name })
-        addEventHandler("onMarkerHit", m, function(hit, matching)
-            if not matching or getElementType(hit) ~= "player" or isPedInVehicle(hit) then return end
-            openMenu(hit, i)
-        end)
-    end
+    for i, t in ipairs(RACE_TRACKS) do createWorldMarker(i, t) end
 end
 createWorldMarkers()
+
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    local i = tonumber(tostring(key):match("^track(%d+)$"))
+    if i and RACE_TRACKS[i] then createWorldMarker(i, RACE_TRACKS[i]) end
+end)
 
 ----------------------------------------------------------------
 -- Bloqueos y limpieza

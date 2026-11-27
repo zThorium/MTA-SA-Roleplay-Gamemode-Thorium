@@ -388,16 +388,29 @@ addEventHandler("onClientRender", root, function()
 end)
 
 ----------------------------------------------------------------
+-- Marcador de la puerta exterior. La posicion puede haberla movido un admin (rp_markers):
+-- se rehace al arrancar y en rp:markers:moved
+local entranceMarker
+local function spawnEntranceMarker()
+    if isElement(entranceMarker) then destroyElement(entranceMarker) end
+    agencyResolvePoints()
+    local e = AGENCY.ENTRANCE
+    entranceMarker = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, 245, 165, 36, 90)
+    if entranceMarker then
+        exports.rp_markers:setMarkerStyle(entranceMarker, { icon = "job", label = "Agencia de empleo" })
+        objects[#objects + 1] = entranceMarker
+    end
+end
+
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then spawnEntranceMarker() end
+end)
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
     buildRoom()
     bindKey("e", "down", onE)
-    -- Texto sobre la puerta exterior
-    local e = AGENCY.ENTRANCE
-    local m = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, 245, 165, 36, 90)
-    if m then
-        exports.rp_markers:setMarkerStyle(m, { icon = "job", label = "Agencia de empleo" })
-        objects[#objects + 1] = m
-    end
+    spawnEntranceMarker()
 end)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()

@@ -511,7 +511,33 @@ local function unload(player)
     if isElement(player) then setElementData(player, "rp:job", false) end
 end
 
+-- Sedes y puntos de venta: sus marcadores los dibuja el cliente; aqui se apuntan en rp_markers para
+-- que los admins los muevan con el editor (ALT / M + clic derecho) y se usa la posicion movida
+local function registerJobPoints()
+    jobsResolvePoints()
+    pcall(function()
+        for _, job in ipairs(JOBS) do
+            local h = job.hq
+            if not job.external and h then
+                exports.rp_markers:registerPoint("hq_" .. job.id, { label = "Sede · " .. job.name, point = { h.x, h.y, h.z },
+                    interior = h.interior or 0, dimension = h.dimension or 0 })
+            end
+        end
+        for _, mk in ipairs(MARKETS) do
+            exports.rp_markers:registerPoint("market_" .. mk.id, { label = "Venta · " .. mk.name, point = { mk.x, mk.y, mk.z } })
+        end
+    end)
+end
+
+addEvent("rp:markers:moved")
+addEvent("rp:markers:ready")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then registerJobPoints() end
+end)
+addEventHandler("rp:markers:ready", root, registerJobPoints)
+
 addEventHandler("onResourceStart", resourceRoot, function()
+    registerJobPoints()
     local function loadAll()
         for _, p in ipairs(getElementsByType("player")) do
             if characterOf(p) then load(p) end

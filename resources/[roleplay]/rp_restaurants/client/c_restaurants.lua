@@ -51,7 +51,14 @@ local function buy(index)
     closeMenu()
 end
 
+addEvent("rp:markers:moved")
+-- Un admin movio una puerta: recalcular las posiciones (rp_markers)
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then restaurantResolvePoints() end
+end)
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
+    restaurantResolvePoints()
     bindKey("e", "down", function()
         if menuLoc then return closeMenu() end
         if blocked() then return end

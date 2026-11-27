@@ -51,7 +51,8 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = 0, dimension = 0, label = row.name }
+                interior = 0, dimension = 0, label = row.name,
+                rot = tonumber(row.rot) or 0, element = e.pickup }
         end
     end
     return list
@@ -64,6 +65,20 @@ function adminDelete(id)
     if store.robbery then endRobbery(store.robbery, "admin") end
     dbExec(db(), "DELETE FROM robbery_stores WHERE id = ?", id)
     destroyStore(id)
+    return true
+end
+
+-- Mover la entrada desde el editor de rp_admin (vista ALT); no durante un robo
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local store = id and STORES[id]
+    if not store then return false, "no existe" end
+    if store.robbery then return false, "hay un robo en curso" end
+    local row = store.row
+    row.x, row.y, row.z, row.rot = x, y, z, rot
+    row.points = toJSON(store.points or {}, true)   -- conservar los puntos editados desde la carga
+    dbExec(db(), "UPDATE robbery_stores SET x = ?, y = ?, z = ?, rot = ? WHERE id = ?", x, y, z, rot, id)
+    spawnStore(row)
     return true
 end
 

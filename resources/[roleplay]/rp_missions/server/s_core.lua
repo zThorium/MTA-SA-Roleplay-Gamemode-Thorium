@@ -104,6 +104,9 @@ function M.spawnContactPoint(contact)
     local bl = createBlip(P.x, P.y, P.z, 0, 2, c[1], c[2], c[3], 255, 0, 350)
     setElementData(mk, "rp:mcontact", contact)
     exports.rp_markers:setMarkerStyle(mk, { icon = "star", label = C.name })
+    -- Movible con el editor de rp_admin (nivel 2, como /mmover); se guarda en mission_points
+    exports.rp_markers:registerMarker(mk, contact, { label = "Misiones · " .. C.name, point = { P.x, P.y, P.z },
+        ownerSaves = true, level = 2 })
     M.markers[contact] = { mk, bl }
     addEventHandler("onMarkerHit", mk, function(hit, dimOk)
         if getElementType(hit) ~= "player" or not dimOk or isPedInVehicle(hit) then return end
@@ -111,6 +114,15 @@ function M.spawnContactPoint(contact)
         M.sendMenu(hit, contact)
     end)
 end
+
+-- Un admin movio el punto con el editor (rp_admin, nivel 2 comprobado en rp_markers): como /mmover
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, contact, x, y, z)
+    if owner ~= getResourceName(resource) or not M.points[contact] or not x then return end
+    M.points[contact] = { x = x, y = y, z = z }
+    dbExec(M.db(), "INSERT INTO mission_points (contact, x, y, z) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE x = VALUES(x), y = VALUES(y), z = VALUES(z)", contact, x, y, z)
+    M.spawnContactPoint(contact)
+end)
 
 function M.loadPoints()
     for contact, p in pairs(MISSIONS.CONTACT_POINTS) do M.points[contact] = { x = p.x, y = p.y, z = p.z } end

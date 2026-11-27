@@ -174,10 +174,11 @@ local function buildStations()
     for _, el in ipairs(stationElements) do if isElement(el) then destroyElement(el) end end
     for _, st in ipairs(stations) do if isElement(st.ped) then destroyElement(st.ped) end end
     stationElements, stationOfMarker = {}, {}
-    for _, st in ipairs(stations) do
+    for i, st in ipairs(stations) do
         local m = createMarker(st.x, st.y, st.z - 1, "cylinder", FUEL.MARKER_RADIUS, 255, 210, 40, 70)
         setElementData(m, "rp:fuelStation", st.name)
         exports.rp_markers:setMarkerStyle(m, { icon = "fuel", label = st.name })
+        exports.rp_markers:registerMarker(m, "station" .. i, { label = "Bencinera · " .. st.name, point = { st.x, st.y, st.z }, ownerSaves = true })
         stationOfMarker[m] = st
         st.marker = m
         stationElements[#stationElements + 1] = m
@@ -188,6 +189,17 @@ end
 
 addEventHandler("onResourceStart", resourceRoot, function()
     loadStations()
+    buildStations()
+end)
+
+-- Un admin movio la bencinera con el editor (rp_admin): se guarda como con /moverbencinera
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key, x, y, z)
+    if owner ~= getResourceName(resource) then return end
+    local st = stations[tonumber(tostring(key):match("^station(%d+)$")) or -1]
+    if not st or not x then return end
+    st.x, st.y, st.z = x, y, z
+    saveStations()
     buildStations()
 end)
 

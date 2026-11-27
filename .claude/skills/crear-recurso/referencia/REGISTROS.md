@@ -50,6 +50,7 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27
 | Y / N | aceptar / rechazar invitaciones (`rp_missions`, `rp_races`, `rp_citizens`). ⚠️ Y también abre el chat de susurro (`rp_chat`) |
 | E / Retroceso | aceptar / rechazar propuestas de otra persona (`rp_interact`), solo mientras hay una en pantalla |
 | Espacio, Retroceso, flechas, A/D | controles contextuales de minijuegos (`rp_gym`, `rp_driving`, `rp_races`) solo mientras estás en ellos |
+| ALT (mantener) | vista de admin (`rp_admin`, solo nivel 1+): etiquetas con ID, dueño y creador sobre lo cercano |
 | F1 | ayuda · F3 facciones · F4 decorar · F5 carreras · F6 MDT policial · F7 mostrar/ocultar HUD (`rp_hud`) · F9 recursos · F10 panel admin |
 | F11 | mapa propio (`rp_map`, sustituye al de GTA; Esc lo cierra) |
 | F12 / Tab / T | reservadas por MTA/GTA (captura, lista, chat) |

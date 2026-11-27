@@ -1753,4 +1753,36 @@ SCHEMA = {
         CONSTRAINT fk_text3d_log_text FOREIGN KEY (text3d_id) REFERENCES text3d (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_admin: que admin creo cada elemento del mundo (cajeros, maquinas, torniquetes...).
+    -- type_key es la clave de WORLD_TYPES (rp_admin/s_world.lua); lo muestra la vista con ALT
+    [[
+    CREATE TABLE IF NOT EXISTS admin_world_creators (
+        type_key   VARCHAR(24)  NOT NULL,
+        element_id INT UNSIGNED NOT NULL,
+        account_id INT UNSIGNED NULL,
+        admin_name VARCHAR(64)  NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (type_key, element_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_markers: puntos fijos con marcador (puertas, mostradores, Pay 'n' Spray...) que los admins
+    -- mueven con el editor. marker_key = "<recurso>:<clave>"; base_* = posicion de la config cuando se
+    -- movio (si la config cambia, se descarta el movimiento); x/y/z NULL = en su sitio de la config
+    [[
+    CREATE TABLE IF NOT EXISTS marker_points (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        marker_key VARCHAR(96)  NOT NULL,
+        label      VARCHAR(64)  NOT NULL DEFAULT '',
+        base_x     FLOAT        NOT NULL,
+        base_y     FLOAT        NOT NULL,
+        base_z     FLOAT        NOT NULL,
+        x          FLOAT        NULL,
+        y          FLOAT        NULL,
+        z          FLOAT        NULL,
+        moved_by   VARCHAR(64)  NULL,
+        moved_at   DATETIME     NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_marker_points_key (marker_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -32,20 +32,38 @@ end
 ----------------------------------------------------------------
 -- Mundo: marcadores, blips y empleados
 ----------------------------------------------------------------
-local function spawnLocation(loc)
+-- Puertas (marcadores y blip). Se rehacen si un admin las mueve con el editor (rp_markers)
+local function spawnDoors(loc)
+    for _, el in ipairs(loc.doorEls or {}) do if isElement(el) then destroyElement(el) end end
     local brand = RESTAURANTS.BRANDS[loc.brand]
-    local dim = restaurantDimension(loc)
     local r, g, b = unpack(brand.color)
-
     local entryM = createMarker(loc.x, loc.y, loc.z - 1, "cylinder", 1.2, r, g, b, 120)
     exports.rp_markers:setMarkerStyle(entryM, { icon = "food", label = loc.name })
-    createBlip(loc.x, loc.y, loc.z, brand.blip, 2, 255, 255, 255, 255, 0, 400)
+    exports.rp_markers:registerMarker(entryM, "loc" .. loc.id, { label = loc.name .. " · entrada", point = { loc.x, loc.y, loc.z } })
+    local blip = createBlip(loc.x, loc.y, loc.z, brand.blip, 2, 255, 255, 255, 255, 0, 400)
 
     local e = brand.entry
     local exitM = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, r, g, b, 120)
     setElementInterior(exitM, brand.interior)
-    setElementDimension(exitM, dim)
+    setElementDimension(exitM, restaurantDimension(loc))
     exports.rp_markers:setMarkerStyle(exitM, { icon = "exit", label = "Salir" })
+    exports.rp_markers:registerMarker(exitM, "exit_" .. loc.brand, { label = ("Salida %s (todos los locales)"):format(loc.brand), point = { e.x, e.y, e.z } })
+    loc.doorEls = { entryM, blip, exitM }
+end
+
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    restaurantResolvePoints()
+    for _, loc in ipairs(RESTAURANTS.LOCATIONS) do
+        if RESTAURANTS.BRANDS[loc.brand] and (key == "loc" .. loc.id or key == "exit_" .. loc.brand) then spawnDoors(loc) end
+    end
+end)
+
+local function spawnLocation(loc)
+    local brand = RESTAURANTS.BRANDS[loc.brand]
+    local dim = restaurantDimension(loc)
+    spawnDoors(loc)
 
     local c = brand.clerk
     local ped = createPed(c.skin, c.x, c.y, c.z, c.rot)
@@ -57,6 +75,7 @@ local function spawnLocation(loc)
 end
 
 addEventHandler("onResourceStart", resourceRoot, function()
+    restaurantResolvePoints()
     for _, loc in ipairs(RESTAURANTS.LOCATIONS) do
         if RESTAURANTS.BRANDS[loc.brand] then
             spawnLocation(loc)

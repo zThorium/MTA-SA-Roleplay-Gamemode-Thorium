@@ -27,4 +27,5 @@
     <file src="sounds/pos_ok.wav" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

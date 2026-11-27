@@ -16,7 +16,14 @@ local function nearbyDoor()
     end
 end
 
+addEvent("rp:markers:moved")
+-- Un admin movio una puerta: recalcular las posiciones (rp_markers)
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then ammuResolvePoints() end
+end)
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
+    ammuResolvePoints()
     bindKey("e", "down", function()
         if isCursorShowing() or isChatBoxInputActive() or isConsoleActive() or isPedInVehicle(localPlayer) then return end
         local loc = nearbyDoor()

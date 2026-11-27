@@ -21,3 +21,16 @@ AMMU = {
 }
 
 function ammuDimension(loc) return 22000 + loc.id end
+
+-- Posiciones efectivas de las puertas: las de arriba o las que movio un admin con el editor
+-- (rp_markers guarda el movimiento). Servidor y cliente la llaman al arrancar y en rp:markers:moved.
+local function place(p, key)
+    p.base = p.base or { p.x, p.y, p.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint(key, p.base[1], p.base[2], p.base[3]) end)
+    if ok and x then p.x, p.y, p.z = x, y, z end
+end
+
+function ammuResolvePoints()
+    for _, loc in ipairs(AMMU.LOCATIONS) do place(loc, "loc" .. loc.id) end
+    place(AMMU.ENTRY, "exit")
+end

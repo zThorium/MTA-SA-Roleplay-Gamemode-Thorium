@@ -66,7 +66,9 @@ function adminElements(kind)
     for id, e in pairs(kind == "trainer" and gymTrainerList() or gymMachineList()) do
         local row = e.row
         list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-            interior = row.interior, dimension = row.dimension, label = e.cfg and e.cfg.label or "" }
+            interior = row.interior, dimension = row.dimension, label = e.cfg and e.cfg.label or "",
+            rot = tonumber(row.rotation) or 0, element = e.object or e.ped,
+            info = kind == "trainer" and gymIsFixedId(id) and "fijo del gimnasio (no se mueve ni borra)" or nil }
     end
     return list
 end
@@ -83,6 +85,32 @@ function adminDelete(id, kind)
     if not id or not gymMachineList()[id] then return false, "no existe" end
     gymDestroyMachine(id)
     dbExec(gymDb(), "DELETE FROM gym_machines WHERE id = ?", id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT). x, y, z es el punto del jugador (la maquina va desplazada)
+function adminMove(id, kind, x, y, z, rot)
+    id = tonumber(id)
+    if kind == "trainer" then
+        local t = id and gymTrainerList()[id]
+        if not t then return false, "no existe" end
+        if gymIsFixedId(id) then return false, "es el entrenador fijo del gimnasio (GYM_FIXED)" end
+        if t.fight then return false, "esta en un combate" end
+        local row = t.row
+        gymDestroyTrainer(id)
+        row.x, row.y, row.z, row.rotation = x, y, z, rot
+        dbExec(gymDb(), "UPDATE gym_trainers SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+        gymSpawnTrainer(row)
+        return true
+    end
+    local m = id and gymMachineList()[id]
+    if not m then return false, "no existe" end
+    if gymIsMachineBusy(id) then return false, "alguien esta entrenando en ella" end
+    local row = m.row
+    gymDestroyMachine(id)
+    row.x, row.y, row.z, row.rotation = x, y, z, rot
+    dbExec(gymDb(), "UPDATE gym_machines SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    gymSpawnMachine(row)
     return true
 end
 
