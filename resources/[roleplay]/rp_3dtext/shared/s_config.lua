@@ -14,8 +14,19 @@ TEXT3D = {
     BOB_SPEED      = 2.2,
     GOLD           = { 255, 205, 60 },    -- color del halo, el haz, el anillo y las chispas
     FX_DISTANCE    = 35,     -- metros: mas lejos no se dibujan halo, haz ni chispas
-    SPARKS_PER_S   = 9,      -- chispas por segundo y por icono
-    MAX_SPARKS     = 160,    -- tope total de chispas vivas
+    SPARKS_PER_S   = 9,      -- chispas por segundo y por icono (en calidad alta)
+    LOS_MS         = 200,    -- cada cuanto se comprueba si una pared tapa el texto
+
+    -- Calidad (PCs de bajos recursos), igual que rp_pickupfx: arranca segun "Calidad de efectos"
+    -- de los ajustes de MTA y baja sola un nivel si los FPS medios caen de MIN_FPS (relativo al
+    -- fpslimit del servidor). Nunca sube sola.
+    MIN_FPS        = 30,
+    FPS_WINDOW_MS  = 3000,
+    QUALITY = {
+        { maxFx = 4,  animDistance = 25, maxSparks = 0,   sparkRate = 0,   beam = false, wave = false },  -- bajo
+        { maxFx = 8,  animDistance = 40, maxSparks = 50,  sparkRate = 0.5, beam = true,  wave = false },  -- medio
+        { maxFx = 12, animDistance = 60, maxSparks = 160, sparkRate = 1,   beam = true,  wave = true  },  -- alto
+    },
 
     -- Tarjeta de texto (cliente)
     DRAW_DISTANCE  = 8,      -- metros: mas lejos no se ve

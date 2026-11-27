@@ -1,5 +1,11 @@
 # Auditoría de rp_3dtext
 
+## 2026-11-27 · mejorar (rendimiento en PCs de bajos recursos)
+- **Motivo**: Fabián pide que los efectos no generen lag en PCs de bajos recursos.
+- **Nota**: 100 → 100.
+- **Cambios**: tres niveles de calidad (`QUALITY`): arranca según "Calidad de efectos" de los ajustes de MTA del jugador y baja sola un nivel si los FPS medios caen de `MIN_FPS` (relativo al `fpslimit` del servidor) durante `FPS_WINDOW_MS`; nunca sube sola. En calidad baja: sin chispas, haz ni onda, halo más pequeño, menos elementos con efectos y animación solo de cerca (CLI-02). Fuera de cada fotograma: animación solo a menos de `animDistance`; en `rp_pickupfx` el estado "recogido" llega por `onClientElementDataChange` y el alfa se toca solo al cambiar; en `rp_3dtext` la línea de visión del texto se comprueba cada `LOS_MS` y hay tope de iconos con efectos.
+- **Probar en juego**: con "Calidad de efectos" baja en los ajustes de MTA, los pickups giran y brillan sin chispas ni haz; con `/debugscript 3`, si el PC baja de 30 FPS sale `calidad de efectos baja a N`; comparar FPS con y sin `stop rp_pickupfx` en una calle con muchas casas.
+
 ## 2026-11-27 · mejorar (efectos del icono)
 - **Motivo**: Fabián lo probó en juego: funciona, pero pide el texto más centrado y un icono más vistoso (shader animado, partículas, efectos y sonido).
 - **Nota**: 100 → 100.
