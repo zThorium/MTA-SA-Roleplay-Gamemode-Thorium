@@ -196,6 +196,41 @@ local function spawnHeli(player)
     sendUnit(player, unit)
 end
 
+-- Lancha Predator (persecucion por mar): piloto y tirador con el uniforme de la ciudad
+local function spawnBoat(player, x, y, z, rot)
+    local p = pursuitOf(player)
+    local level = getWantedLevel(player)
+    local _, skin, _, weapon = resolveFleet("police", x, y, z)
+    local boat = createVehicle(WANTED_BOAT.MODEL, x, y, z + 0.5, 0, 0, rot)
+    if not boat then return end
+    local unit = newUnit("boat", "police")
+    unit.vehicle = boat
+    unit.vehicles[1] = boat
+    setVehicleEngineState(boat, true)
+    setElementData(boat, "rp:copCar", true)
+    register(player, unit, boat)
+    local seats = math.max(1, getVehicleMaxPassengers(boat) + 1)
+    for seat = 0, math.min(WANTED_BOAT.CREW, seats) - 1 do
+        local ped = createPed(skin, x, y, z + 2)
+        if ped then
+            warpPedIntoVehicle(ped, boat, seat)
+            armCop(ped, weapon, level, seat)
+            unit.peds[#unit.peds + 1] = ped
+            register(player, unit, ped)
+        end
+    end
+    p.units[unit.id] = unit
+    sendUnit(player, unit)
+    return unit
+end
+
+-- El jugador esta en el agua: en un barco o nadando
+local function atSea(player)
+    local v = getPedOccupiedVehicle(player)
+    if v then return getVehicleType(v) == "Boat" or isElementInWater(v) end
+    return isElementInWater(player)
+end
+
 -- Control de carretera: 2 patrullas atravesadas y 2 policias a pie detras
 local function spawnRoadblock(player, x, y, z, rot)
     local p = pursuitOf(player)
@@ -326,7 +361,9 @@ local function dispatch(player, p)
     local now = nowMs()
 
     -- Limpieza: muy lejos, sin policias vivos o sobrantes al bajar de nivel
-    local cars, helis = {}, 0
+    local cars, helis, boats = {}, 0, {}
+    local sea = atSea(player)
+    if sea then p.seaAt = now end
     for _, unit in pairs(p.units) do
         if not unit.leaving then
             local d = unitDistance(player, unit)
@@ -337,6 +374,8 @@ local function dispatch(player, p)
                 unit.timer = setTimer(function() removeUnit(player, unit, false) end, WANTED_DISPATCH.BODY_TIME, 1)
             elseif unit.kind == "car" then
                 cars[#cars + 1] = { unit = unit, d = d }
+            elseif unit.kind == "boat" then
+                boats[#boats + 1] = { unit = unit, d = d }
             elseif unit.kind == "heli" then
                 helis = helis + 1
                 if helis > cfg.heli then
@@ -355,9 +394,30 @@ local function dispatch(player, p)
         sendUnit(player, unit)
         unit.timer = setTimer(function() removeUnit(player, unit, true) end, WANTED_DISPATCH.LEAVE_TIME, 1)
     end
+    -- Lanchas: sobran las que pasan del cupo del nivel; todas se van tras un rato en tierra
+    local maxBoats = WANTED_BOAT.PER_LEVEL[level] or 1
+    if not sea and now - (p.seaAt or 0) > WANTED_BOAT.LAND_LEAVE_MS then maxBoats = 0 end
+    table.sort(boats, function(a, b) return a.d < b.d end)
+    for i = maxBoats + 1, #boats do
+        local unit = boats[i].unit
+        unit.leaving = true
+        sendUnit(player, unit)
+        unit.timer = setTimer(function() removeUnit(player, unit, true) end, WANTED_DISPATCH.LEAVE_TIME, 1)
+    end
 
     if now < p.next or p.pending then return end
     p.next = now + WANTED_DISPATCH.TICK
+
+    -- Por el agua no llegan patrullas, controles ni pinchos: salen lanchas (y el helicoptero, si toca)
+    if sea then
+        if #boats < maxBoats then
+            p.pending = { kind = "boat", at = now }
+            triggerClientEvent(player, "rp:wanted:spawnRequest", resourceRoot, "boat")
+        elseif helis < cfg.heli then
+            spawnHeli(player)
+        end
+        return
+    end
 
     if #cars < cfg.cars then
         p.pending = { kind = "car", at = now }
@@ -451,6 +511,8 @@ addEventHandler("rp:wanted:spawnAt", resourceRoot, function(kind, x, y, z, rot)
     if d < 30 or d > 320 then return end
     if kind == "car" then
         spawnCar(player, x, y, z, rot)
+    elseif kind == "boat" then
+        spawnBoat(player, x, y, z, rot)
     elseif kind == "roadblock" and not p.roadblock then
         spawnRoadblock(player, x, y, z, rot)
     elseif kind == "spikes" and not p.spikes then

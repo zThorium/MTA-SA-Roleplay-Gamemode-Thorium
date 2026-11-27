@@ -56,4 +56,6 @@
     <export function="citizenWatch" type="client" />
     <!-- rp_npcrel: toma un peaton para conversar con el -->
     <export function="citizenAdopt" type="client" />
+    <!-- rp_wanted: punto de agua navegable para las lanchas de la policia -->
+    <export function="citizenBoatSpot" type="client" />
 </meta>

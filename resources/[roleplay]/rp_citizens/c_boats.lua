@@ -486,6 +486,28 @@ addEventHandler("onClientResourceStop", resourceRoot, function()
     clearBoats()
 end)
 
+-- Export (cliente): punto de agua navegable sobre la red de barcos a [minD, maxD] m del jugador, de preferencia
+-- fuera de la vista. Devuelve x, y, z (nivel del agua), rumbo hacia el jugador; nil si no hay agua cerca.
+-- Lo usa rp_wanted para que aparezcan las lanchas de la policia.
+function citizenBoatSpot(minD, maxD)
+    if not grid then return nil end
+    local px, py = getElementPosition(localPlayer)
+    minD, maxD = tonumber(minD) or 100, tonumber(maxD) or 220
+    local fallback
+    for _ = 1, 8 do
+        local node, x, y, z = randomNodeAround(px, py, minD, maxD)
+        if node then
+            local water = waterAt(x, y, z)
+            if water then
+                local spot = { x, y, water, heading(px - x, py - y) }
+                if not (citizenIsVisible and citizenIsVisible(x, y, water)) then return unpack(spot) end
+                fallback = fallback or spot
+            end
+        end
+    end
+    if fallback then return unpack(fallback) end
+end
+
 -- Para /poblacioninfo y diagnosticos
 function citizenBoatCount()
     return boatCount, BOAT_NODES and #BOAT_NODES / 3 or 0
