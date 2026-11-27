@@ -185,6 +185,9 @@ setTimer(function()
             local d, i = getElementDimension(player), getElementInterior(player)
             if getElementDimension(v.obj) ~= d then setElementDimension(v.obj, d) end
             if getElementInterior(v.obj) ~= i then setElementInterior(v.obj, i) end
+            -- dueño invisible (editor de mapas, admin oculto) o con el cuerpo oculto: la mochila tampoco se ve
+            local a = (getElementAlpha(player) == 0 or getElementData(player, "rp:hideBody") == true) and 0 or 255
+            if getElementAlpha(v.obj) ~= a then setElementAlpha(v.obj, a) end
 
             local world = d .. ":" .. i
             if v.world ~= world then

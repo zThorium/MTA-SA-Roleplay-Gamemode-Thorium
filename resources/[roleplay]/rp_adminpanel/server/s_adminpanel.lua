@@ -99,8 +99,39 @@ local function sendIam(admin)
         local roles, names = {}, {}
         for lv, set in pairs(getRolePerms()) do roles[tostring(lv)] = set end
         for lv, nm in pairs(ROLE_NAMES) do names[tostring(lv)] = nm end
-        send(admin, "iam", { perms = perms, roles = roles, roleNames = names, super = SUPER_LEVEL, admins = admins })
+        local data = { perms = perms, roles = roles, roleNames = names, super = SUPER_LEVEL, admins = admins, builders = {} }
+        -- rol builder: cuentas con excepcion "permitir" de world.build (pueden no ser admins)
+        dbQuery(function(qh2)
+            for _, r in ipairs(dbPoll(qh2, 0) or {}) do
+                data.builders[#data.builders + 1] = { id = tonumber(r.id), username = r.username, level = tonumber(r.admin_level) or 0 }
+            end
+            if isElement(admin) then send(admin, "iam", data) end
+        end, db(), [[SELECT a.id, a.username, a.admin_level FROM admin_account_perms ap
+                     JOIN accounts a ON a.id = ap.account_id
+                     WHERE ap.perm = 'world.build' AND ap.allowed = 1 ORDER BY a.username]])
     end, db(), "SELECT id, username, admin_level FROM accounts WHERE admin_level >= 1 ORDER BY admin_level DESC, username")
+end
+
+-- Dar o quitar el rol builder por nombre de cuenta
+local function setBuilder(admin, username, add)
+    username = tostring(username or ""):sub(1, 32)
+    if #username < 2 then return notify(admin, "Escribe el nombre de la cuenta.", "warning") end
+    dbQuery(function(qh)
+        local row = (dbPoll(qh, 0) or {})[1]
+        if not isElement(admin) then return end
+        if not row then return notify(admin, "No existe la cuenta " .. username .. ".", "error") end
+        local id = tonumber(row.id)
+        if setOverride(id, "world.build", add and "allow" or "inherit") then
+            logAction(admin, add and "builder+" or "builder-", id, row.username, "world.build")
+            for _, p in ipairs(getElementsByType("player")) do
+                if exports.rp_login:getPlayerAccountId(p) == id then
+                    notify(p, add and "Ahora tienes el rol builder: usa /mapeditor." or "Ya no tienes el rol builder.", "info")
+                end
+            end
+            notify(admin, ("%s %s builder."):format(row.username, add and "ahora es" or "ya no es"), "success")
+            sendIam(admin)
+        end
+    end, db(), "SELECT id, username FROM accounts WHERE username = ? LIMIT 1", username)
 end
 
 local function sendLogs(admin)
@@ -289,6 +320,8 @@ addEventHandler("rp:adminpanel:req", resourceRoot, function(kind, a, b, c)
             logAction(admin, "roleperm", nil, ROLE_NAMES[level], (allow and "+" or "-") .. perm)
             sendIam(admin)
         end
+    elseif kind == "builder" then
+        if need(admin, "iam.manage") then setBuilder(admin, a, tostring(b) == "add") end
     elseif kind == "override" then
         if not need(admin, "iam.manage") then return end
         local id, perm = tonumber(a), tostring(b)

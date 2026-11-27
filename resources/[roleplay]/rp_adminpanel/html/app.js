@@ -370,6 +370,26 @@
         });
         t.appendChild(tb); c.appendChild(t); v.appendChild(c);
 
+        /* Rol builder: editor de mapas (/mapeditor) para cuentas sin rango de admin */
+        v.appendChild(el("div", "group", "Builders (editor de mapas)"));
+        v.appendChild(el("p", "sec", "Un builder puede usar /mapeditor aunque no sea admin. El Super admin ya lo tiene siempre."));
+        var bc = el("div", "card admin-card"), bh = el("div", "head");
+        var bin = el("input", "inp"); bin.placeholder = "Nombre de la cuenta"; bin.maxLength = 32;
+        var badd = el("button", "btn", "Hacer builder");
+        badd.addEventListener("click", function () {
+            var n = bin.value.trim(); if (n) req("builder", n, "add");
+        });
+        bh.appendChild(bin); bh.appendChild(badd); bc.appendChild(bh);
+        if (!d.builders || !d.builders.length) bc.appendChild(el("p", "sec", "Aun no hay builders."));
+        (d.builders || []).forEach(function (b) {
+            var row = el("div", "head");
+            row.appendChild(el("b", "", b.username)); row.appendChild(badge(b.level));
+            var rm = el("button", "btn", "Quitar");
+            rm.addEventListener("click", function () { req("builder", b.username, "remove"); });
+            row.appendChild(rm); bc.appendChild(row);
+        });
+        v.appendChild(bc);
+
         v.appendChild(el("div", "group", "Administradores y excepciones por cuenta"));
         v.appendChild(el("p", "sec", "Una excepcion permite o deniega un permiso a una sola cuenta, por encima de su rango. Para dar rango a alguien nuevo usa la seccion Cuentas."));
         d.admins.forEach(function (a) {

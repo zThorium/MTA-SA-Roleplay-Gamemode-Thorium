@@ -296,12 +296,20 @@ setTimer(function()
     end
 end, 500, 0)
 
+-- Tambien se oculta la cabeza de cualquier ped invisible (alfa 0: editor de mapas, admin oculto)
+-- o con "rp:hideBody" (rp_pool), para que no flote sola
 addEventHandler("onClientRender", root, function()
-    local obj = attached[localPlayer]
-    if not isElement(obj) then return end
-    local weapon = getPedWeapon(localPlayer)
-    local aiming = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN" or getElementData(localPlayer, "rp:hideBody") == true
-    setElementAlpha(obj, aiming and 0 or 255)
+    for ped, obj in pairs(attached) do
+        if isElement(ped) and isElement(obj) then
+            local hide = getElementAlpha(ped) == 0 or getElementData(ped, "rp:hideBody") == true
+            if ped == localPlayer and not hide then
+                local weapon = getPedWeapon(localPlayer)
+                hide = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN"
+            end
+            local a = hide and 0 or 255
+            if getElementAlpha(obj) ~= a then setElementAlpha(obj, a) end
+        end
+    end
 end)
 
 -- Oculta la cabeza original del ped en cada frame (tambien durante la pose de

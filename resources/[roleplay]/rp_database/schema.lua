@@ -1849,4 +1849,79 @@ SCHEMA = {
             REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_mapeditor: proyectos de mapa (borrador en la dimensión 27000 + id). interior/dimension =
+    -- dónde se publica; settings = JSON con hora, clima, gravedad...; live_version_id = versión publicada
+    [[
+    CREATE TABLE IF NOT EXISTS mapedit_projects (
+        id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+        name            VARCHAR(48)   NOT NULL,
+        description     VARCHAR(255)  NOT NULL DEFAULT '',
+        interior        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        dimension       INT UNSIGNED  NOT NULL DEFAULT 0,
+        settings        TEXT          NULL,
+        live_version_id INT UNSIGNED  NULL,
+        created_by      INT UNSIGNED  NULL,
+        created_name    VARCHAR(64)   NOT NULL DEFAULT '',
+        updated_name    VARCHAR(64)   NOT NULL DEFAULT '',
+        created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_mapedit_projects_name (name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_mapeditor: elementos del borrador. etype = object|vehicle|ped|marker|pickup|point|removal;
+    -- props = JSON con lo propio de cada tipo (escala, alfa, colores, radio y LOD del removal...)
+    [[
+    CREATE TABLE IF NOT EXISTS mapedit_elements (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        project_id INT UNSIGNED NOT NULL,
+        etype      VARCHAR(12)  NOT NULL,
+        model      INT          NOT NULL DEFAULT 0,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        rx         FLOAT        NOT NULL DEFAULT 0,
+        ry         FLOAT        NOT NULL DEFAULT 0,
+        rz         FLOAT        NOT NULL DEFAULT 0,
+        interior   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        props      TEXT         NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_mapedit_elements_project (project_id),
+        CONSTRAINT fk_mapedit_elements_project FOREIGN KEY (project_id)
+            REFERENCES mapedit_projects (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_mapeditor: versiones publicadas (snapshot JSON completo); sirven de historial y para restaurar
+    [[
+    CREATE TABLE IF NOT EXISTS mapedit_versions (
+        id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        project_id    INT UNSIGNED NOT NULL,
+        version       INT UNSIGNED NOT NULL,
+        snapshot      MEDIUMTEXT   NOT NULL,
+        element_count INT UNSIGNED NOT NULL DEFAULT 0,
+        published_by  VARCHAR(64)  NOT NULL DEFAULT '',
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_mapedit_versions (project_id, version),
+        CONSTRAINT fk_mapedit_versions_project FOREIGN KEY (project_id)
+            REFERENCES mapedit_projects (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_mapeditor: auditoría (crear, publicar, despublicar, borrar, importar...). Sin FK: sobrevive al proyecto
+    [[
+    CREATE TABLE IF NOT EXISTS mapedit_log (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        project_id   INT UNSIGNED NULL,
+        project_name VARCHAR(48)  NOT NULL DEFAULT '',
+        account_id   INT UNSIGNED NULL,
+        actor_name   VARCHAR(64)  NOT NULL,
+        action       VARCHAR(24)  NOT NULL,
+        details      VARCHAR(255) NOT NULL DEFAULT '',
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_mapedit_log_project (project_id, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

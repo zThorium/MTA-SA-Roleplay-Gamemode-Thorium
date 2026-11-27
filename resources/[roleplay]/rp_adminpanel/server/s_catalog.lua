@@ -63,6 +63,8 @@ ADMIN_CATALOG = {
     {
         id = "mundo", name = "Mundo y propiedades",
         items = {
+            { cmd = "/mapeditor", args = "", alt = "/editormapas", desc = "Editor de mapas: proyectos en BD, borrador privado (dim 27000+id), objetos, vehiculos, peds, marcadores, pickups, puntos y quitar edificios; publicar por versiones, importar/exportar .map. Super admin o rol builder (IAM).", res = "rp_mapeditor" },
+            { cmd = "/mapas", args = "", desc = "Lista los mapas publicados con su version, elementos, interior y dimension.", res = "rp_mapeditor" },
             { cmd = "/veh", args = "<modelo o nombre> [R G B]", desc = "Crea un vehiculo TEMPORAL (ID negativo, no se guarda) delante de donde miras. Queda registrado quien lo creo (vista ALT, /nearbyvehs y admin_log). Maximo 5 por admin.", res = "rp_vehicles" },
             { cmd = "/delveh", args = "[id negativo]", desc = "Borra un vehiculo temporal de /veh (sin id: el que ocupas o el mas cercano). No borra vehiculos con dueno.", res = "rp_vehicles" },
             { cmd = "/makeveh", args = "<modelo o nombre> <id o nombre del dueno> [R G B]", desc = "Crea un vehiculo REAL (con ID y guardado en la BD) para el personaje del jugador, que recibe la llave. Solo super admin o quien tenga el permiso 'Crear vehiculos con dueno' en IAM. Queda en admin_log.", res = "rp_vehicles" },
