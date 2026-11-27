@@ -27,6 +27,44 @@ local MS = math.floor(220 * s) -- tamano del minimapa en pantalla
 local MARGIN = math.floor(22 * s)
 
 local mapTexture, renderTarget
+local mapGraded, mapGradedReady = nil, false   -- map.png con el color del mapa F11 (rp_map)
+
+-- Mismo tratamiento que rp_map/html/js/map2d.js (buildBase): filtro CSS
+-- "grayscale(0.35) brightness(0.40) contrast(1.25) saturate(0.85)" y tinte rgba(20,28,52,0.28).
+-- Si cambia alli, cambiarlo aqui.
+local MAP_GRADE_FX = [[
+texture MapTex;
+sampler S = sampler_state { Texture = (MapTex); MinFilter = Linear; MagFilter = Linear; };
+static const float3 LUM = float3(0.2126, 0.7152, 0.0722);
+float4 PS(float2 uv : TEXCOORD0) : COLOR0
+{
+    float3 c = tex2D(S, uv).rgb;
+    c = lerp(c, dot(c, LUM), 0.35);
+    c = saturate(c * 0.40);
+    c = saturate((c - 0.5) * 1.25 + 0.5);
+    c = saturate(lerp(dot(c, LUM), c, 0.85));
+    c = lerp(c, float3(20, 28, 52) / 255.0, 0.28);
+    return float4(c, 1);
+}
+technique T { pass P0 { PixelShader = compile ps_2_0 PS(); } }
+]]
+
+-- Pinta una vez map.png ya tratado en un render target (solo se puede dentro del render)
+local function buildGradedMap()
+    mapGradedReady = true
+    if not mapGraded then return end
+    local shader = dxCreateShader(MAP_GRADE_FX)
+    if not shader then
+        destroyElement(mapGraded)
+        mapGraded = nil   -- sin shader se usa el radar original
+        return
+    end
+    dxSetShaderValue(shader, "MapTex", mapTexture)
+    dxSetRenderTarget(mapGraded, true)
+    dxDrawImage(0, 0, MAP_SIZE, MAP_SIZE, shader)
+    dxSetRenderTarget()
+    destroyElement(shader)
+end
 local navRoute   -- ruta del GPS de rp_map: { x1, y1, x2, y2, ... } o nil
 
 -- Iconos de blips dibujados para el gamemode (images/blips/<id de icono>.png)
@@ -226,6 +264,7 @@ local function drawMinimap(x, y, now)
     local interior = getElementInterior(localPlayer) ~= 0
     local pulse = (now % 1400) / 1400   -- latido del destino de navegacion
 
+    if not mapGradedReady then buildGradedMap() end
     dxSetRenderTarget(renderTarget, true)
     if interior then
         dxDrawRectangle(0, 0, MS, MS, tocolor(30, 33, 40, 255))
@@ -235,7 +274,7 @@ local function drawMinimap(x, y, now)
         local section = unitsAcross / WORLD * MAP_SIZE * 1.5
         local size = MS * 1.5
         dxDrawImageSection(MS / 2 - size / 2, MS / 2 - size / 2, size, size,
-            mx - section / 2, my - section / 2, section, section, mapTexture, -heading)
+            mx - section / 2, my - section / 2, section, section, mapGraded or mapTexture, -heading)
 
         -- Ruta del GPS (rp_map: setNavRoute), por las calles hasta el destino
         if navRoute then
@@ -922,6 +961,7 @@ end)
 addEventHandler("onClientResourceStart", resourceRoot, function()
     mapTexture = dxCreateTexture("images/map.png", "dxt1", true, "wrap")
     renderTarget = dxCreateRenderTarget(MS, MS, false)
+    mapGraded = mapTexture and dxCreateRenderTarget(MAP_SIZE, MAP_SIZE, false) or nil
     if not mapTexture or not renderTarget then
         outputDebugString("[rp_hud] No se pudo crear la textura del minimapa", 2)
     end
@@ -941,7 +981,11 @@ end)
 -- Si el render target se pierde (al minimizar), se recrea
 addEventHandler("onClientRestore", root, function(cleared)
     if cleared and isElement(renderTarget) then destroyElement(renderTarget) end
-    if cleared then renderTarget = dxCreateRenderTarget(MS, MS, false) end
+    if cleared then
+        renderTarget = dxCreateRenderTarget(MS, MS, false)
+        mapGradedReady = false   -- el mapa tratado tambien se borro: se vuelve a pintar
+        if not isElement(mapGraded) and mapTexture then mapGraded = dxCreateRenderTarget(MAP_SIZE, MAP_SIZE, false) end
+    end
 end)
 
 addEventHandler("onClientPlayerSpawn", localPlayer, hideGtaHud)
