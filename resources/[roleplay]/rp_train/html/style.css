@@ -1,0 +1,82 @@
+/* rp_train · UI del torniquete (460x300, se dibuja sobre el juego con fondo transparente) */
+@font-face { font-family: "Rubik"; src: url("fonts/rubik_medium.ttf"); font-weight: 500; }
+@font-face { font-family: "Rubik"; src: url("fonts/rubik_semibold.ttf"); font-weight: 600; }
+
+:root {
+    --bg: rgba(12, 14, 20, 0.92);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: #f2f4f8;
+    --muted: #9aa3b2;
+    --accent: #f5a524;
+    --success: #4cd38a;
+    --danger: #ff5a4f;
+    --paper: #f4ead2;
+    --ink: #2b2520;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent;
+    font-family: "Rubik", "Segoe UI", Roboto, Arial, sans-serif; user-select: none; color: var(--text); }
+
+.card { position: absolute; left: 10px; right: 10px; bottom: 10px; top: 10px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    display: flex; flex-direction: column; overflow: hidden; animation: enter .25s ease-out; }
+.card.hidden { display: none; }
+.card.shake { animation: shake .35s; }
+@keyframes enter { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+.head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-weight: 600; font-size: 15px;
+    border-bottom: 1px solid var(--border); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.station { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 13px; }
+
+.stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+
+/* Boleto de papel con talón troquelado a la derecha */
+.ticket { position: relative; display: flex; width: 300px; height: 118px; transform: rotate(-3deg);
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5)); transition: transform .3s; }
+.ticket .main, .ticket .stub { background: var(--paper); color: var(--ink); position: relative; }
+.ticket .main { flex: 1; border-radius: 10px 0 0 10px; padding: 12px 16px;
+    background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgba(160, 120, 60, .06) 10px 12px); }
+.ticket .stub { width: 70px; border-radius: 0 10px 10px 0; border-left: 3px dashed rgba(43, 37, 32, .35);
+    display: flex; align-items: center; justify-content: center; transition: transform .7s cubic-bezier(.3, .6, .4, 1), opacity .7s; }
+.stub span { transform: rotate(-90deg); font-size: 12px; letter-spacing: 3px; font-weight: 600; color: rgba(43, 37, 32, .6); }
+.brand { font-size: 11px; letter-spacing: 3px; color: #a2381f; font-weight: 600; }
+.kind { font-size: 19px; font-weight: 600; margin-top: 2px; }
+.trip { font-size: 13px; color: rgba(43, 37, 32, .7); }
+.price { position: absolute; right: 14px; bottom: 10px; font-size: 22px; font-weight: 600; }
+
+.hole { position: absolute; right: 18px; top: 14px; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(12, 14, 20, 1); box-shadow: inset 0 2px 3px rgba(0, 0, 0, .8); transform: scale(0); }
+.stamp { position: absolute; left: 70px; top: 40px; padding: 2px 10px; border: 3px solid var(--success); border-radius: 6px;
+    color: var(--success); font-weight: 600; font-size: 20px; letter-spacing: 2px; transform: rotate(-14deg) scale(2.2);
+    opacity: 0; background: rgba(76, 211, 138, .08); }
+
+/* Perforadora que baja sobre el boleto */
+.punch { position: absolute; left: 50%; top: -60px; margin-left: 44px; width: 34px; height: 60px;
+    background: linear-gradient(90deg, #6f7888, #c9ced8 45%, #6f7888); border-radius: 6px 6px 3px 3px; opacity: 0; }
+
+.empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; color: var(--muted); font-size: 15px; }
+.empty.hidden { display: none; }
+.empty-ico { width: 46px; height: 46px; border-radius: 50%; border: 2px dashed var(--muted); display: flex;
+    align-items: center; justify-content: center; font-size: 24px; font-weight: 600; }
+
+.prompt { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 14px 14px; font-size: 16px; font-weight: 600; }
+.prompt .key { width: 34px; height: 34px; }
+.prompt.ok { color: var(--success); }
+.prompt.bad { color: var(--danger); font-size: 14px; font-weight: 500; }
+.prompt.wait { color: var(--muted); }
+.prompt.hide-key .key { display: none; }
+
+/* Estados del boleto */
+.card.no-ticket .ticket, .card.no-ticket .punch { display: none; }
+.card.punching .punch { animation: punchDown .5s ease-in forwards; }
+@keyframes punchDown { 0% { opacity: 1; top: -60px; } 70% { opacity: 1; top: 34px; } 100% { opacity: 0; top: -60px; } }
+.card.done .hole { transform: scale(1); transition: transform .12s; }
+.card.done .stub { transform: translate(30px, 70px) rotate(28deg); opacity: 0; }
+.card.done .stamp { animation: stamp .35s .25s cubic-bezier(.2, 1.6, .5, 1) forwards; }
+@keyframes stamp { to { opacity: 1; transform: rotate(-14deg) scale(1); } }
+.card.done .ticket { transform: rotate(0deg); }
+.card.done .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }

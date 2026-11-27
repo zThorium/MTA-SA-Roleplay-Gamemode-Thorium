@@ -52,7 +52,7 @@ test("train_tabla_boleterias_y_carteles", function(t)
     query(function(rows, _, _, code, msg)
         if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
         t.pass("train_fixtures accesible")
-    end, "SELECT id, kind, station, x, y, z, rot, interior, dimension FROM train_fixtures LIMIT 1")
+    end, "SELECT id, kind, station, x, y, z, rot, interior, dimension, model FROM train_fixtures LIMIT 1")
 end)
 
 test("train_boleto_en_catalogo", function(t)
@@ -74,4 +74,15 @@ test("train_llegada_estimada", function(t)
     end
     if n ~= 6 then return t.fail("estaciones con llegada estimada: " .. n) end
     t.pass("6 estaciones con llegada estimada")
+end)
+
+-- Los tipos de reja de /crearreja (TRAIN.FENCE_MODELS) son modelos válidos del juego
+test("train_rejas_modelos", function(t)
+    local list = { 970, 1419, 1411, 983, 994 }
+    for _, m in ipairs(list) do
+        local obj = createObject(m, 0, 0, -50)
+        if not obj then return t.fail("modelo de reja inválido: " .. m) end
+        destroyElement(obj)
+    end
+    t.pass(#list .. " modelos de reja válidos")
 end)

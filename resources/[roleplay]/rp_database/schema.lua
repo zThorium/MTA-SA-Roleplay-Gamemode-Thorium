@@ -1564,4 +1564,8 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_train: modelo de las rejas de las estaciones (kind = 'fence'); 0 en boleterias, carteles y torniquetes
+    [[
+    ALTER TABLE train_fixtures ADD COLUMN IF NOT EXISTS model SMALLINT UNSIGNED NOT NULL DEFAULT 0
+    ]],
 }

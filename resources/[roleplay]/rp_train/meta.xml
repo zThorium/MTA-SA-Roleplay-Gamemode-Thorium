@@ -27,6 +27,10 @@
     <script src="client/c_stations.lua" type="client" cache="false" />
     <!-- Editor 3D del cartel para admins (/crearcartel, /editarcartel) -->
     <script src="client/c_signeditor.lua" type="client" cache="false" />
+    <!-- Aura en el piso del empleado de la boletería -->
+    <script src="client/c_booth.lua" type="client" cache="false" />
+    <!-- Torniquetes: UI del boleto (html/) y paso cerrado -->
+    <script src="client/c_gates.lua" type="client" cache="false" />
 
     <!-- Campanas del cruce (ver CREDITOS.md) -->
     <file src="sounds/campanas.mp3" />
@@ -44,6 +48,18 @@
     <file src="images/keys/keyboard_enter.png" />
     <file src="images/keys/keyboard_backspace.png" />
     <file src="images/led_dot.png" />
+    <!-- UI del torniquete (CEF): fuente Rubik (OFL) y sonidos Kenney (CC0), ver CREDITOS.md -->
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/sounds/kenney/glass_001.ogg" />
+    <file src="html/sounds/kenney/impactMetal_light_000.ogg" />
+    <file src="html/sounds/kenney/scratch_001.ogg" />
+    <file src="html/sounds/kenney/scratch_002.ogg" />
+    <file src="html/sounds/kenney/confirmation_001.ogg" />
+    <file src="html/sounds/kenney/error_004.ogg" />
 
     <export function="getTrainState" type="server" />
     <export function="getTrackLength" type="server" />

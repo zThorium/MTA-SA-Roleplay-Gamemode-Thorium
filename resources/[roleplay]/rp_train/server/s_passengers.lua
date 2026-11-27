@@ -97,11 +97,20 @@ addEventHandler("rp:train:board", resourceRoot, function(car)
     end
     local seat = freeSeat(car)
     if not seat then return notify(p, "Este vagón va lleno: prueba en otro.", "warning") end
-    if not exports.rp_inventory:hasItem(p, TRAIN.TICKET_ITEM, 1) then
-        return notify(p, ("Necesitas un boleto de tren. Cómpralo en la boletería de la estación ($%d)."):format(TRAIN.TICKET_PRICE), "error")
+    -- Con torniquetes en la estación se sube con el boleto ya validado en ellos (s_stations.lua);
+    -- sin torniquetes, el boleto se gasta aquí
+    local node = t.leaving and t.leaving.node
+    if node and stationHasGates(node) then
+        if not useStationPass(p, node) then
+            return notify(p, "Primero valida tu boleto en el torniquete de la entrada de la estación.", "error")
+        end
+    else
+        if not exports.rp_inventory:hasItem(p, TRAIN.TICKET_ITEM, 1) then
+            return notify(p, ("Necesitas un boleto de tren. Cómpralo en la boletería de la estación ($%d)."):format(TRAIN.TICKET_PRICE), "error")
+        end
+        local ok, why = exports.rp_inventory:takeItem(p, TRAIN.TICKET_ITEM, 1)
+        if not ok then return notify(p, why or "No se pudo usar el boleto.", "error") end
     end
-    local ok, why = exports.rp_inventory:takeItem(p, TRAIN.TICKET_ITEM, 1)
-    if not ok then return notify(p, why or "No se pudo usar el boleto.", "error") end
 
     local r = { t = t, car = car, seat = seat }
     riders[p] = r

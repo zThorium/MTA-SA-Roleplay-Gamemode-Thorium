@@ -88,4 +88,50 @@ TRAIN = {
     SIGN_EDIT_FINE = 0.15,
     SIGN_EDIT_RANGE = 30,     -- el cartel no puede alejarse más de esto de donde estaba
     SIGN_EDIT_NEAR = 15,      -- /editarcartel sin id edita el más cercano a menos de esto
+    -- /duplicar en el editor: máximo de copias de una vez y de metros entre una copia y la siguiente
+    DUP_MAX = 20,
+    DUP_STEP_MAX = 10,
+
+    -- Boletero destacado (c_booth.lua): aura en el piso que respira para que se vea quién vende los boletos
+    BOOTH_AURA_COLOR = { 255, 255, 255 },
+    BOOTH_AURA_RADIUS = 0.9,        -- radio del aura (m)
+    BOOTH_AURA_PERIOD = 2600,       -- una respiración completa (ms)
+    BOOTH_AURA_DISTANCE = 45,       -- se dibuja a menos de esto de la cámara
+
+    -- Torniquetes (/creartorniquete): el admin se pone FUERA mirando hacia el andén. Desde fuera se
+    -- valida el boleto (lo gasta y deja un pase para esa estación); desde el andén se sale libre.
+    -- En una estación con torniquetes se sube al tren con el pase, no con el boleto.
+    GATE_POST_MODEL = 966,          -- poste
+    GATE_ARM_MODEL = 968,           -- brazo (vertical con rotación Y 0; se baja girándolo 90°)
+    GATE_ARM_LENGTH = 0.24,         -- escala del brazo a lo largo (el 968 de serie mide ~6 m)
+    GATE_ARM_SIDE = 1,              -- -1 si el brazo baja hacia el lado contrario del paso
+    GATE_HALF_WIDTH = 0.75,         -- medio ancho del paso (el poste queda a la izquierda, mirando al andén)
+    GATE_FORWARD = 1.2,             -- el paso queda a esta distancia delante del admin
+    GATE_USE = 2.2,                 -- distancia a la que aparece el boleto o se abre al salir
+    GATE_OPEN_MS = 3500,            -- tiempo que queda abierto
+    GATE_MOVE_MS = 500,             -- subir o bajar el brazo
+    GATE_PASS_MS = 30 * 60000,      -- un boleto validado sirve para subir al tren durante esto
+
+    -- Rejas (/crearreja [tipo]): cierran los lados de los torniquetes para que nadie entre al andén por fuera.
+    -- Objetos del juego, congelados e irrompibles. El número de la lista es el [tipo] del comando.
+    FENCE_MODELS = {
+        { model = 970,  name = "Barandilla metálica" },  -- fencesmallb
+        { model = 1419, name = "Reja de hierro" },       -- DYN_F_IRON_1
+        { model = 1411, name = "Malla metálica" },       -- DYN_MESH_1
+        { model = 983,  name = "Malla alta" },           -- fenceshit3
+        { model = 994,  name = "Valla de metal baja" },  -- lhouse_barrier2
+    },
+    FENCE_FORWARD = 1.5,            -- la reja aparece a esta distancia delante del admin
+    FENCE_DROP = 1.0,               -- y esto por debajo de su centro (luego se ajusta en el editor)
 }
+
+-- Torniquete: dónde van el poste y el brazo a partir del centro del paso (x, y, z del jugador) y su
+-- rotación (mira hacia el andén). Lo usan el servidor (s_stations.lua) y el editor 3D (c_signeditor.lua).
+function TrainGateLayout(x, y, z, rot)
+    local r = math.rad(rot)
+    return x - math.cos(r) * TRAIN.GATE_HALF_WIDTH, y - math.sin(r) * TRAIN.GATE_HALF_WIDTH, z - 1, z - 0.3
+end
+
+function TrainFenceModel(model)
+    for i, f in ipairs(TRAIN.FENCE_MODELS) do if f.model == model then return f, i end end
+end
