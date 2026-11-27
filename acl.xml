@@ -45,6 +45,7 @@
    <group name="RPRemoteFetch">
       <acl name="RPC" />
       <object name="resource.rp_phone" />
+      <object name="resource.rp_scoreboard" />
    </group>
    <group name="MapEditor">
       <acl name="Default" />
