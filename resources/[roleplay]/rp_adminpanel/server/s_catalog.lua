@@ -143,6 +143,7 @@ ADMIN_CATALOG = {
             { cmd = "/fdsitio foco", args = "<id>", desc = "Anade un foco de fuego donde estas (azotea, balcon, pasillo accesible). Max. 120 m de la zona segura.", res = "rp_firefighters" },
             { cmd = "/fdsitio civil", args = "<id>", desc = "Anade un punto de civil atrapado donde estas, mirando hacia tu rumbo.", res = "rp_firefighters" },
             { cmd = "/fdsitio vaciar", args = "<id>", desc = "Quita todos los focos y civiles de un sitio.", res = "rp_firefighters" },
+            { cmd = "/setseatoffset", args = "[altura] [respaldo] [giro]", desc = "Provisional: sentado en una banca o silla del mapa, ajusta en vivo la postura de ese modelo (solo en tu cliente) y escribe los valores para la config. Sin valores muestra los actuales.", res = "rp_worldobjects" },
             { cmd = "/fdsitio borrar", args = "<id>", desc = "Borra un sitio de incendio.", res = "rp_firefighters" },
             { cmd = "/fdsitios", args = "", desc = "Lista los sitios de incendio con focos, civiles y distancia.", res = "rp_firefighters" },
             { cmd = "/fdincendio", args = "[id]", desc = "Lanza una emergencia ya (sin id, en un sitio completo al azar). Solo una a la vez.", res = "rp_firefighters" },
