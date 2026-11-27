@@ -270,6 +270,14 @@
             k ? "" : "Aún no conoces esta zona; la ruta te lleva igualmente.", x, y, buttons);
     }
 
+    // Clic derecho en el mapa: quita el destino y su ruta
+    function clearDestination() {
+        if (!route.active && !(selection && selection.type === "point")) return;
+        play("click");
+        if (route.active) send("rp:map:ui:navStop");
+        closeCard();
+    }
+
     // Atajos de admin desde la tarjeta: abren la pestaña Admin con el formulario listo
     function adminNewPlace(x, y) {
         adminForm.place = { x: x, y: y, z: 0, cat: "especial" };
@@ -517,7 +525,7 @@
     var COACH = [
         { el: "map-wrap", img: "mouse_move", text: "Arrastra con el ratón para mover el mapa." },
         { el: "map-wrap", img: "mouse_scroll", text: "Gira la rueda para acercarte o alejarte (o usa + y -)." },
-        { el: "map-wrap", img: "mouse_left", text: "Haz clic en un icono o en cualquier punto para ver su información y poner una ruta GPS." },
+        { el: "map-wrap", img: "mouse_left", text: "Haz clic en un icono o en cualquier punto para ver su información y poner una ruta GPS. Clic derecho quita el destino." },
         { el: "bottom", img: "mouse_left", text: "Lo oscuro aún no lo conoces: se descubre solo cuando caminas o conduces por ahí. Aquí ves cuánto llevas." },
         { el: "mode-seg", img: "mouse_left", text: "Cambia a 3D para ver los edificios con su altura real. En 3D, el botón derecho gira e inclina." },
         { el: "tabs", img: "mouse_left", text: "Aquí ves tus lugares cercanos y tu progreso por ciudad. Busca lugares arriba." },
@@ -970,9 +978,11 @@
         onPlace: function (id) { selectPlace(id, false); },
         onBuilding: selectBuilding,
         onClick: onMapClick,
+        onRightClick: clearDestination,
     });
     window.Map2D.init($("map2d"), $("layer"), $("map-wrap"), {
         onClick: onMapClick,
+        onRightClick: clearDestination,
         onHover: onHover,
         onPlace: function (id) { selectPlace(id, false); },
         onBase: function () { window.Map3D.refreshTexture(); },
