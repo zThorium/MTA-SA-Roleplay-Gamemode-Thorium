@@ -42,7 +42,13 @@ function isPolice(p)
 end
 
 function getVehicleData(vehicle) return vehicles[vehicle] end
-function getVehicleById(id) return byId[tonumber(id)] end
+-- IDs negativos = vehiculos temporales de admin (/veh, s_adminspawn.lua)
+function getVehicleById(id)
+    id = tonumber(id)
+    if not id then return nil end
+    if id < 0 then return getTempVehicleById and getTempVehicleById(id) or nil end
+    return byId[id]
+end
 
 local function resourceRunning(name)
     local res = getResourceFromName(name)
@@ -448,6 +454,25 @@ function createOwnedVehicle(player, model, color, x, y, z, rz)
         end
     end
     return vehicle
+end
+
+-- Alta asincrona de un vehiculo con dueno en una posicion dada (la usa /makeveh).
+-- callback(vehicle | false, id) cuando termina. La llave va al dueno si esta conectado.
+function insertOwnedVehicle(owner, characterId, model, color, x, y, z, rz, interior, dimension, callback)
+    local plate = randomPlate()
+    local colorJSON = toJSON(color or { 245, 245, 245 }, true)
+    dbQuery(function(qh)
+        local _, _, id = dbPoll(qh, 0)
+        if not id then return callback(false) end
+        local vehicle = spawnRow({ id = id, owner_id = characterId, model = model, plate = plate, color = colorJSON,
+            x = x, y = y, z = z, rx = 0, ry = 0, rz = rz, interior = interior, dimension = dimension, health = 1000, locked = 0 })
+        if vehicle and isElement(owner) and characterOf(owner) == characterId and giveKey(owner, id) then
+            dbExec(db(), "UPDATE vehicles SET key_given = 1 WHERE id = ?", id)
+        end
+        callback(vehicle or false, id)
+    end, db(), [[INSERT INTO vehicles (owner_id, model, plate, color, x, y, z, rz, interior, dimension, locked)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)]],
+        characterId, model, plate, colorJSON, x, y, z, rz, interior, dimension)
 end
 
 function getVehicleOwner(vehicle)

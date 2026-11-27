@@ -21,6 +21,7 @@ VEHICLES = {
     INTERACT_DISTANCE = 6,      -- metros para el menu de click derecho
     HANDBRAKE_MAX_SPEED = 8,    -- km/h: por encima no se puede poner el freno de mano
     SAVE_INTERVAL = 5 * 60000,
+    TEMP_MAX_PER_ADMIN = 5,     -- vehiculos temporales (/veh) a la vez por cuenta de admin
 
     -- Intermitentes
     INDICATOR_BLINK = 380,      -- ms encendido / apagado

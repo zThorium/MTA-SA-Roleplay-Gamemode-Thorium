@@ -51,6 +51,7 @@ local function title(e)
     if e.kind == "loose" then
         return ("%s · %s"):format(e.res or "?", e.info or e.etype)
     elseif e.kind == "vehicle" then
+        if e.temp then return ("Vehiculo temporal #%d · %s"):format(e.id, e.label or "") end
         return e.id and ("Vehiculo #%d · %s"):format(e.id, e.label or "") or ("Vehiculo temporal · %s"):format(e.label or "")
     end
     return ("%s #%d"):format(e.typeName or "?", e.id or 0)
@@ -69,9 +70,10 @@ local function detailLines(e, x, y, z)
     local function add(text) if text and text ~= "" then lines[#lines + 1] = text end end
     if e.kind ~= "loose" then add(e.label) end
     add(e.info)
-    if e.kind == "house" or e.kind == "vehicle" then
+    if e.kind == "house" or (e.kind == "vehicle" and not e.temp) then
         add(e.owner and ("Dueno: " .. e.owner) or (e.id and "Sin dueno" or nil))
     end
+    if e.temp then add("Creado por " .. (e.creator or "?")) end
     if e.kind ~= "loose" and e.kind ~= "vehicle" then
         add(e.creator and ("Creado por " .. e.creator) or "Creador: sin registro (anterior a la vista ALT)")
     end
@@ -82,6 +84,8 @@ local function detailLines(e, x, y, z)
     if e.kind == "type" or e.kind == "house" then
         add(("/goto%s %d   ·   /del%s %d"):format(e.key, e.id, e.key, e.id))
         add("Clic derecho = mover")
+    elseif e.temp then
+        add(("/gotoveh %d   ·   /getveh %d   ·   /delveh %d"):format(e.id, e.id, e.id))
     elseif e.kind == "vehicle" and e.id then
         add(("/gotoveh %d   ·   /getveh %d   ·   /vehinfo"):format(e.id, e.id))
     end

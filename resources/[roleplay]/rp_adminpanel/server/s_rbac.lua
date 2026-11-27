@@ -29,7 +29,8 @@ PERMS = {
     { key = "players.kick",   group = "Jugadores", label = "Expulsar del servidor",         min = 1 },
     { key = "accounts.view",  group = "Cuentas",   label = "Buscar cuentas (incluye fuera de linea)", min = 2 },
     { key = "logs.view",      group = "Auditoria", label = "Ver el registro de acciones",   min = 2 },
-    { key = "commands.view",  group = "Panel",     label = "Ver el catalogo de comandos",   min = 1 },
+    { key = "vehicles.create", group = "Vehiculos", label = "Crear vehiculos con dueno (/makeveh)", min = 3 },
+    { key = "commands.view",  group = "Panel",    label = "Ver el catalogo de comandos",   min = 1 },
     { key = "iam.manage",     group = "IAM",       label = "Gestionar rangos, permisos y niveles (solo super admin)", min = 3, locked = true },
 }
 PERM_BY_KEY = {}

@@ -19,6 +19,7 @@
     <script src="server/s_tuning.lua" type="server" />
     <script src="server/s_perf.lua" type="server" />
     <script src="server/s_admin.lua" type="server" />
+    <script src="server/s_adminspawn.lua" type="server" />
     <script src="server/s_fuel.lua" type="server" />
     <script src="client/c_controls.lua" type="client" cache="false" />
     <script src="client/c_interaction.lua" type="client" cache="false" />
@@ -52,6 +53,9 @@
     <export function="getVehicleOdometer" type="server" />
     <export function="getVehicleFuel" type="server" />
     <export function="setVehicleFuel" type="server" />
+    <!-- Vehiculos temporales de admin (/veh): ID negativo y quien lo creo -->
+    <export function="getTempVehicleId" type="server" />
+    <export function="getTempVehicleInfo" type="server" />
     <!-- Modo cursor de la tecla M (lo usa rp_interact para el menu de personas) -->
     <export function="isCursorModeActive" type="client" />
 </meta>

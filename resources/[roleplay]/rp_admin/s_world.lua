@@ -199,6 +199,11 @@ addCommandHandler("nearby", function(player, cmd, radius)
                 local id = d <= radius and exports.rp_vehicles:getVehicleDatabaseId(v)
                 if id then
                     all[#all + 1] = { id = id, d = d, typeName = "Vehiculo", label = getVehicleName(v) }
+                elseif d <= radius then
+                    local tempId = exports.rp_vehicles:getTempVehicleId(v)
+                    if tempId then
+                        all[#all + 1] = { id = tempId, d = d, typeName = "Vehiculo temporal", label = getVehicleName(v) }
+                    end
                 end
             end
         end
