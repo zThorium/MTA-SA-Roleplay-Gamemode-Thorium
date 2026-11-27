@@ -108,6 +108,32 @@ local function copWeapon(weapon, level, seat)
     return weapon
 end
 
+-- Para rp_test: arma de un policia de una flota a ese nivel y asiento (0 = conductor / a pie)
+function getCopWeapon(fleetName, level, seat)
+    local f = WANTED_FLEET[fleetName]
+    if not f or fleetName == "heli" then return false end
+    return copWeapon(f.weapon, tonumber(level) or 0, tonumber(seat))
+end
+
+-- Para rp_test: incoherencias de la config de la IA (lista vacia = bien)
+function getPoliceAIConfigErrors()
+    local errs = {}
+    local S, C = WANTED_SEARCH, WANTED_COMBAT
+    local function check(ok, msg) if not ok then errs[#errs + 1] = msg end end
+    check(S and C, "falta WANTED_SEARCH o WANTED_COMBAT")
+    if not (S and C) then return errs end
+    check(S.GRACE > 0 and S.PREDICT_MS > 0, "GRACE y PREDICT_MS deben ser > 0")
+    check(S.RADIUS_MIN > 0 and S.RADIUS_MIN < S.RADIUS_MAX, "RADIUS_MIN < RADIUS_MAX")
+    check(S.RADIUS_MAX < WANTED_DISPATCH.LOST_DISTANCE + 80, "RADIUS_MAX debe caber antes de que se retiren las unidades")
+    check(S.SIGHT_TICK >= 100 and S.SIGHT_TICK <= 1000, "SIGHT_TICK entre 100 y 1000 ms")
+    check(S.FOOT_RADIUS > 6, "FOOT_RADIUS > 6")
+    check(C.RING_MIN > 3.5 and C.RING_MIN < C.RING_MAX and C.RING_MAX < C.RANGE, "3.5 < RING_MIN < RING_MAX < RANGE")
+    check(C.BURST_MIN < C.BURST_MAX and C.PAUSE_MIN < C.PAUSE_MAX, "rafagas y pausas: MIN < MAX")
+    check(C.AIM_BASE >= 0 and C.AIM_PER_M >= 0 and C.AIM_PER_KMH >= 0, "errores de punteria >= 0")
+    check(C.COVER_HEALTH > 0 and C.COVER_HEALTH < 100, "COVER_HEALTH entre 0 y 100")
+    return errs
+end
+
 local function armCop(ped, weapon, level, seat)
     local w = copWeapon(weapon, level, seat)
     giveWeapon(ped, w, w == WANTED_FLEET.police.melee and 1 or 9999, true)
@@ -464,14 +490,18 @@ addEventHandler("rp:onWantedLevelChange", root, function(level, old)
     if level > 0 then
         local p = pursuitOf(player)
         if old == 0 then p.next = nowMs() + WANTED_DISPATCH.FIRST_DELAY end
-        -- Armas de los policias segun el nuevo nivel (a 1 estrella no disparan)
-        for _, unit in pairs(p.units) do
-            if unit.kind ~= "heli" and not unit.leaving then
-                local _, _, _, weapon = resolveFleet(unit.fleet, getElementPosition(player))
-                for _, ped in ipairs(unit.peds) do
-                    if isElement(ped) and not isPedDead(ped) and level > 1 and old <= 1 then
-                        local seat = getPedOccupiedVehicleSeat(ped)
-                        giveWeapon(ped, copWeapon(weapon, level, seat), 9999, true)
+        -- Armas de los policias segun el nuevo nivel (a 1 estrella no disparan). Al subir,
+        -- cada uno recibe el arma que le toca (antes solo al pasar de 1 a 2: de 2 a 4
+        -- estrellas las unidades que ya estaban seguian con pistola)
+        if level > 1 and level > old then
+            for _, unit in pairs(p.units) do
+                if unit.kind ~= "heli" and unit.kind ~= "swat" and not unit.leaving then
+                    local _, _, _, weapon = resolveFleet(unit.fleet, getElementPosition(player))
+                    for _, ped in ipairs(unit.peds) do
+                        if isElement(ped) and not isPedDead(ped) then
+                            local w = copWeapon(weapon, level, getPedOccupiedVehicleSeat(ped))
+                            if getPedWeapon(ped) ~= w then giveWeapon(ped, w, 9999, true) end
+                        end
                     end
                 end
             end

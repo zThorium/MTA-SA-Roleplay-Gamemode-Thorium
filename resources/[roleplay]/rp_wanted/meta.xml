@@ -43,6 +43,9 @@
     <export function="isPursuitHeld" type="server" />
     <export function="setPursuitTerms" type="server" />
     <export function="getPursuitTerms" type="server" />
+    <!-- rp_test: arma por nivel y coherencia de la config de la IA policial -->
+    <export function="getCopWeapon" type="server" />
+    <export function="getPoliceAIConfigErrors" type="server" />
     <!-- rp_citizens entrega sus patrullas cuando el jugador esta buscado -->
     <export function="adoptLocalCop" type="client" />
 </meta>

@@ -428,20 +428,37 @@ local function driveCar(u, now)
             else
                 tx, ty = icpt[1], icpt[2]
             end
-        elseif los then
+        elseif los and now >= (u.wallUntil or 0) then
             -- CHASE: directo al jugador, adelantandose a donde va
             local tvx, tvy = getElementVelocity(pveh or localPlayer)
             local lead = math.min(1.5, dist / 30)
             tx, ty = px + tvx * 50 * lead, py + tvy * 50 * lead
-            if cfg.ram and pveh then
+            local pm = pveh and getElementMatrix(pveh)
+            if pm and u.box then
+                -- ENCAJONAR: detras, delante o al costado del auto del jugador; al llegar iguala su
+                -- velocidad (y frena con el): sin salida, el STOP de arriba baja a los policias
+                local off = u.box == "rear" and { 0, -7 } or u.box == "front" and { 0, 8 }
+                    or { (((x - px) * pm[1][1] + (y - py) * pm[1][2]) >= 0 and 1 or -1) * 4, 0 }
+                tx = px + pm[1][1] * off[1] + pm[2][1] * off[2] + tvx * 20
+                ty = py + pm[1][2] * off[1] + pm[2][2] * off[2] + tvy * 20
+                local gap = getDistanceBetweenPoints2D(x, y, tx, ty)
+                desired = gap < 4 and math.max(0, pspeed - 5) or math.min(110, pspeed + gap * 2)
+            elseif cfg.ram and pveh then
                 desired = math.max(pspeed + 30, 90)
-                if dist < 16 then
-                    -- PIT: apunta a la esquina trasera del auto del jugador, del lado
+                -- PIT solo con un angulo que funcione (mismo sentido, velocidad parecida) y
+                -- con pausa entre intentos; si no, lo sigue de cerca esperando su oportunidad
+                local _, _, prz = getElementRotation(pveh)
+                local canPit = math.abs(angleDiff(rz, prz)) < 45 and math.abs(speed - pspeed) < 40
+                    and now - (u.pitAt or 0) > 4000
+                if dist < 16 and canPit then
+                    -- apunta a la esquina trasera del auto del jugador, del lado
                     -- por donde viene la patrulla, y la empuja para hacerlo girar
-                    local pm = getElementMatrix(pveh)
                     local side = ((x - px) * pm[1][1] + (y - py) * pm[1][2]) >= 0 and 1 or -1
                     tx = px - pm[2][1] * 1.6 + pm[1][1] * side * 0.9 + tvx * 12
                     ty = py - pm[2][2] * 1.6 + pm[1][2] * side * 0.9 + tvy * 12
+                    if dist < 6 then u.pitAt = now end
+                elseif dist < 16 then
+                    desired = math.max(60, pspeed + 8)
                 end
             elseif cfg.ram then
                 desired = 120
@@ -449,6 +466,26 @@ local function driveCar(u, now)
                 desired = 160
             else
                 desired = math.max(20, pspeed + 3)   -- lo sigue de cerca sin chocarlo
+            end
+            -- Las demas patrullas no apuntan al mismo punto que la primera: van detras
+            -- y a un costado (izquierda/derecha), asi no se chocan entre ellas
+            if pm and not u.box and (u.chaseIdx or 1) > 1 and dist > 10 then
+                local side = (u.chaseIdx % 2 == 0) and 1 or -1
+                tx = tx + pm[1][1] * side * 3.2 - pm[2][1] * 5
+                ty = ty + pm[1][2] * side * 3.2 - pm[2][2] * 5
+            end
+            -- En linea recta hacia el jugador no hay red vial: si hay una pared delante,
+            -- vuelve un rato a la ruta por calles
+            if now - (u.wallAt or 0) > 200 and speed > 15 then
+                u.wallAt = now
+                local reach = 8 + speed * 0.2
+                local fx, fy = m[2][1], m[2][2]
+                local sx, sy = x + fx * 2.6, y + fy * 2.6
+                local hit, hx, hy = processLineOfSight(sx, sy, z + 0.4, sx + fx * reach, sy + fy * reach, z + 0.4,
+                    true, false, false, false, false, true, false, false, v)
+                if hit and getDistanceBetweenPoints2D(sx, sy, hx, hy) < math.min(reach, dist - 4) then
+                    u.wallUntil, u.planAt = now + 2500, 0
+                end
             end
             u.wp = nil
         else
@@ -490,6 +527,9 @@ local function driveCar(u, now)
     end
 
     local diff = angleDiff(heading(tx - x, ty - y), rz)
+    -- cuanto cambia el angulo entre ticks (para amortiguar el volante, antes de sumar la esquiva)
+    local dDiff = u.lastDiff and angleDiff(diff, u.lastDiff) or 0
+    u.lastDiff = diff
 
     -- Esquiva el trafico: si hay algo delante (que no sea el jugador), prueba
     -- por la izquierda y por la derecha y gira hacia el lado libre
@@ -519,7 +559,10 @@ local function driveCar(u, now)
         return controls(driver, false, true, -diff / 30)
     end
 
-    local steer = diff / 25
+    -- Volante: menos ganancia a alta velocidad y amortiguado (si ya esta corrigiendo, no
+    -- sigue girando de mas); antes era diff/25 y la patrulla zigzagueaba en las rectas
+    local gain = 25 + math.max(0, speed - 60) * 0.25
+    local steer = diff / gain + math.max(-6, math.min(6, dDiff)) * 0.05
     if speed < desired - 3 then
         controls(driver, true, false, steer)
     elseif speed > desired + 8 then
@@ -1102,11 +1145,19 @@ local function assignRoles(now)
         end
     end
     table.sort(list, function(a, b) return a.d < b.d end)
+    -- Encajonar: vas lento en un vehiculo, te ven y hay 2+ patrullas cerca. La mas
+    -- cercana se pone detras, la segunda delante y la tercera al costado; frenan y te arrestan.
+    local near = 0
+    for _, e in ipairs(list) do if e.d < 40 then near = near + 1 end end
+    local boxing = pveh and knowledgeMode(now) == "live" and near >= 2 and speedKmh(pveh) < 45
+    local BOX = { "rear", "front", "side" }
     for i, e in ipairs(list) do
         local u = e.u
         local was = u.icpt
         local wasRole = u.role
         u.role, u.icpt = "chase", nil
+        u.chaseIdx = i
+        u.box = boxing and e.d < 40 and BOX[i] or nil
         -- la primera persigue; el resto intercepta si hay ruta probable y va rapido
         local cfg = levelCfg()
         if i > (cfg and cfg.chasers or 1) and path and #path > 3 and (pred.speed or 0) > 9 then
