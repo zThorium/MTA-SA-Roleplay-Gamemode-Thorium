@@ -111,7 +111,8 @@ ADMIN_CATALOG = {
             { cmd = "/borrarbarrera", args = "<id>", desc = "Elimina una barrera de paso a nivel.", res = "rp_train" },
             { cmd = "/barreras", args = "", desc = "Lista las barreras de paso a nivel con id, estado y distancia.", res = "rp_train" },
             { cmd = "/crearboleteria", args = "", desc = "Pone una empleada de boleteria delante de ti en la estacion mas cercana: vende boletos de tren (con el boleto se sube al tren de pasajeros). Borrar con /delticketbooth <id>.", res = "rp_train" },
-            { cmd = "/crearcartel", args = "", desc = "Pone un cartel LED delante de ti, mirandote, con la llegada estimada del tren a la estacion mas cercana. Borrar con /deltrainsign <id>.", res = "rp_train" },
+            { cmd = "/crearcartel", args = "", desc = "Pone un cartel LED delante de ti, mirandote, con la llegada estimada del tren a la estacion mas cercana; se abre el editor 3D para ajustarlo. Borrar con /deltrainsign <id>.", res = "rp_train" },
+            { cmd = "/editarcartel", args = "[id]", desc = "Editor 3D de un cartel LED de tren (sin id, el mas cercano a 15 m): flechas mover, Re/Av Pag subir/bajar, Z/X girar, Mayus fino, Enter guardar, Retroceso cancelar.", res = "rp_train" },
         },
     },
     {

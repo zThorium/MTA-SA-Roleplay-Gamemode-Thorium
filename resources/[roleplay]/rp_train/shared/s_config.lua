@@ -74,7 +74,7 @@ TRAIN = {
 
     -- Estaciones: boleterías y carteles LED que colocan los admins (tabla train_fixtures)
     STATION_SNAP = 300,       -- una boletería o cartel se asigna a la estación más cercana a menos de esto
-    BOOTH_SKIN = 211,         -- empleada de la boletería
+    BOOTH_SKIN = 253,         -- empleado de la boletería (uniforme de conductor de tren)
     BOOTH_NAME = "Boletería",
     ETA_MS = 2000,            -- cada cuánto el servidor publica la llegada estimada (rp:train:eta)
     SIGN_WIDTH = 3.2,         -- cartel LED en el mundo (m)
@@ -82,4 +82,10 @@ TRAIN = {
     SIGN_LIFT = 1.4,          -- altura sobre el admin que lo coloca
     SIGN_FORWARD = 1.0,       -- metros delante del admin (el cartel lo mira)
     SIGN_DRAW_DISTANCE = 70,
+    -- Editor 3D del cartel (/editarcartel, y al crearlo): m/s y grados/s; Mayús los multiplica por SIGN_EDIT_FINE
+    SIGN_EDIT_SPEED = 1.5,
+    SIGN_EDIT_TURN = 60,
+    SIGN_EDIT_FINE = 0.15,
+    SIGN_EDIT_RANGE = 30,     -- el cartel no puede alejarse más de esto de donde estaba
+    SIGN_EDIT_NEAR = 15,      -- /editarcartel sin id edita el más cercano a menos de esto
 }

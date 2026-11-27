@@ -25,6 +25,8 @@
     <script src="client/c_train.lua" type="client" cache="false" />
     <script src="client/c_passengers.lua" type="client" cache="false" />
     <script src="client/c_stations.lua" type="client" cache="false" />
+    <!-- Editor 3D del cartel para admins (/crearcartel, /editarcartel) -->
+    <script src="client/c_signeditor.lua" type="client" cache="false" />
 
     <!-- Campanas del cruce (ver CREDITOS.md) -->
     <file src="sounds/campanas.mp3" />
@@ -33,6 +35,14 @@
     <!-- Teclas dibujadas (Kenney, CC0) y máscara de LED del cartel -->
     <file src="images/keys/keyboard_e.png" />
     <file src="images/keys/mouse_move.png" />
+    <file src="images/keys/keyboard_arrows_all.png" />
+    <file src="images/keys/keyboard_page_up.png" />
+    <file src="images/keys/keyboard_page_down.png" />
+    <file src="images/keys/keyboard_z.png" />
+    <file src="images/keys/keyboard_x.png" />
+    <file src="images/keys/keyboard_shift.png" />
+    <file src="images/keys/keyboard_enter.png" />
+    <file src="images/keys/keyboard_backspace.png" />
     <file src="images/led_dot.png" />
 
     <export function="getTrainState" type="server" />
