@@ -63,6 +63,9 @@ ADMIN_CATALOG = {
     {
         id = "mundo", name = "Mundo y propiedades",
         items = {
+            { cmd = "/veh", args = "<modelo o nombre> [R G B]", desc = "Crea un vehiculo TEMPORAL (ID negativo, no se guarda) delante de donde miras. Queda registrado quien lo creo (vista ALT, /nearbyvehs y admin_log). Maximo 5 por admin.", res = "rp_vehicles" },
+            { cmd = "/delveh", args = "[id negativo]", desc = "Borra un vehiculo temporal de /veh (sin id: el que ocupas o el mas cercano). No borra vehiculos con dueno.", res = "rp_vehicles" },
+            { cmd = "/makeveh", args = "<modelo o nombre> <id o nombre del dueno> [R G B]", desc = "Crea un vehiculo REAL (con ID y guardado en la BD) para el personaje del jugador, que recibe la llave. Solo super admin o quien tenga el permiso 'Crear vehiculos con dueno' en IAM. Queda en admin_log.", res = "rp_vehicles" },
             { cmd = "/agenciacola", args = "", desc = "Muestra en el chat la cola de la agencia de empleo y el estado de cada mostrador.", res = "rp_agency" },
             { cmd = "/agenciareset", args = "", desc = "Vacia la cola de turnos de la agencia y libera los mostradores.", res = "rp_agency" },
             { cmd = "/create3dtext", args = "<texto>", desc = "Crea un texto 3D con el icono de info en tu posicion (interior y dimension incluidos); se lee solo de cerca. Usa \\n para saltar de linea. Queda registrado quien lo creo y cuando.", res = "rp_3dtext" },

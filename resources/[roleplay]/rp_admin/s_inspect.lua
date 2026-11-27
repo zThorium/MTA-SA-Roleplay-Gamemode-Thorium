@@ -203,8 +203,17 @@ local function gather(player, forPick)
     local vehRunning = vehRes and getResourceState(vehRes) == "running"
     for _, v in ipairs(getElementsWithinRange(px, py, pz, RADIUS, "vehicle", int, dim)) do
         local dbId = vehRunning and exports.rp_vehicles:getVehicleDatabaseId(v) or nil
+        local temp = not dbId and vehRunning and exports.rp_vehicles:getTempVehicleInfo(v) or nil
+        if temp then
+            -- Temporal de /veh: ID negativo y quien lo creo (auditoria)
+            local by = temp.createdBy or {}
+            out[#out + 1] = { kind = "vehicle", elem = v, id = temp.id, temp = true, label = getVehicleName(v),
+                info = ("modelo %d, temporal (no se guarda)"):format(getElementModel(v)), res = "rp_vehicles",
+                creator = ("%s (cuenta %s #%s)"):format(tostring(by.player), tostring(by.account), tostring(by.accountId)),
+                createdAt = temp.createdAt, elementId = getElementID(v) }
+        end
         local x, y, z = getElementPosition(v)
-        if dbId or getDistanceBetweenPoints3D(px, py, pz, x, y, z) <= LOOSE_RADIUS then
+        if not temp and (dbId or getDistanceBetweenPoints3D(px, py, pz, x, y, z) <= LOOSE_RADIUS) then
             local res = ownerResource(v)
             if dbId or not SKIP_LOOSE[res or ""] then
                 local ownerId = dbId and tonumber(exports.rp_vehicles:getVehicleOwner(v)) or nil
@@ -253,7 +262,7 @@ local function gather(player, forPick)
         if not isElement(player) then return end
         for _, e in ipairs(out) do
             if e.ownerId then e.owner = names[e.ownerId] or ("personaje #" .. e.ownerId) end
-            if e.kind == "vehicle" and e.id then e.createdAt = vehDates[e.id] end
+            if e.kind == "vehicle" and e.id and not e.temp then e.createdAt = vehDates[e.id] end
         end
         triggerClientEvent(player, "rp:admin:inspect:data", resourceRoot, out, int, dim, forPick)
     end

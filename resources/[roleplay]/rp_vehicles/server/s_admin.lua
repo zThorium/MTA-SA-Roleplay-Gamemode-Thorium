@@ -40,7 +40,8 @@ end
 
 local function label(v)
     local data = getVehicleData(v)
-    return ("#%s %s (%s)"):format(data and data.id or "-", getVehicleName(v) or "?", getVehiclePlateText(v) or "")
+    local id = data and data.id or (getTempVehicleId and getTempVehicleId(v)) or "-"
+    return ("#%s %s (%s)"):format(id, getVehicleName(v) or "?", getVehiclePlateText(v) or "")
 end
 
 addCommandHandler("nearbyvehs", function(player, _, radius)
@@ -58,7 +59,8 @@ addCommandHandler("nearbyvehs", function(player, _, radius)
         local v = found[i].v
         local data = getVehicleData(v)
         chat(player, ("  %s - %.0f m%s%s"):format(label(v), found[i].d,
-            data and (" - dueno #" .. data.ownerId) or " - sin dueno",
+            data and (" - dueno #" .. data.ownerId)
+                or (getTempVehicleInfo(v) and (" - temporal de " .. getTempVehicleInfo(v).createdBy.account) or " - sin dueno"),
             data and (data.locked and " - cerrado" or " - abierto") or ""), 255, 255, 255)
     end
 end)
