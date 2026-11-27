@@ -95,6 +95,8 @@ addEventHandler("onClientRender", root, function()
             drawSign(rt, signText(el, now), now)
             local x, y, z = getElementPosition(el)
             local rot = math.rad(tonumber(getElementData(el, "rot")) or 0)
+            local edit = SignPreview -- editor 3D abierto (c_signeditor.lua): se dibuja donde quedará
+            if edit and edit.el == el then x, y, z, rot = edit.x, edit.y, edit.z, math.rad(edit.rot) end
             local h = TRAIN.SIGN_HEIGHT / 2
             dxDrawMaterialLine3D(x, y, z + h, x, y, z - h, rt, TRAIN.SIGN_WIDTH, tocolor(255, 255, 255),
                 x - math.sin(rot), y + math.cos(rot), z)
