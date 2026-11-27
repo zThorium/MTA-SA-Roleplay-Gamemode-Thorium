@@ -1,15 +1,20 @@
 --[[
     rp_clothing / s_clothing.lua
 
-    Tiendas de ropa (tabla clothing_stores). En la puerta hay un pickup de
-    camiseta: E para entrar. Cada tienda tiene su interior de GTA en su propia
-    dimension. Dentro, E abre el probador: lo que eliges se prueba en vivo sobre
-    el personaje (lo ven todos) y solo se guarda si lo compras. Al cerrar sin
-    comprar vuelve la ropa guardada. En la puerta de dentro, E para salir.
+    Tiendas de ropa (tabla clothing_stores). Tres marcadores de rp_markers por tienda,
+    todos movibles por un admin con el editor (ALT o M + clic derecho):
+      - Puerta (exterior, clave door<id>): E para entrar. Se guarda en clothing_stores.x/y/z.
+      - Salida (dentro, clave exit<id>): E para salir. Se guarda en clothing_stores.ix/iy/iz.
+      - Mostrador (dentro, clave caja_<tipo>): E abre el estudio. La posicion la guarda rp_markers
+        y es la misma para todas las tiendas del mismo tipo (mismo interior de GTA).
+    Cada tienda tiene su interior de GTA en su propia dimension. En el estudio lo que eliges se
+    prueba en vivo sobre el personaje (lo ven todos) y solo se guarda si lo compras; al cerrar
+    sin comprar vuelve la ropa guardada.
 
       - Personajes con cabeza personalizada (hombres): torso, piernas y zapatos de CJ.
       - Personajes con skin (mujeres): skins civiles de su genero.
-      - Todas las tiendas venden accesorios (toys, ver s_toys.lua).
+      - Todas las tiendas venden accesorios (toys, ver s_toys.lua), que se previsualizan y se
+        colocan con el gizmo antes de comprarlos.
 
     Comandos de administracion (admin_level >= 1):
         /crearropa <tipo> <nombre>          crea una tienda con la puerta en tu posicion
@@ -18,13 +23,16 @@
         /tiendasropa                        lista las tiendas
 ]]
 
-local stores = {}    -- [id] = { row, pickup, col, exitCol, blip }
-local fitting = {}   -- [player] = storeId con el probador abierto
+local stores = {}    -- [id] = { row, door, exit, counter, blip }
+local fitting = {}   -- [player] = storeId con el estudio abierto
 local cooldown = {}
+local clientReady = {} -- [player] = true cuando su cliente ya registro los eventos
 
 addEvent("rp:onDatabaseReady", false)
 addEvent("rp:onCharacterSpawn", false)
 addEvent("rp:onCharacterLogout", false)
+addEvent("rp:markers:moved")
+addEvent("rp:cloth:clientReady", true)
 addEvent("rp:cloth:enter", true)
 addEvent("rp:cloth:exit", true)
 addEvent("rp:cloth:open", true)
@@ -80,6 +88,14 @@ function getStoreInterior(row)
     }
 end
 
+-- Mostrador del tipo de tienda: el de la config o el que movio un admin (rp_markers)
+local function counterPoint(kind)
+    local t = CLOTHING_INTERIORS[kind]
+    local c = t and t.counter
+    if not c then return nil end
+    return exports.rp_markers:placePoint("caja_" .. kind, c[1], c[2], c[3])
+end
+
 -- Tienda en la que esta el jugador (por interior y dimension), o nil
 function getPlayerStore(player)
     local id = getElementDimension(player) - CLOTHING.DIMENSION_BASE
@@ -90,11 +106,44 @@ function getPlayerStore(player)
     return id, s, t
 end
 
+-- ¿Esta el jugador junto al mostrador de su tienda?
+local function atCounter(player)
+    local id, s = getPlayerStore(player)
+    if not id then return nil end
+    local cx, cy, cz = counterPoint(s.row.type)
+    if not cx then return nil end
+    local px, py, pz = getElementPosition(player)
+    if getDistanceBetweenPoints3D(px, py, pz, cx, cy, cz) > CLOTHING.COUNTER_RADIUS then return nil end
+    return id, s
+end
+
 local function destroyStore(id)
     local s = stores[id]
     if not s then return end
-    for _, el in ipairs({ s.pickup, s.col, s.exitCol, s.blip }) do if isElement(el) then destroyElement(el) end end
+    for _, el in ipairs({ s.door, s.exit, s.counter, s.blip }) do if isElement(el) then destroyElement(el) end end
     stores[id] = nil
+end
+
+-- Marcador de rp_markers: x, y, z = punto a la altura del jugador (el cilindro va 1 m mas abajo)
+local function makeMarker(x, y, z, interior, dimension, style, key, opts)
+    local m = createMarker(x, y, z - 1, "cylinder", CLOTHING.MARKER_SIZE, 255, 255, 255, 120)
+    setElementInterior(m, interior)
+    setElementDimension(m, dimension)
+    exports.rp_markers:setMarkerStyle(m, style)
+    opts.point = { x, y, z }
+    exports.rp_markers:registerMarker(m, key, opts)
+    return m
+end
+
+-- Avisa al cliente del marcador que pisa (para el atajo E). kind = door | exit | counter
+local function bindNear(marker, kind, id, name)
+    addEventHandler("onMarkerHit", marker, function(el, sameDim)
+        if getElementType(el) ~= "player" or not sameDim or not characterOf(el) or isPedInVehicle(el) then return end
+        triggerClientEvent(el, "rp:cloth:near", resourceRoot, kind, id, name)
+    end)
+    addEventHandler("onMarkerLeave", marker, function(el)
+        if getElementType(el) == "player" then triggerClientEvent(el, "rp:cloth:near", resourceRoot, kind, false) end
+    end)
 end
 
 local function spawnStore(row)
@@ -103,29 +152,24 @@ local function spawnStore(row)
     local t = getStoreInterior(row)
     if not t then return outputDebugString("[rp_clothing] Tipo desconocido en tienda #" .. id, 2) end
     row.x, row.y, row.z = tonumber(row.x), tonumber(row.y), tonumber(row.z)
+    local dim = dimensionOf(id)
 
-    local pickup = createPickup(row.x, row.y, row.z, 3, CLOTHING.ENTRANCE_PICKUP, 0)
-    local col = createColTube(row.x, row.y, row.z - 2, 1.4, 4)
-    local exitCol = createColSphere(t.x, t.y, t.z, CLOTHING.EXIT_RADIUS)
-    setElementInterior(exitCol, t.interior)
-    setElementDimension(exitCol, dimensionOf(id))
+    local door = makeMarker(row.x, row.y, row.z, 0, 0, { icon = "clothes", label = row.name },
+        "door" .. id, { label = row.name .. " · entrada", ownerSaves = true })
+    local exit = makeMarker(t.x, t.y, t.z, t.interior, dim, { icon = "exit", label = "Salir" },
+        "exit" .. id, { label = row.name .. " · salida", ownerSaves = true })
+    local counter
+    local cx, cy, cz = counterPoint(row.type)
+    if cx then
+        counter = makeMarker(cx, cy, cz, t.interior, dim, { icon = "clothes", label = "Probador y accesorios" },
+            "caja_" .. row.type, { label = t.name .. " · mostrador (todas las " .. t.name .. ")" })
+    end
     local blip = createBlip(row.x, row.y, row.z, CLOTHING.BLIP, 2, 255, 255, 255, 255, 0, 250)
-    stores[id] = { row = row, pickup = pickup, col = col, exitCol = exitCol, blip = blip }
+    stores[id] = { row = row, door = door, exit = exit, counter = counter, blip = blip }
 
-    addEventHandler("onColShapeHit", col, function(el, sameDim)
-        if getElementType(el) ~= "player" or not sameDim or not characterOf(el) or isPedInVehicle(el) then return end
-        triggerClientEvent(el, "rp:cloth:near", resourceRoot, "door", id, row.name)
-    end)
-    addEventHandler("onColShapeLeave", col, function(el)
-        if getElementType(el) == "player" then triggerClientEvent(el, "rp:cloth:near", resourceRoot, "door", false) end
-    end)
-    addEventHandler("onColShapeHit", exitCol, function(el, sameDim)
-        if getElementType(el) ~= "player" or not sameDim then return end
-        triggerClientEvent(el, "rp:cloth:near", resourceRoot, "exit", id, row.name)
-    end)
-    addEventHandler("onColShapeLeave", exitCol, function(el)
-        if getElementType(el) == "player" then triggerClientEvent(el, "rp:cloth:near", resourceRoot, "exit", false) end
-    end)
+    bindNear(door, "door", id, row.name)
+    bindNear(exit, "exit", id, row.name)
+    if counter then bindNear(counter, "counter", id, row.name) end
 end
 
 local function insertStore(name, kind, x, y, z, callback)
@@ -136,28 +180,110 @@ local function insertStore(name, kind, x, y, z, callback)
     end, db(), "INSERT INTO clothing_stores (name, type, x, y, z) VALUES (?, ?, ?, ?, ?)", name, kind, x, y, z)
 end
 
--- Avisa al cliente si el jugador esta dentro de una tienda (para el atajo E del probador)
+-- Avisa al cliente si el jugador esta dentro de una tienda (cierra el estudio al salir)
 local function updateInside(player)
-    if not isElement(player) then return end
+    if not isElement(player) or not clientReady[player] then return end
     local id, s = getPlayerStore(player)
     triggerClientEvent(player, "rp:cloth:inside", resourceRoot, id or false, s and s.row.name or nil)
+end
+
+-- Siembra de las tiendas iniciales. Atomica: no inserta si ya hay una tienda del mismo tipo a menos
+-- de DUP_RADIUS de esa puerta. Asi dos cargas seguidas (arranque + rp:onDatabaseReady de un reinicio
+-- de rp_database) ya no pueden duplicar las tiendas.
+local DUP_RADIUS = 3
+local function seedStore(name, kind, x, y, z)
+    dbQuery(function(qh)
+        local ok, affected, id = dbPoll(qh, 0)
+        if ok and (tonumber(affected) or 0) > 0 then spawnStore({ id = id, name = name, type = kind, x = x, y = y, z = z }) end
+    end, db(), [[
+        INSERT INTO clothing_stores (name, type, x, y, z)
+        SELECT ?, ?, ?, ?, ? FROM DUAL
+        WHERE NOT EXISTS (SELECT 1 FROM clothing_stores WHERE type = ? AND ABS(x - ?) < ? AND ABS(y - ?) < ?)
+    ]], name, kind, x, y, z, kind, x, DUP_RADIUS, y, DUP_RADIUS)
+end
+
+-- ¿La puerta esta donde la puso la semilla? (si no, un admin la coloco a mano)
+local function atSeed(row)
+    for _, s in ipairs(CLOTHING_SEED) do
+        if s[2] == row.type and math.abs(s[3] - tonumber(row.x)) < 0.05 and math.abs(s[4] - tonumber(row.y)) < 0.05 then return true end
+    end
+    return false
+end
+
+-- Tiendas duplicadas (mismo tipo y puerta a menos de DUP_RADIUS): se queda la que un admin coloco
+-- a mano y, si no, la de id menor. Las demas se borran de la BD.
+local function removeDuplicates(rows)
+    local keep = {}
+    for _, row in ipairs(rows) do row._seed = atSeed(row) end
+    table.sort(rows, function(a, b)
+        if a._seed ~= b._seed then return not a._seed end
+        return tonumber(a.id) < tonumber(b.id)
+    end)
+    for _, row in ipairs(rows) do
+        local x, y, z = tonumber(row.x), tonumber(row.y), tonumber(row.z)
+        local dup
+        for _, k in ipairs(keep) do
+            if k.type == row.type and getDistanceBetweenPoints3D(x, y, z, tonumber(k.x), tonumber(k.y), tonumber(k.z)) < DUP_RADIUS then
+                dup = k
+                break
+            end
+        end
+        if dup then
+            outputDebugString(("[rp_clothing] Tienda #%s '%s' duplicada de la #%s: se elimina"):format(row.id, row.name, dup.id), 2)
+            dbExec(db(), "DELETE FROM clothing_stores WHERE id = ?", row.id)
+        else
+            keep[#keep + 1] = row
+        end
+    end
+    return keep
 end
 
 local function loadStores()
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0) or {}
         if #rows == 0 then
-            for _, seed in ipairs(CLOTHING_SEED) do insertStore(seed[1], seed[2], seed[3], seed[4], seed[5]) end
+            for _, seed in ipairs(CLOTHING_SEED) do seedStore(seed[1], seed[2], seed[3], seed[4], seed[5]) end
             return outputDebugString("[rp_clothing] Tiendas de ropa iniciales creadas")
         end
+        rows = removeDuplicates(rows)
         for _, row in ipairs(rows) do spawnStore(row) end
         outputDebugString(("[rp_clothing] %d tiendas de ropa cargadas"):format(#rows))
-        for _, p in ipairs(getElementsByType("player")) do updateInside(p) end
+        for p in pairs(clientReady) do if isElement(p) then updateInside(p) end end
     end, db(), "SELECT * FROM clothing_stores")
 end
 
+-- El cliente avisa cuando ya cargo sus scripts: antes no se le pueden mandar eventos
+-- (tras un restart, el servidor arranca antes que la descarga del cliente).
+addEventHandler("rp:cloth:clientReady", resourceRoot, function()
+    clientReady[client] = true
+    if characterOf(client) then updateInside(client) end
+end)
+
 addEventHandler("onResourceStart", resourceRoot, function()
     if exports.rp_database:isReady() then loadStores() else addEventHandler("rp:onDatabaseReady", root, loadStores) end
+end)
+
+-- Un admin movio un marcador con el editor: se guarda (puerta y salida) y se rehace la tienda
+addEventHandler("rp:markers:moved", root, function(owner, key, x, y, z)
+    if owner ~= "rp_clothing" or type(key) ~= "string" then return end
+    x, y, z = tonumber(x), tonumber(y), tonumber(z)
+    local door, exit, kind = tonumber(key:match("^door(%d+)$")), tonumber(key:match("^exit(%d+)$")), key:match("^caja_(%a+)$")
+    if door and stores[door] and x then
+        local row = stores[door].row
+        row.x, row.y, row.z = x, y, z
+        dbExec(db(), "UPDATE clothing_stores SET x = ?, y = ?, z = ? WHERE id = ?", x, y, z, door)
+        spawnStore(row)
+    elseif exit and stores[exit] and x then
+        local row = stores[exit].row
+        local rot = getStoreInterior(row).rot
+        row.ix, row.iy, row.iz, row.irot = x, y, z, rot
+        dbExec(db(), "UPDATE clothing_stores SET ix = ?, iy = ?, iz = ?, irot = ? WHERE id = ?", x, y, z, rot, exit)
+        spawnStore(row)
+    elseif kind then
+        for _, s in pairs(stores) do
+            if s.row.type == kind then spawnStore(s.row) end
+        end
+    end
 end)
 
 -- Si reaparece dentro de una tienda (se desconecto ahi), el cliente necesita saberlo
@@ -192,7 +318,7 @@ addEventHandler("rp:cloth:enter", resourceRoot, function(id)
     setCameraTarget(player, player)
     triggerEvent("rp:clothing:onTeleport", player)
     triggerClientEvent(player, "rp:cloth:inside", resourceRoot, tonumber(s.row.id), s.row.name)
-    notify(player, ("Bienvenido a %s. Pulsa E para abrir el probador."):format(s.row.name), "info")
+    notify(player, ("Bienvenido a %s. Ve al mostrador (marcador con la camiseta) para probarte ropa y accesorios."):format(s.row.name), "info")
 end)
 
 addEventHandler("rp:cloth:exit", resourceRoot, function()
@@ -213,7 +339,7 @@ end)
 addEvent("rp:clothing:onTeleport", false)
 
 ----------------------------------------------------------------
--- Probador
+-- Estudio (probador + accesorios)
 ----------------------------------------------------------------
 local function shopData(player, storeId)
     local s = stores[storeId]
@@ -249,8 +375,9 @@ end
 addEventHandler("rp:cloth:open", resourceRoot, function()
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
-    local id = getPlayerStore(player)
-    if not id or not characterOf(player) then return end
+    if not characterOf(player) or isPedInVehicle(player) then return end
+    local id = atCounter(player)
+    if not id then return notify(player, "Acercate al mostrador de la tienda.", "warning") end
     fitting[player] = id
     sendShop(player)
 end)
@@ -274,11 +401,17 @@ local function validChoice(player, slot, index)
     return isInt(index, 0, countClothes(SLOT_TYPES[slot]) - 1), look
 end
 
+-- Sigue con el estudio abierto y junto al mostrador de esa misma tienda
+local function stillFitting(player)
+    local storeId = fitting[player]
+    return storeId and atCounter(player) == storeId and storeId or nil
+end
+
 addEventHandler("rp:cloth:try", resourceRoot, function(slot, index)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     index = tonumber(index)
-    if not fitting[player] or not getPlayerStore(player) then return end
+    if not stillFitting(player) then return end
     if not validChoice(player, slot, index) then return end
     if slot == "skin" then
         setElementModel(player, index)
@@ -294,8 +427,8 @@ addEventHandler("rp:cloth:buy", resourceRoot, function(slot, index)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     index = tonumber(index)
-    local storeId = fitting[player]
-    if not storeId or getPlayerStore(player) ~= storeId or throttled(player) then return end
+    local storeId = stillFitting(player)
+    if not storeId or throttled(player) then return end
     local ok, look = validChoice(player, slot, index)
     if not ok then return notify(player, "Esa prenda no esta disponible.", "error") end
 
@@ -309,21 +442,29 @@ addEventHandler("rp:cloth:buy", resourceRoot, function(slot, index)
     exports.rp_characters:setCharacterLook(player, { [column] = index })
     exports.rp_characters:saveCharacter(player)
     notify(player, ("Compraste %s por $%d."):format(slot == "skin" and "un nuevo conjunto" or SLOT_NAMES[slot]:lower(), price), "success")
+    triggerClientEvent(player, "rp:cloth:bought", resourceRoot, "clothes")
     sendShop(player)
 end)
 
-addEventHandler("rp:cloth:buyToy", resourceRoot, function(toyKey)
+-- adjust = ajuste del gizmo hecho en la vista previa (opcional; el servidor lo recorta)
+addEventHandler("rp:cloth:buyToy", resourceRoot, function(toyKey, adjust)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
-    local storeId = fitting[player]
-    if not storeId or getPlayerStore(player) ~= storeId or throttled(player) then return end
-    buyToy(player, toyKey, getStoreInterior(stores[storeId].row).multiplier, function() sendShop(player) end)
+    local storeId = stillFitting(player)
+    if not storeId or throttled(player) then return end
+    buyToy(player, toyKey, getStoreInterior(stores[storeId].row).multiplier, adjust, function()
+        triggerClientEvent(player, "rp:cloth:bought", resourceRoot, "toy", toyKey)
+        sendShop(player)
+    end)
 end)
 
 local function forget(player)
     fitting[player], cooldown[player] = nil, nil
 end
-addEventHandler("onPlayerQuit", root, function() forget(source) end)
+addEventHandler("onPlayerQuit", root, function()
+    forget(source)
+    clientReady[source] = nil
+end)
 addEventHandler("rp:onCharacterLogout", root, function() forget(source) end)
 addEventHandler("onPlayerWasted", root, function() closeFitting(source, false) end)
 addEvent("rp:onPlayerDowned", false)
@@ -365,7 +506,7 @@ function adminElements()
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
                 interior = 0, dimension = 0, label = row.name,
-                noRot = true, element = e.pickup }
+                noRot = true, element = e.door }
         end
     end
     return list

@@ -46,7 +46,7 @@ Prefijo `s_` = servidor o compartido, `c_` = cliente.
 
 Base: `rp_database` (conexión + esquema), `rp_login` (CEF + bcrypt), `rp_characters`
 (3 slots, spawn), `rp_ids`, `rp_notify`. Personaje: `rp_heads` + `bone_attach`
-(terceros, ver créditos), `rp_needs`, `rp_injury` (abatido en vez de morir, hospital), `rp_seatbelt` (cinturón con C; sin él los choques leves tiñen de rojo los bordes y los fuertes te lanzan por el parabrisas), `rp_worldobjects` (sentarse con E en bancas, sillas y sofás del mapa original, mapeados de los IPL del juego), `rp_inventory` (I), `rp_clothing` (ropa y toys).
+(terceros, ver créditos), `rp_needs`, `rp_injury` (abatido en vez de morir, hospital), `rp_seatbelt` (cinturón con C; sin él los choques leves tiñen de rojo los bordes y los fuertes te lanzan por el parabrisas), `rp_worldobjects` (sentarse con E en bancas, sillas y sofás del mapa original, mapeados de los IPL del juego), `rp_inventory` (I), `rp_clothing` (ropa y toys: estudio en el mostrador con vista previa y gizmo 3D para colocar accesorios).
 Economía: `rp_bank` (cajeros), `rp_shops`, `rp_vending` (expendedoras: sed/hambre), `rp_restaurants` (Burger Shot, Cluckin' Bell y pizzería con interior original y comida con animación de SA), `rp_dealership`, `rp_payday`.
 Comunidad: `rp_factions` (F3, roles con permisos y sueldo), `rp_phone` (P) con Tinder (personas simuladas con personalidad, fotos sacadas en el mundo con `/tinderstudio`, chat que contesta con retraso, citas que crean un vínculo de `rp_npcrel`; jugadores reales en el mismo mazo) y la app
 de viajes `rp_rides` (Vroom), `rp_interact` (M + clic derecho sobre una persona: menú CEF de interacción; las acciones
