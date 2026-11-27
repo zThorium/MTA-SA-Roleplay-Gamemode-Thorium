@@ -1568,4 +1568,129 @@ SCHEMA = {
     [[
     ALTER TABLE train_fixtures ADD COLUMN IF NOT EXISTS model SMALLINT UNSIGNED NOT NULL DEFAULT 0
     ]],
+    -- rp_phone (Tinder completo): intereses, trabajo, rango de edad, Gold, cupo diario de likes y tutorial visto
+    [[
+    ALTER TABLE tinder_profiles
+        ADD COLUMN IF NOT EXISTS interests   VARCHAR(160) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS job         VARCHAR(40)  NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS age_min     TINYINT UNSIGNED NOT NULL DEFAULT 18,
+        ADD COLUMN IF NOT EXISTS age_max     TINYINT UNSIGNED NOT NULL DEFAULT 70,
+        ADD COLUMN IF NOT EXISTS gold_until  DATETIME NULL,
+        ADD COLUMN IF NOT EXISTS quota_day   DATE NULL,
+        ADD COLUMN IF NOT EXISTS likes_used  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS supers_used TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS tutorial    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS thumb       TEXT NULL,
+        ADD COLUMN IF NOT EXISTS last_active DATETIME NULL
+    ]],
+    -- rp_phone (Tinder): fotos extra del perfil (la 1 es tinder_profiles.photo; aqui van la 2, 3 y 4)
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_profile_photos (
+        character_id INT UNSIGNED NOT NULL,
+        slot         TINYINT UNSIGNED NOT NULL,
+        image        MEDIUMTEXT NOT NULL,
+        PRIMARY KEY (character_id, slot),
+        CONSTRAINT fk_tinder_profile_photos_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Tinder): personas simuladas (NPC) con personalidad, gustos y biografia generadas una vez
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_npcs (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name       VARCHAR(40)  NOT NULL,
+        age        TINYINT UNSIGNED NOT NULL,
+        gender     TINYINT UNSIGNED NOT NULL,
+        skin       SMALLINT UNSIGNED NOT NULL,
+        archetype  VARCHAR(24)  NOT NULL,
+        job        VARCHAR(48)  NOT NULL DEFAULT '',
+        zone       VARCHAR(32)  NOT NULL DEFAULT '',
+        home_x     FLOAT        NOT NULL DEFAULT 0,
+        home_y     FLOAT        NOT NULL DEFAULT 0,
+        bio        VARCHAR(400) NOT NULL DEFAULT '',
+        interests  VARCHAR(160) NOT NULL DEFAULT '',
+        prompts    TEXT         NULL,
+        traits     VARCHAR(255) NOT NULL DEFAULT '',
+        likes      CHAR(1)      NOT NULL DEFAULT 'a',
+        age_min    TINYINT UNSIGNED NOT NULL DEFAULT 18,
+        age_max    TINYINT UNSIGNED NOT NULL DEFAULT 70,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Tinder): fotos de los NPC. scene/pose dicen como sacarla; image la llena el estudio (/tinderestudio)
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_npc_photos (
+        id       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        npc_id   INT UNSIGNED NOT NULL,
+        slot     TINYINT UNSIGNED NOT NULL,
+        scene    VARCHAR(24)  NOT NULL,
+        pose     VARCHAR(16)  NOT NULL,
+        image    MEDIUMTEXT   NULL,
+        thumb    TEXT         NULL,
+        taken_at DATETIME     NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_tinder_npc_photos_slot (npc_id, slot),
+        CONSTRAINT fk_tinder_npc_photos_npc FOREIGN KEY (npc_id) REFERENCES tinder_npcs (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Tinder): relacion de cada personaje con cada NPC (votos, match, interes del NPC, memoria de la charla)
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_npc_links (
+        character_id   INT UNSIGNED NOT NULL,
+        npc_id         INT UNSIGNED NOT NULL,
+        player_swipe   TINYINT UNSIGNED NULL,
+        swiped_at      DATETIME NULL,
+        npc_swipe      TINYINT UNSIGNED NULL,
+        npc_decide_at  DATETIME NULL,
+        matched_at     DATETIME NULL,
+        interest       SMALLINT NOT NULL DEFAULT 0,
+        state          VARCHAR(12) NOT NULL DEFAULT '',
+        memory         TEXT NULL,
+        exchanges      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        last_player_at DATETIME NULL,
+        last_npc_at    DATETIME NULL,
+        followups      TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        reply_at       DATETIME NULL,
+        PRIMARY KEY (character_id, npc_id),
+        KEY idx_tinder_npc_links_decide (npc_decide_at),
+        KEY idx_tinder_npc_links_matched (matched_at),
+        KEY idx_tinder_npc_links_reply (reply_at),
+        CONSTRAINT fk_tinder_npc_links_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tinder_npc_links_npc FOREIGN KEY (npc_id) REFERENCES tinder_npcs (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Tinder): chat con NPC. Las respuestas del NPC se programan (send_at) y se entregan con retraso
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_npc_messages (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        character_id INT UNSIGNED NOT NULL,
+        npc_id       INT UNSIGNED NOT NULL,
+        from_npc     TINYINT UNSIGNED NOT NULL,
+        body         VARCHAR(500) NOT NULL,
+        send_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        delivered    TINYINT UNSIGNED NOT NULL DEFAULT 1,
+        read_at      DATETIME NULL,
+        PRIMARY KEY (id),
+        KEY idx_tinder_npc_messages_queue (delivered, send_at),
+        KEY idx_tinder_npc_messages_chat (character_id, npc_id, id),
+        CONSTRAINT fk_tinder_npc_messages_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tinder_npc_messages_npc FOREIGN KEY (npc_id) REFERENCES tinder_npcs (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_phone (Tinder): chat entre jugadores con match
+    [[
+    CREATE TABLE IF NOT EXISTS tinder_messages (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        sender_id   INT UNSIGNED NOT NULL,
+        receiver_id INT UNSIGNED NOT NULL,
+        body        VARCHAR(500) NOT NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        read_at     DATETIME NULL,
+        PRIMARY KEY (id),
+        KEY idx_tinder_messages_receiver (receiver_id, read_at),
+        KEY idx_tinder_messages_pair (sender_id, receiver_id, id),
+        CONSTRAINT fk_tinder_messages_sender FOREIGN KEY (sender_id) REFERENCES characters (id) ON DELETE CASCADE,
+        CONSTRAINT fk_tinder_messages_receiver FOREIGN KEY (receiver_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
