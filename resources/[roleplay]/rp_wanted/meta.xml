@@ -23,6 +23,7 @@
     <script src="server/s_jail.lua" type="server" />
     <script src="client/c_roads.lua" type="client" cache="false" />
     <script src="client/c_knowledge.lua" type="client" cache="false" />
+    <script src="client/c_combat.lua" type="client" cache="false" />
     <script src="client/c_crimes.lua" type="client" cache="false" />
     <script src="client/c_police.lua" type="client" cache="false" />
     <script src="client/c_jail.lua" type="client" cache="false" />

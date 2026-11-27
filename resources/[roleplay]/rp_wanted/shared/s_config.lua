@@ -276,6 +276,30 @@ WANTED_SEARCH = {
     SHOT_REVEAL_RADIUS = 80,   -- m: disparar con un policia a esta distancia revela tu posicion
 }
 
+--[[
+    Combate de los policias a pie y de los tiradores de las patrullas
+    (client/c_combat.lua). Mas listos, no mas letales: rodean al jugador,
+    se desplazan mientras disparan, se cubren y fallan mas de lejos o si corres.
+]]
+WANTED_COMBAT = {
+    RANGE = 32,                 -- m: distancia maxima de disparo a pie
+    -- Error de punteria (m de desvio del punto al que apuntan):
+    -- base + por metro de distancia + por km/h del jugador; mas si les acaban de pegar
+    AIM_BASE = 0.25, AIM_PER_M = 0.035, AIM_PER_KMH = 0.02, AIM_HURT = 0.8,
+    AIM_LEVEL = 0.05,           -- menos error por cada estrella sobre 2 (minimo la mitad)
+    AIM_REFRESH = 300,          -- ms entre cambios del punto de mira
+    -- Ritmo propio de cada policia: rafagas, pausas y recarga
+    BURST_MIN = 250, BURST_MAX = 650, PAUSE_MIN = 450, PAUSE_MAX = 1100,
+    BURSTS_PER_RELOAD = 4, RELOAD = 1600,
+    -- Anillo: a esta distancia se reparten alrededor del jugador para rodearlo
+    RING_MIN = 9, RING_MAX = 17,
+    -- Cobertura: al apuntarles, al recibir dano o con poca vida
+    COVER_HEALTH = 50, COVER_HIDE = 2500, COVER_COOLDOWN = 5000, COVER_COOLDOWN_HURT = 2500,
+    COVER_GO_MAX = 3500,        -- ms maximos corriendo a la cobertura
+    SURRENDER_MS = 1500,        -- ms quieto y sin apuntar: uno se acerca a arrestarte, los demas te cubren
+    STUCK_MS = 1500,            -- ms sin avanzar: salta y se aparta para rodear el obstaculo
+}
+
 -- Nivel de estrellas para un total de caos
 function wantedLevelFromChaos(chaos)
     local level = 0

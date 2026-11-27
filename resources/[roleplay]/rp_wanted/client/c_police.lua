@@ -58,7 +58,9 @@ local function controls(ped, accel, brake, steer, handbrake)
 end
 
 local function releaseFoot(ped)
-    for _, c in ipairs({ "forwards", "sprint", "walk", "aim_weapon", "fire" }) do setPedControlState(ped, c, false) end
+    for _, c in ipairs({ "forwards", "backwards", "left", "right", "jump", "sprint", "walk", "aim_weapon", "fire" }) do
+        setPedControlState(ped, c, false)
+    end
 end
 
 local function levelCfg() return WANTED_LEVELS[level] end
@@ -691,7 +693,7 @@ local function footCop(u, ped, now)
             sx, sy = sp[1], sp[2]
         end
         if getDistanceBetweenPoints2D(x, y, sx, sy) < 2 then return releaseFoot(ped) end
-        return runTo(ped, x, y, sx, sy, mode == "predict")
+        return combatRun(ped, now, x, y, sx, sy, mode == "predict")
     end
 
     -- El jugador se escapa en un vehiculo (o se aleja mucho a pie): si su patrulla esta
@@ -726,13 +728,11 @@ local function footCop(u, ped, now)
         if cfg.shoot and armed and los and dist < 35 and dist > 6 then
             setPedControlState(ped, "forwards", false)
             setPedControlState(ped, "sprint", false)
-            setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
-            setPedAimTarget(ped, px, py, pz + 0.3)
-            setPedControlState(ped, "aim_weapon", true)
-            setPedControlState(ped, "fire", (now + (tonumber(u.id) or 0) * 300) % 1300 < 450)
+            -- punteria con error y ritmo propio (client/c_combat.lua)
+            combatAimFire(ped, now, x, y, z, px, py, pz - 0.1, dist)
             return
         end
-        return runTo(ped, x, y, doorX, doorY, doorDist > 4)
+        return combatRun(ped, now, x, y, doorX, doorY, doorDist > 4)
     end
 
     -- A pie: en el suelo o quieto a su lado -> arresto
@@ -747,16 +747,8 @@ local function footCop(u, ped, now)
     end
     st.bustSince = nil
 
-    -- Desde 2 estrellas dispara si te ve
-    if cfg.shoot and armed and los and dist < 32 and dist > 3.5 then
-        setPedControlState(ped, "forwards", false)
-        setPedControlState(ped, "sprint", false)
-        setElementRotation(ped, 0, 0, heading(px - x, py - y), "default", true)
-        setPedAimTarget(ped, px, py, pz + 0.4)
-        setPedControlState(ped, "aim_weapon", true)
-        setPedControlState(ped, "fire", (now + (tonumber(u.id) or 0) * 300) % 1300 < 450)
-        return
-    end
+    -- Desde 2 estrellas: combate (rodean, disparan con error, se cubren; client/c_combat.lua)
+    if cfg.shoot and armed and combatFoot(u, ped, now, x, y, z, px, py, pz, dist, los) then return end
 
     -- Control de carretera: esperan en su sitio hasta que te acercas
     if (u.kind == "roadblock" or u.kind == "spikes") and dist > 45 then
@@ -774,7 +766,7 @@ local function footCop(u, ped, now)
         setPedControlState(ped, "fire", (now % 700) < 250)
         return
     end
-    runTo(ped, x, y, px, py, dist > 4)
+    combatRun(ped, now, x, y, px, py, dist > 4)
 end
 
 ----------------------------------------------------------------
@@ -1177,9 +1169,9 @@ local function carGunners(u, now)
             local seat = getPedOccupiedVehicleSeat(ped) or 0
             if firing and seat > 0 and not isPedDead(ped) and getPedWeapon(ped) >= 22 then
                 if not u.driveby[ped] then u.driveby[ped] = true setDriveby(ped, true) end
-                -- a los neumaticos si vas en vehiculo
-                setPedAimTarget(ped, px, py, pz + (pveh and -0.4 or 0.3))
-                local burst = (now + seat * 250) % 1100 < 500
+                -- a los neumaticos si vas en vehiculo; con error de punteria y ritmo propio
+                combatDrivebyAim(ped, now, px, py, pz, pveh and -0.4 or 0.3, dist)
+                local burst = combatRhythm(ped, now)
                 setPedControlState(ped, "vehicle_fire", burst)
                 setPedControlState(ped, "fire", burst)
             elseif u.driveby[ped] then
@@ -1297,10 +1289,30 @@ local function boatTick(u, now)
     controls(driver, cruise, false, diff / 35)
 end
 
+-- Policias a pie en combate: se reparten alrededor del jugador (client/c_combat.lua)
+local slotsAt = 0
+local function assignFootSlots(now)
+    if now - slotsAt < 1000 then return end
+    slotsAt = now
+    local list = {}
+    for _, u in pairs(units) do
+        if not u.leaving and (u.kind == "car" or u.kind == "swat") then
+            for _, ped in ipairs(u.peds) do
+                if isElement(ped) and not isPedDead(ped) and not isPedInVehicle(ped) and controlled(u, ped) then
+                    list[#list + 1] = ped
+                end
+            end
+        end
+    end
+    combatAssignSlots(list)
+end
+
 local function tick()
     local now = getTickCount()
     planBudget = 1
+    combatTickStart()
     assignRoles(now)
+    assignFootSlots(now)
     checkSpikes()
     for _, u in pairs(units) do
         if u.isLocal then
