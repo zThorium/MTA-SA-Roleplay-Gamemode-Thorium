@@ -1,0 +1,12 @@
+<meta>
+    <info author="Thorium" name="RP Pickup FX" description="Glow, shader y particulas para los pickups del juego (casas, estrellas, camiseta, fajos)" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <!-- Solo cliente: no llama exports de nadie. Los pickups los siguen creando sus recursos. -->
+    <script src="shared/s_config.lua" type="client" cache="false" />
+    <script src="client/c_pickupfx.lua" type="client" cache="false" />
+
+    <file src="fx/pickup.fx" />
+    <file src="fx/glow.fx" />
+    <file src="fx/mta-helper.fx" />
+</meta>

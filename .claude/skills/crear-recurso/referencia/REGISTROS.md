@@ -25,6 +25,7 @@ grep -rhoE 'setElementData\([^,]+, *"rp:[^"]+"' --include=*.lua "resources/[role
 | 25000 + id | `rp_restaurants` | Burger Shot, Cluckin' Bell y pizzerías |
 | 26000 + slot | `rp_pizzeria` | una por turno de pizzero (`DIM_BASE + 1..500`, interior 5) |
 | 30001 | `rp_agency` | agencia de empleo |
+| 65000 | `rp_pickupfx` | solo en el cliente: aparca los pickups originales mientras se ve su copia animada |
 
 Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27000 + n`...) en
 `DIMENSION_BASE` de su config, y escríbelo aquí. Comprueba siempre **interior + dimensión + distancia**.
@@ -71,6 +72,8 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
   trenes (`rp_train`): `rp:train`, `rp:train:wagon`, `rp:train:of`, `rp:train:idx`, `rp:train:v`, `rp:train:passenger`, `rp:train:dwell`, `rp:train:horn`.
 - Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
+- Objetos: `rp:text3d` (texto de `rp_3dtext`, icono 1239).
+- Pickups: `rp:pickupUsed` (recogido y esperando reaparecer; `rp_pickupfx` no lo hace brillar).
 - Marcadores: `rp:marker` (estilo de `rp_markers`; ponlo solo con `setMarkerStyle`).
   `rp:robberyStore`, `rp:fireVictim`, `rp:restaurantClerk`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.
 - Root: `rp:world` (hora y clima), `rp:events`.

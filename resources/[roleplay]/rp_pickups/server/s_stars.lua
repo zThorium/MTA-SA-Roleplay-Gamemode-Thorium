@@ -11,6 +11,10 @@ local function onStarUse(player)
         return
     end
     exports.rp_wanted:setWantedLevel(player, level - 1)
+    -- Recogida: rp_pickupfx apaga su brillo hasta que vuelva a aparecer
+    local star = source
+    setElementData(star, "rp:pickupUsed", true)
+    setTimer(function() if isElement(star) then removeElementData(star, "rp:pickupUsed") end end, STAR_RESPAWN_MS, 1)
     local left = level - 1
     exports.rp_notify:notify(player, left > 0
         and ("Una estrella menos. Te quedan %d."):format(left)
