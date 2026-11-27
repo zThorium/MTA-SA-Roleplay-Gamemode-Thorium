@@ -79,7 +79,7 @@ mindmap
 |---|---|
 | `rp_factions` | Facciones con panel en **F3**. El líder crea roles, define sus permisos y su sueldo. Cada miembro solo ve y usa lo que su rol permite. Fondos de facción, registro de actividad, invitaciones y chat `/f`. |
 | `rp_payday` | Cada **60 minutos de juego** (acumulados por personaje, sin contar AFK) se paga el sueldo del rol en la facción. Sin facción, el Estado paga un sueldo base. El dinero va al banco con su movimiento en el historial. |
-| `rp_clothing` | Tiendas de ropa con interior propio (Binco, SubUrban, ProLaps, ZIP, Victim, Didier Sachs). Probador en vivo y compra de ropa (o skin). Toys: accesorios pegados a un hueso con `bone_attach`, con editor de posición, rotación y tamaño guardado por personaje. |
+| `rp_clothing` | Tiendas de ropa con interior propio (Binco, SubUrban, ProLaps, ZIP, Victim, Didier Sachs). Probador en vivo y compra de ropa (o skin). Toys: accesorios pegados a un hueso con `bone_attach`, colocados con gizmo 3D (mover, rotar y escalar arrastrando) y vista previa antes de comprar, guardado por personaje. |
 
 ## Lo que falta para el MVP
 

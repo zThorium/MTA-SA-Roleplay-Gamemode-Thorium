@@ -3,11 +3,12 @@
 
     Accesorios (toys) del personaje en character_toys. Los que lleva puestos se
     crean como objetos pegados a un hueso con bone_attach y con su escala por eje.
-    Cada jugador ajusta hueso, posicion, rotacion y tamano en el editor (cliente);
-    el servidor recorta los valores a CLOTHING.LIMITS antes de guardarlos.
+    Cada jugador ajusta hueso, posicion, rotacion y tamano con el gizmo del estudio
+    (cliente, c_gizmo.lua); el servidor recorta los valores con sanitizeToyAdjust
+    (CLOTHING.LIMITS) antes de guardarlos, tambien los de la vista previa al comprar.
 
     Comandos:
-        /accesorios  (o /toys)   lista de accesorios: poner, quitar, editar, tirar
+        /accesorios  (o /toys)   estudio con tus accesorios: poner, quitar, ajustar, tirar
 ]]
 
 local owned = {}     -- [player] = { [toyId] = fila }
@@ -31,12 +32,6 @@ local function normalize(row)
     for _, k in ipairs(NUMERIC) do row[k] = tonumber(row[k]) or 0 end
     row.worn = row.worn == 1
     return row
-end
-
-local function clamp(v, a, b)
-    v = tonumber(v)
-    if not v or v ~= v then return nil end
-    return math.max(a, math.min(b, v))
 end
 
 ----------------------------------------------------------------
@@ -67,7 +62,7 @@ local function attach(player, row)
     setElementDimension(obj, getElementDimension(player))
     setElementCollisionsEnabled(obj, false)
     setObjectScale(obj, row.sx, row.sy, row.sz)
-    setElementData(obj, "rp:toy", row.id, false)
+    setElementData(obj, "rp:toy", row.id)   -- sincronizado: c_headlink.lua lo pega a la cabeza custom en cada cliente
     exports.bone_attach:attachElementToBone(obj, player, row.bone, row.x, row.y, row.z, row.rx, row.ry, row.rz)
     objects[player] = objects[player] or {}
     objects[player][row.id] = obj
@@ -146,7 +141,8 @@ function getToysPayload(player)
     local list = {}
     for _, row in pairs(owned[player] or {}) do
         local def = TOYS[row.toy]
-        list[#list + 1] = { id = row.id, toy = row.toy, name = def.name, icon = def.icon, worn = row.worn }
+        list[#list + 1] = { id = row.id, toy = row.toy, name = def.name, icon = def.icon, worn = row.worn,
+            adjust = { bone = row.bone, x = row.x, y = row.y, z = row.z, rx = row.rx, ry = row.ry, rz = row.rz, sx = row.sx, sy = row.sy, sz = row.sz } }
     end
     table.sort(list, function(a, b) return a.id < b.id end)
     return list
@@ -172,16 +168,20 @@ end
 ----------------------------------------------------------------
 -- Compra (desde s_clothing.lua)
 ----------------------------------------------------------------
-function buyToy(player, toyKey, multiplier, callback)
+-- adjust = como lo dejo en la vista previa (gizmo); si no vale, la posicion del catalogo.
+-- Si le queda hueco, sale de la tienda puesto.
+function buyToy(player, toyKey, multiplier, adjust, callback)
     local characterId = characterOf(player)
     local def = type(toyKey) == "string" and TOYS[toyKey]
     if not characterId or not def or loadedFor[player] ~= characterId then return end
     if count(player) >= CLOTHING.MAX_TOYS_OWNED then
-        return notify(player, ("Ya tienes %d accesorios. Tira alguno con /accesorios."):format(CLOTHING.MAX_TOYS_OWNED), "error")
+        return notify(player, ("Ya tienes %d accesorios. Tira alguno en «Mis accesorios»."):format(CLOTHING.MAX_TOYS_OWNED), "error")
     end
     local price = getToyPrice(toyKey, multiplier)
     if getPlayerMoney(player) < price then return notify(player, ("No tienes suficiente efectivo. Necesitas $%d."):format(price), "error") end
 
+    local a = sanitizeToyAdjust(adjust) or getToyDefaults(toyKey)
+    local wear = count(player, true) < CLOTHING.MAX_TOYS_WORN
     takePlayerMoney(player, price)
     exports.rp_characters:saveCharacter(player)
     dbQuery(function(qh)
@@ -192,13 +192,17 @@ function buyToy(player, toyKey, multiplier, callback)
             return notify(player, "No se pudo completar la compra.", "error")
         end
         owned[player] = owned[player] or {}
-        owned[player][id] = normalize({ id = id, toy = toyKey, bone = def.bone, x = def.x, y = def.y, z = def.z,
-            rx = def.rx, ry = def.ry, rz = def.rz, sx = 1, sy = 1, sz = 1, worn = 0 })
-        notify(player, ("Compraste %s por $%d. Pontelo y ajustalo con /accesorios."):format(def.name, price), "success")
+        local row = normalize({ id = id, toy = toyKey, bone = a.bone, x = a.x, y = a.y, z = a.z,
+            rx = a.rx, ry = a.ry, rz = a.rz, sx = a.sx, sy = a.sy, sz = a.sz, worn = wear and 1 or 0 })
+        owned[player][id] = row
+        if wear then attach(player, row) end
+        notify(player, wear and ("Compraste %s por $%d. Ya lo llevas puesto."):format(def.name, price)
+            or ("Compraste %s por $%d. Quitate otro accesorio para ponertelo."):format(def.name, price), "success")
         if callback then callback() end
     end, db(), [[
-        INSERT INTO character_toys (character_id, toy, bone, x, y, z, rx, ry, rz) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ]], characterId, toyKey, def.bone, def.x, def.y, def.z, def.rx, def.ry, def.rz)
+        INSERT INTO character_toys (character_id, toy, bone, x, y, z, rx, ry, rz, sx, sy, sz, worn)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ]], characterId, toyKey, a.bone, a.x, a.y, a.z, a.rx, a.ry, a.rz, a.sx, a.sy, a.sz, wear and 1 or 0)
 end
 
 ----------------------------------------------------------------
@@ -260,24 +264,16 @@ addEventHandler("rp:toys:save", resourceRoot, function(toyId, v)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
     local player = client
     local row = ownedToy(player, toyId)
-    if not row or type(v) ~= "table" then return end
-    local L = CLOTHING.LIMITS
-    local bone = tonumber(v.bone)
-    if not bone or bone ~= math.floor(bone) or bone < 1 or bone > 20 then return end
-    local vals = {
-        x = clamp(v.x, -L.pos, L.pos), y = clamp(v.y, -L.pos, L.pos), z = clamp(v.z, -L.pos, L.pos),
-        rx = clamp(v.rx, -L.rot, L.rot), ry = clamp(v.ry, -L.rot, L.rot), rz = clamp(v.rz, -L.rot, L.rot),
-        sx = clamp(v.sx, L.scaleMin, L.scaleMax), sy = clamp(v.sy, L.scaleMin, L.scaleMax), sz = clamp(v.sz, L.scaleMin, L.scaleMax),
-    }
-    for _, n in pairs(vals) do if not n then return end end
+    local vals = row and sanitizeToyAdjust(v)
+    if not vals then return end
 
-    row.bone = bone
     for k, n in pairs(vals) do row[k] = n end
     dbExec(db(), [[
         UPDATE character_toys SET bone = ?, x = ?, y = ?, z = ?, rx = ?, ry = ?, rz = ?, sx = ?, sy = ?, sz = ? WHERE id = ?
-    ]], bone, row.x, row.y, row.z, row.rx, row.ry, row.rz, row.sx, row.sy, row.sz, row.id)
+    ]], row.bone, row.x, row.y, row.z, row.rx, row.ry, row.rz, row.sx, row.sy, row.sz, row.id)
     if row.worn then attach(player, row) end
-    notify(player, ("%s ajustado."):format(TOYS[row.toy].name), "success")
+    notify(player, ("%s ajustado y guardado."):format(TOYS[row.toy].name), "success")
+    sendWardrobe(player)
 end)
 
 local function openWardrobe(player)

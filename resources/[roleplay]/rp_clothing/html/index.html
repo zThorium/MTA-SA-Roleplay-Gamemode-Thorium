@@ -6,21 +6,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main class="window">
+    <aside class="panel-wrap">
         <header>
-            <div>
+            <div class="titles">
                 <h1 id="title">Tienda de ropa</h1>
-                <p class="hint" id="subtitle"><kbd>Esc</kbd> para salir. Lo que no compres se devuelve al cerrar.</p>
-            </div>
-            <div class="money" id="money-box">
-                <span class="label">Tu efectivo</span>
-                <strong id="money">$0</strong>
+                <p class="hint" id="subtitle"></p>
             </div>
             <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
         </header>
+        <div class="money" id="money-box">
+            <span class="label">Tu efectivo</span>
+            <strong id="money">$0</strong>
+        </div>
         <nav class="tabs" id="tabs"></nav>
         <section class="panel" id="panel"></section>
-    </main>
+        <footer id="footer"></footer>
+    </aside>
     <script src="app.js"></script>
 </body>
 </html>
