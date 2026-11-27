@@ -101,6 +101,7 @@ WANTED = {
       speeding                   exceso de velocidad delante de la policia
       aim_gun                    apuntar con un arma a alguien
       drug_buy                   comprar drogas con un policia cerca (rp_dealers)
+      person_rob                 quitarle algo a una persona reducida al cachearla (rp_interact)
 ]]
 -- instant = N: el delito deja como minimo N estrellas al momento (aunque no haya testigos)
 WANTED_CRIMES = {
@@ -122,6 +123,7 @@ WANTED_CRIMES = {
     speeding     = { points = 5,   label = "Exceso de velocidad" },
     aim_gun      = { points = 2,   label = "Amenaza con arma" },
     drug_buy     = { points = 25,  label = "Compra de drogas", instant = 1 },   -- rp_dealers
+    person_rob   = { points = 20,  label = "Robo a una persona" },             -- rp_interact (quitar en el cacheo)
 }
 
 -- Pandilleros: a la policia "no le importan" (PoliceDontCareAboutCrimesAgainstPedType)

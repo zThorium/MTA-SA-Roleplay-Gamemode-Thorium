@@ -431,6 +431,57 @@ end
 ----------------------------------------------------------------
 -- Menu contextual
 ----------------------------------------------------------------
+-- Opciones policiales sobre una persona. Tambien las usa rp_interact (menu M + click derecho).
+local function playerOptions(officer, target)
+    local options = {}
+    local function opt(id, label, icon, disabled, hint)
+        options[#options + 1] = { id = id, label = label, icon = icon, disabled = disabled or nil, hint = hint }
+    end
+    local detain, fine = can(officer, "pol_detain"), can(officer, "pol_fine")
+    if not cuffed[target] then
+        if detain then
+            opt("cuff", "Esposar", "🔗")
+            opt("hardcuff", "Esposar (inmovilizar)", "⛓️")
+            opt("identify", "Pedir identificacion", "🪪")
+        end
+    else
+        if detain then
+            opt("uncuff", "Quitar esposas", "🔓")
+            opt("escort", escorting[officer] == target and "Soltar escolta" or "Escoltar", "🚶")
+            opt("search", "Cachear", "🔎")
+            opt("identify", "Identificar", "🪪")
+        end
+        if fine then
+            opt("fine", "Multar", "💵")
+            local near = nearPoint(officer, "booking", POLICE.BOOKING_RADIUS)
+            opt("arrest", "Arrestar", "🚔", not near, not near and "Solo en los calabozos" or nil)
+        end
+    end
+    return options
+end
+
+-- Export: lista de acciones { id, label, icon, disabled, hint } o false si no aplica
+function getPlayerActions(officer, target)
+    if not isElement(officer) or not isOnDuty(officer) or isPedDead(officer) then return false end
+    if not validPlayerTarget(officer, target) then return false end
+    return playerOptions(officer, target)
+end
+
+-- Export: ejecuta una accion policial sobre una persona con las mismas validaciones que el menu K
+function doPlayerAction(officer, target, id)
+    if type(id) ~= "string" or id:sub(1, 2) == "v_" or not ACT[id] then return false end
+    if not isElement(officer) or busy(officer) or not isOnDuty(officer) or isPedDead(officer) then return false end
+    if not validPlayerTarget(officer, target) then return false end
+    for _, o in ipairs(playerOptions(officer, target)) do
+        if o.id == id then
+            if o.disabled then notify(officer, o.hint or "Ahora no puedes hacer eso.", "warning") return false end
+            ACT[id](officer, target)
+            return true
+        end
+    end
+    return false
+end
+
 addEventHandler("rp:pol:menu", resourceRoot, function(target)
     local officer = client
     if busy(officer) or not isOnDuty(officer) or isPedDead(officer) or not isElement(target) then return end
@@ -442,26 +493,7 @@ addEventHandler("rp:pol:menu", resourceRoot, function(target)
     if getElementType(target) == "player" then
         if not validPlayerTarget(officer, target) then return end
         title = dname(target)
-        local detain, fine = can(officer, "pol_detain"), can(officer, "pol_fine")
-        if not cuffed[target] then
-            if detain then
-                opt("cuff", "Esposar", "🔗")
-                opt("hardcuff", "Esposar (inmovilizar)", "⛓️")
-                opt("identify", "Pedir identificacion", "🪪")
-            end
-        else
-            if detain then
-                opt("uncuff", "Quitar esposas", "🔓")
-                opt("escort", escorting[officer] == target and "Soltar escolta" or "Escoltar", "🚶")
-                opt("search", "Cachear", "🔎")
-                opt("identify", "Identificar", "🪪")
-            end
-            if fine then
-                opt("fine", "Multar", "💵")
-                local near = nearPoint(officer, "booking", POLICE.BOOKING_RADIUS)
-                opt("arrest", "Arrestar", "🚔", not near, not near and "Solo en los calabozos" or nil)
-            end
-        end
+        options = playerOptions(officer, target)
     elseif getElementType(target) == "vehicle" then
         if distPlayers(officer, target) > POLICE.INTERACT_DISTANCE + 2 then return end
         title = getVehicleNameFromModel(getElementModel(target)) or "Vehiculo"

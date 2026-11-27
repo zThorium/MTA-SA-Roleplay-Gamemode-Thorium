@@ -316,6 +316,10 @@
             players = list || [];
             if (tab === "report") render();
         },
+        preselect: function (index) {
+            form.target = String(index);
+            if (tab === "report") render();
+        },
         setMyReports: function (list) {
             myReports = list || [];
             if (tab === "report") render();

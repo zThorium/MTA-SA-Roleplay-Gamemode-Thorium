@@ -100,6 +100,7 @@ Items con id dinámico usan prefijo: `vkey:<id>` (llave de vehículo), `bcard:<i
 | `rp_levels:giveXP(p, n, motivo)`, `getPlayerLevel(p)`, `getPlayerXP(p)` | |
 | `rp_injury:isPlayerDowned(p)`, `downPlayer(p)`, `revivePlayer(p)`; cliente `isLocalPlayerDowned()` | |
 | `rp_police:isCuffed(p)`, `isOnDuty(p)` | |
+| `rp_police:getPlayerActions(oficial, objetivo)`, `doPlayerAction(oficial, objetivo, id)` | acciones policiales sobre una persona (las del menú K); las usa `rp_interact` |
 | `rp_worldobjects:isPlayerSeated(p)`, `standPlayer(p)` (levanta sin animación), `getWorldObjectStats()` | sentado en una banca o silla del mapa; levántalo antes de teletransportarlo o animarlo |
 | `rp_missions:getPlayerMission(p)` | id de instancia o `false` |
 | `rp_races:getPlayerRace(p)` | id o `false` |
@@ -162,6 +163,8 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_hud:getTopRightBottom()` (cliente) | Y en px donde termina el bloque de arriba a la derecha (hora, dinero, banco, arma, estrellas, nivel). Pon tus paneles de esa esquina debajo, preguntando unas veces por segundo, no en cada frame (ej. `rp_robbery`) |
 | `rp_radio:setRadioSuppressed(razon, bool)`, `isRadioSuppressed()` | silencia `rp_radio` y la radio nativa |
 | `rp_phone:setMusicSuppressed(razon, bool)` (cliente) | pausa la música del teléfono (privada, altavoz y vehículo) mientras haya algún motivo |
+| `rp_vehicles:isCursorModeActive()` (cliente) | `true` con el cursor de la tecla M activo y sin panel de vehículo abierto (lo usa `rp_interact`) |
+| `rp_help:openReport(jugador)` (cliente) | abre F1 en Reportar con esa persona ya elegida |
 | `rp_hud:setNavRoute(puntos)` (cliente) | dibuja una ruta `{x1, y1, x2, y2, ...}` en el minimapa (`nil` la quita); la usa el GPS de `rp_map` |
 | `rp_map:getPlayerExplorationPercent(p)`, `revealPlayerArea(p, x, y, r)`, `getMapStats()` (servidor) | % de mapa explorado; descubrir un área del mapa F11 (misiones, eventos) |
 | `rp_jobs:playJobCinematic`, `stopJobCinematic`, `isJobCinematicPlaying` | cinemáticas cortas reutilizables |

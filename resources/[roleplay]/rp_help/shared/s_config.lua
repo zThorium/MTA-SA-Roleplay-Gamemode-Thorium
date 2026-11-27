@@ -81,7 +81,8 @@ HELP.KEYS = {
         { key = "C",   text = "Ponerte o quitarte el cinturon. Sin el, un choque fuerte te lanza por el parabrisas" },
         { key = "\226\134\144 \226\134\146", text = "Intermitentes izquierdo y derecho" },
         { key = "\226\134\147", text = "Balizas" },
-        { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas). En Vroom alterna app y mapa" },
+        { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas) y sobre una persona, el de interaccion (saludar, dar dinero u objetos, documentos, reanimar, cachear). En Vroom alterna app y mapa" },
+        { key = "E / Retroceso", text = "Aceptar o rechazar lo que te propone otra persona (darte la mano, un objeto, subir a su coche, cachearte)" },
     } },
     { group = "Bomberos", items = {
         { key = "E",   text = "En la estacion: vestuario (entrar o salir de servicio) y garaje (autobomba). En una emergencia: cargar a un civil y dejarlo en la zona segura" },

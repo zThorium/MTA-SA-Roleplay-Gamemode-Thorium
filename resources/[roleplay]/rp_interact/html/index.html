@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Interacción</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ======================= Menú sobre una persona ======================= -->
+    <div id="menu" class="menu hidden">
+        <header id="head" class="head">
+            <div id="avatar" class="avatar">?</div>
+            <div class="who">
+                <div id="name" class="name">—</div>
+                <div id="chips" class="chips"></div>
+            </div>
+            <button id="btn-close" class="x" title="Cerrar">×</button>
+        </header>
+
+        <!-- Lista de acciones -->
+        <section id="list" class="list"></section>
+
+        <!-- Formulario: dar dinero -->
+        <section id="form-money" class="form hidden">
+            <button class="back" data-back>‹ Volver</button>
+            <div class="form-title">💵 Dar dinero</div>
+            <div class="money-box">
+                <span class="cur">$</span>
+                <input id="money-input" type="text" inputmode="numeric" maxlength="6" value="0">
+            </div>
+            <div id="money-have" class="form-sub"></div>
+            <div id="money-quick" class="quick"></div>
+            <button id="money-ok" class="btn primary money">Dar</button>
+        </section>
+
+        <!-- Formulario: dar un objeto -->
+        <section id="form-item" class="form hidden">
+            <button class="back" data-back>‹ Volver</button>
+            <div class="form-title">🎁 Dar un objeto</div>
+            <div class="form-sub">Elige qué darle. Le llegará como propuesta.</div>
+            <div id="items" class="items"></div>
+            <div class="stepper">
+                <button id="qty-minus" class="step">−</button>
+                <span id="qty" class="qty">1</span>
+                <button id="qty-plus" class="step">+</button>
+            </div>
+            <button id="item-ok" class="btn primary">Ofrecer</button>
+        </section>
+
+        <footer class="foot">
+            <span class="hint"><img class="key-ico" src="img/mouse_left.png" alt="">Elegir</span>
+            <span class="hint"><img class="key-ico" src="img/keyboard_escape.png" alt="">Cerrar</span>
+        </footer>
+    </div>
+
+    <!-- ======================= Resultado del cacheo ======================= -->
+    <div id="frisk" class="frisk-wrap hidden">
+        <div class="frisk">
+            <header class="frisk-head">
+                <div>
+                    <div class="kicker">Cacheo</div>
+                    <h1 id="frisk-name">—</h1>
+                </div>
+                <button id="frisk-close" class="x" title="Cerrar">×</button>
+            </header>
+            <div id="frisk-cash" class="frisk-cash"></div>
+            <div id="frisk-note" class="frisk-note"></div>
+            <div id="frisk-items" class="frisk-items"></div>
+            <footer class="foot">
+                <span class="hint"><img class="key-ico" src="img/keyboard_escape.png" alt="">Cerrar</span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ======================= Tutorial (solo la primera vez) ======================= -->
+    <div id="coach-dim" class="coach-dim hidden"></div>
+    <div id="coach" class="coach hidden">
+        <div id="coach-step" class="coach-step">Paso 1 de 3</div>
+        <div id="coach-text" class="coach-text"></div>
+        <button id="coach-next" class="btn primary">Siguiente</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

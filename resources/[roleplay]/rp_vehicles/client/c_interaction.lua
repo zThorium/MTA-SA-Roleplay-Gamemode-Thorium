@@ -179,6 +179,9 @@ local function toggleCursorMode()
     showCursor(cursorMode)
 end
 
+-- Export (cliente): rp_interact abre su menu de personas con el mismo modo cursor (M)
+function isCursorModeActive() return cursorMode and not panelOpen end
+
 addEventHandler("onClientResourceStart", resourceRoot, function()
     local k = VEHICLES.KEYS.interact
     addCommandHandler(k.command, toggleCursorMode)

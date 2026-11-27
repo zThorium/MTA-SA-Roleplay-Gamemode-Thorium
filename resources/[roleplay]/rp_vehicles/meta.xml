@@ -52,4 +52,6 @@
     <export function="getVehicleOdometer" type="server" />
     <export function="getVehicleFuel" type="server" />
     <export function="setVehicleFuel" type="server" />
+    <!-- Modo cursor de la tecla M (lo usa rp_interact para el menu de personas) -->
+    <export function="isCursorModeActive" type="client" />
 </meta>
