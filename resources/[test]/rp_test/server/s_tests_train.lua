@@ -1,6 +1,6 @@
 --[[
     rp_test / s_tests_train.lua
-    Pruebas de humo de rp_train: tabla de barreras, vía cargada y trenes avanzando sin jugadores.
+    Pruebas de humo de rp_train: tablas, vía cargada, trenes avanzando sin jugadores, boleto y carteles LED.
 ]]
 
 test("train_recurso_en_marcha", function(t)
@@ -46,4 +46,32 @@ test("train_recorrido_desde_unity", function(t)
         if r.stations[i].km <= r.stations[i - 1].km then return t.fail("estaciones fuera de orden en " .. r.stations[i].name) end
     end
     t.pass(("%s > ... > %s (%.1f km)"):format(r.stations[1].name, r.stations[6].name, r.length / 1000))
+end)
+
+test("train_tabla_boleterias_y_carteles", function(t)
+    query(function(rows, _, _, code, msg)
+        if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
+        t.pass("train_fixtures accesible")
+    end, "SELECT id, kind, station, x, y, z, rot, interior, dimension FROM train_fixtures LIMIT 1")
+end)
+
+test("train_boleto_en_catalogo", function(t)
+    local def = exports.rp_inventory:getItemDefinition("train_ticket")
+    if type(def) ~= "table" or not def.name then return t.fail("falta el item train_ticket en rp_inventory") end
+    t.pass(def.name)
+end)
+
+-- Los carteles LED leen la llegada estimada del tren de pasajeros a cada una de las 6 estaciones
+test("train_llegada_estimada", function(t)
+    local eta = exports.rp_train:getTrainEta()
+    if type(eta) ~= "table" then return t.fail("getTrainEta no devolvió una tabla") end
+    local n = 0
+    for node, e in pairs(eta) do
+        n = n + 1
+        if type(node) ~= "string" or not tonumber(e[1]) or e[1] < 0 or (e[2] ~= 0 and e[2] ~= 1) or type(e[3]) ~= "string" then
+            return t.fail("entrada inválida para la estación " .. tostring(node))
+        end
+    end
+    if n ~= 6 then return t.fail("estaciones con llegada estimada: " .. n) end
+    t.pass("6 estaciones con llegada estimada")
 end)

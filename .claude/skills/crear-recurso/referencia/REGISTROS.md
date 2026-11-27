@@ -66,7 +66,9 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
   `rp:hudHidden` (no lo toques: usa `setHudSuppressed`), `rp:downed`, `rp:carried`, `rp:cuffed`, `rp:tased`,
   `rp:faction`, `rp:policeDuty`, `rp:job`, `rp:jobShift`, `rp:race`, `rp:drivingTest`, `rp:packWeight`,
   `rp:meth`, `rp:respect`, `rp:fireDuty`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
-- Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`.
+- Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
+  trenes (`rp_train`): `rp:train`, `rp:train:wagon`, `rp:train:of`, `rp:train:idx`, `rp:train:v`, `rp:train:passenger`, `rp:train:dwell`, `rp:train:horn`.
+- Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
 - Marcadores: `rp:marker` (estilo de `rp_markers`; ponlo solo con `setMarkerStyle`).
   `rp:robberyStore`, `rp:fireVictim`, `rp:restaurantClerk`, `rp:emergency`, `rp:npcrel`, `rp:furn`, `rp:eventProp`, `rp:toy`, `rp:property`.

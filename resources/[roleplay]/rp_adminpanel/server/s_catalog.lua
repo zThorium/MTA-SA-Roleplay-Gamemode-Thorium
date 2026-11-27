@@ -110,6 +110,8 @@ ADMIN_CATALOG = {
             { cmd = "/crearbarrera", args = "[inv]", desc = "Crea una barrera de paso a nivel en tu posicion junto a la via (el brazo apunta hacia donde miras; inv lo baja al otro lado). Baja sola cuando pasa el tren.", res = "rp_train" },
             { cmd = "/borrarbarrera", args = "<id>", desc = "Elimina una barrera de paso a nivel.", res = "rp_train" },
             { cmd = "/barreras", args = "", desc = "Lista las barreras de paso a nivel con id, estado y distancia.", res = "rp_train" },
+            { cmd = "/crearboleteria", args = "", desc = "Pone una empleada de boleteria delante de ti en la estacion mas cercana: vende boletos de tren (con el boleto se sube al tren de pasajeros). Borrar con /delticketbooth <id>.", res = "rp_train" },
+            { cmd = "/crearcartel", args = "", desc = "Pone un cartel LED delante de ti, mirandote, con la llegada estimada del tren a la estacion mas cercana. Borrar con /deltrainsign <id>.", res = "rp_train" },
         },
     },
     {

@@ -103,6 +103,12 @@ ITEMS = {
         use = { event = "id_card" },
     },
 
+    -- rp_train: se compra en la boleteria de una estacion y se gasta al subir al tren de pasajeros
+    train_ticket = {
+        name = "Boleto de tren", icon = "🎫", weight = 0.01, stack = 10,
+        description = "Un viaje en el tren de pasajeros. Pulsa E junto a un vagón cuando el tren esté en el andén; se gasta al subir.",
+    },
+
     -- rp_backpacks: al usarlas se equipan en la espalda (capacidad y peso en rp_backpacks/shared/s_config.lua)
     bp_small = {
         name = "Mochila pequena", icon = "🎒", iconImg = ITEM_ICON_IMG.bp_small, weight = 0.4, stack = 1,
@@ -365,7 +371,7 @@ local ITEM_MODELS = {
     vest = { 1242, 0.8 },
     cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
     phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
-    id_card = CARD, driver_license = CARD,
+    id_card = CARD, driver_license = CARD, train_ticket = CARD,
     bp_small = { 3026, 0.75 }, bp_school = { 3026, 0.9 }, bp_hiking = { 3026, 1.15 },
     bp_tactical = { 3026, 1.3 }, bp_expedition = { 3026, 1.5 },
     old_watch = { 2710, 1.0 },

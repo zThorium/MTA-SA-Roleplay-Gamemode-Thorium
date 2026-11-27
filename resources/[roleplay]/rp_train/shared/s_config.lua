@@ -7,8 +7,9 @@ TRAIN = {
     -- Trenes en la vía principal. station = nodo de la estación donde sale (espera en el andén y arranca);
     -- sin station, start = metros desde el nodo 1 de la vía (0..~18135).
     -- Modelos: 538 Brown Streak (pasajeros) + 570 vagón; 537 Freight + 569 plataforma / 590 caja.
+    -- passenger = true: lleva pasajeros con boleto y aparece en los carteles LED de las estaciones.
     TRAINS = {
-        { model = 538, carriages = { 570, 570, 570 }, station = 331 },       -- sale de Unity Station (Los Santos)
+        { model = 538, carriages = { 570, 570, 570 }, station = 331, passenger = true }, -- sale de Unity Station (Los Santos)
         { model = 537, carriages = { 569, 590, 569, 590 }, station = 597 },  -- carga: al otro lado del bucle (San Fierro)
     },
     -- Recorrido completo (bucle LS-SF-LV de tracks.dat) contado desde esta estación:
@@ -55,6 +56,30 @@ TRAIN = {
     BARRIER_MOVE_MS = 3500,
     BELL_DISTANCE = 120,      -- se oyen las campanas hasta aquí
     BELL_VOLUME = 0.9,
-    ARRIVAL_HORN_DISTANCE = 250, -- el claxon de llegada a la estación se oye hasta aquí
-    ARRIVAL_HORN_VOLUME = 1.0,
+
+    -- Claxon de salida (sounds/claxon.mp3): suena cuando faltan DEPART_HORN_MS para dejar el andén
+    DEPART_HORN_MS = 10000,
+    DEPART_HORN_DISTANCE = 250, -- se oye hasta aquí
+    DEPART_HORN_VOLUME = 1.0,
+
+    -- Pasajeros: boleto (item de rp_inventory) que se gasta al subir; solo se baja en estaciones
+    TICKET_ITEM = "train_ticket",
+    TICKET_PRICE = 25,
+    CAR_HALF_LENGTH = 9.8,    -- media longitud de un vagón 570 (para saber si estás junto a él)
+    BOARD_SIDE = 5,           -- distancia máxima al eje del vagón para subir
+    ALIGHT_SIDE = 3.6,        -- al bajar quedas a esta distancia del eje, del lado del andén
+    PASSENGERS_PER_CAR = 10,
+    CAM_DISTANCE = 16,        -- cámara del pasajero: distancia y altura sobre el vagón (gira con el ratón)
+    CAM_HEIGHT = 3,
+
+    -- Estaciones: boleterías y carteles LED que colocan los admins (tabla train_fixtures)
+    STATION_SNAP = 300,       -- una boletería o cartel se asigna a la estación más cercana a menos de esto
+    BOOTH_SKIN = 211,         -- empleada de la boletería
+    BOOTH_NAME = "Boletería",
+    ETA_MS = 2000,            -- cada cuánto el servidor publica la llegada estimada (rp:train:eta)
+    SIGN_WIDTH = 3.2,         -- cartel LED en el mundo (m)
+    SIGN_HEIGHT = 0.6,
+    SIGN_LIFT = 1.4,          -- altura sobre el admin que lo coloca
+    SIGN_FORWARD = 1.0,       -- metros delante del admin (el cartel lo mira)
+    SIGN_DRAW_DISTANCE = 70,
 }

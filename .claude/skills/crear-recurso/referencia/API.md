@@ -149,6 +149,7 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_events:registerEvent{ id, name, duration = {min, max}, weight, cooldown, severity, elements, hours, rain, alert, kind }` | evento dinámico propio (`rp:events:ext:start/finish`) |
 | `rp_events:getWorldState()`, `setWeatherState(...)` | hora y clima los gobierna `rp_events`: no uses `setTime`/`setWeather` |
 | `rp_radio:getVehicleStation(v)`, `setVehicleStation(v, ...)` | |
+| `rp_train:getTrainState()`, `getTrainRoute()`, `getTrackLength()`, `getTrainEta()` | trenes, recorrido desde Unity y llegada estimada a cada estación |
 | Cliente `rp_citizens:citizenWatch`, `citizenAdopt`, `getRoadGraph`; `rp_rides:findRoadRoute`, `nearestRoadNode` | red vial para IA |
 
 ## HUD, radio y cinemáticas (cliente)
