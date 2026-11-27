@@ -55,4 +55,6 @@ TRAIN = {
     BARRIER_MOVE_MS = 3500,
     BELL_DISTANCE = 120,      -- se oyen las campanas hasta aquí
     BELL_VOLUME = 0.9,
+    ARRIVAL_HORN_DISTANCE = 250, -- el claxon de llegada a la estación se oye hasta aquí
+    ARRIVAL_HORN_VOLUME = 1.0,
 }

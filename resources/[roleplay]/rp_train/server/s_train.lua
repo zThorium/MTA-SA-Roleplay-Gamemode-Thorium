@@ -170,6 +170,7 @@ local function updateSpeed(t, now, dt)
     local st, dist = nextStation(t)
     if st and dist < 4 and t.v < 3 then -- llegó: espera en el andén
         t.v, t.dwellUntil, t.leaving = 0, now + TRAIN.STATION_STOP_MS, st
+        setElementData(t.loco, "rp:train:arrived", now) -- el cliente toca el claxon de llegada
         return
     end
     local target = TRAIN.SPEED

@@ -19,6 +19,8 @@
 
     <!-- Campanas del cruce (ver CREDITOS.md) -->
     <file src="sounds/campanas.mp3" />
+    <!-- Claxon al llegar a cada estación (ver CREDITOS.md) -->
+    <file src="sounds/claxon.mp3" />
 
     <export function="getTrainState" type="server" />
     <export function="getTrackLength" type="server" />

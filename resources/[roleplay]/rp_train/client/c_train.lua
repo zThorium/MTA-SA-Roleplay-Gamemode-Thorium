@@ -10,6 +10,7 @@
     - Bocina nativa del tren (control "horn" del maquinista) si un jugador está en la vía por delante
       o al acercarse a un cruce con las barreras bajadas.
     - Campanas en los cruces cerrados cercanos.
+    - Claxon (sounds/claxon.mp3) al llegar a cada estación (rp:train:arrived del servidor).
 ]]
 
 local locos = {}       -- [loco] = true, solo las cargadas (stream in)
@@ -196,6 +197,19 @@ local function untrack(el)
     wagons[el], cars[el] = nil, nil
     if locos[el] then forget(el) end
 end
+
+-- Claxon al llegar a una estación: el servidor marca la llegada; solo suena si la locomotora está cargada cerca
+addEventHandler("onClientElementDataChange", root, function(key)
+    if key ~= "rp:train:arrived" or not locos[source] then return end
+    local x, y, z = getElementPosition(source)
+    local snd = playSound3D("sounds/claxon.mp3", x, y, z + 2)
+    if not snd then return end
+    setSoundMinDistance(snd, 20)
+    setSoundMaxDistance(snd, TRAIN.ARRIVAL_HORN_DISTANCE)
+    setSoundVolume(snd, TRAIN.ARRIVAL_HORN_VOLUME)
+    setElementDimension(snd, getElementDimension(source))
+    setElementInterior(snd, getElementInterior(source))
+end)
 
 addEventHandler("onClientElementStreamIn", root, function() track(source) end)
 addEventHandler("onClientElementStreamOut", root, function() untrack(source) end)
