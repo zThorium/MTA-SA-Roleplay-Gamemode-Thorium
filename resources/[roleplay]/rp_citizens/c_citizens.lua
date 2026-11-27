@@ -1045,6 +1045,8 @@ local function intersect(px, py, dx, dy, qx, qy, ex, ey)
     if math.abs(den) < 0.05 then return nil end
     local t = ((qx - px) * ey - (qy - py) * ex) / den
     if t < 0 or t > 30 then return nil end
+    -- tambien por delante de q en su direccion (si no, la Bezier se pasa del final de la curva y vuelve atras)
+    if ((qx - px) * dy - (qy - py) * dx) / den < 0 then return nil end
     return px + dx * t, py + dy * t
 end
 
@@ -1250,6 +1252,22 @@ local function planSegment(s)
     local sx, sy, sz
     if last then
         sx, sy, sz = last[1], last[2], last[3]
+        -- En tramos cortos los arcos de dos nodos seguidos se solapan y el inicio de la curva nueva queda
+        -- detras del final de la anterior: la ruta retrocedia unos metros y el auto giraba de golpe 45-90
+        -- grados hacia ese punto antes de seguir. Esos puntos se quitan; su giro, cruce, semaforo y maniobra
+        -- pasan al siguiente punto que se conserva (o al ultimo de la ruta).
+        local ax0, ay0 = nodePos(VEH_NODES, A)
+        local ux, uy = dir(ax0, ay0, bx0, by0)
+        while pts[1] and (pts[1][1] - sx) * ux + (pts[1][2] - sy) * uy < 0.5 do
+            local drop = table.remove(pts, 1)
+            local keep = pts[1] or last
+            keep[4] = math.max(keep[4] or 0, drop[4] or 0)
+            for f = 5, 7 do if drop[f] and not keep[f] then keep[f] = drop[f] end end
+        end
+        if not pts[1] then
+            s.prev, s.node = B, C
+            return true
+        end
     else
         local ax, ay, az = nodePos(VEH_NODES, A)
         local bx, by = nodePos(VEH_NODES, B)

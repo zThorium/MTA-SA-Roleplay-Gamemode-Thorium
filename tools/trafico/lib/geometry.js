@@ -32,6 +32,8 @@ function intersect(px, py, dx, dy, qx, qy, ex, ey) {
   if (Math.abs(den) < 0.05) return null;
   const t = ((qx - px) * ey - (qy - py) * ex) / den;
   if (t < 0 || t > 30) return null;
+  // tambien por delante de q en su direccion (si no, la Bezier se pasa del final de la curva y vuelve atras)
+  if (((qx - px) * dy - (qy - py) * dx) / den < 0) return null;
   return [px + dx * t, py + dy * t];
 }
 
@@ -162,7 +164,19 @@ function planChain(net, chain, opts = {}) {
     const A = chain[k - 1], B = chain[k], C = chain[k + 1];
     const m = computeTurnPoints(net, A, B, C);
     let sx, sy, sz;
-    if (wp.length) { [sx, sy, sz] = wp[wp.length - 1]; }
+    if (wp.length) {
+      // igual que planSegment: en tramos cortos los arcos de dos nodos seguidos se solapan y el inicio de la
+      // curva nueva queda detras del final de la anterior; esos puntos harian retroceder la ruta y se quitan
+      [sx, sy, sz] = wp[wp.length - 1];
+      const [ux, uy] = dir(net.x[A], net.y[A], net.x[B], net.y[B]);
+      const last = wp[wp.length - 1];
+      while (m.pts.length && (m.pts[0][0] - sx) * ux + (m.pts[0][1] - sy) * uy < 0.5) {
+        const drop = m.pts.shift(), keep = m.pts[0] || last;
+        keep[3] = Math.max(keep[3] || 0, drop[3] || 0);   // el giro sigue existiendo: no perder el freno de curva
+        for (const f of [4, 5, 6]) if (drop[f] && !keep[f]) keep[f] = drop[f];
+      }
+      if (!m.pts.length) continue;
+    }
     else {
       const [dx, dy] = dir(net.x[A], net.y[A], net.x[B], net.y[B]);
       const off = laneInfo(net, A, B)[1];
