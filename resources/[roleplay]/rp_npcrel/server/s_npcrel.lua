@@ -20,6 +20,7 @@
         /vinculos        panel con tus vinculos (amistad, romance, etapa, telefono)
     Exports:
         callNpc(player, numero)   llamada desde rp_phone a un numero de vinculo
+        createDateContact(charId, datos)  cita de Tinder: crea el vinculo con numero (rp_phone)
         getDialogueStats()        conteo y validacion del banco de dialogos (rp_test)
 ]]
 
@@ -702,6 +703,50 @@ function callNpc(player, number)
         SELECT *, DATEDIFF(NOW(), last_interaction) AS idle_days
         FROM npc_contacts WHERE character_id = ? AND phone_number = ? AND number_shared = 1
     ]], characterId, number)
+    return true
+end
+
+----------------------------------------------------------------
+-- Citas de Tinder (rp_phone): la persona del chat pasa a ser un vinculo con su numero
+-- guardado en el telefono. Al llamarla viene a verte, como cualquier vinculo.
+-- Responde con el evento de servidor "rp:npcrel:dateContact" (ref, numero|nil).
+----------------------------------------------------------------
+addEvent("rp:npcrel:dateContact", false)
+
+function createDateContact(characterId, data)
+    characterId = tonumber(characterId)
+    if not characterId or type(data) ~= "table" or not dbReady() then return false end
+    local gender = tonumber(data.gender) == 1 and 1 or 0
+    local skin = tonumber(data.skin)
+    if not skin then return false end
+    local traits = {}
+    if type(data.traits) == "table" then
+        for _, t in ipairs(data.traits) do
+            if NPCREL_TRAITS[t] and #traits < 2 then traits[#traits + 1] = t end
+        end
+    end
+    if #traits == 0 then traits = { pick(NPCREL_TRAIT_IDS) } end
+    local likes = ({ m = "m", f = "f", a = "a" })[data.likes] or "a"
+    local session = {
+        characterId = characterId,
+        npc = {
+            id = nil, name = tostring(data.name or "Alguien"):sub(1, 48), gender = gender, skin = skin, traits = traits, likes = likes,
+            friendship = clamp(tonumber(data.friendship) or 25, 0, NPCREL_RULES.MAX),
+            romance = clamp(tonumber(data.romance) or 30, 0, NPCREL_RULES.MAX),
+            dating = 0, numberShared = false, interactions = 1, idleDays = 0,
+        },
+    }
+    local ref = data.ref
+    persistNew(nil, session, function(ok)
+        local npc = session.npc
+        if not ok or not npc.phone then return triggerEvent("rp:npcrel:dateContact", root, ref, nil) end
+        dbExec(db(), "UPDATE npc_contacts SET number_shared = 1 WHERE id = ? AND character_id = ?", npc.id, characterId)
+        dbExec(db(), [[
+            INSERT INTO phone_contacts (character_id, name, number) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE name = VALUES(name)
+        ]], characterId, npc.name:sub(1, 32), npc.phone)
+        triggerEvent("rp:npcrel:dateContact", root, ref, npc.phone)
+    end)
     return true
 end
 

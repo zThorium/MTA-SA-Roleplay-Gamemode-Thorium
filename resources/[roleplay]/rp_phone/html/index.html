@@ -30,7 +30,7 @@
                     <button type="button" class="app" data-open="contacts"><span class="icon contacts">👤</span>Contactos</button>
                     <button type="button" class="app" data-open="bank"><span class="icon bank">🏦</span>Banco</button>
                     <button type="button" class="app" data-open="social"><span class="icon social">📷<i class="app-badge" hidden></i></span>Fotogram</button>
-                    <button type="button" class="app" data-open="tinder"><span class="icon tinder">🔥</span>Tinder</button>
+                    <button type="button" class="app" data-open="tinder"><span class="icon tinder">🔥<i class="tinder-badge" id="tinder-badge" hidden></i></span>Tinder</button>
                     <button type="button" class="app" id="app-camera"><span class="icon camera">📸</span>Camara</button>
                     <button type="button" class="app" data-open="gallery"><span class="icon gallery">🖼️</span>Galeria</button>
                     <button type="button" class="app" data-open="music"><span class="icon music">♫</span>Musica</button>
@@ -239,42 +239,151 @@
                 </nav>
             </section>
 
-            <!-- Tinder (parte 1: perfil, parte 2: swipe) -->
-            <section class="view" id="view-tinder">
-                <header><button type="button" class="back">‹ Inicio</button><h1 class="logo-text tinder-logo">tinder</h1><button type="button" class="action" id="tinder-save">Guardar</button></header>
-                <div class="editor">
-                    <button type="button" class="secondary tinder-discover" id="tinder-discover">🔥 Descubrir personas</button>
-                    <div class="tinder-photo" id="tinder-photo"><span>Sin foto</span></div>
-                    <button type="button" class="secondary" id="tinder-camera">📷 Tomar foto de perfil</button>
-                    <button type="button" class="secondary" id="tinder-gallery">🖼️ Elegir de la galeria</button>
-                    <p class="note" id="tinder-data"></p>
-                    <textarea id="tinder-bio" maxlength="200" placeholder="Cuentale algo a la gente (max. 200)..."></textarea>
-                    <h2 class="section-title">Me interesan</h2>
-                    <div class="segmented" id="tinder-interest">
-                        <button type="button" data-interest="m">Hombres</button>
-                        <button type="button" data-interest="f">Mujeres</button>
-                        <button type="button" data-interest="a" class="active">Todos</button>
-                    </div>
-                    <label class="tinder-active"><input type="checkbox" id="tinder-active" checked> Mostrar mi perfil a otras personas</label>
-                </div>
-            </section>
+            <!-- Tinder (html/tinder.js, tinder.css): mazo, Le gustas, mensajes, chat y perfil -->
+            <section class="view tn" id="view-tinder">
+                <header class="tn-head">
+                    <button type="button" class="tn-icon-btn" id="tn-home" title="Salir">‹</button>
+                    <h1 class="tn-logo"><span class="tn-flame"></span>tinder<b class="tn-gold-tag" id="tn-gold-tag" hidden>GOLD</b></h1>
+                    <button type="button" class="tn-icon-btn" id="tn-help" title="Cómo funciona">?</button>
+                </header>
 
-            <!-- Tinder: swipe -->
-            <section class="view" id="view-tinder-swipe">
-                <header><button type="button" class="back" data-to="tinder">‹ Perfil</button><h1 class="logo-text tinder-logo">tinder</h1><span></span></header>
-                <div class="tinder-deck">
-                    <div class="tinder-card" id="tinder-card"></div>
-                    <p class="note tinder-msg" id="tinder-msg">Buscando personas...</p>
-                    <div class="tinder-buttons">
-                        <button type="button" class="tinder-nope" id="tinder-nope" aria-label="No me interesa">✕</button>
-                        <button type="button" class="tinder-like" id="tinder-like" aria-label="Me gusta">♥</button>
+                <!-- Descubrir -->
+                <div class="tn-page" id="tn-page-discover">
+                    <div class="tn-stack" id="tn-stack"></div>
+                    <div class="tn-state" id="tn-state" hidden>
+                        <div class="tn-radar"><span></span><span></span><span></span><div class="tn-radar-me" id="tn-radar-me"></div></div>
+                        <p id="tn-state-text">Buscando personas cerca...</p>
+                        <button type="button" class="tn-pill" id="tn-state-btn" hidden></button>
+                    </div>
+                    <div class="tn-actions" id="tn-actions">
+                        <button type="button" class="tn-act rewind" id="tn-rewind" title="Deshacer (Gold)">↺</button>
+                        <button type="button" class="tn-act nope" id="tn-nope" title="No (←)">✕</button>
+                        <button type="button" class="tn-act super" id="tn-super" title="Super Like (↑)">★</button>
+                        <button type="button" class="tn-act like" id="tn-like" title="Me gusta (→)">♥</button>
+                    </div>
+                    <div class="tn-keys" id="tn-keys">
+                        <span><img src="img/keyboard_arrow_left.png" alt="">No</span>
+                        <span><img src="img/keyboard_arrow_up.png" alt="">Super</span>
+                        <span><img src="img/keyboard_arrow_right.png" alt="">Sí</span>
+                        <span><img src="img/keyboard_arrow_down.png" alt="">Perfil</span>
                     </div>
                 </div>
-                <div class="tinder-match" id="tinder-match" hidden>
-                    <h2>¡Es un match!</h2>
-                    <p id="tinder-match-text"></p>
-                    <button type="button" class="secondary" id="tinder-match-close">Seguir viendo</button>
+
+                <!-- Le gustas -->
+                <div class="tn-page" id="tn-page-likes" hidden>
+                    <div class="tn-scroll">
+                        <h2 class="tn-h2" id="tn-likes-title">Le gustas a 0 personas</h2>
+                        <p class="tn-sub" id="tn-likes-sub">Desliza a la derecha en Descubrir para hacer match al instante.</p>
+                        <div class="tn-likes-grid" id="tn-likes-grid"></div>
+                        <button type="button" class="tn-gold-btn" id="tn-likes-gold">Ver quién te dio like con Tinder Gold</button>
+                    </div>
                 </div>
+
+                <!-- Mensajes -->
+                <div class="tn-page" id="tn-page-messages" hidden>
+                    <div class="tn-scroll">
+                        <h2 class="tn-h2 pink">Nuevos matches</h2>
+                        <div class="tn-new-matches" id="tn-new-matches"></div>
+                        <h2 class="tn-h2 pink">Mensajes</h2>
+                        <div class="tn-convos" id="tn-convos"></div>
+                    </div>
+                </div>
+
+                <!-- Perfil -->
+                <div class="tn-page" id="tn-page-profile" hidden>
+                    <div class="tn-scroll">
+                        <div class="tn-meter"><span>Perfil completo</span><b id="tn-quality">0%</b><i><em id="tn-quality-bar"></em></i></div>
+                        <p class="tn-sub" id="tn-quality-tip"></p>
+                        <div class="tn-photos" id="tn-photos"></div>
+                        <p class="tn-data" id="tn-data"></p>
+                        <label class="tn-label">Sobre mí <small id="tn-bio-count">0/300</small></label>
+                        <textarea id="tn-bio" maxlength="300" placeholder="Cuéntale a la gente quién eres, qué te gusta, qué buscas..."></textarea>
+                        <label class="tn-label">Trabajo</label>
+                        <input type="text" id="tn-job" maxlength="40" placeholder="Ej.: Mecánico en Ganton">
+                        <label class="tn-label">Pasiones <small id="tn-int-count">0/5</small></label>
+                        <div class="tn-chips select" id="tn-interests"></div>
+                        <label class="tn-label">Me interesan</label>
+                        <div class="tn-seg" id="tn-interested">
+                            <button type="button" data-v="m">Hombres</button><button type="button" data-v="f">Mujeres</button><button type="button" data-v="a">Todos</button>
+                        </div>
+                        <label class="tn-label">Edad: <b id="tn-age-text">18 - 70</b></label>
+                        <div class="tn-range"><input type="range" id="tn-age-min" min="18" max="90" value="18"><input type="range" id="tn-age-max" min="18" max="90" value="70"></div>
+                        <label class="tn-switch"><input type="checkbox" id="tn-active" checked><span></span>Mostrarme en Tinder</label>
+                        <button type="button" class="tn-save" id="tn-save">Guardar perfil</button>
+                        <div class="tn-gold-card" id="tn-gold-card">
+                            <strong>tinder <b>GOLD</b></strong>
+                            <ul><li>Likes ilimitados</li><li>Ve quién te dio like</li><li>5 Super Likes al día</li><li>Deshaz tu último «No»</li></ul>
+                            <button type="button" id="tn-gold-buy">Obtener Gold</button>
+                        </div>
+                        <button type="button" class="tn-link" id="tn-tutorial-again">Ver otra vez cómo funciona</button>
+                    </div>
+                </div>
+
+                <nav class="tn-nav">
+                    <button type="button" data-tn="discover" class="active" title="Descubrir"><span class="ic"><span class="tn-flame sm"></span></span></button>
+                    <button type="button" data-tn="likes" title="Le gustas"><span class="ic">★</span><i class="tn-dot gold" id="tn-nav-likes" hidden></i></button>
+                    <button type="button" data-tn="messages" title="Mensajes"><span class="ic">💬</span><i class="tn-dot" id="tn-nav-msgs" hidden></i></button>
+                    <button type="button" data-tn="profile" title="Perfil"><span class="ic">👤</span></button>
+                </nav>
+
+                <!-- Perfil expandido (tarjeta completa) -->
+                <div class="tn-sheet" id="tn-sheet" hidden>
+                    <div class="tn-sheet-scroll" id="tn-sheet-body"></div>
+                    <button type="button" class="tn-sheet-close" id="tn-sheet-close" title="Cerrar">⌄</button>
+                    <div class="tn-sheet-actions" id="tn-sheet-actions">
+                        <button type="button" class="tn-act nope" data-sa="nope">✕</button>
+                        <button type="button" class="tn-act super" data-sa="super">★</button>
+                        <button type="button" class="tn-act like" data-sa="like">♥</button>
+                    </div>
+                </div>
+
+                <!-- Chat -->
+                <div class="tn-chat" id="tn-chat" hidden>
+                    <header class="tn-chat-head">
+                        <button type="button" class="tn-icon-btn" id="tn-chat-back">‹</button>
+                        <div class="tn-avatar" id="tn-chat-avatar"></div>
+                        <div class="tn-chat-who"><strong id="tn-chat-name"></strong><small id="tn-chat-active"></small></div>
+                        <button type="button" class="tn-icon-btn" id="tn-chat-menu">⋯</button>
+                    </header>
+                    <div class="tn-menu" id="tn-menu" hidden>
+                        <button type="button" id="tn-menu-profile">Ver perfil</button>
+                        <button type="button" id="tn-menu-unmatch" class="danger">Deshacer match</button>
+                    </div>
+                    <div class="tn-number" id="tn-number" hidden></div>
+                    <div class="tn-msgs" id="tn-msgs"></div>
+                    <div class="tn-suggest" id="tn-suggest" hidden></div>
+                    <form class="tn-compose" id="tn-compose">
+                        <input type="text" id="tn-input" maxlength="400" placeholder="Escribe un mensaje" autocomplete="off">
+                        <button type="submit" id="tn-send">Enviar</button>
+                    </form>
+                </div>
+
+                <!-- Match -->
+                <div class="tn-match" id="tn-match" hidden>
+                    <div class="tn-match-title">¡Es un match!</div>
+                    <p id="tn-match-text"></p>
+                    <div class="tn-match-pics"><div class="tn-avatar xl" id="tn-match-me"></div><div class="tn-avatar xl" id="tn-match-them"></div></div>
+                    <form class="tn-compose light" id="tn-match-form"><input type="text" id="tn-match-input" maxlength="400" placeholder="Di algo bonito..." autocomplete="off"><button type="submit">Enviar</button></form>
+                    <button type="button" class="tn-pill ghost" id="tn-match-close">Seguir deslizando</button>
+                </div>
+
+                <!-- Avisos de la app (sin likes, Gold, elegir foto) -->
+                <div class="tn-modal" id="tn-modal" hidden>
+                    <div class="tn-modal-box"><h3 id="tn-modal-title"></h3><p id="tn-modal-text"></p><div class="tn-modal-btns" id="tn-modal-btns"></div></div>
+                </div>
+
+                <!-- Tutorial de primera vez -->
+                <div class="tn-tutorial" id="tn-tutorial" hidden>
+                    <div class="tn-tut-box">
+                        <div class="tn-tut-art" id="tn-tut-art"></div>
+                        <h3 id="tn-tut-title"></h3>
+                        <p id="tn-tut-text"></p>
+                        <div class="tn-tut-dots" id="tn-tut-dots"></div>
+                        <button type="button" class="tn-save" id="tn-tut-next">Siguiente</button>
+                    </div>
+                </div>
+
+                <div class="tn-toast" id="tn-toast" hidden></div>
             </section>
             <!-- Galeria (html/gallery.js) -->
             <section class="view" id="view-gallery">

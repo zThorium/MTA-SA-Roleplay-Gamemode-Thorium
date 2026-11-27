@@ -52,6 +52,8 @@
 
     <!-- Llamada desde rp_phone a un numero de vinculo (5560000-5569999) -->
     <export function="callNpc" type="server" />
+    <!-- Citas de Tinder (rp_phone): crea el vinculo con numero; responde con rp:npcrel:dateContact -->
+    <export function="createDateContact" type="server" />
     <!-- Prueba de humo del banco de dialogos (rp_test) -->
     <export function="getDialogueStats" type="server" />
 </meta>

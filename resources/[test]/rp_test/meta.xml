@@ -41,4 +41,5 @@
     <script src="server/s_tests_worldobjects.lua" type="server" />
     <script src="server/s_tests_npcrel.lua" type="server" />
     <script src="server/s_tests_interact.lua" type="server" />
+    <script src="server/s_tests_tinder.lua" type="server" />
 </meta>

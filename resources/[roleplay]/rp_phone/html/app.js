@@ -34,7 +34,7 @@
         if (window.Fotogram) Fotogram.onShow(name);
         if (window.Music) Music.onShow(name);
         if (window.Gallery) Gallery.onShow(name);
-        if (name === "tinder") send("rp:phone:ui:tinderOpen");
+        if (window.TinderApp) TinderApp.onShow(name);
         if (name === "contact-add") send("rp:phone:ui:nearby");
     }
 
@@ -309,5 +309,5 @@
     };
 
     // Para social.js (Fotogram)
-    window.Phone = { $: $, el: el, send: send, show: show };
+    window.Phone = { $: $, el: el, send: send, show: show, call: startCall };
 })();

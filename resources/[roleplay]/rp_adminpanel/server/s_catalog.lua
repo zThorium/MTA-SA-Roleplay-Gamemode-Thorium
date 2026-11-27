@@ -27,6 +27,8 @@ ADMIN_CATALOG = {
             { cmd = "/abatir", args = "<id o nombre>", desc = "Deja abatido a un jugador (empieza la cuenta atras de 2 minutos).", res = "rp_injury" },
             { cmd = "/cancelar911", args = "<id o nombre>", desc = "Cancela la emergencia 911 activa de un jugador.", res = "rp_emergency" },
             { cmd = "/borrarpost", args = "<id>", desc = "Borra una foto de Fotogram (con sus likes, comentarios y avisos). El id sale en la base de datos (social_posts).", res = "rp_phone" },
+            { cmd = "/tinderstudio", args = "[id NPC]", alt = "/tinderestudio", desc = "Estudio de fotos de Tinder: la camara recorre San Andreas y saca las fotos que faltan de las personas simuladas (selfies, atardeceres, retratos, junto a su auto) con la hora y el clima de cada sitio. Con id rehace las de ese NPC. Repetir para detener.", res = "rp_phone" },
+            { cmd = "/tinderstats", args = "", desc = "Resumen de Tinder: personas simuladas, fotos sacadas, matches con NPC y mensajes.", res = "rp_phone" },
             { cmd = "/darlicencia", args = "<id o nombre>", desc = "Entrega o rehabilita la licencia de conducir sin hacer las pruebas.", res = "rp_driving" },
             { cmd = "/forzarpayday", args = "[id o nombre]", desc = "Paga el sueldo (payday) al instante a un jugador; sin argumento, a ti.", res = "rp_payday" },
             { cmd = "/pmlog", args = "<id o nombre> [cantidad]", desc = "Historial de PMs (OOC) enviados o recibidos por un personaje, para revisar MG.", res = "rp_chat" },
