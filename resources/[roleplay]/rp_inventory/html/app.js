@@ -673,11 +673,14 @@
             renderInventory();
         },
         opened: function () {
+            // Los datos ya se dibujaron en segundo plano (RP.render al llegar rp:inv:update):
+            // al abrir solo se reconstruye si el filtro cambia, para que aparezca al instante.
+            var filterChanged = state.filter !== "all";
             state.filter = "all";
             hideMenu();
             hideTip();
             play("open");
-            renderAll();
+            if (filterChanged) renderInventory();
         }
     };
 
