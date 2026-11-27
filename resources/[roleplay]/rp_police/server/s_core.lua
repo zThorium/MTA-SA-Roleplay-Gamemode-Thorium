@@ -133,11 +133,31 @@ local function refreshBlips()
     end
 end
 
+-- Traje de policia de CJ del juego original (premio de Barbara): {textura, modelo} de player.img
+local CJ_UNIFORM = { { "policetr", "policetr" }, { "cappolice", "cappolice" } }
+
+-- Solo personajes con cuerpo de CJ (skin 0); las mujeres usan skin y no admiten ropa de CJ
+local function applyUniform(player)
+    if not duty[player] or not isElement(player) or isPedDead(player) or getElementModel(player) ~= 0 then return end
+    for _, c in ipairs(CJ_UNIFORM) do
+        local clothesType = getTypeIndexFromClothes(c[1], c[2])
+        if clothesType then addPedClothes(player, c[1], c[2], clothesType) end
+    end
+end
+
+-- Revivido o reaparecido: rp_injury/rp_characters le devuelven su ropa; se vuelve a uniformar
+addEventHandler("onPlayerSpawn", root, function()
+    if duty[source] then setTimer(applyUniform, 600, 1, source) end
+end)
+
 function setDuty(player, on, silent)
     if on == (duty[player] == true) then return end
     duty[player] = on or nil
     setElementData(player, "rp:policeDuty", on and true or false)
-    if not on then
+    if on then
+        applyUniform(player)
+    else
+        if not isPedDead(player) then exports.rp_characters:restoreCharacterLook(player) end
         -- Devolver el equipo reglamentario
         for _, a in ipairs(POLICE_ARMORY) do
             if a.issued then
