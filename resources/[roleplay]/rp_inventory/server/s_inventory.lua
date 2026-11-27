@@ -33,6 +33,16 @@ local function clearMeth(player)
 end
 addEventHandler("rp:onCharacterLogout", root, function() clearMeth(source) end)
 addEventHandler("onPlayerQuit", root, function() clearMeth(source) end)
+addEventHandler("onPlayerWasted", root, function() clearMeth(source) end)
+-- El timer muere con el recurso pero el elementData sigue en el jugador: sin esto, reiniciar
+-- rp_inventory durante el efecto deja la metanfetamina activa para siempre.
+local function clearAllMeth()
+    for _, p in ipairs(getElementsByType("player")) do
+        if getElementData(p, "rp:meth") then clearMeth(p) end
+    end
+end
+addEventHandler("onResourceStart", resourceRoot, clearAllMeth)
+addEventHandler("onResourceStop", resourceRoot, clearAllMeth)
 
 local function db()
     return exports.rp_database:getConnection()
