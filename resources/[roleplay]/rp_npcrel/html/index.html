@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vínculos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ======================= Conversacion ======================= -->
+    <div id="talk" class="hidden">
+        <!-- Ficha de la persona -->
+        <section id="card" class="card">
+            <div class="card-head">
+                <div id="avatar" class="avatar"><span id="avatar-letter">?</span><i id="avatar-badge" class="badge hidden">♥</i></div>
+                <div class="who">
+                    <div id="name" class="name">—</div>
+                    <div class="sub">
+                        <span id="stage-chip" class="chip">Desconocido</span>
+                        <span id="mood" class="mood"></span>
+                    </div>
+                </div>
+            </div>
+
+            <ol id="path" class="path"></ol>
+
+            <div class="meter" id="meter-f">
+                <div class="meter-top"><span class="meter-label">🤝 Amistad</span><span class="meter-val" id="val-f">0</span></div>
+                <div class="track"><div class="fill fill-f" id="fill-f"></div><div class="marks" id="marks-f"></div></div>
+            </div>
+            <div class="meter" id="meter-r">
+                <div class="meter-top"><span class="meter-label">💗 Romance</span><span class="meter-val" id="val-r">0</span></div>
+                <div class="track"><div class="fill fill-r" id="fill-r"></div><div class="marks" id="marks-r"></div></div>
+            </div>
+
+            <div id="goal" class="goal"></div>
+
+            <div class="traits-row">
+                <span class="mini-label">Rasgos</span>
+                <div id="traits" class="traits"></div>
+            </div>
+
+            <div class="energy-row">
+                <span class="mini-label">Ganas de charlar</span>
+                <div id="energy" class="energy"></div>
+            </div>
+        </section>
+
+        <!-- Acciones -->
+        <section id="actions" class="actions"></section>
+
+        <!-- Dialogo -->
+        <section id="dialog" class="dialog">
+            <div id="me-line" class="me-line hidden"><b>Tú</b><span id="me-text"></span></div>
+            <div class="npc-line">
+                <div id="speaker" class="speaker">—</div>
+                <div id="npc-text" class="npc-text"></div>
+            </div>
+        </section>
+
+        <!-- Pistas de teclas -->
+        <footer id="hints" class="hints">
+            <span class="hint"><img class="key-ico" src="img/mouse_left.png" alt="">Elegir</span>
+            <span class="hint"><kbd>1</kbd>–<kbd>0</kbd> Atajo</span>
+            <span class="hint"><img class="key-ico" src="img/keyboard_backspace.png" alt="">Despedirse</span>
+        </footer>
+
+        <!-- Cartel de nueva etapa -->
+        <div id="banner" class="banner hidden">
+            <div class="banner-kicker">Nueva etapa</div>
+            <div id="banner-title" class="banner-title">AMIGO</div>
+            <div id="banner-sub" class="banner-sub"></div>
+        </div>
+
+        <!-- Aviso corto (te recuerda, numero guardado) -->
+        <div id="toast" class="toast hidden"></div>
+
+        <!-- Tutorial guiado (solo la primera vez) -->
+        <div id="coach-dim" class="coach-dim hidden"></div>
+        <div id="coach" class="coach hidden">
+            <div id="coach-step" class="coach-step">Paso 1 de 3</div>
+            <div id="coach-text" class="coach-text"></div>
+            <button id="coach-next" class="btn">Siguiente</button>
+        </div>
+    </div>
+
+    <!-- ======================= /vinculos ======================= -->
+    <div id="list" class="list-wrap hidden">
+        <div class="window">
+            <header class="win-head">
+                <div>
+                    <h1>💞 Mis vínculos</h1>
+                    <div id="list-count" class="win-sub"></div>
+                </div>
+                <button id="list-close" class="x" title="Cerrar">×</button>
+            </header>
+            <nav id="tabs" class="tabs"></nav>
+            <div id="grid" class="grid"></div>
+            <footer class="win-foot">
+                <span class="hint">📱 Llámales desde el teléfono (<kbd>P</kbd>) y vendrán a verte</span>
+                <span class="hint"><img class="key-ico" src="img/keyboard_escape.png" alt="">Cerrar</span>
+            </footer>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

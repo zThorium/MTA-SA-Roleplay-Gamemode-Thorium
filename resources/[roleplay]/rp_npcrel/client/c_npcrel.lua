@@ -1,11 +1,13 @@
 --[[
     rp_npcrel / c_npcrel.lua
 
-    Parte visual del sistema de vinculos: aviso "[H] Hablar" sobre el peaton cercano,
-    menu radial, camara de escena (plano general -> sobre el hombro -> contraplano ->
+    Parte visual del sistema de vinculos: aviso con la tecla H dibujada sobre el peaton
+    cercano, camara de escena (plano general -> sobre el hombro -> contraplano ->
     primer plano -> orbita en el beso), barras negras, animaciones de ambos,
-    corazones/destellos/confeti y la visita de la persona a la que llamas por telefono.
-    Todo lo que cuenta (resultado, dinero, etapa) lo decide el servidor.
+    corazones/destellos/confeti, globo de emocion sobre la cabeza y la visita de la
+    persona a la que llamas por telefono.
+    La ficha, las acciones, el dialogo, el tutorial y el panel /vinculos son CEF (html/).
+    Todo lo que cuenta (resultado, dinero, etapa, frases) lo decide el servidor.
 ]]
 
 local screenW, screenH = guiGetScreenSize()
@@ -15,27 +17,109 @@ addEvent("rp:npcrel:open", true)
 addEvent("rp:npcrel:result", true)
 addEvent("rp:npcrel:numberShared", true)
 addEvent("rp:npcrel:summon", true)
+addEvent("rp:npcrel:list", true)
+-- Desde el CEF
+addEvent("rp:npcrel:ui:pick", false)
+addEvent("rp:npcrel:ui:leave", false)
+addEvent("rp:npcrel:ui:closeList", false)
+addEvent("rp:npcrel:ui:tutorialDone", false)
 
 local IMG = { heart = "images/heart.png", spark = "images/spark.png" }
+local TUTORIAL_FILE = "@tutorial_vinculos.done"
 
 local ui = nil          -- conversacion en curso
 local visitors = {}     -- [ped] = estado de la persona que viene tras una llamada
-local leavers = {}      -- [ped] = { untilT, startT } peds que se van caminando
+local leavers = {}      -- [ped] = { startT } peds que se van caminando
 local parts = {}        -- particulas
-local banner = nil      -- cartel grande ("Ahora son amigos")
 local target = nil      -- ped al que se puede hablar ahora
 local camState = nil    -- camara suavizada
+local emote = nil       -- globo de emocion sobre la persona { tex, t0 }
+local tex = {}          -- texturas dx (se crean una vez)
+local timers = {}       -- timers con nombre, para poder cancelarlos
 
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 local function rotTo(dx, dy) return math.deg(math.atan2(-dx, dy)) end
 local function pick(list) return list[math.random(#list)] end
 local function now() return getTickCount() end
 local function notify(text, kind) pcall(function() exports.rp_notify:notify(text, kind) end) end
+local function firstName(name) return (tostring(name or ""):match("^(%S+)")) or tostring(name or "") end
+-- estandar:dep-opcional rp_citizens  peatones (citizenAdopt, citizenWalkSpot); se comprueba con running()
+local function running(name)
+    local r = getResourceFromName(name)
+    return r and getResourceState(r) == "running"
+end
+
+-- Timer con nombre: si ya habia uno con ese nombre lo cancela
+local function after(name, ms, fn)
+    if timers[name] and isTimer(timers[name]) then killTimer(timers[name]) end
+    timers[name] = setTimer(function() timers[name] = nil fn() end, math.max(50, ms), 1)
+end
+local function cancel(name)
+    if timers[name] and isTimer(timers[name]) then killTimer(timers[name]) end
+    timers[name] = nil
+end
 
 local function headPos(el)
     local x, y, z = getPedBonePosition(el, 8)
     if not x then x, y, z = getElementPosition(el) z = z + 0.7 end
     return x, y, z
+end
+
+----------------------------------------------------------------
+-- Navegador CEF (uno, precreado y oculto)
+----------------------------------------------------------------
+local browserGui, browser, browserReady, pendingJS = nil, nil, false, {}
+local listOpen = false
+
+local function callJS(code)
+    if isElement(browser) and browserReady then executeBrowserJavascript(browser, code)
+    else pendingJS[#pendingJS + 1] = code end
+end
+
+local function jsString(s)
+    s = tostring(s or "")
+    s = s:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\n", "\\n"):gsub("\r", ""):gsub("<", "\\u003c")
+    return "\"" .. s .. "\""
+end
+
+local function jsData(t)
+    local json = toJSON(t or {}, true)
+    return (json:gsub("<", "\\u003c")) .. "[0]"
+end
+
+local function createBrowserUI()
+    if isElement(browserGui) then return end
+    browserGui = guiCreateBrowser(0, 0, screenW, screenH, true, true, false)
+    guiSetVisible(browserGui, false)
+    browser = guiGetBrowser(browserGui)
+    browserReady, pendingJS = false, {}
+    addEventHandler("onClientBrowserCreated", browser, function()
+        loadBrowserURL(source, "http://mta/local/html/index.html")
+    end)
+    addEventHandler("onClientBrowserDocumentReady", browser, function()
+        browserReady = true
+        for _, code in ipairs(pendingJS) do executeBrowserJavascript(source, code) end
+        pendingJS = {}
+    end)
+end
+
+local function showBrowser(on)
+    if not isElement(browserGui) then return end
+    cancel("hideBrowser")
+    if on then
+        guiSetVisible(browserGui, true)
+        guiBringToFront(browserGui)
+        focusBrowser(browser)
+        showCursor(true, false)
+        guiSetInputEnabled(true)
+    else
+        guiSetInputEnabled(false)
+        showCursor(false)
+        -- deja terminar la animacion de salida del panel
+        after("hideBrowser", 420, function()
+            if not ui and not listOpen and isElement(browserGui) then guiSetVisible(browserGui, false) end
+        end)
+    end
 end
 
 ----------------------------------------------------------------
@@ -121,6 +205,45 @@ local function drawParts()
                 tocolor(p.c[1], p.c[2], p.c[3], math.floor(255 * alpha)))
         end
     end
+end
+
+----------------------------------------------------------------
+-- Globo de emocion sobre la cabeza (Kenney Emotes, CC0)
+----------------------------------------------------------------
+local EMOTES = { "hearts", "heart", "faceHappy", "laugh", "faceSad", "anger", "heartBroken", "question", "dots3", "stars", "exclamation" }
+
+local function showEmote(name)
+    if tex[name] then emote = { tex = tex[name], t0 = now() } end
+end
+
+local function emoteFor(res)
+    if res.stageUp then return "stars" end
+    if res.reject == "romance" then return "heartBroken" end
+    if res.bored then return "dots3" end
+    if res.outcome == "bad" then return res.action == "flirt" and "anger" or (res.action == "number" and "question" or "faceSad") end
+    if res.action == "bye" then return nil end
+    if res.action == "joke" then return "laugh" end
+    if res.action == "number" then return "exclamation" end
+    local kind
+    for _, a in ipairs(NPCREL_ACTIONS) do if a.id == res.action then kind = a.kind end end
+    if kind == "romance" or res.action == "askout" then return res.outcome == "great" and "hearts" or "heart" end
+    return res.outcome == "great" and "stars" or "faceHappy"
+end
+
+local function drawEmote()
+    if not emote or not ui or not isElement(ui.ped) then return end
+    local age = now() - emote.t0
+    if age > 2600 then emote = nil return end
+    local x, y, z = headPos(ui.ped)
+    local sx, sy = getScreenFromWorldPosition(x, y, z + 0.42)
+    if not sx then return end
+    local k = clamp(age / 220, 0, 1)
+    local pop = 1 + math.sin(k * math.pi) * 0.25
+    local fade = age > 2200 and 1 - (age - 2200) / 400 or 1
+    local w = 46 * S * pop * (0.4 + 0.6 * k)
+    local h = w * 38 / 32
+    local bob = math.sin(age / 180) * 3 * S
+    dxDrawImage(sx - w / 2, sy - h + bob, w, h, emote.tex, 0, 0, 0, tocolor(255, 255, 255, math.floor(255 * fade)))
 end
 
 ----------------------------------------------------------------
@@ -247,13 +370,10 @@ local function startAnimations(actionId, outcome)
     playAnim(localPlayer, pick(set.player), not (actionId == "kiss" or actionId == "hug"))
     playAnim(ui.ped, bad and pick(set.bad) or pick(set.npc), not (actionId == "kiss" or actionId == "hug"))
     local ped = ui.ped
-    ui.animUntil = now() + ms
-    setTimer(function()
-        if not ui or ui.ped ~= ped or not ui.animUntil or now() < ui.animUntil - 50 then return end
-        ui.animUntil = nil
+    after("anim", ms + 80, function()
         clearAnim(localPlayer)
-        if isElement(ped) then playAnim(ped, { "PED", "IDLE_chat" }) end
-    end, ms + 80, 1)
+        if ui and ui.ped == ped and isElement(ped) then playAnim(ped, { "PED", "IDLE_chat" }) end
+    end)
 end
 
 ----------------------------------------------------------------
@@ -293,12 +413,18 @@ local function groundZ(x, y, z)
     return (gz and gz ~= 0) and gz or z
 end
 
+-- Punto de aparicion en una acera (rp_citizens es opcional)
+local function walkSpot(minD, maxD)
+    if not running("rp_citizens") then return nil end
+    local ok, sx, sy, sz, sr = pcall(function() return exports.rp_citizens:citizenWalkSpot(minD, maxD, true) end)
+    if ok and sx then return sx, sy, sz, sr end
+    return nil
+end
+
 local function spawnVisitor(data)
     local px, py, pz = getElementPosition(localPlayer)
-    local x, y, z, rot
-    local ok, sx, sy, sz, sr = pcall(function() return exports.rp_citizens:citizenWalkSpot(32, 55, true) end)
-    if ok and sx then x, y, z, rot = sx, sy, sz, sr
-    else
+    local x, y, z, rot = walkSpot(32, 55)
+    if not x then
         local a = math.random() * 6.28
         x, y = px + math.cos(a) * 38, py + math.sin(a) * 38
         z, rot = groundZ(x, y, pz), 0
@@ -310,11 +436,11 @@ local function spawnVisitor(data)
         id = data.id, name = data.name, stage = data.stage, dating = data.dating,
         arrived = false, expire = now() + (data.stay or 240000), lastX = x, lastY = y, lastCheck = now(), stuck = 0,
     }
-    notify((data.name:match("^(%S+)") or data.name) .. " está llegando.", "info")
+    notify(firstName(data.name) .. " está llegando.", "info")
 end
 
 local function updateVisitors()
-    local px, py, pz = getElementPosition(localPlayer)
+    local px, py = getElementPosition(localPlayer)
     for ped, v in pairs(visitors) do
         if not isElement(ped) then
             visitors[ped] = nil
@@ -323,7 +449,7 @@ local function updateVisitors()
         elseif now() > v.expire then
             sendAway(ped)
         else
-            local x, y, z = getElementPosition(ped)
+            local x, y = getElementPosition(ped)
             local d = getDistanceBetweenPoints2D(px, py, x, y)
             if d > 160 then
                 destroyElement(ped) visitors[ped] = nil
@@ -337,8 +463,8 @@ local function updateVisitors()
                         if getDistanceBetweenPoints2D(x, y, v.lastX, v.lastY) < 1.2 then
                             v.stuck = v.stuck + 1
                             if v.stuck >= 2 then   -- atascada: aparece mas cerca, fuera de la vista
-                                local ok, sx, sy, sz = pcall(function() return exports.rp_citizens:citizenWalkSpot(9, 16, true) end)
-                                if ok and sx then setElementPosition(ped, sx, sy, sz + 1) end
+                                local sx, sy, sz = walkSpot(9, 16)
+                                if sx then setElementPosition(ped, sx, sy, sz + 1) end
                                 v.stuck = 0
                             end
                         else
@@ -353,7 +479,7 @@ local function updateVisitors()
                     setElementRotation(ped, 0, 0, rotTo(px - x, py - y))
                     playAnim(ped, { "ON_LOOKERS", "wave_loop" })
                     setTimer(function() if isElement(ped) and not (ui and ui.ped == ped) then clearAnim(ped) end end, 2600, 1)
-                    notify((v.name:match("^(%S+)") or v.name) .. " llegó. Pulsa " .. string.upper(NPCREL.KEY) .. " para hablar.", "success")
+                    notify(firstName(v.name) .. " llegó. Pulsa " .. string.upper(NPCREL.KEY) .. " para hablar.", "success")
                 end
             end
         end
@@ -363,7 +489,7 @@ end
 addEventHandler("rp:npcrel:summon", resourceRoot, spawnVisitor)
 
 ----------------------------------------------------------------
--- Aviso "[H] Hablar" sobre el peaton cercano
+-- Aviso con la tecla dibujada sobre el peaton cercano
 ----------------------------------------------------------------
 local function talkable(ped)
     if not isElement(ped) or isPedDead(ped) or isPedInVehicle(ped) or leavers[ped] then return false end
@@ -374,7 +500,7 @@ end
 
 local function scanTarget()
     target = nil
-    if ui or isPedInVehicle(localPlayer) or isPedDead(localPlayer) or getElementData(localPlayer, "rp:downed") then return end
+    if ui or listOpen or isPedInVehicle(localPlayer) or isPedDead(localPlayer) or getElementData(localPlayer, "rp:downed") then return end
     if getPedWeapon(localPlayer) >= 22 and getPedControlState(localPlayer, "aim_weapon") then return end
     local px, py, pz = getElementPosition(localPlayer)
     local best, bestD = nil, NPCREL.TALK_DISTANCE
@@ -385,22 +511,31 @@ local function scanTarget()
             if d < bestD and math.abs(z - pz) < 1.8 then best, bestD = ped, d end
         end
     end
-    target = best
+    if best ~= target then target = best end
 end
 
+local promptT0, promptPed = 0, nil
 local function drawPrompt()
-    if not target or ui or not isElement(target) then return end
+    if not target or ui or not isElement(target) then promptPed = nil return end
+    if promptPed ~= target then promptPed, promptT0 = target, now() end
     local x, y, z = headPos(target)
-    local sx, sy = getScreenFromWorldPosition(x, y, z + 0.35)
+    local sx, sy = getScreenFromWorldPosition(x, y, z + 0.38)
     if not sx then return end
     local v = visitors[target]
-    local text = "[" .. string.upper(NPCREL.KEY) .. "] " .. (v and ("Hablar con " .. (v.name:match("^(%S+)") or v.name)) or "Hablar")
-    local w = dxGetTextWidth(text, 1 * S, "default-bold") + 22 * S
-    local h = 26 * S
-    local pulse = 0.85 + math.sin(now() / 260) * 0.15
-    dxDrawRectangle(sx - w / 2, sy - h / 2, w, h, tocolor(20, 20, 26, math.floor(200 * pulse)))
-    dxDrawRectangle(sx - w / 2, sy + h / 2 - 3 * S, w, 3 * S, tocolor(255, 90, 140, 230))
-    dxDrawText(text, sx - w / 2, sy - h / 2, sx + w / 2, sy + h / 2 - 2 * S, tocolor(255, 255, 255, 255), 1 * S, "default-bold", "center", "center")
+    local label = v and ("Hablar con " .. firstName(v.name)) or "Hablar"
+    local k = clamp((now() - promptT0) / 200, 0, 1)
+    local a = math.floor(255 * k)
+    local key = 34 * S * (1 + math.sin(now() / 230) * 0.05)
+    local tw = dxGetTextWidth(label, 1.05 * S, "default-bold")
+    local w = key + 10 * S + tw + 18 * S
+    local h = 40 * S
+    local x0 = sx - w / 2
+    local y0 = sy - h / 2 - (1 - k) * 8 * S
+    dxDrawRectangle(x0, y0, w, h, tocolor(16, 14, 22, math.floor(215 * k)))
+    dxDrawRectangle(x0, y0 + h - 3 * S, w, 3 * S, v and tocolor(255, 90, 140, a) or tocolor(90, 170, 255, a))
+    dxDrawImage(x0 + 6 * S, y0 + (h - key) / 2, key, key, tex.keyH, 0, 0, 0, tocolor(255, 255, 255, a))
+    if v then dxDrawImage(x0 + w - 4 * S, y0 - 12 * S, 22 * S, 22 * S, IMG.heart, 0, 0, 0, tocolor(255, 90, 140, a)) end
+    dxDrawText(label, x0 + key + 14 * S, y0, x0 + w, y0 + h - 2 * S, tocolor(255, 255, 255, a), 1.05 * S, "default-bold", "left", "center")
 end
 
 ----------------------------------------------------------------
@@ -413,49 +548,47 @@ local function blocked()
 end
 
 local function startInteraction(ped)
-    if ui or not talkable(ped) then return end
-    local adopt = getElementData(ped, "rp:citizen")
-    if adopt then
+    if ui or listOpen or not talkable(ped) then return end
+    if getElementData(ped, "rp:citizen") then
+        if not running("rp_citizens") then return end
         local ok, res = pcall(function() return exports.rp_citizens:citizenAdopt(ped) end)
         if not ok or not res then return end   -- el recurso de peatones no entrega al ped
     end
     setPedControlState(ped, "forwards", false)
     setPedControlState(ped, "walk", false)
     setPedControlState(ped, "sprint", false)
-    ui = {
-        ped = ped, pending = true, t0 = now(), npcId = getElementData(ped, "rp:npcrel"),
-        shot = "wide", bars = 0, hover = nil, rects = {}, shown = { f = 0, r = 0 },
-        subtitle = nil, busy = false, lastSend = 0,
-    }
+    ui = { ped = ped, pending = true, t0 = now(), npcId = getElementData(ped, "rp:npcrel"), shot = "wide", bars = 0, busy = false, lastSend = 0 }
     triggerServerEvent("rp:npcrel:ui:begin", resourceRoot, getElementModel(ped), ui.npcId)
     -- Si el servidor no abre la conversacion, la persona sigue su camino
-    setTimer(function()
+    after("pending", 3500, function()
         if ui and ui.pending and ui.ped == ped then
-            local p = ped
             ui = nil
-            if isElement(p) then sendAway(p) end
+            if isElement(ped) then sendAway(ped) end
         end
-    end, 3500, 1)
+    end)
 end
 
 local function closeInteraction(tellServer)
     if not ui then return end
     local ped = ui.ped
     if tellServer then triggerServerEvent("rp:npcrel:ui:end", resourceRoot) end
+    cancel("busy") cancel("ending") cancel("anim") cancel("pending")
     clearAnim(localPlayer)
-    showCursor(false)
+    callJS("RP.close()")
+    showBrowser(false)
     toggleAllControls(true, true, false)
+    emote = nil
     local wasOpen, bars = not ui.pending, ui.bars or 0
     ui = nil
     if wasOpen and camState then
         -- salida suave: la camara vuelve detras del jugador y se entrega al juego
-        local fake = { ped = ped, shot = "exit", data = { stage = 1 }, bars = bars, rects = {} }
+        local fake = { ped = ped, shot = "exit", data = { stage = 1 }, bars = bars, exiting = true }
         ui = fake
-        setTimer(function()
+        after("exit", 750, function()
             if ui == fake then ui = nil end
             camState = nil
             setCameraTarget(localPlayer)
-        end, 750, 1)
+        end)
     else
         camState = nil
     end
@@ -466,7 +599,6 @@ local function closeInteraction(tellServer)
             sendAway(ped)
         end
     end
-    if banner then banner = nil end
 end
 
 addEventHandler("rp:npcrel:open", resourceRoot, function(data)
@@ -474,35 +606,38 @@ addEventHandler("rp:npcrel:open", resourceRoot, function(data)
         triggerServerEvent("rp:npcrel:ui:end", resourceRoot)
         return
     end
+    cancel("pending")
     ui.pending, ui.data, ui.t0 = false, data, now()
-    ui.shown = { f = data.friendship, r = data.romance }
     local px, py, pz = getElementPosition(localPlayer)
     local nx, ny = getElementPosition(ui.ped)
     if getDistanceBetweenPoints2D(px, py, nx, ny) > 1.9 then placeNpc(1.6) end
     faceEachOther()
     playAnim(ui.ped, { "PED", "IDLE_chat" })
+    playAnim(localPlayer, { "GANGS", "prtial_gngtlkA" })
+    after("anim", 1800, function() clearAnim(localPlayer) end)
     toggleAllControls(false, true, false)
-    showCursor(true, false)
     local cx, cy, cz = getCameraMatrix()
     camState = { init = true, x = cx, y = cy, z = cz, lx = px, ly = py, lz = pz, fov = 70 }
     lastCamTick = now()
     shot("wide", 900, "over")
-    -- Saludo
-    local f = ui.data.stage >= 4 and "Hola, qué sorpresa verte." or (ui.data.stage >= 2 and "¡Hola de nuevo!" or "Hola… ¿nos conocemos?")
-    ui.subtitle = { text = f, t0 = now() }
+    showEmote(data.stage >= 4 and "heart" or (data.stage >= 2 and "faceHappy" or "question"))
+    callJS(("RP.open(%s, %s)"):format(jsData(data), tostring(not fileExists(TUTORIAL_FILE))))
+    showBrowser(true)
 end)
 
 addEventHandler("rp:npcrel:result", resourceRoot, function(res)
     if not ui or ui.pending or not isElement(ui.ped) then return end
     ui.busy = false
-    local old = ui.data
+    cancel("busy")
     ui.data = res.state
-    ui.subtitle = { text = res.text or "", t0 = now() }
+    callJS(("RP.result(%s)"):format(jsData(res)))
     local x, y, z = headPos(ui.ped)
     local gainR = res.gain and res.gain.romance or 0
     local gainF = res.gain and res.gain.friendship or 0
 
     startAnimations(res.action, res.outcome)
+    local em = emoteFor(res)
+    if em then after("emote", 500, function() showEmote(em) end) end
 
     if res.outcome == "bad" then
         rejectFx(ui.ped)
@@ -514,7 +649,7 @@ addEventHandler("rp:npcrel:result", resourceRoot, function(res)
             local cx, cy = camState and camState.x or mx, camState and camState.y or my
             ui.orbitA0 = math.atan2(cy - my, cx - mx)
             shot("orbit", ANIM_MS.kiss, "over")
-            for i = 1, 14 do setTimer(function() if ui then local hx, hy, hz = headPos(ui.ped) hearts(hx, hy, hz + 0.1, 1 + (i % 2), true) end end, i * 380, 1) end
+            for i = 1, 14 do setTimer(function() if ui and isElement(ui.ped) then local hx, hy, hz = headPos(ui.ped) hearts(hx, hy, hz + 0.1, 1 + (i % 2), true) end end, i * 380, 1) end
         elseif res.outcome == "great" then
             shot("closeNpc", 1500, ui.alt and "reverse" or "over")
         else
@@ -527,15 +662,14 @@ addEventHandler("rp:npcrel:result", resourceRoot, function(res)
     end
     if res.celebrate then
         confetti(x, y, z, 50)
-        setTimer(function() if ui then local cx2, cy2, cz2 = headPos(ui.ped) confetti(cx2, cy2, cz2, 30) end end, 700, 1)
+        setTimer(function() if ui and isElement(ui.ped) then local cx2, cy2, cz2 = headPos(ui.ped) confetti(cx2, cy2, cz2, 30) end end, 700, 1)
     end
-    if res.stageUp and old then
-        banner = { text = "¡" .. res.state.stageName:upper() .. "!", sub = res.state.name, t0 = now() }
-        sparks(x, y, z + 0.4, 14, { 255, 210, 90 })
-    end
+    if res.stageUp then sparks(x, y, z + 0.4, 14, { 255, 210, 90 }) end
     if res.ended then
+        -- deja leer las frases (accion + etapa + cansancio) antes de cerrar
+        local chars = #(res.text or "") + #(res.stageText or "") + #(res.tiredText or "") + #(res.playerText or "")
         ui.ending = true
-        setTimer(function() if ui and ui.ending then closeInteraction(false) end end, 2700, 1)
+        after("ending", 2600 + chars * 28, function() if ui and ui.ending then closeInteraction(false) end end)
     end
 end)
 
@@ -545,137 +679,51 @@ addEventHandler("rp:npcrel:numberShared", resourceRoot, function(name, auto)
     local x, y, z = headPos(ui.ped)
     hearts(x, y, z + 0.2, auto and 16 or 8, true)
     if auto then confetti(x, y, z, 24) end
+    callJS(("RP.toast(%s, true)"):format(jsString("📱 " .. firstName(name) .. " te dio su número")))
 end)
 
 local function sendAction(id)
-    if not ui or ui.pending or ui.busy or ui.ending then return end
-    if now() - ui.lastSend < NPCREL.ACTION_COOLDOWN - 100 then return end
+    if not ui or ui.pending or ui.busy or ui.ending or ui.exiting then return end
+    if now() - ui.lastSend < NPCREL.ACTION_COOLDOWN - 100 then return callJS("RP.unbusy()") end
     ui.lastSend, ui.busy = now(), true
     triggerServerEvent("rp:npcrel:ui:act", resourceRoot, id)
-    setTimer(function() if ui then ui.busy = false end end, 5000, 1)
+    -- si el servidor no contesta (sin dinero, accion invalida), se vuelve a poder elegir
+    after("busy", 3000, function() if ui then ui.busy = false callJS("RP.unbusy()") end end)
 end
+
+addEventHandler("rp:npcrel:ui:pick", root, function(id)
+    if type(id) == "string" then sendAction(id) end
+end)
+addEventHandler("rp:npcrel:ui:leave", root, function()
+    if ui and not ui.pending and not ui.ending and not ui.exiting then closeInteraction(true) end
+end)
+addEventHandler("rp:npcrel:ui:tutorialDone", root, function()
+    if fileExists(TUTORIAL_FILE) then return end
+    local f = fileCreate(TUTORIAL_FILE)
+    if f then fileWrite(f, "1") fileClose(f) end
+end)
 
 ----------------------------------------------------------------
--- Dibujo
+-- Panel /vinculos
 ----------------------------------------------------------------
-local KIND_COLOR = { friend = { 90, 170, 255 }, romance = { 255, 90, 140 }, special = { 255, 190, 80 } }
--- Se llena al primer uso: los scripts de cliente con cache="false" pueden ejecutarse antes que los compartidos
-local KIND_OF = {}
-local function kindOf(id)
-    if next(KIND_OF) == nil then
-        for _, a in ipairs(NPCREL_ACTIONS) do KIND_OF[a.id] = a.kind end
-    end
-    return KIND_OF[id]
+local function closeList()
+    if not listOpen then return end
+    listOpen = false
+    callJS("RP.closeList()")
+    showBrowser(false)
 end
 
-local function bar(x, y, w, h, value, shown, r, g, b, label)
-    dxDrawText(label, x, y - 17 * S, x + w, y, tocolor(230, 230, 235, 255), 0.85 * S, "default-bold")
-    dxDrawText(tostring(math.floor(value)), x, y - 17 * S, x + w, y, tocolor(230, 230, 235, 255), 0.85 * S, "default-bold", "right")
-    dxDrawRectangle(x, y, w, h, tocolor(255, 255, 255, 30))
-    dxDrawRectangle(x, y, w * clamp(shown / 100, 0, 1), h, tocolor(r, g, b, 235))
-    dxDrawRectangle(x, y, w * clamp(shown / 100, 0, 1), h / 2, tocolor(255, 255, 255, 40))
-end
+addEventHandler("rp:npcrel:list", resourceRoot, function(list, max, days)
+    if ui then return end
+    listOpen = true
+    callJS(("RP.list(%s, %d, %d)"):format(jsData(list), tonumber(max) or 40, tonumber(days) or 3))
+    showBrowser(true)
+end)
+addEventHandler("rp:npcrel:ui:closeList", root, closeList)
 
-local function drawCard(alpha)
-    local d = ui.data
-    local x, y, w = screenW * 0.04, screenH * 0.2, 330 * S
-    local h = 232 * S
-    dxDrawRectangle(x, y, w, h, tocolor(14, 14, 20, math.floor(205 * alpha)))
-    dxDrawRectangle(x, y, 4 * S, h, tocolor(255, 90, 140, math.floor(255 * alpha)))
-    local a = math.floor(255 * alpha)
-    dxDrawText(d.name, x + 18 * S, y + 10 * S, x + w - 10, y + 40 * S, tocolor(255, 255, 255, a), 1.35 * S, "default-bold")
-    -- etapa
-    local sc = d.stage >= 5 and { 255, 90, 140 } or (d.stage >= 4 and { 255, 140, 170 } or (d.stage >= 3 and { 120, 200, 255 } or { 190, 190, 200 }))
-    local sw = dxGetTextWidth(d.stageName, 0.95 * S, "default-bold") + 18 * S
-    dxDrawRectangle(x + 18 * S, y + 44 * S, sw, 22 * S, tocolor(sc[1], sc[2], sc[3], math.floor(60 * alpha)))
-    dxDrawText(d.stageName, x + 18 * S, y + 44 * S, x + 18 * S + sw, y + 66 * S, tocolor(sc[1], sc[2], sc[3], a), 0.95 * S, "default-bold", "center", "center")
-    bar(x + 18 * S, y + 98 * S, w - 36 * S, 9 * S, d.friendship, ui.shown.f, 90, 170, 255, "Amistad")
-    bar(x + 18 * S, y + 134 * S, w - 36 * S, 9 * S, d.romance, ui.shown.r, 255, 90, 140, "Romance")
-    -- rasgos y humor
-    local line = d.mood and ("Humor: " .. d.mood) or ""
-    if #d.traits > 0 then line = table.concat(d.traits, " · ") .. "   |   " .. line end
-    dxDrawText(line, x + 18 * S, y + 160 * S, x + w - 10, y + 184 * S, tocolor(200, 200, 210, a), 0.9 * S, "default-bold")
-    dxDrawText(("Conversación: %d acciones restantes"):format(d.left or 0), x + 18 * S, y + 192 * S, x + w - 10, y + 216 * S, tocolor(150, 150, 165, a), 0.8 * S, "default-bold")
-    -- barritas sobre la cabeza de la persona
-    local hx, hy, hz = headPos(ui.ped)
-    local sx, sy = getScreenFromWorldPosition(hx, hy, hz + 0.32)
-    if sx then
-        local bw = 70 * S
-        dxDrawRectangle(sx - bw / 2, sy, bw, 5 * S, tocolor(0, 0, 0, 140))
-        dxDrawRectangle(sx - bw / 2, sy, bw * clamp(ui.shown.f / 100, 0, 1), 5 * S, tocolor(90, 170, 255, 230))
-        dxDrawRectangle(sx - bw / 2, sy + 7 * S, bw, 5 * S, tocolor(0, 0, 0, 140))
-        dxDrawRectangle(sx - bw / 2, sy + 7 * S, bw * clamp(ui.shown.r / 100, 0, 1), 5 * S, tocolor(255, 90, 140, 230))
-    end
-end
-
-local function drawMenu(alpha)
-    local d = ui.data
-    local cx, cy = screenW * 0.77, screenH * 0.5
-    local rx, ry = 205 * S, screenH * 0.3
-    local bw, bh = 172 * S, 44 * S
-    local n = #d.actions
-    local mx, my = 0, 0
-    if isCursorShowing() then
-        local rx2, ry2 = getCursorPosition()
-        mx, my = rx2 * screenW, ry2 * screenH
-    end
-    ui.hover = nil
-    ui.rects = {}
-    for i, a in ipairs(d.actions) do
-        local ang = -math.pi / 2 + (i - 1) * 2 * math.pi / n
-        local bx, by = cx + math.cos(ang) * rx - bw / 2, cy + math.sin(ang) * ry - bh / 2
-        local kc = KIND_COLOR[kindOf(a.id)] or KIND_COLOR.friend
-        local over = mx >= bx and mx <= bx + bw and my >= by and my <= by + bh
-        local usable = a.enabled and not ui.busy and not ui.ending
-        if over and a.enabled then ui.hover = a.id end
-        ui.rects[#ui.rects + 1] = { id = a.id, x = bx, y = by, w = bw, h = bh, ok = usable }
-        local fade = math.floor(255 * alpha)
-        -- hilo hasta el centro
-        dxDrawLine(cx, cy, bx + bw / 2, by + bh / 2, tocolor(kc[1], kc[2], kc[3], math.floor((a.enabled and 55 or 20) * alpha)), 1)
-        local bg = a.enabled and (over and usable and 235 or 190) or 120
-        dxDrawRectangle(bx, by, bw, bh, tocolor(14, 14, 20, math.floor(bg * alpha)))
-        dxDrawRectangle(bx, by, 5 * S, bh, tocolor(kc[1], kc[2], kc[3], math.floor((a.enabled and 255 or 70) * alpha)))
-        if over and usable then dxDrawRectangle(bx, by, bw, bh, tocolor(kc[1], kc[2], kc[3], math.floor(45 * alpha))) end
-        local col = a.enabled and tocolor(255, 255, 255, fade) or tocolor(130, 130, 140, fade)
-        if a.hint ~= "" then
-            dxDrawText(a.label, bx + 16 * S, by + 3 * S, bx + bw - 6, by + bh * 0.62, col, 1 * S, "default-bold", "left", "center")
-            dxDrawText(a.hint, bx + 16 * S, by + bh * 0.55, bx + bw - 6, by + bh - 2, tocolor(kc[1], kc[2], kc[3], math.floor((a.enabled and 230 or 150) * alpha)), 0.75 * S, "default-bold", "left", "center")
-        else
-            dxDrawText(a.label, bx + 16 * S, by, bx + bw - 6, by + bh, col, 1 * S, "default-bold", "left", "center")
-        end
-    end
-    dxDrawText("Backspace: salir", cx - 120 * S, cy - 10 * S, cx + 120 * S, cy + 12 * S, tocolor(190, 190, 200, math.floor(150 * alpha)), 0.8 * S, "default-bold", "center", "center")
-end
-
-local function drawSubtitle()
-    local s = ui.subtitle
-    if not s then return end
-    local age = now() - s.t0
-    if age > 6500 then ui.subtitle = nil return end
-    local shownChars = math.min(#s.text, math.floor(age / 22))
-    local text = s.text:sub(1, shownChars)
-    -- recortar sin partir un caracter UTF-8 a la mitad
-    while #text > 0 and text:byte(#text) >= 0x80 and text:byte(#text) < 0xC0 do text = text:sub(1, #text - 1) end
-    local fade = age > 5800 and 1 - (age - 5800) / 700 or 1
-    local y = screenH * 0.89 - 66 * S
-    dxDrawText(text, screenW * 0.2 + 1, y + 1, screenW * 0.8 + 1, y + 60 * S + 1, tocolor(0, 0, 0, math.floor(230 * fade)), 1.25 * S, "default-bold", "center", "center", false, true)
-    dxDrawText(text, screenW * 0.2, y, screenW * 0.8, y + 60 * S, tocolor(255, 255, 255, math.floor(255 * fade)), 1.25 * S, "default-bold", "center", "center", false, true)
-end
-
-local function drawBanner()
-    if not banner then return end
-    local age = now() - banner.t0
-    if age > 3200 then banner = nil return end
-    local k = clamp(age / 350, 0, 1)
-    local pop = 1 + (1 - k) * 0.8
-    local fade = age > 2600 and 1 - (age - 2600) / 600 or 1
-    local a = math.floor(255 * fade * k)
-    local y = screenH * 0.2
-    dxDrawText(banner.text, 2, y + 2, screenW + 2, y + 80 * S + 2, tocolor(0, 0, 0, math.floor(a * 0.8)), 3 * S * pop, "default-bold", "center", "center")
-    dxDrawText(banner.text, 0, y, screenW, y + 80 * S, tocolor(255, 110, 160, a), 3 * S * pop, "default-bold", "center", "center")
-    dxDrawText(banner.sub or "", 0, y + 70 * S, screenW, y + 100 * S, tocolor(255, 255, 255, a), 1.1 * S, "default-bold", "center", "center")
-end
-
+----------------------------------------------------------------
+-- Dibujo dx (barras de cine, aviso, globo, particulas)
+----------------------------------------------------------------
 local lastRender = 0
 addEventHandler("onClientRender", root, function()
     local t = now()
@@ -690,32 +738,16 @@ addEventHandler("onClientRender", root, function()
         local barH = screenH * 0.11 * (ui.bars or 0)
         dxDrawRectangle(0, 0, screenW, barH, tocolor(0, 0, 0, 255))
         dxDrawRectangle(0, screenH - barH, screenW, barH, tocolor(0, 0, 0, 255))
-        if ui.data and not ui.pending and ui.shot ~= "exit" then
-            local alpha = clamp((t - ui.t0) / 450, 0, 1)
-            local k = 1 - math.exp(-dt * 6)
-            ui.shown.f = ui.shown.f + (ui.data.friendship - ui.shown.f) * k
-            ui.shown.r = ui.shown.r + (ui.data.romance - ui.shown.r) * k
-            drawCard(alpha)
-            drawMenu(alpha)
-            drawSubtitle()
-        end
+        drawEmote()
     end
     drawParts()
-    drawBanner()
-end)
-
-addEventHandler("onClientClick", root, function(button, state)
-    if button ~= "left" or state ~= "down" or not ui or ui.pending or not ui.rects then return end
-    for _, r in ipairs(ui.rects) do
-        if r.ok and ui.hover == r.id then return sendAction(r.id) end
-    end
 end)
 
 ----------------------------------------------------------------
 -- Arranque, teclas y limpieza
 ----------------------------------------------------------------
 local function guard()
-    if ui and not ui.pending and ui.shot ~= "exit" then
+    if ui and not ui.pending and not ui.exiting then
         local ped = ui.ped
         local px, py, pz = getElementPosition(localPlayer)
         local bad = not isElement(ped) or isPedDead(ped) or isPedDead(localPlayer) or isPedInVehicle(localPlayer)
@@ -726,23 +758,29 @@ local function guard()
         end
         if bad then closeInteraction(true) end
     end
+    if listOpen and (isPedDead(localPlayer) or getElementData(localPlayer, "rp:downed")) then closeList() end
     scanTarget()
     updateVisitors()
     updateLeavers()
 end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    setTimer(guard, 200, 0)
+    tex.keyH = dxCreateTexture("images/keys/keyboard_h.png", "argb", true, "clamp")
+    for _, name in ipairs(EMOTES) do tex[name] = dxCreateTexture("images/emotes/emote_" .. name .. ".png", "argb", true, "clamp") end
+    createBrowserUI()
+    timers.guard = setTimer(guard, 200, 0)
     bindKey(NPCREL.KEY, "down", function()
-        if ui or blocked() or not target then return end
+        if ui or listOpen or blocked() or not target then return end
         startInteraction(target)
     end)
+    -- Respaldo por si el navegador pierde el foco (el CEF ya escucha Backspace/Esc)
     bindKey("backspace", "down", function()
-        if ui and not ui.pending and not ui.ending then closeInteraction(true) end
+        if listOpen then return closeList() end
+        if ui and not ui.pending and not ui.ending and not ui.exiting then closeInteraction(true) end
     end)
 end)
 
--- /npcdebug: que ve el sistema en los peatones cercanos (para diagnosticar "no sale [H] Hablar")
+-- /npcdebug: que ve el sistema en los peatones cercanos (para diagnosticar "no sale Hablar")
 addCommandHandler("npcdebug", function()
     local px, py, pz = getElementPosition(localPlayer)
     local list = getElementsByType("ped", root, true)
@@ -767,14 +805,21 @@ addCommandHandler("npcdebug", function()
 end)
 
 local function destroyAll()
+    for _, t in pairs(timers) do if isTimer(t) then killTimer(t) end end
+    timers = {}
     for ped in pairs(visitors) do if isElement(ped) then destroyElement(ped) end end
     for ped in pairs(leavers) do if isElement(ped) then destroyElement(ped) end end
-    if ui then
+    if ui or listOpen then
         clearAnim(localPlayer)
+        guiSetInputEnabled(false)
         showCursor(false)
         toggleAllControls(true, true, false)
         setCameraTarget(localPlayer)
     end
+    if isElement(browserGui) then destroyElement(browserGui) end
 end
 addEventHandler("onClientResourceStop", resourceRoot, destroyAll)
-addEventHandler("onClientPlayerWasted", localPlayer, function() if ui then closeInteraction(true) end end)
+addEventHandler("onClientPlayerWasted", localPlayer, function()
+    if ui then closeInteraction(true) end
+    closeList()
+end)
