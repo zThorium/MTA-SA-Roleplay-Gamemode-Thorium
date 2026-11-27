@@ -3883,7 +3883,11 @@ end)
 
 -- Diagnostico: /poblacioninfo
 addCommandHandler("poblacioninfo", function()
-    outputChatBox(("Peatones: %d  Autos: %d  Nodos: %d peatonales, %d viales"):format(pedCount, carCount, #PED_NODES / 3, #VEH_NODES / 3), 120, 200, 255)
+    local boats, boatNodes, air, airRoutes = 0, 0, 0, 0
+    if citizenBoatCount then boats, boatNodes = citizenBoatCount() end
+    if citizenAirCount then air, airRoutes = citizenAirCount() end
+    outputChatBox(("Peatones: %d  Autos: %d  Barcos: %d  Aeronaves: %d  Nodos: %d peatonales, %d viales, %d de barcos  Rutas aereas: %d"):format(
+        pedCount, carCount, boats, air, #PED_NODES / 3, #VEH_NODES / 3, boatNodes, airRoutes), 120, 200, 255)
 end)
 
 ----------------------------------------------------------------
@@ -3901,6 +3905,12 @@ end
 
 function citizensEnabled()
     return enabled and not suspended
+end
+
+-- Solo el interruptor (/poblacion), sin contar la suspension de pasajero: lo usa c_air.lua, cuyo trafico
+-- es el mismo para todos (un pasajero no necesita copiarlo del conductor)
+function citizenPopulationEnabled()
+    return enabled
 end
 
 function citizenCounts()
