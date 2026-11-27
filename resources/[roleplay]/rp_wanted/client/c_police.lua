@@ -837,16 +837,62 @@ local function damageLocal(amount)
     if amount > 0 then setElementHealth(localPlayer, math.max(0, getElementHealth(localPlayer) - amount)) end
 end
 
+-- Tirador asomado vivo de la unidad (nil si no hay o lo mataron)
+local function heliGunner(u)
+    local g = u.gunner
+    return (isElement(g) and not isPedDead(g)) and g or nil
+end
+
+-- Un disparo visible: fogonazo, sonido 3D, trazadora e impacto (lo usan el buscado y los que miran)
+local function heliShotFx(sx, sy, sz, tx, ty, tz, ignore, now)
+    local dx, dy, dz = tx - sx, ty - sy, tz - sz
+    local len = math.max(0.1, math.sqrt(dx * dx + dy * dy + dz * dz))
+    dx, dy, dz = dx / len, dy / len, dz / len
+    fxAddGunshot(sx, sy, sz, dx, dy, dz, true)
+    local snd = playSound3D(WANTED_HELI.SOUND, sx, sy, sz)
+    if snd then
+        setSoundMaxDistance(snd, WANTED_HELI.SOUND_DISTANCE)
+        setSoundMinDistance(snd, 15)
+        setSoundVolume(snd, 0.9)
+    end
+    local hitAny, ix, iy, iz = processLineOfSight(sx, sy, sz, sx + dx * (len + 20), sy + dy * (len + 20), sz + dz * (len + 20),
+        true, true, false, true, false, false, false, false, ignore)
+    if hitAny then
+        fxAddBulletImpact(ix, iy, iz, -dx, -dy, -dz, 1, 4, 1)
+        tracers[#tracers + 1] = { sx, sy, sz, ix, iy, iz, now }
+    else
+        tracers[#tracers + 1] = { sx, sy, sz, tx, ty, tz, now }
+    end
+end
+
+-- Boca del arma: un poco por encima del tirador, o bajo el helicoptero si no se puede ubicar
+local function muzzleOf(gunner, h)
+    local gx, gy, gz = getElementPosition(gunner)
+    if gx then return gx, gy, gz + 0.45 end
+    local x, y, z = getElementPosition(h)
+    return x, y, z - 1.4
+end
+
 local function heliGun(u, now, h, x, y, z, px, py, pz)
     local H = WANTED_HELI
     if level < H.SHOOT_LEVEL or u.leaving or isPedDead(localPlayer) then return end
-    if (now + (tonumber(u.id) or 0) * 700) % H.CYCLE > H.BURST then return end
-    if now - (u.shotAt or 0) < H.SHOT_EVERY then return end
-    u.shotAt = now
+    -- sin tirador (aun no llego a 4 estrellas cuando salio, o lo abatiste) no hay disparos
+    local gunner = heliGunner(u)
+    if not gunner then return end
+    local phase = (now + (tonumber(u.id) or 0) * 700) % H.CYCLE
+    if phase > H.BURST then return end
     local dist = getDistanceBetweenPoints3D(x, y, z, px, py, pz)
     if dist > H.RANGE then return end
-    local sx, sy, sz = x, y, z - 1.4
+    local sx, sy, sz = muzzleOf(gunner, h)
     if not isLineOfSightClear(sx, sy, sz, px, py, pz + 0.5, true, false, false, true, false, true, false) then return end
+    -- empieza una rafaga: el servidor la reenvia a los jugadores cercanos (la ven y la oyen)
+    local burstNo = math.floor((now + (tonumber(u.id) or 0) * 700) / H.CYCLE)
+    if u.burstNo ~= burstNo then
+        u.burstNo = burstNo
+        triggerServerEvent("rp:wanted:heliBurst", resourceRoot, h)
+    end
+    if now - (u.shotAt or 0) < H.SHOT_EVERY then return end
+    u.shotAt = now
     local pveh = getPedOccupiedVehicle(localPlayer)
     local speed = speedKmh(pveh or localPlayer)
     local acc = H.ACCURACY * (1 - math.min(0.6, speed / 250)) * (dist < 60 and 1 or 0.7)
@@ -854,18 +900,7 @@ local function heliGun(u, now, h, x, y, z, px, py, pz)
     local spread = hit and 0.4 or (1.5 + math.random() * 3)
     local a = math.random() * math.pi * 2
     local tx, ty, tz = px + math.cos(a) * spread, py + math.sin(a) * spread, pz + (hit and 0.3 or -0.8)
-    local dx, dy, dz = tx - sx, ty - sy, tz - sz
-    local len = math.sqrt(dx * dx + dy * dy + dz * dz)
-    dx, dy, dz = dx / len, dy / len, dz / len
-    fxAddGunshot(sx, sy, sz, dx, dy, dz, true)
-    local hitAny, ix, iy, iz = processLineOfSight(sx, sy, sz, sx + dx * (len + 20), sy + dy * (len + 20), sz + dz * (len + 20),
-        true, true, false, true, false, false, false, false, h)
-    if hitAny then
-        fxAddBulletImpact(ix, iy, iz, -dx, -dy, -dz, 1, 4, 1)
-        tracers[#tracers + 1] = { sx, sy, sz, ix, iy, iz, now }
-    else
-        tracers[#tracers + 1] = { sx, sy, sz, tx, ty, tz, now }
-    end
+    heliShotFx(sx, sy, sz, tx, ty, tz, h, now)
     if not hit then return end
     if pveh and getVehicleController(pveh) == localPlayer then
         setElementHealth(pveh, math.max(0, getElementHealth(pveh) - H.DAMAGE_VEHICLE))
@@ -875,6 +910,36 @@ local function heliGun(u, now, h, x, y, z, px, py, pz)
         if vt == "Bike" or vt == "BMX" or vt == "Quad" then damageLocal(H.DAMAGE_PED) end
     elseif not pveh then
         damageLocal(H.DAMAGE_PED)
+    end
+end
+
+-- Rafagas que ven los demas jugadores cerca (solo efectos: el dano lo aplica el cliente del buscado)
+local watchedBursts = {}
+addEvent("rp:wanted:heliBurst", true)
+addEventHandler("rp:wanted:heliBurst", resourceRoot, function(heli, gunner, target)
+    if not isElement(heli) or not isElement(gunner) or not isElement(target) or target == localPlayer then return end
+    watchedBursts[#watchedBursts + 1] = { heli = heli, gunner = gunner, target = target, at = getTickCount(), shotAt = 0 }
+end)
+
+local function watchedBurstsTick(now)
+    local H = WANTED_HELI
+    for i = #watchedBursts, 1, -1 do
+        local b = watchedBursts[i]
+        if now - b.at > H.BURST or not isElement(b.heli) or not isElement(b.target)
+            or not isElement(b.gunner) or isPedDead(b.gunner) then
+            table.remove(watchedBursts, i)
+        elseif now - b.shotAt >= H.SHOT_EVERY then
+            b.shotAt = now
+            local sx, sy, sz = muzzleOf(b.gunner, b.heli)
+            local px, py, pz = getElementPosition(b.target)
+            local a, r = math.random() * math.pi * 2, 0.4 + math.random() * 3
+            -- el tirador apunta a quien persigue (asi tambien lo ven los demas)
+            if isElementStreamedIn(b.gunner) then
+                setPedAimTarget(b.gunner, px, py, pz)
+                setPedControlState(b.gunner, "aim_weapon", true)
+            end
+            heliShotFx(sx, sy, sz, px + math.cos(a) * r, py + math.sin(a) * r, pz - 0.5 + math.random(), b.heli, now)
+        end
     end
 end
 
@@ -990,6 +1055,16 @@ local function heliTick(u, now)
         end
         if not dropping and live then heliGun(u, now, h, x, y, z, getElementPosition(localPlayer)) end
     end
+    -- Tirador asomado: el helicoptero te pone de costado (su puerta hacia ti) y el tirador te apunta
+    local gunner = heliGunner(u)
+    local aiming = gunner and live and not dropping and not u.leaving and level >= WANTED_HELI.SHOOT_LEVEL
+    if gunner and controlled(u, gunner) then
+        if aiming then
+            local rx, ry, rz = getElementPosition(localPlayer)
+            setPedAimTarget(gunner, rx, ry, rz)
+        end
+        setPedControlState(gunner, "aim_weapon", aiming and true or false)
+    end
     local dx, dy, dz = tx - x, ty - y, tz - z
     local d = math.sqrt(dx * dx + dy * dy + dz * dz)
     if d > 0.5 then
@@ -999,7 +1074,10 @@ local function heliTick(u, now)
         setElementVelocity(h, 0, 0, 0)
     end
     setElementAngularVelocity(h, 0, 0, 0)
-    setElementRotation(h, 0, 0, heading(lightX - x, lightY - y))
+    -- con tirador apuntando, la puerta (GUNNER_ROT respecto al morro) mira al jugador
+    local yaw = heading(lightX - x, lightY - y)
+    if aiming then yaw = yaw - WANTED_HELI.GUNNER_ROT end
+    setElementRotation(h, 0, 0, yaw)
     if setVehicleRotorSpeed then setVehicleRotorSpeed(h, 0.2) end
 
     -- Foco de noche
@@ -1362,6 +1440,7 @@ local function tick()
     local now = getTickCount()
     planBudget = 1
     combatTickStart()
+    watchedBurstsTick(now)
     assignRoles(now)
     assignFootSlots(now)
     checkSpikes()
@@ -1415,6 +1494,7 @@ addEventHandler("rp:wanted:unit", resourceRoot, function(data)
     if data.leaving and not u.leaving then u.wp, u.leaveTarget = nil, nil end
     u.leaving = data.leaving
     u.spike = data.spike
+    u.gunner = data.gunner
     if data.drop and not u.drop then
         u.drop, u.rappel, u.landed = data.drop, true, {}
     end

@@ -143,6 +143,21 @@ Aquí nos apartamos de GTA SA a propósito: en SA la policía siempre sabe dónd
 - **Cobertura**: si les apuntas, les pegas o tienen poca vida, corren a un punto cercano donde no los ves (pared o auto), esperan 2,5 s y vuelven. Los controles de carretera se cubren tras sus patrullas.
 - **Rendición**: si te quedas quieto a pie sin apuntar durante 1,5 s, el policía más cercano se acerca a arrestarte y el resto te apunta sin disparar.
 - **Atascos a pie**: si en 1,5 s no avanzan, saltan y se apartan para rodear el obstáculo.
+- **Habilidad con armas**: todos los policías IA (patrullas, controles, lanchas, SWAT y tirador del heli) salen con las stats 69-79 a `WANTED_COP_SKILL` = 998, el nivel «Gangster».
+  - Así apuntan con la postura correcta y pueden moverse apuntando.
+  - Antes salían con la habilidad mínima y disparaban desde la cadera.
+  - No llegan a «Hitman» (999), que da doble pistola.
+  - Excepción: las patrullas del tráfico que se suman (`adoptLocalCop`) son peds del cliente y MTA no deja cambiarles las stats.
+
+### Helicóptero (`WANTED_HELI`)
+- **Foco**: te sigue de noche (20:00 a 06:00). Si te pierde, barre la zona en espiral.
+- **Tirador asomado** desde 4★: de pie en el patín derecho, sujeto a la puerta (`GUNNER_OFFSET` y `GUNNER_ROT`, ajustables en juego).
+  - El helicóptero se pone de costado para que su puerta te mire.
+  - Si el heli salió a 3★, el tirador se sube al llegar a 4★.
+  - Sin tirador vivo no hay disparos: si lo abates, deja de disparar.
+- **Ráfagas**: el cliente del buscado las simula (fogonazo, trazadora, impacto y daño) y las sonoriza con `sounds/disparo_rifle.wav`, que es sintetizado.
+  - Al empezar cada ráfaga avisa al servidor (`rp:wanted:heliBurst`, validado y limitado a una por ciclo).
+  - El servidor la reenvía a los jugadores a menos de `SHARE_RADIUS` (250 m), que la ven y la oyen sin daño.
 
 ### Persecución en vehículo (`client/c_police.lua`)
 - **Volante amortiguado**, con menos ganancia a alta velocidad. Ya no zigzaguean.

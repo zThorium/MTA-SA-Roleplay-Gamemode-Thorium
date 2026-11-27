@@ -28,6 +28,9 @@
     <script src="client/c_police.lua" type="client" cache="false" />
     <script src="client/c_jail.lua" type="client" cache="false" />
 
+    <!-- Rafagas del tirador del helicoptero (sintetizado: tools/gen_sounds.ps1) -->
+    <file src="sounds/disparo_rifle.wav" />
+
     <export function="getWantedLevel" type="server" />
     <export function="getWantedChaos" type="server" />
     <export function="setWantedLevel" type="server" />

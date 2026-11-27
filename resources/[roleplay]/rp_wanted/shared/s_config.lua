@@ -180,7 +180,19 @@ WANTED_HELI = {
     SWAT_MAX_SPEED = 30,      -- km/h: solo baja si vas a pie o despacio
     HOVER_HEIGHT = 14,        -- m sobre el suelo mientras bajan
     RAPPEL_SPEED = 6,         -- m/s
+    -- Tirador asomado: de pie en el patin derecho, sujeto a la puerta (offset respecto al
+    -- helicoptero: derecha, adelante, arriba; giro -90 = mira hacia fuera). Ajustar en juego.
+    GUNNER_OFFSET = { 1.25, 0.5, -0.45 },
+    GUNNER_ROT = -90,
+    SHARE_RADIUS = 250,       -- m: los demas jugadores a esta distancia ven y oyen las rafagas
+    SOUND = "sounds/disparo_rifle.wav",
+    SOUND_DISTANCE = 220,     -- m hasta donde se oye un disparo
 }
+
+-- Habilidad con armas de los policias IA (stats 69-79 de GTA SA). 998 = "Gangster" en todas:
+-- apuntan con la postura correcta y pueden moverse apuntando, sin llegar a "Hitman"
+-- (999+: doble pistola). Sin esto salian con la minima y disparaban desde la cadera.
+WANTED_COP_SKILL = 998
 
 -- Probabilidad de reventarte un neumatico: por bala de policia que pega en tu
 -- vehiculo, y cada 1.5 s mientras te disparan desde una patrulla a menos de 30 m
