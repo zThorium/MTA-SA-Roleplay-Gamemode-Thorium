@@ -143,18 +143,26 @@ addEventHandler("rp:train:alight", resourceRoot, function(x, y, z)
     notify(p, ("Bajaste en %s."):format(station), "success")
 end)
 
--- Hooks de s_train.lua
+-- Hooks de s_train.lua. Los avisos por megafonía (campanilla + voz, c_passengers.lua) solo los oyen
+-- los pasajeros de ese tren: "Estación X" al llegar y "Próxima estación, X" al salir.
 function onTrainArrive(t, st)
     for p, r in pairs(riders) do
         if r.t == t then
             sendState(p, r)
+            triggerClientEvent(p, "rp:train:announce", resourceRoot, "llegada", st.node)
             notify(p, ("Llegaste a %s. Pulsa E para bajar."):format(st.name), "info")
         end
     end
 end
 
 function onTrainDepart(t)
-    for p, r in pairs(riders) do if r.t == t then sendState(p, r) end end
+    local _, nextNode = getTrainNextStop(t)
+    for p, r in pairs(riders) do
+        if r.t == t then
+            sendState(p, r)
+            if nextNode then triggerClientEvent(p, "rp:train:announce", resourceRoot, "proxima", nextNode) end
+        end
+    end
 end
 
 addEventHandler("onPlayerQuit", root, function() riders[source], cooldown[source] = nil, nil end)

@@ -1,6 +1,8 @@
 # Créditos de rp_train
 
 - `sounds/campanas.mp3`: "Train Crossing" de *freesound_community* (Pixabay, id 105569), licencia de contenido de Pixabay (uso libre, sin atribución obligatoria).
+- `sounds/avisos/campanilla.wav`: campanilla de aviso propia, sintetizada (tres notas de campana).
+- `sounds/avisos/llegada_<nodo>.mp3` y `proxima_<nodo>.mp3`: voces generadas con Fish Audio (TTS, modelo `s2.1-pro-free`) con la voz pública "Verity" de su biblioteca (`anunciadora_tren` en la skill `voces-gta`). Formato de los avisos inspirado en la megafonía de Metrotren (sin usar su audio ni su voz).
 - `sounds/claxon.mp3`: "Train Horn Fades" de *freesound_community* (Pixabay, id 25194), misma licencia.
 - `images/keys/*.png` (E, ratón, flechas, Re/Av Pág, Z, X, Mayús, Enter, Retroceso): Kenney Input Prompts (CC0), copiados de `assets/kenney/teclas/teclado-raton/128px/`.
 - `images/led_dot.png`: máscara de LED de 8x8 px, propia (generada a mano para el cartel de las estaciones).

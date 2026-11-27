@@ -49,5 +49,10 @@
                   "modo":  "biblioteca",
                   "titulo":  "PROVISIONAL - Fish biblioteca \u0027Chico\u0027 (espanol latino joven). Sustituir por clon del doblaje de Cesar",
                   "id":  "76919aa82fe04381b44e3473326e2a08"
-              }
+              },
+    "anunciadora_tren":  {
+                             "modo":  "modelo",
+                             "titulo":  "Anunciadora de estación (biblioteca pública de Fish: Verity)",
+                             "id":  "692eb1e1023242219dc8caae8c56fb12"
+                         }
 }

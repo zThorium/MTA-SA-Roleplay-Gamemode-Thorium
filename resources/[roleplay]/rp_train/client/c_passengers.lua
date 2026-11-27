@@ -7,9 +7,11 @@
       andén, E para bajar con la cuenta atrás de la salida. Al bajar propone el suelo más alto a cada lado
       del vagón (el andén) y el servidor lo valida.
     - Los jugadores que viajan (rp:train:rider) no chocan con el vagón en ningún cliente.
+    - Megafonía: campanilla + "Estación X" al llegar y "Próxima estación, X" al salir (rp:train:announce).
 ]]
 
 addEvent("rp:train:ride", true)
+addEvent("rp:train:announce", true)
 
 local W, H = guiGetScreenSize()
 local keyE, mouseMove        -- texturas de las teclas dibujadas (se crean una vez)
@@ -105,6 +107,23 @@ addEventHandler("rp:train:ride", resourceRoot, function(car, station, secs, next
     end
     textures()
     ride = { car = car, station = station, leavesAt = getTickCount() + (tonumber(secs) or 0) * 1000, nextStop = nextStop or "" }
+end)
+
+-- Megafonía del tren (solo pasajeros): campanilla y luego la voz de sounds/avisos/<tipo>_<nodo>.mp3
+-- (tipo = "llegada" | "proxima"). Si falta la voz, suena solo la campanilla.
+local announceTimer
+addEventHandler("rp:train:announce", resourceRoot, function(kind, node)
+    if not ride then return end
+    if isTimer(announceTimer) then killTimer(announceTimer) end
+    local chime = playSound("sounds/avisos/campanilla.wav")
+    if chime then setSoundVolume(chime, TRAIN.ANNOUNCE_VOLUME) end
+    local voice = ("sounds/avisos/%s_%s.mp3"):format(tostring(kind), tostring(node))
+    if not fileExists(voice) then return end
+    announceTimer = setTimer(function()
+        if not ride then return end
+        local snd = playSound(voice)
+        if snd then setSoundVolume(snd, TRAIN.ANNOUNCE_VOLUME) end
+    end, TRAIN.ANNOUNCE_VOICE_DELAY_MS, 1)
 end)
 
 -- El ratón (sin cursor) gira la cámara alrededor del vagón

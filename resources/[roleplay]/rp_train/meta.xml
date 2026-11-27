@@ -36,6 +36,20 @@
     <file src="sounds/campanas.mp3" />
     <!-- Claxon 10 s antes de salir de cada estación (ver CREDITOS.md) -->
     <file src="sounds/claxon.mp3" />
+    <!-- Megafonía del tren (solo pasajeros): campanilla propia y voces de cada estación (ver CREDITOS.md) -->
+    <file src="sounds/avisos/campanilla.wav" />
+    <file src="sounds/avisos/llegada_331.mp3" />
+    <file src="sounds/avisos/proxima_331.mp3" />
+    <file src="sounds/avisos/llegada_371.mp3" />
+    <file src="sounds/avisos/proxima_371.mp3" />
+    <file src="sounds/avisos/llegada_597.mp3" />
+    <file src="sounds/avisos/proxima_597.mp3" />
+    <file src="sounds/avisos/llegada_823.mp3" />
+    <file src="sounds/avisos/proxima_823.mp3" />
+    <file src="sounds/avisos/llegada_59.mp3" />
+    <file src="sounds/avisos/proxima_59.mp3" />
+    <file src="sounds/avisos/llegada_107.mp3" />
+    <file src="sounds/avisos/proxima_107.mp3" />
     <!-- Teclas dibujadas (Kenney, CC0) y máscara de LED del cartel -->
     <file src="images/keys/keyboard_e.png" />
     <file src="images/keys/mouse_move.png" />

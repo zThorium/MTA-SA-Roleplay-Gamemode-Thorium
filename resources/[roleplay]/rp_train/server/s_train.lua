@@ -308,7 +308,7 @@ function getTrainOfWagon(veh)
     end
 end
 
-function getTrainNextStop(t) local st = nextStation(t) return st and st.name end
+function getTrainNextStop(t) local st = nextStation(t) if st then return st.name, st.node end end
 
 -- Estación más cercana a (x, y) a menos de r metros: nodo, nombre y distancia
 function getNearestStation(x, y, r)

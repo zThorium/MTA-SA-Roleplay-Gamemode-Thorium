@@ -63,6 +63,10 @@ TRAIN = {
     DEPART_HORN_DISTANCE = 250, -- se oye hasta aquí
     DEPART_HORN_VOLUME = 1.0,
 
+    -- Megafonía para los pasajeros (sounds/avisos/): campanilla y, tras este retardo, la voz
+    ANNOUNCE_VOLUME = 0.9,
+    ANNOUNCE_VOICE_DELAY_MS = 1700,
+
     -- Pasajeros: boleto (item de rp_inventory) que se gasta al subir; solo se baja en estaciones
     TICKET_ITEM = "train_ticket",
     TICKET_PRICE = 25,
