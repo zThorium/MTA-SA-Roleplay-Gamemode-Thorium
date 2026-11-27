@@ -1,5 +1,12 @@
 # Auditoría de rp_citizens
 
+## 2026-11-27 · mejorar · foco: avionetas más bajas
+- **Motivo**: Fabián vio una avioneta con `/irvuelo` pero iba tan alta que casi no se veía.
+- **Cambio**: las rutas de avioneta bajan: costa 150-200 → 55-110 m (90 m sobre las grúas de Ocean Docks), fumigadora 110 → 60-75 m, Verdant Meadows 130-140 → 75-105 m. Cada punto de paso tiene su propia altura: ~30-40 m sobre el suelo más alto del tramo.
+- **Cómo se midió el suelo**: z máxima de los nodos de calles y aceras del juego (`c_nodes_veh.lua` y `c_nodes_ped.lua`, sin los de interiores, que están a más de 600 m) a menos de 150 m de la ruta. El relieve de `rp_map` (`terrain.js`) **no sirve** para esto: es la media de objetos por celda y da más de 500 m en zonas llanas como el aeropuerto de San Fierro. Margen mínimo resultante: costa 36 m, fumigadora 33 m, Verdant 37 m; el resto de rutas, ≥ 76 m.
+- **Nota**: 82 → 82.
+- **Probar en juego**: `/irvuelo costa`, `/irvuelo fumigadora` y `/irvuelo verdant`: que se vean bien y que no atraviesen árboles, colinas, grúas ni edificios.
+
 ## 2026-11-27 · mejorar · foco: encontrar el tráfico aéreo (`/gotoaircraft`)
 - **Motivo**: Fabián no lograba ver ningún avión porque no sabía dónde ni cuándo pasan.
 - **Cambio**: comando de admin `/gotoaircraft [ruta]` (sintaxis Owl) con alias `/irvuelo`. El servidor comprueba `admin_level >= 1`, saca al admin del vehículo, lo pasa a interior y dimensión 0 y avisa al cliente (`rp:citizens:air:goto`). El cliente, que tiene el horario, elige un vuelo que seguirá en el aire dentro de 30 s y dentro del mapa (sin ruta, los de línea primero y el que más tiempo le queda; con ruta, la que contenga el texto), lleva al admin al suelo o al agua justo bajo ese punto (congelado hasta que carga la colisión) y sigue la aeronave con un blip en el radar (icono 5) hasta que sale del mapa o pasan 3 min. Respuestas con `rp_notify`. Añadido al catálogo de `rp_adminpanel` y a `RECURSOS.md`.

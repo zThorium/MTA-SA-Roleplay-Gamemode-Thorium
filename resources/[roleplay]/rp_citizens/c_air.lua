@@ -44,17 +44,18 @@ local ROUTES = {
       models = { 519, 577, 553 },
       pts = { { -3600, 400, 360 }, { -2300, 300, 340 }, { -1400, -250, 280 }, { -900, 600, 330 },
               { -200, 1300, 330 }, { 700, 1450, 320 }, { 1550, 1500, 270 }, { 2500, 1650, 320 }, { 3600, 1700, 360 } } },
-    -- Avionetas de un lado a otro de la costa (mas bajas y lentas)
+    -- Avionetas de un lado a otro de la costa, bajas para que se vean bien. Las alturas de las avionetas
+    -- son ~30-40 m sobre el suelo mas alto de cada tramo (nodos de calles y aceras del juego a menos de 150 m)
     { name = "Costa", kind = "plane", period = 480, offset = 230, speed = 42, both = true,
       models = { 593, 511, 593 },        -- Dodo, Beagle
-      pts = { { 3600, -1900, 180 }, { 2900, -2200, 160 }, { 2000, -2650, 150 }, { 900, -2750, 150 },
-              { 0, -2900, 170 }, { -1200, -2900, 190 }, { -2900, -2900, 200 }, { -3600, -2600, 200 } } },
+      pts = { { 3600, -1900, 70 }, { 2900, -2200, 90 }, { 2000, -2650, 60 },   -- 90 m: gruas de Ocean Docks { 900, -2750, 55 },
+              { 0, -2900, 100 }, { -1200, -2900, 110 }, { -2900, -2900, 90 }, { -3600, -2600, 70 } } },
 
     -- Circuitos cerrados
     { name = "Fumigadora", kind = "plane", loop = true, n = 1, speed = 35, models = { 512 },
-      pts = { { 200, -100, 110 }, { 700, -200, 110 }, { 1250, 150, 110 }, { 750, 380, 110 }, { 250, 220, 110 } } },
+      pts = { { 200, -100, 72 }, { 700, -200, 75 }, { 1250, 150, 65 }, { 750, 380, 60 }, { 250, 220, 60 } } },
     { name = "Verdant Meadows", kind = "plane", loop = true, n = 2, speed = 40, models = { 593, 511 },
-      pts = { { 100, 2400, 130 }, { 800, 2400, 130 }, { 850, 2650, 140 }, { 450, 2750, 140 }, { 100, 2700, 130 } } },
+      pts = { { 100, 2400, 100 }, { 800, 2400, 75 }, { 850, 2650, 105 }, { 450, 2750, 105 }, { 100, 2700, 100 } } },
     { name = "Noticias LS", kind = "heli", loop = true, n = 1, speed = 22, models = { 488 },
       pts = { { 1750, -1300, 200 }, { 1500, -1050, 200 }, { 1250, -1300, 200 }, { 1500, -1550, 200 } } },
     { name = "Turismo Vinewood", kind = "heli", loop = true, n = 1, speed = 28, models = { 487 },
