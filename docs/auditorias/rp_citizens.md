@@ -1,5 +1,34 @@
 # Auditoría de rp_citizens
 
+## 2026-11-27 · mejorar · foco: despegues y aterrizajes (fase C)
+- **Qué cambia en el juego**: en el aeropuerto de Los Santos los aviones **despegan** (aparecen en la cabecera, ruedan acelerando, rotan, suben y recogen el tren) y **aterrizan** (aproximación alineada con la pista, tren bajado, toma de contacto a ~58 m/s y frenada hasta el final de la pista). Cuando los admins capturen las pistas de SF, LV o Verdant Meadows, aparecen solos los vuelos entre aeropuertos.
+- **Por qué con captura**: los datos del juego no dan el eje de las pistas (en los IPL solo están los centros de las piezas del modelo, que incluyen las calles de rodaje, y no hay objetos de luces de pista). Inventarlas dejaría aviones aterrizando en el césped. La pista de LS va **provisional** (y = −2493 según la cinemática de `rp_login`, x 1420 → 2080, z 13); `/runways` la marca así hasta que se capture de nuevo.
+- **Diseño**:
+  - Pistas en `runways.json` (servidor, `s_clock.lua`). Comandos de admin `/setrunway <ls|sf|lv|verdant> <start|end>` (alias `/pista`; a pie sobre el eje; altura de los pies; 300-3.000 m), `/delrunway`, `/runways`. Se envían con la hora (`rp:citizens:clockRecv`) y, al cambiar, a todos (`rp:citizens:runways`). El cliente rehace el horario en el siguiente ciclo.
+  - Rutas generadas en `c_air.lua` (`buildAirportRoutes`), con velocidad y tren por punto (`pts[i][4]`, `pts[i][5]`):
+    - por cada pista, salida y llegada internacionales (por el eje, desde y hacia fuera del mapa);
+    - entre cada par de pistas del mismo tipo, vuelo directo con un punto de crucero a 320 m;
+    - Verdant Meadows solo para avionetas (velocidades × 0,55, alturas × 0,6).
+  - **Reserva de pista**: cada ruta ocupa la pista desde el inicio hasta pasar 30 m (despegue) y desde que baja de 30 m hasta el final (aterrizaje). Las horas de salida (periodo 480 s) se eligen en orden fijo, la primera cada 5 s sin choque y con 15 s de margen, así que el resultado es igual en todos los clientes.
+  - En vuelo y en pista: las ruedas nunca bajan de la cota de la pista y se suma la altura real del modelo (`getElementDistanceFromCentreOfMassToBaseOfModel`). Fundido de 3 s al aparecer y al irse, porque no hay rodaje.
+- **Verificación**: sintaxis con `lua5.1.dll`; simulación con solo LS y con tres pistas (SF y LV inventadas, solo para la prueba): 2 y 12 rutas, **0 s con dos vuelos a la vez en la misma pista en 24 h**, sin saltos (≤ 8 m por 0,1 s a 80 m/s), toma a 58 m/s. Margen mínimo sobre calles y aceras del juego en vuelo (> 30 m sobre la pista): salida de LS 32 m antes de subir el primer tramo de ascenso a 100 m; llegada 45 m sobre las colinas de Flint.
+- **Nota**: 82 → 82.
+- **Pendiente**: capturar las pistas de SF, LV y Verdant Meadows y **recapturar LS** (provisional). No hay rodaje ni puertas de embarque. La carrera de despegue y la frenada se ajustan al largo de cada pista: en una pista corta frenan fuerte.
+- **Probar en juego**: `/irvuelo salida` y `/irvuelo llegada` en LS. Que ruede por el centro de la pista (si va por el borde o el césped, recapturar con `/setrunway ls start|end`); que las ruedas toquen el asfalto, sin hundirse ni flotar; que el tren baje en la aproximación y suba tras despegar; y que no atraviese las grúas de Ocean Docks al salir hacia el este. Después capturar SF y LV y comprobar que aparecen los vuelos entre aeropuertos (`/vuelos`).
+
+## 2026-11-27 · mejorar · foco: punto de agua para la policía (fase B)
+- **Cambio de plan**: la fase B era un helicóptero policial, pero `rp_wanted` ya lo tiene completo; se descartó para no duplicarlo. En su lugar, persecución por mar en `rp_wanted` (ver `docs/auditorias/rp_wanted.md`).
+- **Cambio en `rp_citizens`**: export de cliente `citizenBoatSpot(minD, maxD)` en `c_boats.lua`: punto de agua navegable sobre la red de barcos a esa distancia del jugador, de preferencia fuera de la vista, con el nivel del agua y el rumbo hacia el jugador. Lo usa `rp_wanted` para hacer aparecer sus lanchas.
+- **Nota**: 82 → 82.
+
+## 2026-11-27 · mejorar · foco: lanzaderas por mar con horario (fase A)
+- **Qué cambia en el juego**: un **ferry** cruza la bahía de San Fierro (Bayside ↔ Pier 69) y una **lancha** recorre la costa de LS (muelle de Santa María ↔ Ocean Docks). Salen del muelle acelerando y pitando, frenan al llegar y dan la vuelta mientras esperan 40-45 s. Todos los jugadores los ven en el mismo sitio a la vez, como los aviones.
+- **Cambio de diseño en `c_air.lua`**: el motor de horarios pasa de velocidad constante a **tabla tiempo → distancia** por ruta (velocidad en cada punto de paso, `pts[i][4]` opcional), base también para la fase C (despegues y aterrizajes). Tres tipos de ruta: con horario (`period`), circuito (`loop`) y lanzadera (`shuttle`, ida y vuelta con `dwell`). El camino de las lanzaderas sale de la red de barcos (Dijkstra entre los nodos más cercanos a `from` y `to`, determinista) y su perfil de velocidad es simétrico (`v = min(crucero, sqrt(1 + 2·a·d))` desde cada extremo), así que la vuelta es la ida al revés. En el muelle el rumbo gira del de llegada al de salida con un suavizado que también sale de la hora. Los barcos flotan sobre `getWaterLevel` (consultado cada ~0,5 s) con vaivén; motor al ralentí atracados.
+- **Arreglo de paso**: en la ruta «Costa» un comentario mal colocado (commit bd2f79c) anulaba el punto `{ 900, -2750, 55 }`; restaurado.
+- **Verificación**: sintaxis con `lua5.1.dll`; simulación de todas las rutas en pasos de 0,1 s: sin saltos (salto máximo = velocidad × 0,1 s) ni giros bruscos (≤ 3,3° por paso); los vuelos conservan sus tiempos; ferry 2.003 m en 243 s, lancha 2.354 m en 259 s; contra la máscara agua/tierra de `rp_map` (celdas de 50 m): 0-2 % en celdas de tierra, solo junto a los muelles.
+- **Nota**: 82 → 82.
+- **Probar en juego**: `/irvuelo ferry` y `/irvuelo lancha`; que floten bien, que giren en el muelle sin atravesarlo, que piten al salir y que no corten por tierra.
+
 ## 2026-11-27 · mejorar · foco: avionetas más bajas
 - **Motivo**: Fabián vio una avioneta con `/irvuelo` pero iba tan alta que casi no se veía.
 - **Cambio**: las rutas de avioneta bajan: costa 150-200 → 55-110 m (90 m sobre las grúas de Ocean Docks), fumigadora 110 → 60-75 m, Verdant Meadows 130-140 → 75-105 m. Cada punto de paso tiene su propia altura: ~30-40 m sobre el suelo más alto del tramo.

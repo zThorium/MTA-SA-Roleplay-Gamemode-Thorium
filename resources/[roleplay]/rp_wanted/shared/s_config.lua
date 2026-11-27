@@ -213,6 +213,18 @@ WANTED_FLEET = {
     heli = { model = 497, skin = 280, crew = 1 },
 }
 
+-- Persecucion por mar (GTA SA: lanchas Predator si huyes por el agua). Mientras el jugador va en barco o
+-- nadando no salen patrullas de calle, controles ni pinchos: salen lanchas por la red de barcos de rp_citizens.
+WANTED_BOAT = {
+    MODEL = 430,                      -- Predator
+    CREW = 2,                         -- piloto y tirador (el tirador dispara desde 2 estrellas, como las patrullas)
+    PER_LEVEL = { 1, 1, 2, 2, 2, 3 }, -- lanchas a la vez por estrellas
+    SPAWN_MIN = 110, SPAWN_MAX = 220, -- m del jugador donde aparecen (en un nodo de barcos, fuera de la vista)
+    LAND_LEAVE_MS = 15000,            -- ms en tierra hasta que las lanchas se retiran
+    CHASE_DIST = 18,                  -- m a los que se quedan rondando al jugador
+    RAM_LEVEL = 3,                    -- desde estas estrellas lo embisten
+}
+
 -- A 1 estrella la patrulla lleva solo al conductor (GTA: 1 policia en persecucion)
 WANTED_CREW_AT_ONE_STAR = 1
 

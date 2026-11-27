@@ -209,6 +209,12 @@ addEventHandler("rp:wanted:spawnRequest", resourceRoot, function(kind)
         if not x then x, y, z, rot = roadblockPointStraight() end
     elseif kind == "spikes" then
         x, y, z, rot = pathPointAhead(WANTED_SPIKES.AHEAD_MIN, WANTED_SPIKES.AHEAD_MAX, false)
+    elseif kind == "boat" then
+        -- agua navegable de la red de barcos de rp_citizens (opcional: sin el recurso no salen lanchas)
+        local ok, bx, by, bz, brot = pcall(function()
+            return exports.rp_citizens:citizenBoatSpot(WANTED_BOAT.SPAWN_MIN, WANTED_BOAT.SPAWN_MAX)
+        end)
+        if ok and bx then x, y, z, rot = bx, by, bz, brot end
     end
     if x then triggerServerEvent("rp:wanted:spawnAt", resourceRoot, kind, x, y, z, rot) end
 end)
@@ -1178,6 +1184,63 @@ setTimer(function()
     if level > 0 and policeSeesMe() then triggerServerEvent("rp:wanted:seen", resourceRoot) end
 end, 1000, 0)
 
+----------------------------------------------------------------
+-- Lancha (persecucion por mar): en el agua no hay red vial; va directa hacia donde estara el jugador.
+-- Por debajo de WANTED_BOAT.RAM_LEVEL lo ronda a CHASE_DIST (el tirador dispara con carGunners);
+-- desde RAM_LEVEL lo embiste. Si se queda atascada contra la orilla, da marcha atras.
+----------------------------------------------------------------
+local function boatTick(u, now)
+    local v = u.vehicle
+    if isVehicleBlown(v) then return end
+    local driver = getVehicleController(v)
+    if not driver or not u.pedSet[driver] or isPedDead(driver) or not controlled(u, v) then return end
+    local x, y = getElementPosition(v)
+    local _, _, rz = getElementRotation(v)
+    local px, py = getElementPosition(localPlayer)
+    local dist = getDistanceBetweenPoints2D(x, y, px, py)
+    local speed = speedKmh(v)
+
+    -- Muy lejos y fuera de la vista: se retira y el servidor manda otra mas cerca
+    if not u.leaving and dist > WANTED_DISPATCH.LOST_DISTANCE and not isElementOnScreen(v) and not u.lostSent then
+        u.lostSent = true
+        return triggerServerEvent("rp:wanted:unitLost", resourceRoot, u.id)
+    end
+
+    -- Atascada (contra la orilla o un muelle): marcha atras un momento girando
+    if u.reverseUntil and now < u.reverseUntil then
+        return controls(driver, false, true, u.reverseSteer or 0)
+    end
+
+    local tx, ty
+    local cruise = true
+    if u.leaving or not levelCfg() then
+        tx, ty = x + (x - px), y + (y - py)   -- se aleja del jugador
+    else
+        -- hacia donde estara el jugador en ~1,5 s (MTA: velocidad en unidades por 1/50 s)
+        local vx, vy = getElementVelocity(getPedOccupiedVehicle(localPlayer) or localPlayer)
+        tx, ty = px + vx * 75, py + vy * 75
+        if level < WANTED_BOAT.RAM_LEVEL and dist < WANTED_BOAT.CHASE_DIST * 2 then
+            -- ronda: apunta a un punto a CHASE_DIST del jugador, girando a su alrededor
+            local ox, oy = (x - px) / math.max(dist, 1), (y - py) / math.max(dist, 1)
+            tx = px + (ox * 0.6 - oy) * WANTED_BOAT.CHASE_DIST
+            ty = py + (oy * 0.6 + ox) * WANTED_BOAT.CHASE_DIST
+            cruise = speed < 35
+        end
+    end
+    local diff = angleDiff(heading(tx - x, ty - y), rz)
+
+    if cruise and speed < 4 then
+        u.stuckSince = u.stuckSince or now
+        if now - u.stuckSince > 2500 then
+            u.stuckSince = nil
+            u.reverseUntil, u.reverseSteer = now + 1800, diff > 0 and -1 or 1
+        end
+    else
+        u.stuckSince = nil
+    end
+    controls(driver, cruise, false, diff / 35)
+end
+
 local function tick()
     local now = getTickCount()
     planBudget = 1
@@ -1195,6 +1258,11 @@ local function tick()
     for _, u in pairs(units) do
         if u.kind == "heli" then
             if isElement(u.vehicle) then heliTick(u, now) end
+        elseif u.kind == "boat" then
+            if isElement(u.vehicle) then
+                boatTick(u, now)
+                carGunners(u, now)
+            end
         elseif u.kind == "swat" and u.rappel then
             rappelTick(u, now)
         else
