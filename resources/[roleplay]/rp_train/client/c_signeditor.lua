@@ -30,7 +30,8 @@ local restoreLater -- pieza editada y su posición original, por si el servidor 
 local keys        -- texturas de las teclas dibujadas (se crean al abrir el editor por primera vez)
 local KEY_FILES = { move = "keyboard_arrows_all", up = "keyboard_page_up", down = "keyboard_page_down",
     z = "keyboard_z", x = "keyboard_x", shift = "keyboard_shift", enter = "keyboard_enter", back = "keyboard_backspace" }
-local TITLE = { sign = "Cartel", gate = "Torniquete", fence = "Reja" }
+local TITLE = { sign = "Cartel", gate = "Torniquete", fence = "Reja", pole = "Poste de metro" }
+local OBJECT_KIND = { fence = true, pole = true } -- un solo objeto que se mueve tal cual
 
 local function typing()
     return isChatBoxInputActive() or isConsoleActive() or isMainMenuActive() or isCursorShowing()
@@ -42,7 +43,7 @@ local function placeLocal(e, x, y, z, rot)
         local px, py, postZ, armZ = TrainGateLayout(x, y, z, rot)
         if isElement(e.post) then setElementPosition(e.post, px, py, postZ) setElementRotation(e.post, 0, 0, rot) end
         if isElement(e.arm) then setElementPosition(e.arm, px, py, armZ) setElementRotation(e.arm, 0, 90 * TRAIN.GATE_ARM_SIDE, rot) end
-    elseif e.kind == "fence" and isElement(e.el) then
+    elseif OBJECT_KIND[e.kind] and isElement(e.el) then
         setElementPosition(e.el, x, y, z)
         setElementRotation(e.el, 0, 0, rot)
     end
@@ -72,7 +73,7 @@ end)
 -- editor y se crean al guardar con Enter). /duplicar 0 las quita. El servidor vuelve a validar los límites.
 addCommandHandler("duplicar", function(_, n, x, y, z, rot)
     if not edit then
-        return exports.rp_notify:notify("Primero abre el editor: /editartorniquete, /editarreja o /editarcartel.", "warning")
+        return exports.rp_notify:notify("Primero abre el editor: /editartorniquete, /editarreja, /editarcartel o /editarpostemetro.", "warning")
     end
     n = math.floor(tonumber(n) or -1)
     if n == 0 then
@@ -173,7 +174,7 @@ local function drawFrame(s, copy)
         dxDrawLine3D(s.x - fx * 0.8, s.y - fy * 0.8, gz, s.x + fx * 1.2, s.y + fy * 1.2, gz, GREEN, 4)
         label3D(s.x + fx * 1.5, s.y + fy * 1.5, gz + 0.3, "ANDÉN")
         label3D(s.x - fx * 1.2, s.y - fy * 1.2, gz + 0.3, "ENTRADA (boleto)")
-    elseif s.kind == "fence" and isElement(s.el) then
+    elseif OBJECT_KIND[s.kind] and isElement(s.el) then
         local x0, y0, z0, x1, y1, z1 = getElementBoundingBox(s.el)
         if x0 then
             box(s.x, s.y, s.z + z0, s.z + z1, s.rot, (x1 - x0) / 2, (y1 - y0) / 2, (x0 + x1) / 2, (y0 + y1) / 2)
