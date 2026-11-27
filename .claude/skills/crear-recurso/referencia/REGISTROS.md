@@ -42,11 +42,12 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27
 | J | motor del vehículo (`rp_vehicles`, rebindeable) |
 | K | cursor de interacción policial (`rp_police`) |
 | L / X / flechas | cerrar, freno de mano, intermitentes (`rp_vehicles`, rebindeables en Ajustes > Binds) |
-| M | cursor y menú de vehículo (`rp_vehicles`), mapa/app en Vroom (`rp_rides`) |
+| M | cursor (`rp_vehicles`): clic derecho en un vehículo = menú de vehículo, en una persona = menú de `rp_interact`; mapa/app en Vroom (`rp_rides`) |
 | P | teléfono |
 | R | radio del vehículo |
 | T / Y / U / B | chat: decir, susurrar, gritar, OOC (`rp_chat`) |
-| Y / N | aceptar / rechazar invitaciones (`rp_missions`, `rp_races`, `rp_citizens`) |
+| Y / N | aceptar / rechazar invitaciones (`rp_missions`, `rp_races`, `rp_citizens`). ⚠️ Y también abre el chat de susurro (`rp_chat`) |
+| E / Retroceso | aceptar / rechazar propuestas de otra persona (`rp_interact`), solo mientras hay una en pantalla |
 | Espacio, Retroceso, flechas, A/D | controles contextuales de minijuegos (`rp_gym`, `rp_driving`, `rp_races`) solo mientras estás en ellos |
 | F1 | ayuda · F3 facciones · F4 decorar · F5 carreras · F6 MDT policial · F7 mostrar/ocultar HUD (`rp_hud`) · F9 recursos · F10 panel admin |
 | F11 | mapa propio (`rp_map`, sustituye al de GTA; Esc lo cierra) |
@@ -124,7 +125,7 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
-→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map
+→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map → rp_worldobjects → rp_interact
 ```
 
 Un recurso nuevo va **al final** salvo que otro existente dependa de él. Aun así, declara las
@@ -135,7 +136,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 `rp:admin:`, `rp:adminpanel:`, `rp:agency:`, `rp:ammu:`, `rp:anims:`, `rp:atm:`, `rp:auth:`, `rp:bank:`,
 `rp:bikes:`, `rp:bp:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
 `rp:dealers:`, `rp:driving:`, `rp:firefighters:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
-`rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
+`rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:interact:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`,
 `rp:map:`, `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
 `rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
 `rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:vending:`, `rp:wanted:`.

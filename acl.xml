@@ -47,6 +47,10 @@
       <object name="resource.rp_phone" />
       <object name="resource.rp_scoreboard" />
    </group>
+   <group name="RPCommandRelay">
+      <acl name="RPCommandRelay" />
+      <object name="resource.rp_interact" />
+   </group>
    <group name="MapEditor">
       <acl name="Default" />
       <acl name="MapEditor" />
@@ -261,6 +265,11 @@
       <right name="function.restartResource" access="true" />
       <right name="function.refreshResources" access="true" />
       <right name="function.getResourceInfo" access="true" />
+   </acl>
+   <acl name="RPCommandRelay">
+      <!-- rp_interact ejecuta comandos fijos (/check, /goto, /mostrardni, /finvitar...) en nombre del
+           jugador que pulsa la opcion; cada comando valida al jugador por su cuenta -->
+      <right name="function.executeCommandHandler" access="true" />
    </acl>
    <acl name="MapEditor">
       <right name="general.ModifyOtherObjects" access="true" />

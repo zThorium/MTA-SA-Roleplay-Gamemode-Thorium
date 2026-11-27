@@ -75,12 +75,12 @@ local function hide()
     guiSetInputEnabled(false)
 end
 
-local function show(tab)
+local function show(tab, force)
     if visible then
         if tab then callJS(("RP.show(%s, %s)"):format(json(tab), json(playerList()))) end
         return
     end
-    if isCursorShowing() or isConsoleActive() or isChatBoxInputActive() or isMainMenuActive() then return end
+    if (isCursorShowing() and not force) or isConsoleActive() or isChatBoxInputActive() or isMainMenuActive() then return end
     ensureBrowser()
     visible = true
     guiSetVisible(browserGui, true)
@@ -126,6 +126,16 @@ addEventHandler("rp:help:ui:myReports", root, function() triggerServerEvent("rp:
 -- Servidor -> panel
 ----------------------------------------------------------------
 addEventHandler("rp:help:open", resourceRoot, function(tab) show(tab) end)
+
+-- Export (cliente): abre la pestana Reportar con esa persona ya elegida (menu de rp_interact)
+function openReport(target)
+    show("report", true)
+    if not visible then return false end
+    for i, p in ipairs(reportTargets) do
+        if p == target then callJS(("RP.preselect(%s)"):format(json(tostring(i)))) break end
+    end
+    return true
+end
 
 addEventHandler("rp:help:myReports", resourceRoot, function(list)
     callJS(("RP.setMyReports(%s)"):format(json(list or {})))

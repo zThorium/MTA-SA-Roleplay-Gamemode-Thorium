@@ -30,4 +30,7 @@
     <export function="isOnDuty" type="server" />
     <export function="dispatchAlert" type="server" />
     <export function="isCuffed" type="server" />
+    <!-- Acciones policiales sobre una persona para el menu de rp_interact (M + click derecho) -->
+    <export function="getPlayerActions" type="server" />
+    <export function="doPlayerAction" type="server" />
 </meta>
