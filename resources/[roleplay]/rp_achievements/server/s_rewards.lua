@@ -13,6 +13,18 @@
 
 addEvent("rp:achievements:request", true)
 addEvent("rp:achievements:claim", true)
+addEvent("rp:achievements:statusRequest", true)   -- el cliente arranca (p. ej. tras un restart) y pide el globo del HUD
+
+local lastStatus = {}
+addEventHandler("rp:achievements:statusRequest", resourceRoot, function()
+    local p = client
+    local s = Achievements.get(p)
+    if not s or not s.loaded then return end      -- al terminar de cargar ya se le manda
+    local now = getTickCount()
+    if lastStatus[p] and now - lastStatus[p] < 2000 then return end
+    lastStatus[p] = now
+    triggerClientEvent(p, "rp:achievements:status", resourceRoot, #Achievements.readyMilestones(s), 0)
+end)
 
 local lastPanel, lastClaim, claiming = {}, {}, {}
 
@@ -23,7 +35,9 @@ local function running(name)
 end
 
 local function sendPanel(p, s, open)
-    triggerClientEvent(p, "rp:achievements:panel", resourceRoot, Achievements.snapshot(s), open and true or false)
+    local snap = Achievements.snapshot(s)
+    snap.ready = #Achievements.readyMilestones(s, snap.points)   -- para el globo de la ficha del HUD
+    triggerClientEvent(p, "rp:achievements:panel", resourceRoot, snap, open and true or false)
 end
 
 addEventHandler("rp:achievements:request", resourceRoot, function()
@@ -115,7 +129,7 @@ addEventHandler("rp:achievements:claim", resourceRoot, function(index)
 end)
 
 addEventHandler("onPlayerQuit", root, function()
-    lastPanel[source], lastClaim[source], claiming[source] = nil, nil, nil
+    lastPanel[source], lastClaim[source], claiming[source], lastStatus[source] = nil, nil, nil, nil
 end)
 
 -- /logros también desde el servidor (por si el cliente aún no cargó el script)

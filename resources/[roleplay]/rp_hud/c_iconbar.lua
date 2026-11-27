@@ -2,7 +2,7 @@
     rp_hud / c_iconbar.lua
     Fichas clicables a la izquierda del dinero (idea del HUD de OwlGaming; codigo e iconos propios en SVG).
     Cada ficha: cuadro negro pequeno con una muesca arriba y el icono (el nombre, en la tarjeta).
-      - Fila de arriba: accesos rapidos del personaje (faccion, inventario, telefono, ayuda, ocultar HUD)
+      - Fila de arriba: accesos rapidos del personaje (faccion, inventario, telefono, logros con globo de pendientes, ayuda, ocultar HUD)
         y estados que te limitan, en rojo (esposado, abatido).
       - Fila de abajo, solo en un vehiculo: motor, freno de mano, cerradura, cinturon, balizas y radio.
     Encendido = icono y borde de color, apagado = gris. Con el cursor visible (M) cada ficha muestra su tecla dibujada;
@@ -11,7 +11,7 @@
       - vehiculo: los comandos de rp_vehicles (bloquear, toggleengine, frenodemano, balizas),
         asi respetan las teclas que el jugador haya cambiado;
       - el resto: evento de cliente "rp:hud:action" (id) que escucha el recurso dueno
-        (rp_phone, rp_inventory, rp_factions, rp_help, rp_seatbelt, rp_radio) con sus mismas
+        (rp_phone, rp_inventory, rp_factions, rp_achievements, rp_help, rp_seatbelt, rp_radio) con sus mismas
         comprobaciones. El servidor revalida todo como con la tecla.
 ]]
 
@@ -41,6 +41,7 @@ local ICON_SVG = {
     belt = '<circle cx="24" cy="10" r="5" fill="#fff"/><path d="M14 42V27a10 10 0 0 1 20 0v15" fill="none" ' .. W .. '/><path d="M15 21l18 18" ' .. W .. '/>',
     hazard = '<path d="M24 6l19 33H5z" fill="none" ' .. W .. '/><path d="M24 19l8 14H16z" fill="none" ' .. W .. '/>',
     radio = '<path d="M19 34V11l18-4v23" fill="none" ' .. W .. '/><circle cx="14" cy="34" r="5.5" fill="#fff"/><circle cx="32" cy="30" r="5.5" fill="#fff"/>',
+    trophy = '<path d="M15 8h18v10a9 9 0 0 1-18 0z" fill="#fff"/><path d="M15 11H9a5 5 0 0 0 6 8M33 11h6a5 5 0 0 1-6 8" fill="none" ' .. W .. '/><path d="M24 27v7M17 40h14" ' .. W .. '/>',
 }
 local icons = {}
 local function icon(name)
@@ -126,6 +127,19 @@ local PLAYER_BUTTONS = {
       visible = function() return running("rp_phone") end,
       state = function() return true, "Llamadas, banco, Vroom, redes...", WHITE end,
       run = action("phone") },
+    -- Logros (rp_achievements): globo con lo pendiente (medallas nuevas sin ver + recompensas por
+    -- reclamar; "!" si nunca abriste los logros). Lo publica rp_achievements en el elementData
+    -- local (sin sincronizar) rp:achBadge = numero o "!".
+    { id = "achievements", label = "LOGROS", kind = "open", icon = "trophy", title = "Logros", hint = "ver tus logros y recompensas",
+      visible = function() return running("rp_achievements") end,
+      badge = function() return getElementData(localPlayer, "rp:achBadge") end,
+      state = function()
+          local b = getElementData(localPlayer, "rp:achBadge")
+          if b == "!" then return true, "¡Descubre tus logros y gana recompensas!", AMBER end
+          if tonumber(b) and b > 0 then return true, ("Tienes %d novedades: medallas o recompensas"):format(b), AMBER end
+          return true, "Medallas, puntos y recompensas", WHITE
+      end,
+      run = action("achievements") },
     { id = "help", label = "AYUDA", kind = "open", icon = "help", key = "f1", title = "Ayuda", hint = "abrir la ayuda",
       visible = function() return running("rp_help") end,
       state = function() return true, "Guia, reglas, teclas y reportes", WHITE end,
@@ -225,6 +239,41 @@ local function font()
     return labelFont or "default-bold"
 end
 
+-- Globo rojo de contador (esquina de arriba a la derecha de la ficha)
+local badgeTex
+local function badgeTexture()
+    if badgeTex == nil then
+        badgeTex = svgCreate(64, 64, '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
+            .. '<circle cx="32" cy="32" r="29" fill="#fff"/></svg>') or false
+    end
+    return badgeTex or nil
+end
+local lastBadge = {}      -- [id] = ultimo valor (para el salto al subir)
+local badgeBump = {}      -- [id] = tick del salto
+
+local function drawBadge(b, dx, dy, w, now)
+    local v = b.badge and b.badge()
+    local n = tonumber(v)
+    if not (v == "!" or (n and n > 0)) then lastBadge[b.id] = v return end
+    if v ~= lastBadge[b.id] and (v == "!" or (tonumber(lastBadge[b.id]) or 0) < (n or 0)) then badgeBump[b.id] = now end
+    lastBadge[b.id] = v
+    local text = v == "!" and "!" or (n > 9 and "9+" or tostring(n))
+    local k = badgeBump[b.id] and (now - badgeBump[b.id]) / 450 or 1
+    local bump = k < 1 and (1 + 0.45 * math.sin(k * math.pi)) or (1 + 0.06 * math.sin(now / 260))   -- late un poco siempre
+    local size = math.floor(15 * s) * bump
+    local cx, cy = dx + w - 2 * s, dy + 4 * s
+    local tex = badgeTexture()
+    local red = tocolor(229, 72, 77, 255)
+    if tex then
+        dxDrawImage(cx - size / 2 - 1, cy - size / 2 - 1, size + 2, size + 2, tex, 0, 0, 0, tocolor(0, 0, 0, 200))   -- borde
+        dxDrawImage(cx - size / 2, cy - size / 2, size, size, tex, 0, 0, 0, red)
+    else
+        dxDrawCircle(cx, cy, size / 2, 0, 360, red)
+    end
+    local scale = 0.62 * s * bump
+    dxDrawText(text, cx - size, cy - size, cx + size, cy + size, tocolor(255, 255, 255), scale, font(), "center", "center")
+end
+
 local hover = {}          -- [id] = 0..1 (animacion al pasar el raton)
 local pop = {}            -- [id] = tick del ultimo clic
 local hovered = nil       -- { b = boton, st = estado, x, y }
@@ -294,6 +343,7 @@ local function drawButton(b, st, x, y, now, cursor, mx, my)
         local ks = math.floor(14 * s)
         drawKey(key, dx + w - ks * 0.7, dy + hh - ks * 0.7, ks, 240)
     end
+    if b.badge then drawBadge(b, dx, dy, w, now) end
 
     if isOver then
         hovered = { b = b, st = st, x = x, y = y }

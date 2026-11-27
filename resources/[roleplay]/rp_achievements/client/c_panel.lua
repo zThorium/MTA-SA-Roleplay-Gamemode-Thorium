@@ -84,6 +84,7 @@ addEventHandler("rp:achievements:panel", resourceRoot, function(data, doOpen)
         data.coach = not coachSeen()
     end
     callJS(("RP.show(%s[0])"):format(toJSON(data, true)))
+    if AchUI.onPanel then AchUI.onPanel(data) end     -- globo de la ficha del HUD (c_badge.lua)
 end)
 
 addEventHandler("rp:achievements:claimed", resourceRoot, function(index, ok)

@@ -25,6 +25,7 @@
     <script src="client/c_dx.lua" type="client" cache="false" />
     <script src="client/c_toast.lua" type="client" cache="false" />
     <script src="client/c_panel.lua" type="client" cache="false" />
+    <script src="client/c_badge.lua" type="client" cache="false" />
 
     <!-- Aviso de medalla: texturas propias (assets/propios/texturas/detector) y sonidos de la paleta -->
     <file src="images/fx/glow.png" />

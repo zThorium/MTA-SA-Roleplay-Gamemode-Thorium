@@ -295,6 +295,9 @@ local function finishLoad(p, s)
     -- Medallas que corresponden a lo que ya tiene (umbrales cambiados, datos sembrados): sin toast
     local gained = 0
     for stat in pairs(ACH.STATS) do gained = gained + evaluate(p, s, stat, true) end
+    -- Globo de la ficha de logros del HUD: recompensas por reclamar y medallas nuevas al entrar
+    -- (antes de los avisos pendientes, que suman sus propias medallas con rp:achievements:unlocked)
+    triggerClientEvent(p, "rp:achievements:status", resourceRoot, #Achievements.readyMilestones(s), gained)
     for _, e in ipairs(s.pending) do apply(p, s, e[1], e[2], false) end
     s.pending = {}
     flush(s)

@@ -26,7 +26,13 @@ visual que `rp_levels`:
 
 Si los puntos alcanzan un hito, sale el anuncio central «¡Recompensa de logros!».
 
-**Panel**: `/logros` o la app **Logros** del teléfono (P). Tiene:
+**Ficha en el HUD**: en la barra de iconos de arriba a la derecha (junto a inventario, teléfono y
+ayuda) hay un trofeo con un **globo rojo** que va sumando novedades: medallas que aún no viste y
+recompensas listas para reclamar. Si el jugador nunca abrió los logros, muestra «!». Así se
+descubren solos: al ver el contador subir, el jugador lo pulsa (con el cursor, M). Abrir el panel
+marca las medallas como vistas; las recompensas cuentan hasta reclamarlas.
+
+**Panel**: clic en la ficha, `/logros` o la app **Logros** del teléfono (P). Tiene:
 - arriba, la barra de hitos (los que se pueden reclamar brillan);
 - debajo, pestañas por categoría y «Casi lo tienes»;
 - tarjetas con la barra de progreso hacia la siguiente medalla.

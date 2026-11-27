@@ -99,6 +99,7 @@ addEventHandler("rp:achievements:unlocked", resourceRoot, function(achKey, tier,
     tier, gained = tonumber(tier), tonumber(gained)
     if type(achKey) ~= "string" or not tier then return end
     push(achKey, tier, gained, tonumber(milestone) or nil)
+    if AchUI.onMedal then AchUI.onMedal(tonumber(milestone) ~= nil) end   -- globo de la ficha del HUD
     if AchUI.onPoints then AchUI.onPoints(tonumber(total) or 0) end
 end)
 

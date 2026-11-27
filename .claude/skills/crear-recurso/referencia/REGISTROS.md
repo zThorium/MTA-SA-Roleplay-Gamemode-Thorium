@@ -74,6 +74,7 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
 - Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
 - Objeto en la mano (no arma): `rp:heldItem` en el jugador = id del item (lo pone el recurso que lo maneja; `rp_inventory` lo marca con ✓ y su botón dice «Guardar»). Hoy: `rp_metaldetector` (`metal_detector_<n>`); al quitarlo, borra solo si el valor es tuyo.
 - Detector de metales (`rp_metaldetector`): `rp:mdShop` en el ped vendedor.
+- Logros (`rp_achievements`): `rp:achBadge` en `localPlayer`, **solo local** (`setElementData(..., false)`): globo de la ficha «Logros» del HUD (número de novedades o `"!"` si nunca abrió los logros); lo lee `rp_hud/c_iconbar.lua`.
 - Peds / objetos: `rp:citizen`, `rp:cop`, `rp:dealer`, `rp:shopId`, `rp:shopName`, `rp:robberyPed`,
 - Objetos: `rp:text3d` (texto de `rp_3dtext`, icono 1239).
 - Pickups: `rp:pickupUsed` (recogido y esperando reaparecer; `rp_pickupfx` no lo hace brillar).
