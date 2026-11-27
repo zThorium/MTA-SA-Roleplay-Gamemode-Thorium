@@ -166,6 +166,7 @@ function gymDestroyMachine(id)
 end
 
 function gymMachineList() return machines end
+function gymIsMachineBusy(id) return busy[id] ~= nil end
 
 addEventHandler("onResourceStop", resourceRoot, function()
     for player in pairs(sessions) do endSession(player, "stop", true) end

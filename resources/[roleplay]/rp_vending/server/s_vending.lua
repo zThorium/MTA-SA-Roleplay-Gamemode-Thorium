@@ -354,7 +354,8 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = "Expendedora " .. tostring(row.kind) }
+                interior = row.interior, dimension = row.dimension, label = "Expendedora " .. tostring(row.kind),
+                rot = tonumber(row.rot) or 0, element = e.obj }
         end
     end
     return list
@@ -365,6 +366,19 @@ function adminDelete(id)
     if not id or not machines[id] then return false, "no existe" end
     destroyMachine(id)
     dbExec(db(), "DELETE FROM vending_machines WHERE id = ?", id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): cierra sesiones, guarda y vuelve a crearla
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local m = id and machines[id]
+    if not m then return false, "no existe" end
+    local row = m.row
+    destroyMachine(id)
+    row.x, row.y, row.z, row.rot = x, y, z, rot
+    dbExec(db(), "UPDATE vending_machines SET x = ?, y = ?, z = ?, rot = ? WHERE id = ?", x, y, z, rot, id)
+    spawnMachine(row)
     return true
 end
 

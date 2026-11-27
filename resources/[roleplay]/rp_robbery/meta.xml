@@ -12,6 +12,7 @@
     <include resource="rp_login" />
     <include resource="rp_characters" />
     <include resource="rp_wanted" />
+    <include resource="rp_markers" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_stores.lua" type="server" />
@@ -32,4 +33,5 @@
     <export function="robberyStarsFor" type="server" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

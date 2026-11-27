@@ -97,10 +97,11 @@ end
 local function buildShops()
     for _, el in ipairs(shopElements) do if isElement(el) then destroyElement(el) end end
     shopElements, shopMarkers = {}, {}
-    for _, shop in ipairs(shops) do
+    for i, shop in ipairs(shops) do
         local m = createMarker(shop.x, shop.y, shop.z - 1, "cylinder", shop.radius, 255, 170, 0, 90)
         shopMarkers[m] = shop
         exports.rp_markers:setMarkerStyle(m, { icon = "wrench", label = shop.name and ("Taller " .. shop.name) or "Taller" })
+        exports.rp_markers:registerMarker(m, "shop" .. i, { label = "Taller · " .. tostring(shop.name or i), point = { shop.x, shop.y, shop.z }, ownerSaves = true })
         shopElements[#shopElements + 1] = m
         shopElements[#shopElements + 1] = createBlip(shop.x, shop.y, shop.z, 27, 2, 0, 0, 0, 255, 0, 99999)
     end
@@ -108,6 +109,17 @@ end
 
 addEventHandler("onResourceStart", resourceRoot, function()
     loadShops()
+    buildShops()
+end)
+
+-- Un admin movio el taller con el editor (rp_admin): se guarda como con /movertaller
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key, x, y, z)
+    if owner ~= getResourceName(resource) then return end
+    local shop = shops[tonumber(tostring(key):match("^shop(%d+)$")) or -1]
+    if not shop or not x then return end
+    shop.x, shop.y, shop.z = x, y, z
+    saveShops()
     buildShops()
 end)
 

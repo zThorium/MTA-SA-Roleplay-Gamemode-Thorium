@@ -188,6 +188,9 @@ ADMIN_CATALOG = {
     {
         id = "owl_mundo", name = "Elementos del mundo (sintaxis Owl)",
         items = {
+            { cmd = "ALT (mantener)", args = "", desc = "Vista de admin: sobre cada cajero, tienda, casa (y su salida), maquina, torniquete, cartel, expendedora, texto 3D, vehiculo, pickup u objeto cercano se ve su tipo e ID; lo que miras se amplia con dueno, creador, fecha, recurso, posicion y los comandos /goto y /del.", res = "rp_admin" },
+            { cmd = "ALT + clic derecho / M + clic derecho", args = "", desc = "Mover el elemento que miras (o en el que haces clic con el cursor M): flechas 3D X/Y/Z, anillo de giro y panel con valores arrastrables, Al suelo, A mis pies, Deshacer. Enter guarda, Retroceso cancela. El menu del cursor tambien copia /goto y borra.", res = "rp_admin" },
+            { cmd = "/resetmarker", args = "<id>", desc = "Devuelve a su sitio de la config un marcador fijo movido con el editor (puertas, mostradores, Pay n Spray...). Los IDs salen en la vista ALT o en /nearbymarkers.", res = "rp_markers" },
             { cmd = "/nearby", args = "[radio]", desc = "Todo lo cercano (por defecto 20 m) con su tipo e ID: cajeros, tiendas, casas, expendedoras, traficantes, maquinas, mesas, barreras... y vehiculos.", res = "rp_admin" },
             { cmd = "/nearby<tipos>", args = "[radio]", desc = "Lista solo un tipo: /nearbyatms /nearbyshops /nearbyhouses /nearbyclothingstores /nearbyvendings /nearbydealers /nearbyrobstores /nearbygymmachines /nearbytrainers /nearbyschools /nearbypooltables /nearbycrossings /nearby3dtexts.", res = "rp_admin" },
             { cmd = "/goto<tipo>", args = "<id>", desc = "Ir hasta un elemento: /gotoatm /gotoshop /gotohouse /gotoclothingstore /gotovending /gotodealer /gotorobstore /gotogymmachine /gototrainer /gotoschool /gotopooltable /gotocrossing /goto3dtext.", res = "rp_admin" },

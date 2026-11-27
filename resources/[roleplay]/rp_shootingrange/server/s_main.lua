@@ -177,15 +177,30 @@ function isPlayerInRange(p)
     return rangePlayers[p] ~= nil and rangePlayers[p].inside == true
 end
 
-addEventHandler("onResourceStart", resourceRoot, function()
-    local m = RANGE.MARKER
+-- Marcador del mostrador en cada armeria. Se rehace si un admin lo mueve con el editor (rp_markers)
+local deskMarkers = {}
+local function spawnDesks()
+    for _, el in ipairs(deskMarkers) do if isElement(el) then destroyElement(el) end end
+    deskMarkers = {}
+    rangeResolveDesk()
+    local m, D = RANGE.MARKER, RANGE.DESK
     for _, loc in ipairs(RANGE.LOCATIONS) do
-        local D = RANGE.DESK
         local marker = createMarker(D.x, D.y, D.z - 1, "cylinder", m.size * 1.2, m.r, m.g, m.b, m.a)
         setElementInterior(marker, RANGE.STORE_INTERIOR)
         setElementDimension(marker, storeDim(loc))
         exports.rp_markers:setMarkerStyle(marker, { icon = "target", label = "Campo de tiro" })
+        exports.rp_markers:registerMarker(marker, "desk", { label = "Campo de tiro · mostrador (todas)", point = { D.x, D.y, D.z } })
+        deskMarkers[#deskMarkers + 1] = marker
     end
+end
+
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner == getResourceName(resource) and key == "desk" then spawnDesks() end
+end)
+
+addEventHandler("onResourceStart", resourceRoot, function()
+    spawnDesks()
     for _, p in ipairs(getElementsByType("player")) do
         local id = exports.rp_characters:getPlayerCharacterId(p)
         if id then load(p, id) end

@@ -468,6 +468,26 @@ end
 ----------------------------------------------------------------
 -- Arranque
 ----------------------------------------------------------------
+-- Puerta de la calle: blip y punto movible (el marcador lo dibuja el cliente, c_agency.lua).
+-- La posicion puede haberla movido un admin con el editor (rp_markers).
+local entranceBlip
+local function spawnEntrance()
+    agencyResolvePoints()
+    local en = AGENCY.ENTRANCE
+    if isElement(entranceBlip) then destroyElement(entranceBlip) end
+    entranceBlip = createBlip(en.x, en.y, en.z, 56, 2, 255, 255, 255, 255, 0, 400)
+    pcall(function()
+        exports.rp_markers:registerPoint("entrance", { label = "Agencia de empleo · entrada", point = { en.x, en.y, en.z } })
+    end)
+end
+
+addEvent("rp:markers:moved")
+addEvent("rp:markers:ready")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then spawnEntrance() end
+end)
+addEventHandler("rp:markers:ready", root, function() spawnEntrance() end)
+
 addEventHandler("onResourceStart", resourceRoot, function()
     for i = 1, #AGENCY.COUNTERS do
         local s = agencyCounterPoints(i).seat
@@ -479,9 +499,7 @@ addEventHandler("onResourceStart", resourceRoot, function()
             if sameDim then onCounterHit(i, el) end
         end)
     end
-    -- Blip del edificio
-    local en = AGENCY.ENTRANCE
-    createBlip(en.x, en.y, en.z, 56, 2, 255, 255, 255, 255, 0, 400)
+    spawnEntrance()
     setTimer(tick, 1000, 0)
 
     -- Si el recurso se reinicia con gente dentro, que vuelva a ver el HUD

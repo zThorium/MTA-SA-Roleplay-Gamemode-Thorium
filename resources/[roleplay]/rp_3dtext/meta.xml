@@ -22,4 +22,5 @@
     <!-- Gramatica Owl de rp_admin: /nearby3dtexts, /goto3dtext, /del3dtext, /delthis3dtext... -->
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

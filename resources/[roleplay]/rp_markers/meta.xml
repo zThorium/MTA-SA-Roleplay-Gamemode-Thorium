@@ -3,13 +3,16 @@
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <!-- /markerdemo: nivel de admin y aviso de error -->
+    <include resource="rp_database" />
     <include resource="rp_login" />
     <include resource="rp_notify" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="shared/s_style.lua" type="shared" />
     <script src="server/s_markers.lua" type="server" />
+    <script src="server/s_points.lua" type="server" />
     <script src="client/c_markers.lua" type="client" cache="false" />
+    <script src="client/c_points.lua" type="client" cache="false" />
 
     <file src="images/ring.png" />
     <file src="images/dash.png" />
@@ -51,4 +54,13 @@
     <export function="setMarkerStyle" type="client" />
     <export function="getMarkerIcons" type="server" />
     <export function="getMarkerIcons" type="client" />
+    <!-- Puntos fijos movibles por los admins (s_points.lua / c_points.lua) -->
+    <export function="placePoint" type="server" />
+    <export function="placePoint" type="client" />
+    <export function="registerMarker" type="server" />
+    <export function="registerPoint" type="server" />
+    <!-- Gramatica Owl y editor de rp_admin (WORLD_TYPES "marker") -->
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
 </meta>

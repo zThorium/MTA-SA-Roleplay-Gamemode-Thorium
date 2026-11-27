@@ -55,7 +55,7 @@ local function spawnATM(row)
     local col = createColSphere(row.x, row.y, row.z + 1, ATM_RADIUS)
     setElementInterior(col, row.interior)
     setElementDimension(col, row.dimension)
-    atms[id] = { object = obj, col = col }
+    atms[id] = { object = obj, col = col, row = row }
 
     addEventHandler("onColShapeHit", col, function(el, sameDim)
         if getElementType(el) == "player" and sameDim and characterOf(el) then
@@ -283,7 +283,8 @@ function adminElements()
         if isElement(a.object) then
             local x, y, z = getElementPosition(a.object)
             list[#list + 1] = { id = id, x = x, y = y, z = z, interior = getElementInterior(a.object),
-                dimension = getElementDimension(a.object), label = "Cajero" }
+                dimension = getElementDimension(a.object), label = "Cajero",
+                rot = tonumber(a.row.rotation) or 0, element = a.object }
         end
     end
     return list
@@ -296,6 +297,25 @@ function adminDelete(id)
     for _, el in pairs(atm) do if isElement(el) then destroyElement(el) end end
     atms[id] = nil
     dbExec(db(), "DELETE FROM atms WHERE id = ?", id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): guarda y vuelve a crear el cajero
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local atm = id and atms[id]
+    if not atm then return false, "no existe" end
+    local row = atm.row
+    row.x, row.y, row.z, row.rotation = x, y, z, rot
+    dbExec(db(), "UPDATE atms SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    for _, el in pairs(atm) do if isElement(el) then destroyElement(el) end end
+    for p, nid in pairs(nearAtm) do
+        if nid == id then
+            nearAtm[p] = nil
+            if isElement(p) then triggerClientEvent(p, "rp:bank:nearATM", resourceRoot, false) end
+        end
+    end
+    spawnATM(row)
     return true
 end
 

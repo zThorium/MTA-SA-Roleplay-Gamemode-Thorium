@@ -310,7 +310,8 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = "Autoescuela" }
+                interior = row.interior, dimension = row.dimension, label = "Autoescuela",
+                rot = tonumber(row.rotation) or 0, element = e.ped }
         end
     end
     return list
@@ -321,6 +322,19 @@ function adminDelete(id)
     if not id or not schools[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM driving_schools WHERE id = ?", id)
     destroySchool(id)
+    broadcastSchools()
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): guarda, vuelve a crear el instructor y avisa a los clientes
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local s = id and schools[id]
+    if not s then return false, "no existe" end
+    local row = s.row
+    row.x, row.y, row.z, row.rotation = x, y, z, rot
+    dbExec(db(), "UPDATE driving_schools SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    spawnSchool(row)
     broadcastSchools()
     return true
 end

@@ -226,6 +226,9 @@ local function placePoint(kind, x, y, z, rot)
         setElementInterior(pt.marker, def.interior or 0)
         exports.rp_markers:setMarkerStyle(pt.marker, { icon = POINT_ICONS[kind] or "police", label = def.label,
             color = kind ~= "exit" and { 59, 111, 224 } or nil })  -- azul policía salvo la salida (verde)
+        -- Movible con el editor de rp_admin (nivel 3, como /pmover); se guarda en police_points
+        exports.rp_markers:registerMarker(pt.marker, kind, { label = "Policía · " .. def.label, point = { x, y, z },
+            ownerSaves = true, level = 3 })
         if isElement(pt.blip) then destroyElement(pt.blip) end
     end
     POINTS[kind] = pt
@@ -239,6 +242,16 @@ local function pointList()
     end
     return out
 end
+
+-- Un admin movio un punto con el editor (rp_admin, nivel 3 comprobado en rp_markers): como /pmover
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, kind, x, y, z)
+    if owner ~= getResourceName(resource) or not POLICE_POINTS[kind] or not x then return end
+    local rot = POINTS[kind] and POINTS[kind].rot or 0
+    placePoint(kind, x, y, z, rot)
+    dbExec(db(), "REPLACE INTO police_points (kind, x, y, z, rot) VALUES (?, ?, ?, ?, ?)", kind, x, y, z, rot)
+    triggerClientEvent("rp:pol:points", resourceRoot, pointList())
+end)
 
 local function loadPoints()
     for kind, def in pairs(POLICE_POINTS) do placePoint(kind, def.x, def.y, def.z, def.rot) end

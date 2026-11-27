@@ -364,7 +364,8 @@ function adminElements()
         local row = e.row
         if row then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = 0, dimension = 0, label = row.name }
+                interior = 0, dimension = 0, label = row.name,
+                noRot = true, element = e.pickup }
         end
     end
     return list
@@ -375,6 +376,18 @@ function adminDelete(id)
     if not id or not stores[id] then return false, "no existe" end
     dbExec(db(), "DELETE FROM clothing_stores WHERE id = ?", id)
     destroyStore(id)
+    return true
+end
+
+-- Mover la entrada desde el editor de rp_admin (vista ALT). La tabla no guarda giro.
+function adminMove(id, _, x, y, z)
+    id = tonumber(id)
+    local s = id and stores[id]
+    if not s then return false, "no existe" end
+    local row = s.row
+    row.x, row.y, row.z = x, y, z
+    dbExec(db(), "UPDATE clothing_stores SET x = ?, y = ?, z = ? WHERE id = ?", x, y, z, id)
+    spawnStore(row)
     return true
 end
 

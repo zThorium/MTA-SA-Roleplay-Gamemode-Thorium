@@ -183,7 +183,10 @@ end)
 ----------------------------------------------------------------
 -- Marcador de contratacion (maletin)
 ----------------------------------------------------------------
-addEventHandler("onClientResourceStart", resourceRoot, function()
+-- La posicion puede haberla movido un admin con el editor (rp_markers): se rehace en rp:markers:moved
+local function spawnHireMarker()
+    if isElement(hireMarker) then destroyElement(hireMarker) end
+    pizzeriaResolveHire()
     local h = PIZZERIA.HIRE
     hireMarker = createMarker(h.x, h.y, h.z - 1, "cylinder", 1.2, 200, 60, 50, 120)
     setElementInterior(hireMarker, PIZZERIA.INTERIOR)
@@ -193,6 +196,15 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         if el ~= localPlayer or not sameDim or isPedInVehicle(localPlayer) or Pz.onShift then return end
         triggerServerEvent("rp:pizzeria:hireOpen", resourceRoot)
     end)
+end
+
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then spawnHireMarker() end
+end)
+
+addEventHandler("onClientResourceStart", resourceRoot, function()
+    spawnHireMarker()
 
     bindKey("e", "down", function()
         if not Pz.onShift or isElement(panelGui) then return end

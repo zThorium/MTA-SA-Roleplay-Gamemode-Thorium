@@ -106,3 +106,12 @@ RANGE = {
 
     UI = { title = "Campo de tiro", hint_exit = "F2: salir del entrenamiento" },
 }
+
+-- Posicion efectiva del mostrador: la de arriba o la que movio un admin con el editor (rp_markers).
+-- Servidor y cliente la llaman al arrancar y en rp:markers:moved.
+function rangeResolveDesk()
+    local D = RANGE.DESK
+    D.base = D.base or { D.x, D.y, D.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint("desk", D.base[1], D.base[2], D.base[3]) end)
+    if ok and x then D.x, D.y, D.z = x, y, z end
+end

@@ -13,28 +13,36 @@
     Cada recurso dueno expone dos exports de servidor (los datos siguen siendo suyos):
         adminElements(kind) -> { { id, x, y, z, interior, dimension, label }, ... }
         adminDelete(id, kind) -> true | false, motivo
+        adminMove(id, kind, x, y, z, rot, admin, part) -> true | false, motivo   (editor de c_move.lua)
     `kind` solo lo usan los recursos con varios tipos (rp_gym). Si el recurso esta parado,
     sus comandos responden que no esta en marcha.
+
+    Campos opcionales de cada elemento, para la vista con ALT (s_inspect.lua):
+        ownerId (characters.id), creator (nombre), createdAt, info (texto extra),
+        rot (giro Z), noRot (no guarda giro), element (elemento principal, para la vista previa),
+        exit = { x, y, z, interior, dimension } (salida interior de una casa)
+    `create` es el comando que crea el tipo: s_inspect.lua lo vigila para guardar que admin lo creo.
 ]]
 
 WORLD_TYPES = {
-    { key = "atm",           many = "atms",           res = "rp_bank",       name = "Cajero" },
-    { key = "shop",          many = "shops",          res = "rp_shops",      name = "Tienda" },
-    { key = "house",         many = "houses",         res = "rp_properties", name = "Casa" },
-    { key = "clothingstore", many = "clothingstores", res = "rp_clothing",   name = "Tienda de ropa" },
-    { key = "vending",       many = "vendings",       res = "rp_vending",    name = "Expendedora" },
-    { key = "dealer",        many = "dealers",        res = "rp_dealers",    name = "Traficante" },
-    { key = "robstore",      many = "robstores",      res = "rp_robbery",    name = "Tienda robable" },
-    { key = "gymmachine",    many = "gymmachines",    res = "rp_gym",        name = "Maquina de gimnasio", kind = "machine" },
-    { key = "trainer",       many = "trainers",       res = "rp_gym",        name = "Entrenador", kind = "trainer" },
-    { key = "school",        many = "schools",        res = "rp_driving",    name = "Autoescuela" },
-    { key = "pooltable",     many = "pooltables",     res = "rp_pool",       name = "Mesa de pool" },
-    { key = "crossing",      many = "crossings",      res = "rp_train",      name = "Barrera de tren" },
-    { key = "ticketbooth",   many = "ticketbooths",   res = "rp_train",      name = "Boleteria de tren", kind = "booth" },
-    { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign" },
-    { key = "turnstile",     many = "turnstiles",     res = "rp_train",      name = "Torniquete de tren", kind = "gate" },
-    { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence" },
-    { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D" },
+    { key = "atm",           many = "atms",           res = "rp_bank",       name = "Cajero", create = "crearatm" },
+    { key = "shop",          many = "shops",          res = "rp_shops",      name = "Tienda", create = "crearshop" },
+    { key = "house",         many = "houses",         res = "rp_properties", name = "Casa", create = "crearcasa" },
+    { key = "clothingstore", many = "clothingstores", res = "rp_clothing",   name = "Tienda de ropa", create = "crearropa" },
+    { key = "vending",       many = "vendings",       res = "rp_vending",    name = "Expendedora", create = "crearexpendedora" },
+    { key = "dealer",        many = "dealers",        res = "rp_dealers",    name = "Traficante", create = "creartraficante" },
+    { key = "robstore",      many = "robstores",      res = "rp_robbery",    name = "Tienda robable", create = "crearrobo" },
+    { key = "gymmachine",    many = "gymmachines",    res = "rp_gym",        name = "Maquina de gimnasio", kind = "machine", create = "crearmaquina" },
+    { key = "trainer",       many = "trainers",       res = "rp_gym",        name = "Entrenador", kind = "trainer", create = "crearentrenador" },
+    { key = "school",        many = "schools",        res = "rp_driving",    name = "Autoescuela", create = "crearautoescuela" },
+    { key = "pooltable",     many = "pooltables",     res = "rp_pool",       name = "Mesa de pool", create = "crearmesapool" },
+    { key = "crossing",      many = "crossings",      res = "rp_train",      name = "Barrera de tren", create = "crearbarrera" },
+    { key = "ticketbooth",   many = "ticketbooths",   res = "rp_train",      name = "Boleteria de tren", kind = "booth", create = "crearboleteria" },
+    { key = "trainsign",     many = "trainsigns",     res = "rp_train",      name = "Cartel LED de tren", kind = "sign", create = "crearcartel" },
+    { key = "turnstile",     many = "turnstiles",     res = "rp_train",      name = "Torniquete de tren", kind = "gate", create = "creartorniquete" },
+    { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence", create = "crearreja" },
+    { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D", create = "create3dtext" },
+    { key = "marker",        many = "markers",        res = "rp_markers",    name = "Marcador" },
 }
 
 local NEARBY_RADIUS, NEARBY_MAX = 20, 500
@@ -87,6 +95,7 @@ local function deleteOne(player, t, id, cmd)
         notify(player, ("No se pudo borrar %s #%d%s"):format(t.name:lower(), id, why and (": " .. why) or "."), "error")
         return false
     end
+    if forgetCreator then forgetCreator(t.key, id) end
     logAction(player, cmd, nil, ("%s #%d"):format(t.key, id))
     return true
 end
@@ -197,3 +206,16 @@ addCommandHandler("nearby", function(player, cmd, radius)
     table.sort(all, function(a, b) return a.d < b.d end)
     printList(player, ("Elementos a menos de %d m (vehiculos: /gotoveh, /getveh):"):format(radius), all, true)
 end)
+
+-- Para el menu de admin del cursor (s_move.lua): borra por clave de tipo con el mismo registro que /del<tipo>
+function worldTypeByKey(key)
+    for _, t in ipairs(WORLD_TYPES) do
+        if t.key == key then return t end
+    end
+end
+
+function worldDelete(player, key, id)
+    local t = worldTypeByKey(key)
+    if not t or not running(t) then return false end
+    return deleteOne(player, t, id, "del" .. t.key)
+end

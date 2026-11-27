@@ -629,3 +629,22 @@ end)
 function isPlayerOnPizzaShift(player)
     return shifts[player] ~= nil
 end
+
+----------------------------------------------------------------
+-- Marcador de contratacion movible por los admins (rp_markers; el marcador lo dibuja el cliente)
+----------------------------------------------------------------
+local function registerHire()
+    pizzeriaResolveHire()
+    local h = PIZZERIA.HIRE
+    pcall(function()
+        exports.rp_markers:registerPoint("hire", { label = "Pizzería · contratación", point = { h.x, h.y, h.z },
+            interior = PIZZERIA.INTERIOR, dimension = h.dimension })
+    end)
+end
+addEvent("rp:markers:moved")
+addEvent("rp:markers:ready")
+addEventHandler("rp:markers:moved", root, function(owner)
+    if owner == getResourceName(resource) then registerHire() end
+end)
+addEventHandler("rp:markers:ready", root, registerHire)
+addEventHandler("onResourceStart", resourceRoot, registerHire)

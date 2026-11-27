@@ -4,17 +4,36 @@
     el precio, el dinero y el peso del inventario los valida alla.
 ]]
 addEvent("rp:ammu:door", true)
+addEvent("rp:markers:moved")
 
-local function spawnLocation(loc)
+-- Puertas (marcadores y blip). Se rehacen si un admin las mueve con el editor (rp_markers)
+local function spawnDoors(loc)
+    for _, el in ipairs(loc.doorEls or {}) do if isElement(el) then destroyElement(el) end end
     local dim = ammuDimension(loc)
     local entryM = createMarker(loc.x, loc.y, loc.z - 1, "cylinder", 1.2, 255, 140, 0, 120)
     exports.rp_markers:setMarkerStyle(entryM, { icon = "gun", label = loc.name or "Ammu-Nation" })
-    createBlip(loc.x, loc.y, loc.z, 18, 2, 255, 255, 255, 255, 0, 300)
+    exports.rp_markers:registerMarker(entryM, "loc" .. loc.id, { label = (loc.name or "Ammu-Nation") .. " · entrada", point = { loc.x, loc.y, loc.z } })
+    local blip = createBlip(loc.x, loc.y, loc.z, 18, 2, 255, 255, 255, 255, 0, 300)
     local e = AMMU.ENTRY
     local exitM = createMarker(e.x, e.y, e.z - 1, "cylinder", 1.2, 255, 140, 0, 120)
     setElementInterior(exitM, AMMU.INTERIOR)
     setElementDimension(exitM, dim)
     exports.rp_markers:setMarkerStyle(exitM, { icon = "exit", label = "Salir" })
+    exports.rp_markers:registerMarker(exitM, "exit", { label = "Ammu-Nation · salida (todas)", point = { e.x, e.y, e.z } })
+    loc.doorEls = { entryM, blip, exitM }
+end
+
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    ammuResolvePoints()
+    for _, loc in ipairs(AMMU.LOCATIONS) do
+        if key == "exit" or key == "loc" .. loc.id then spawnDoors(loc) end
+    end
+end)
+
+local function spawnLocation(loc)
+    local dim = ammuDimension(loc)
+    spawnDoors(loc)
 
     local c = AMMU.CLERK
     local ped = createPed(c.skin, c.x, c.y, c.z, c.rot)
@@ -26,6 +45,7 @@ local function spawnLocation(loc)
 end
 
 addEventHandler("onResourceStart", resourceRoot, function()
+    ammuResolvePoints()
     for _, loc in ipairs(AMMU.LOCATIONS) do spawnLocation(loc) end
 end)
 

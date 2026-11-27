@@ -306,3 +306,18 @@ MINER = {
     CAVEIN_CHANCE = 0.12,          -- probabilidad de derrumbe (x2 con dinamita)
     CAVEIN_DAMAGE = 25,
 }
+
+-- Posiciones efectivas de sedes y puntos de venta: las de arriba o las que movio un admin con el
+-- editor (rp_markers). Servidor y cliente la llaman al arrancar y en rp:markers:moved.
+local function placeJobPoint(p, key)
+    p.base = p.base or { p.x, p.y, p.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint(key, p.base[1], p.base[2], p.base[3]) end)
+    if ok and x then p.x, p.y, p.z = x, y, z end
+end
+
+function jobsResolvePoints()
+    for _, job in ipairs(JOBS) do
+        if not job.external and job.hq then placeJobPoint(job.hq, "hq_" .. job.id) end
+    end
+    for _, mk in ipairs(MARKETS) do placeJobPoint(mk, "market_" .. mk.id) end
+end

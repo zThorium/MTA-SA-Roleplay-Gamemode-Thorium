@@ -87,3 +87,16 @@ function getRestaurantLocation(id)
         if loc.id == id then return loc end
     end
 end
+
+-- Posiciones efectivas de las puertas: las de arriba o las que movio un admin con el editor
+-- (rp_markers guarda el movimiento). Servidor y cliente la llaman al arrancar y en rp:markers:moved.
+local function place(p, key)
+    p.base = p.base or { p.x, p.y, p.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint(key, p.base[1], p.base[2], p.base[3]) end)
+    if ok and x then p.x, p.y, p.z = x, y, z end
+end
+
+function restaurantResolvePoints()
+    for _, loc in ipairs(RESTAURANTS.LOCATIONS) do place(loc, "loc" .. loc.id) end
+    for name, brand in pairs(RESTAURANTS.BRANDS) do place(brand.entry, "exit_" .. name) end
+end

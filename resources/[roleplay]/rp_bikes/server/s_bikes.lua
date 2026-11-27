@@ -204,11 +204,21 @@ end)
 ----------------------------------------------------------------
 -- Puntos de arriendo: marcador + blip + colshape
 ----------------------------------------------------------------
-local function spawnPoints()
-    for i, c in ipairs(BIKES.POINTS) do
+-- Un punto (marcador + colshape + blip). La posicion es la de BIKES.POINTS o la que movio un
+-- admin con el editor (rp_markers); c.x/y/z se actualiza para que el resto del recurso la use.
+local function spawnPoint(i, c)
+    local old = points[i]
+    if old then
+        for _, el in ipairs({ old.marker, old.colshape, old.blip }) do if isElement(el) then destroyElement(el) end end
+    end
+    c.base = c.base or { c.x, c.y, c.z }
+    local ok, nx, ny, nz = pcall(function() return exports.rp_markers:placePoint("point" .. i, c.base[1], c.base[2], c.base[3]) end)
+    if ok and nx then c.x, c.y, c.z = nx, ny, nz end
+    do
         local m = BIKES.MARKER
         local marker = createMarker(c.x, c.y, c.z - 0.9, "cylinder", m.size, m.r, m.g, m.b, m.a)
         exports.rp_markers:setMarkerStyle(marker, { icon = "bike", label = "Arriendo de bicicletas" })
+        exports.rp_markers:registerMarker(marker, "point" .. i, { label = "Bicicletas · " .. tostring(c.name or i), point = { c.x, c.y, c.z } })
         local shape = createColSphere(c.x, c.y, c.z, BIKES.INTERACT_RADIUS)
         local blip
         if BIKES.BLIP.enabled then
@@ -222,8 +232,20 @@ local function spawnPoints()
         setElementData(shape, "rp:bikePoint", i, false)
         points[i] = { cfg = c, marker = marker, colshape = shape, blip = blip }
     end
+end
+
+local function spawnPoints()
+    for i, c in ipairs(BIKES.POINTS) do spawnPoint(i, c) end
     outputDebugString(("[rp_bikes] %d puntos de arriendo creados"):format(#points))
 end
+
+-- Un admin movio un punto con el editor (rp_admin): rehacerlo
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    local i = tonumber(tostring(key):match("^point(%d+)$"))
+    if i and BIKES.POINTS[i] then spawnPoint(i, BIKES.POINTS[i]) end
+end)
 
 addEventHandler("onColShapeHit", resourceRoot, function(element, matchingDimension)
     if getElementType(element) ~= "player" or not matchingDimension then return end

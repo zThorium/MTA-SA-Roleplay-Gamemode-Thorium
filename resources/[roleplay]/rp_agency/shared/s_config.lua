@@ -119,3 +119,16 @@ function agencyFormatTicket(reason, number)
     local r = AGENCY.REASONS[reason]
     return ("%s-%02d"):format(r and r.prefix or "?", number or 0)
 end
+
+-- Posicion efectiva de la puerta de la calle: la de arriba o la que movio un admin con el editor
+-- (rp_markers). Donde apareces al salir (EXIT_SPAWN) se desplaza lo mismo. Servidor y cliente la
+-- llaman al arrancar y en rp:markers:moved.
+function agencyResolvePoints()
+    local e, s = AGENCY.ENTRANCE, AGENCY.EXIT_SPAWN
+    e.base = e.base or { e.x, e.y, e.z }
+    s.base = s.base or { s.x, s.y, s.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint("entrance", e.base[1], e.base[2], e.base[3]) end)
+    if not (ok and x) then x, y, z = e.base[1], e.base[2], e.base[3] end
+    e.x, e.y, e.z = x, y, z
+    s.x, s.y, s.z = s.base[1] + x - e.base[1], s.base[2] + y - e.base[2], s.base[3] + z - e.base[3]
+end

@@ -84,7 +84,7 @@ function destroyStore(id)
     local store = STORES[id]
     if not store then return end
     clearStorePeds(store)
-    for _, el in ipairs({ store.pickup, store.col, store.exitCol, store.blip }) do
+    for _, el in ipairs({ store.pickup, store.col, store.exitCol, store.exitMarker, store.blip }) do
         if isElement(el) then destroyElement(el) end
     end
     STORES[id] = nil
@@ -109,6 +109,13 @@ function spawnStore(row)
     store.exitCol = createColSphere(exit.x, exit.y, exit.z, ROBBERY.EXIT_RADIUS)
     setElementInterior(store.exitCol, t.interior)
     setElementDimension(store.exitCol, storeDimension(id))
+    -- Salida visible y movible con el editor de admin (rp_markers); se guarda en points.exit
+    store.exitMarker = createMarker(exit.x, exit.y, exit.z - 1, "cylinder", 1.2, 245, 165, 36, 120)
+    setElementInterior(store.exitMarker, t.interior)
+    setElementDimension(store.exitMarker, storeDimension(id))
+    exports.rp_markers:setMarkerStyle(store.exitMarker, { icon = "exit", label = "Salir" })
+    exports.rp_markers:registerMarker(store.exitMarker, "exit" .. id, { label = row.name .. " · salida",
+        point = { exit.x, exit.y, exit.z }, ownerSaves = true })
 
     addEventHandler("onColShapeHit", store.col, function(el, sameDim)
         if getElementType(el) ~= "player" or not sameDim or not characterOf(el) or isPedInVehicle(el) then return end
@@ -140,6 +147,27 @@ end
 function saveStorePoints(store)
     dbExec(db(), "UPDATE robbery_stores SET points = ? WHERE id = ?", toJSON(store.points, true), store.row.id)
 end
+
+-- Un admin movio la salida con el editor (rp_admin): se guarda como con /robopunto <id> salida
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key, x, y, z)
+    if owner ~= getResourceName(resource) or not x then return end
+    local store = STORES[tonumber(tostring(key):match("^exit(%d+)$")) or -1]
+    if not store then return end
+    local old = getStorePoint(store, "exit")
+    store.points.exit = { x = x, y = y, z = z, rot = old and old.rot or 0 }
+    saveStorePoints(store)
+    if store.robbery then
+        -- Robo en curso: no rehacer la tienda (NPCs y escena); mover solo la salida
+        setElementPosition(store.exitCol, x, y, z)
+        setElementPosition(store.exitMarker, x, y, z - 1)
+        return
+    end
+    local row, cooldown = store.row, store.cooldownUntil
+    row.points = toJSON(store.points, true)
+    local fresh = spawnStore(row)
+    if fresh then fresh.cooldownUntil = cooldown end
+end)
 
 local function loadStores()
     dbQuery(function(qh)

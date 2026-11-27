@@ -80,7 +80,7 @@ local function loadTexts()
         if not rows then return log("no se pudieron cargar los textos 3D", 1) end
         for _, row in ipairs(rows) do spawnText(row) end
         log(("%d textos 3D cargados"):format(#rows))
-    end, db(), "SELECT id, text, x, y, z, interior, dimension FROM text3d WHERE deleted_at IS NULL")
+    end, db(), "SELECT id, text, x, y, z, interior, dimension, created_by_name, created_at FROM text3d WHERE deleted_at IS NULL")
 end
 
 addEventHandler("onResourceStart", resourceRoot, function()
@@ -114,7 +114,7 @@ addCommandHandler("create3dtext", function(player, _, ...)
             if isElement(player) then notify(player, "No se pudo guardar el texto 3D.", "error") end
             return log("fallo el INSERT de un texto 3D", 1)
         end
-        spawnText({ id = insertId, text = text, x = x, y = y, z = z, interior = int, dimension = dim })
+        spawnText({ id = insertId, text = text, x = x, y = y, z = z, interior = int, dimension = dim, created_by_name = name })
         addLog(insertId, "create", text, player)
         log(("%s (cuenta %s) creo el texto 3D #%d"):format(name, accName, insertId))
         if isElement(player) then notify(player, ("Texto 3D #%d creado."):format(insertId), "success") end
@@ -172,7 +172,9 @@ function adminElements()
             local label = t.row.text
             if utf8.len(label) > 40 then label = utf8.sub(label, 1, 40) .. "..." end
             list[#list + 1] = { id = id, x = x, y = y, z = z, interior = getElementInterior(t.icon),
-                dimension = getElementDimension(t.icon), label = label }
+                dimension = getElementDimension(t.icon), label = label,
+                creator = t.row.created_by_name, createdAt = t.row.created_at,
+                noRot = true, element = t.icon }
         end
     end
     return list
@@ -189,5 +191,18 @@ function adminDelete(id, _, admin)
     dbExec(db(), [[UPDATE text3d SET deleted_at = NOW(), deleted_by_account_id = NULLIF(?, 0), deleted_by_name = ?
                    WHERE id = ? AND deleted_at IS NULL]], accId, name, id)
     addLog(id, "delete", text, admin)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): queda en el historial como edicion
+function adminMove(id, _, x, y, z, _, admin)
+    id = tonumber(id)
+    local t = id and texts[id]
+    if not t then return false, "no existe" end
+    local row = t.row
+    row.x, row.y, row.z = x, y, z
+    dbExec(db(), "UPDATE text3d SET x = ?, y = ?, z = ?, updated_at = NOW() WHERE id = ?", x, y, z, id)
+    spawnText(row)
+    addLog(id, "edit", row.text, admin)
     return true
 end

@@ -9,6 +9,7 @@
 
     El marcador lo crea SIEMPRE el recurso que lo usa (createMarker normal): así muere con
     él y no depende de que rp_markers se reinicie. Si rp_markers no está, se ve el cilindro nativo.
+    Puntos fijos movibles por los admins (registerMarker / placePoint): ver s_points.lua.
 ]]
 
 --- Pone (o quita, con style = nil) el icono/texto/color de un marcador. Devuelve true si se aplicó.

@@ -29,13 +29,30 @@ addEventHandler("onResourceStop", resourceRoot, function()
     for _, gym in ipairs(GYM_FIXED) do originalMachines(gym, false) end
 end)
 
+-- Posicion efectiva de una puerta (la de GYM_FIXED o la que movio un admin, rp_markers).
+-- `follow` (donde apareces al cruzarla) se desplaza lo mismo que la puerta.
+local function place(p, key, follow)
+    p.base = p.base or { p.x, p.y, p.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint(key, p.base[1], p.base[2], p.base[3]) end)
+    if not (ok and x) then x, y, z = p.base[1], p.base[2], p.base[3] end
+    p.x, p.y, p.z = x, y, z
+    if follow then
+        follow.base = follow.base or { follow.x, follow.y, follow.z }
+        follow.x, follow.y, follow.z = follow.base[1] + x - p.base[1], follow.base[2] + y - p.base[2], follow.base[3] + z - p.base[3]
+    end
+end
+
 local function addDoor(id, gym, inside, pos)
+    local old = doors[id]
+    if old and isElement(old.marker) then destroyElement(old.marker) end
     local int, dim = inside and gym.interior or 0, inside and gym.dimension or 0
     local marker = createMarker(pos.x, pos.y, pos.z - 1, "cylinder", 1.2, 245, 165, 36, 120)
     setElementInterior(marker, int)
     setElementDimension(marker, dim)
     exports.rp_markers:setMarkerStyle(marker, inside and { icon = "exit", label = "Salir" } or { icon = "gym", label = gym.name })
-    doors[id] = { gym = gym, inside = inside, x = pos.x, y = pos.y, z = pos.z, int = int, dim = dim }
+    exports.rp_markers:registerMarker(marker, (inside and "exit" or "door") .. gym.key,
+        { label = gym.name .. (inside and " · salida" or " · puerta"), point = { pos.x, pos.y, pos.z } })
+    doors[id] = { gym = gym, inside = inside, x = pos.x, y = pos.y, z = pos.z, int = int, dim = dim, marker = marker }
 
     local label = inside and "Salir a la calle" or ("Entrar: " .. gym.name)
     addEventHandler("onMarkerHit", marker, function(el, sameDim)
@@ -50,11 +67,27 @@ local function addDoor(id, gym, inside, pos)
     end)
 end
 
+local function spawnDoors(i, gym)
+    place(gym.door, "door" .. gym.key, gym.outside)
+    place(gym.exit, "exit" .. gym.key, gym.inside)
+    if isElement(gym.blipEl) then destroyElement(gym.blipEl) end
+    gym.blipEl = createBlip(gym.door.x, gym.door.y, gym.door.z, gym.blip, 2, 255, 255, 255, 255, 0, 400)
+    addDoor(i * 2 - 1, gym, false, gym.door)
+    addDoor(i * 2, gym, true, gym.exit)
+end
+
+-- Un admin movio una puerta con el editor (rp_admin): rehacer las de ese gimnasio
+addEvent("rp:markers:moved")
+addEventHandler("rp:markers:moved", root, function(owner, key)
+    if owner ~= getResourceName(resource) then return end
+    for i, gym in ipairs(GYM_FIXED) do
+        if key == "door" .. gym.key or key == "exit" .. gym.key then spawnDoors(i, gym) end
+    end
+end)
+
 addEventHandler("onResourceStart", resourceRoot, function()
     for i, gym in ipairs(GYM_FIXED) do
-        createBlip(gym.door.x, gym.door.y, gym.door.z, gym.blip, 2, 255, 255, 255, 255, 0, 400)
-        addDoor(i * 2 - 1, gym, false, gym.door)
-        addDoor(i * 2, gym, true, gym.exit)
+        spawnDoors(i, gym)
         originalMachines(gym, true)
         local t = gym.trainer
         if t and GYM_STYLES[t.style] then

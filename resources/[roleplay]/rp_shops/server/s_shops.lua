@@ -258,7 +258,8 @@ function adminElements()
         local row = e.row
         if row and not e.temp then
             list[#list + 1] = { id = id, x = tonumber(row.x), y = tonumber(row.y), z = tonumber(row.z),
-                interior = row.interior, dimension = row.dimension, label = row.name }
+                interior = row.interior, dimension = row.dimension, label = row.name,
+                rot = tonumber(row.rotation) or 0, element = e.ped }
         end
     end
     return list
@@ -269,6 +270,24 @@ function adminDelete(id)
     if not id or not shops[id] or shops[id].temp then return false, "no existe" end
     dbExec(db(), "DELETE FROM shops WHERE id = ?", id)
     destroyShop(id)
+    return true
+end
+
+-- Mover desde el editor de rp_admin (vista ALT): guarda y vuelve a crear el NPC con su catalogo
+function adminMove(id, _, x, y, z, rot)
+    id = tonumber(id)
+    local shop = id and shops[id]
+    if not shop or shop.temp then return false, "no existe" end
+    local row, items = shop.row, shop.items
+    row.x, row.y, row.z, row.rotation = x, y, z, rot
+    dbExec(db(), "UPDATE shops SET x = ?, y = ?, z = ?, rotation = ? WHERE id = ?", x, y, z, rot, id)
+    for p, nid in pairs(nearby) do
+        if nid == id then
+            nearby[p] = nil
+            if isElement(p) then triggerClientEvent(p, "rp:shop:near", resourceRoot, false) end
+        end
+    end
+    spawnShop(row, items)
     return true
 end
 

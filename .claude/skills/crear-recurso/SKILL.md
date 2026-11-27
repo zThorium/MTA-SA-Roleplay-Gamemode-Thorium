@@ -147,6 +147,8 @@ Parte de [`plantillas/c_main.lua`](plantillas/c_main.lua).
   chat y avisos; para un HUD propio a pantalla completa usa `setHudHidden`, UX-09) y
   `exports.rp_radio:setRadioSuppressed("rp_sistema", true/false)`. Nunca toques `rp:hudHidden` ni la
   radio nativa. Libera siempre la supresión en `onClientResourceStop`.
+- **Marcadores**: siempre con `rp_markers` (regla 12 de `CLAUDE.md`): `setMarkerStyle` para el aspecto y, si es fijo,
+  `placePoint` + `registerMarker` + reconstruirlo en `rp:markers:moved` para que los admins lo muevan con el editor.
 - Blips: `rp_hud` solo dibuja los iconos de su lista `KNOWN_BLIP_ICON_IDS`. Usa uno existente
   (`REGISTROS.md`) o añade el icono y su PNG en `rp_hud/images/blips/` en el mismo PR.
 - `onClientRender` lo más barato posible: precalcula, cachea texturas y fuentes, y no recorras

@@ -164,3 +164,13 @@ do
     end
     C.ARRIVE_MS = math.floor(len / C.WALK_SPEED * 1000) + 800
 end
+
+-- Posicion efectiva del marcador de contratacion: la de arriba o la que movio un admin con el editor
+-- (rp_markers). Servidor y cliente la llaman al arrancar y en rp:markers:moved. (LEAVE no: va en la
+-- dimension de cada turno.)
+function pizzeriaResolveHire()
+    local h = PIZZERIA.HIRE
+    h.base = h.base or { h.x, h.y, h.z }
+    local ok, x, y, z = pcall(function() return exports.rp_markers:placePoint("hire", h.base[1], h.base[2], h.base[3]) end)
+    if ok and x then h.x, h.y, h.z = x, y, z end
+end
