@@ -1,5 +1,13 @@
 # Auditoría de rp_citizens
 
+## 2026-11-27 · mejorar · foco: lanzaderas por mar con horario (fase A)
+- **Qué cambia en el juego**: un **ferry** cruza la bahía de San Fierro (Bayside ↔ Pier 69) y una **lancha** recorre la costa de LS (muelle de Santa María ↔ Ocean Docks). Salen del muelle acelerando y pitando, frenan al llegar y dan la vuelta mientras esperan 40-45 s. Todos los jugadores los ven en el mismo sitio a la vez, como los aviones.
+- **Cambio de diseño en `c_air.lua`**: el motor de horarios pasa de velocidad constante a **tabla tiempo → distancia** por ruta (velocidad en cada punto de paso, `pts[i][4]` opcional), base también para la fase C (despegues y aterrizajes). Tres tipos de ruta: con horario (`period`), circuito (`loop`) y lanzadera (`shuttle`, ida y vuelta con `dwell`). El camino de las lanzaderas sale de la red de barcos (Dijkstra entre los nodos más cercanos a `from` y `to`, determinista) y su perfil de velocidad es simétrico (`v = min(crucero, sqrt(1 + 2·a·d))` desde cada extremo), así que la vuelta es la ida al revés. En el muelle el rumbo gira del de llegada al de salida con un suavizado que también sale de la hora. Los barcos flotan sobre `getWaterLevel` (consultado cada ~0,5 s) con vaivén; motor al ralentí atracados.
+- **Arreglo de paso**: en la ruta «Costa» un comentario mal colocado (commit bd2f79c) anulaba el punto `{ 900, -2750, 55 }`; restaurado.
+- **Verificación**: sintaxis con `lua5.1.dll`; simulación de todas las rutas en pasos de 0,1 s: sin saltos (salto máximo = velocidad × 0,1 s) ni giros bruscos (≤ 3,3° por paso); los vuelos conservan sus tiempos; ferry 2.003 m en 243 s, lancha 2.354 m en 259 s; contra la máscara agua/tierra de `rp_map` (celdas de 50 m): 0-2 % en celdas de tierra, solo junto a los muelles.
+- **Nota**: 82 → 82.
+- **Probar en juego**: `/irvuelo ferry` y `/irvuelo lancha`; que floten bien, que giren en el muelle sin atravesarlo, que pitén al salir y que no corten por tierra.
+
 ## 2026-11-27 · mejorar · foco: avionetas más bajas
 - **Motivo**: Fabián vio una avioneta con `/irvuelo` pero iba tan alta que casi no se veía.
 - **Cambio**: las rutas de avioneta bajan: costa 150-200 → 55-110 m (90 m sobre las grúas de Ocean Docks), fumigadora 110 → 60-75 m, Verdant Meadows 130-140 → 75-105 m. Cada punto de paso tiene su propia altura: ~30-40 m sobre el suelo más alto del tramo.
