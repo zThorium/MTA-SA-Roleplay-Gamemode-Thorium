@@ -443,6 +443,7 @@ addEventHandler("rp:cloth:buy", resourceRoot, function(slot, index)
     exports.rp_characters:saveCharacter(player)
     notify(player, ("Compraste %s por $%d."):format(slot == "skin" and "un nuevo conjunto" or SLOT_NAMES[slot]:lower(), price), "success")
     triggerClientEvent(player, "rp:cloth:bought", resourceRoot, "clothes")
+    triggerEvent("rp:achievements:progress", player, "clothes_bought", 1)   -- logros (rp_achievements)
     sendShop(player)
 end)
 

@@ -180,7 +180,16 @@ MARKETS = {
         x = 1310.0, y = -1370.0, z = 13.55, interior = 0, dimension = 0,
         items = {
             old_watch = 150, gold_ring = 320, rare_vinyl = 180, old_coin = 60, broken_phone = 40,
-            pearl = 260, gem_raw = 520, message_bottle = 90,
+            pearl = 260, gem_raw = 520, message_bottle = 90, scrap_metal = 10, gold_chain = 400, doubloon = 1050,
+        },
+    },
+    -- Lo que se encuentra con el detector de metales (rp_metaldetector), junto a su tienda
+    {
+        id = "beachfinds", name = "Puesto del buscador", icon = "🧭",
+        x = 809.0, y = -1858.0, z = 12.87, interior = 0, dimension = 0,
+        items = {
+            rusty_can = 4, scrap_metal = 12, rusty_key = 15, lost_keys = 30, old_coin = 60, old_compass = 140,
+            old_watch = 150, gold_earrings = 240, gold_ring = 320, gold_chain = 420, doubloon = 1100, jeweled_tiara = 2200,
         },
     },
 }

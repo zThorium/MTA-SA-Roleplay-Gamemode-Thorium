@@ -1,0 +1,110 @@
+<meta>
+    <info author="Thorium" name="RP Detector de metales" description="Detector de metales en las playas: lectura del metal, pitidos por cercanía, excavar a paladas, colección y botín que se vende" version="2.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+    <include resource="rp_characters" />
+    <include resource="rp_inventory" />
+    <include resource="rp_markers" />
+    <include resource="rp_injury" />
+    <include resource="rp_levels" />
+    <include resource="rp_hud" />
+    <include resource="bone_attach" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_config.lua" type="server" />
+    <script src="server/s_metaldetector.lua" type="server" />
+
+    <script src="client/c_ui.lua" type="client" cache="false" />
+    <script src="client/c_fx.lua" type="client" cache="false" />
+    <script src="client/c_hold.lua" type="client" cache="false" />
+    <script src="client/c_shop.lua" type="client" cache="false" />
+    <script src="client/c_metaldetector.lua" type="client" cache="false" />
+
+    <!-- Panel CEF: tienda, progreso y colección -->
+    <file src="html/index.html" />
+    <file src="html/style.css" />
+    <file src="html/app.js" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/sounds/confirmation_001.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/pluck_001.ogg" />
+    <file src="html/sounds/coins.wav" />
+
+    <!-- Modelo 3D del detector, uno por nivel (tools/build_detector.py en Blender) y su render para la tienda -->
+    <file src="models/detector.txd" />
+    <file src="models/detector_1.dff" />
+    <file src="models/detector_2.dff" />
+    <file src="models/detector_3.dff" />
+    <file src="models/detector_4.dff" />
+    <file src="models/detector_5.dff" />
+    <file src="images/detectors/detector_1.png" />
+    <file src="images/detectors/detector_2.png" />
+    <file src="images/detectors/detector_3.png" />
+    <file src="images/detectors/detector_4.png" />
+    <file src="images/detectors/detector_5.png" />
+
+
+    <!-- Fuentes (assets/fuentes/rubik, SIL OFL 1.1) -->
+    <file src="fonts/rubik_medium.ttf" />
+    <file src="fonts/rubik_semibold.ttf" />
+
+    <!-- Teclas (Kenney, CC0) -->
+    <file src="images/keys/keyboard_e.png" />
+    <file src="images/keys/keyboard_backspace.png" />
+
+    <!-- Efectos (propios, tools/gen_assets.ps1) -->
+    <file src="images/fx/glow.png" />
+    <file src="images/fx/ring.png" />
+    <file src="images/fx/sparkle.png" />
+    <file src="images/fx/hole.png" />
+    <file src="images/fx/vignette.png" />
+
+    <!-- Iconos de los items (SwisserDev/fivem-icons-photoreal, CC0) -->
+    <file src="images/items/metal_detector.png" />
+    <file src="images/items/shovel.png" />
+    <file src="images/items/rusty_can.png" />
+    <file src="images/items/scrap_metal.png" />
+    <file src="images/items/rusty_key.png" />
+    <file src="images/items/lost_keys.png" />
+    <file src="images/items/old_coin.png" />
+    <file src="images/items/old_compass.png" />
+    <file src="images/items/old_watch.png" />
+    <file src="images/items/gold_earrings.png" />
+    <file src="images/items/gold_ring.png" />
+    <file src="images/items/gold_chain.png" />
+    <file src="images/items/doubloon.png" />
+    <file src="images/items/jeweled_tiara.png" />
+
+    <!-- Sonidos: sintetizados (tools/gen_assets.ps1), Kenney (CC0) y propios -->
+    <file src="sounds/beep_hi.wav" />
+    <file src="sounds/beep_lo.wav" />
+    <file src="sounds/tone_loop.wav" />
+    <file src="sounds/hum_loop.wav" />
+    <file src="sounds/power_on.wav" />
+    <file src="sounds/reveal_common.wav" />
+    <file src="sounds/reveal_rare.wav" />
+    <file src="sounds/reveal_legendary.wav" />
+    <file src="sounds/sparkle.wav" />
+    <file src="sounds/new_entry.wav" />
+    <file src="sounds/coins.wav" />
+    <file src="sounds/footstep_snow_000.ogg" />
+    <file src="sounds/footstep_snow_001.ogg" />
+    <file src="sounds/footstep_snow_002.ogg" />
+    <file src="sounds/impactSoft_medium_000.ogg" />
+    <file src="sounds/impactSoft_heavy_001.ogg" />
+    <file src="sounds/impactMetal_light_000.ogg" />
+    <file src="sounds/impactMetal_light_002.ogg" />
+    <file src="sounds/drop_002.ogg" />
+    <file src="sounds/error_004.ogg" />
+    <file src="sounds/pluck_001.ogg" />
+
+    <export function="isPlayerDetecting" type="server" />
+    <export function="getMetalDetectorLoot" type="server" />
+    <export function="getPlayerDetectorLevel" type="server" />
+</meta>

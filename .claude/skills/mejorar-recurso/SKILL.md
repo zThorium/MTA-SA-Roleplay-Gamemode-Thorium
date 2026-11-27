@@ -50,7 +50,7 @@ un beneficio concreto en el juego:
 |---|---|---|
 | P0 · Bloqueante | FALLA [B] de la auditoría y reglas B manuales rotas | `source` en evento remoto, cobro no atómico, SQL concatenado, sin validación de distancia |
 | P1 · Robustez | Ciclo de vida y estado | limpieza al salir/cambiar de personaje, rehidratar al reiniciar, abatido/esposado/en misión |
-| P2 · Integración | Usar la GM en vez de duplicarla | `rp_notify` en vez de chat, `rp_inventory`, `rp_levels`, `rp_wanted`, HUD/radio con supresión, dimensiones y teclas sin choques |
+| P2 · Integración | Usar la GM en vez de duplicarla | `rp_notify` en vez de chat, `rp_inventory`, `rp_levels`, `rp_wanted`, HUD/radio con supresión, dimensiones y teclas sin choques, **logros con sentido** (`INT-09`: si el recurso tiene hechos que merecen logro y aún no avisa a `rp_achievements`, se añaden; si no tiene, `N/A` justificado; `docs/LOGROS.md`) |
 | P3 · Calidad | FALLA [I], AVISOS, config centralizada, documentación, pruebas en `rp_test` | |
 | P4 · Experiencia | Lo que nota el jugador (reglas `UX-*`, `docs/EXPERIENCIA_JUEGO.md`) | tecla y ratón dibujados, una cosa a la vez, tutorial guiado y foco, entrenador en paneles, sonidos y recompensa, globos de estado, zonas de acción amplias, textos de rol, rendimiento (onClientRender, timers). Assets desde `assets/` (paleta estándar en `assets/README.md`) |
 | P5 · Funcionalidad | Solo si el foco lo pide | |

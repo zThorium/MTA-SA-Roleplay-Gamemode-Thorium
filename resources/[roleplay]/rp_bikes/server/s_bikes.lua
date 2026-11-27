@@ -129,6 +129,7 @@ addEventHandler("rp:bikes:rent", resourceRoot, function(index)
     local rental = { vehicle = vehicle, timers = timers, expires = now + BIKES.DURATION }
     rentals[player] = rental
     byVehicle[vehicle] = player
+    triggerEvent("rp:achievements:progress", player, "bike_rentals", 1)   -- logros (rp_achievements)
 
     -- Avisos previos y fin del arriendo
     for _, before in ipairs(BIKES.WARN_BEFORE) do

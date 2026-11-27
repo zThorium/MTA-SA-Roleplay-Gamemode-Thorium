@@ -123,10 +123,12 @@
 
     // ---- Casillas ----
     function equippedWeapon() { return state.char.weaponItem || null; }
+    // Objeto en la mano que no es un arma (rp:heldItem; p. ej. el detector de metales)
+    function heldItem() { return state.char.heldItem || null; }
 
     function itemSlot(item) {
         var cls = "slot item" + (item.bp ? " bp" : "") + (menuItem && keyOf(menuItem) === keyOf(item) ? " selected" : "");
-        if (!item.bp && item.id === equippedWeapon()) cls += " equipped";
+        if (!item.bp && (item.id === equippedWeapon() || item.id === heldItem())) cls += " equipped";
         var slot = el("div", cls);
         slot.appendChild(iconNode(item));
         if (item.amount > 1) slot.appendChild(el("span", "qty", item.amount));
@@ -356,6 +358,8 @@
     // ---- Acciones ----
     function useLabel(item) {
         if (/^wpn_/.test(item.id)) return item.id === equippedWeapon() ? "Guardar" : "Equipar";
+        if (!item.bp && item.id === heldItem()) return "Guardar";
+        if (/^metal_detector_/.test(item.id)) return "Sacar";
         if (/^bp_/.test(item.id)) return "Ponerse";
         if (/^(id_card|driver_license)$/.test(item.id)) return "Ver";
         if (item.id === "phone") return "Abrir";

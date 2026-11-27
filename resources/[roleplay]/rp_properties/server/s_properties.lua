@@ -415,6 +415,7 @@ addEventHandler("rp:prop:buy", resourceRoot, function()
                     return notify(player, "Alguien compro esta propiedad antes que tu.", "error")
                 end
                 dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'purchase', ?, ?)", characterId, price, row.name)
+                if isElement(player) then triggerEvent("rp:achievements:progress", player, "property_bought", 1) end   -- logros
                 exports.rp_notify:popup(player, "Propiedad comprada", row.name .. " ya es tuya. Usa /cerrarcasa para abrir o cerrar.", "success")
                 refresh(id)
                 triggerClientEvent(player, "rp:prop:near", resourceRoot, false)

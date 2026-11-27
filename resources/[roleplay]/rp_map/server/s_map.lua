@@ -379,6 +379,11 @@ local function reveal(p, st, list)
     end
     st.dirty = true
     triggerClientEvent(p, "rp:map:cells", resourceRoot, list, newPlaces)
+    -- Logros (rp_achievements): % del mapa (modo max) y lugares descubiertos
+    if not st.adminView then
+        triggerEvent("rp:achievements:progress", p, "map_explored", math.floor(percentOf(st.landCount, landTotal)))
+        if #newPlaces > 0 then triggerEvent("rp:achievements:progress", p, "places_found", #newPlaces) end
+    end
     for _, s in ipairs(sectorsDone) do
         local o = sectorOver[sectors[s].id] or {}
         notify(p, ("Cuadrícula %s descubierta: %s"):format(sectors[s].id, o.name or sectors[s].name), "success")

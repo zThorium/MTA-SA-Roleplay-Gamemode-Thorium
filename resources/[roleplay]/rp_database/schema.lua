@@ -1785,4 +1785,68 @@ SCHEMA = {
         UNIQUE KEY uq_marker_points_key (marker_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_metaldetector: colección de hallazgos por personaje (cuántas veces encontró cada objeto,
+    -- «¡nuevo!» la primera vez y bitácora /hallazgos)
+    [[
+    CREATE TABLE IF NOT EXISTS metal_finds (
+        character_id INT UNSIGNED NOT NULL,
+        item_id      VARCHAR(32)  NOT NULL,
+        times        INT UNSIGNED NOT NULL DEFAULT 0,
+        first_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, item_id),
+        CONSTRAINT fk_metal_finds_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_metaldetector: nivel de buscador por personaje (XP de hallazgos, objetos encontrados y
+    -- dinero ganado vendiendo lo encontrado). El nivel desbloquea detectores mejores en la tienda
+    [[
+    CREATE TABLE IF NOT EXISTS metal_detecting (
+        character_id  INT UNSIGNED NOT NULL,
+        xp            INT UNSIGNED NOT NULL DEFAULT 0,
+        items_found   INT UNSIGNED NOT NULL DEFAULT 0,
+        money_earned  INT UNSIGNED NOT NULL DEFAULT 0,
+        updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_metal_detecting_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_achievements: estadísticas por personaje que alimentan los logros (entregas, dinero
+    -- ganado, % del mapa...). Modo "add" suma, modo "max" guarda el mejor valor
+    [[
+    CREATE TABLE IF NOT EXISTS character_achievement_stats (
+        character_id INT UNSIGNED    NOT NULL,
+        stat_key     VARCHAR(48)     NOT NULL,
+        value        BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, stat_key),
+        CONSTRAINT fk_ach_stats_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_achievements: medalla conseguida en cada logro (1 bronce, 2 plata, 3 oro, 4 platino)
+    [[
+    CREATE TABLE IF NOT EXISTS character_achievements (
+        character_id INT UNSIGNED NOT NULL,
+        ach_key      VARCHAR(48)  NOT NULL,
+        tier         TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        unlocked_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, ach_key),
+        CONSTRAINT fk_ach_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_achievements: hitos de puntos ya reclamados (la PK impide cobrar dos veces el mismo)
+    [[
+    CREATE TABLE IF NOT EXISTS character_achievement_milestones (
+        character_id INT UNSIGNED     NOT NULL,
+        milestone    TINYINT UNSIGNED NOT NULL,
+        claimed_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id, milestone),
+        CONSTRAINT fk_ach_milestones_character FOREIGN KEY (character_id)
+            REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -96,6 +96,7 @@ local function dropVictim(p, rescued)
         v.state = "safe"
         I.contrib[p] = I.contrib[p] or { hits = 0, rescues = 0, foci = 0 }
         I.contrib[p].rescues = I.contrib[p].rescues + 1
+        if isElement(p) then triggerEvent("rp:achievements:progress", p, "fire_rescues", 1) end   -- logros
         exports.rp_notify:bubble(root, v.ped, "¡Gracias! Pensé que no salía de ahí...", 5000)
         triggerClientEvent(p, "rp:firefighters:fx", resourceRoot, "rescued")
     else
@@ -199,6 +200,7 @@ addEventHandler("rp:firefighters:spray", resourceRoot, function(hits)
                 I.contrib[p] = c
                 if f.hp <= 0 then
                     c.foci = c.foci + 1
+                    triggerEvent("rp:achievements:progress", p, "fire_foci", 1)   -- logros (rp_achievements)
                     sendAll("rp:firefighters:focusOut", I.id, idx)
                 end
             end

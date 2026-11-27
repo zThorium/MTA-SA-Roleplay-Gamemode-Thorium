@@ -232,6 +232,12 @@ local function finishRun(run, passed, reason, extra)
     local function deliver(improved)
         result.improved = improved
         result.best = run.scores[test.id]
+        -- Logros (rp_achievements): pruebas con oro o platino en su mejor marca
+        local golds = 0
+        for _, sc in pairs(run.scores or {}) do
+            if type(sc) == "table" and (tonumber(sc.medal) or 0) >= 3 then golds = golds + 1 end
+        end
+        triggerEvent("rp:achievements:progress", player, "driving_gold", golds)
         local nextTest = DRIVING_TESTS[test.index + 1]
         if result.passed and nextTest then result.unlocked, result.nextId = nextTest.name, nextTest.id end
 

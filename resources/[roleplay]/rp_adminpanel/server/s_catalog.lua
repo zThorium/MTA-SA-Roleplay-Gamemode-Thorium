@@ -149,6 +149,21 @@ ADMIN_CATALOG = {
         },
     },
     {
+        id = "detector", name = "Detector de metales",
+        items = {
+            { cmd = "/detectorsuelo", args = "", desc = "Activa o desactiva un medidor con el ID de material que pisas (para afinar los materiales de arena del detector). La tienda se mueve con el editor (ALT o M + clic derecho).", res = "rp_metaldetector" },
+        },
+    },
+    {
+        id = "logros", name = "Logros",
+        items = {
+            { cmd = "/verlogros", args = "<id>", desc = "Puntos, medallas (bronce, plata, oro, platino) e hitos reclamados de un jugador.", res = "rp_achievements" },
+            { cmd = "/darlogro", args = "<id> <clave> [medalla 1-4]", desc = "Nivel 2. Da una medalla de un logro (por defecto la maxima); sube su estadistica al umbral. Claves en docs/LOGROS.md.", res = "rp_achievements" },
+            { cmd = "/statlogro", args = "<id> <estadistica> <valor>", desc = "Nivel 2. Fija una estadistica de logros (puede bajarla; las medallas ya ganadas no se quitan).", res = "rp_achievements" },
+            { cmd = "/resetlogros", args = "<id> [confirmar]", desc = "Nivel 2. Borra estadisticas, medallas e hitos del personaje (pide confirmacion).", res = "rp_achievements" },
+        },
+    },
+    {
         id = "bomberos", name = "Bomberos",
         items = {
             { cmd = "/fdmover", args = "<vestuario|garaje|camion>", desc = "Mueve un punto de la estacion de bomberos a tu posicion (camion = donde aparece la autobomba, con tu rumbo).", res = "rp_firefighters" },

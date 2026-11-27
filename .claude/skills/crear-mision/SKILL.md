@@ -20,6 +20,7 @@ Lee el archivo de `references/` de cada área que toques. Responde y documenta *
 4. **Mundo**: radio silenciada y HUD oculto en cinemáticas; no se entra con estrellas ni se acumulan dentro; blips de objetivo siempre visibles en el radar; enemigos con aparición validada por rayos. → `references/mundo.md`
 5. **Verificación**: servidor de prueba sin errores y aviso explícito de que el **cliente hay que probarlo en juego**; una misión no está terminada sin voces. → `references/verificacion.md`
 6. **Experiencia de juego** (reglas `UX-*`): objetivos con guía donde se mira (visor, objeto resaltado), teclas dibujadas en cada interacción, sonido por evento y una cosa destacada a la vez. → `docs/EXPERIENCIA_JUEGO.md`
+7. **Logros** (`INT-09`): toda misión superada ya cuenta para *Misionero* (`missions_done`, en `s_finish.lua`), y no hay que tocar nada. Una misión solo lleva logro **propio** si tiene un momento que lo merece: terminar una historia o la cadena de un contacto, la dificultad máxima, un reto opcional como sin muertes o contrarreloj, o un secreto. Va como logro de una medalla en `rp_achievements/shared/s_achievements.lua`, con el aviso en el servidor al validar el éxito. Nada de un logro por cada misión. → `docs/LOGROS.md`
 
 ## Flujo (en este orden)
 

@@ -295,13 +295,25 @@
         });
     }
 
+    // Opciones de los logros (rp_achievements): bloqueadas hasta que el servidor diga lo contrario
+    var lockedKeys = null;
+    function isLocked(it) {
+        if (!it.requires) return false;
+        return lockedKeys === null || lockedKeys.indexOf(it.key) !== -1;
+    }
+
     function optGrid(box, items, current, build, onPick) {
         box.textContent = "";
         items.forEach(function (it) {
-            var b = el("button", "opt" + (it.key === current ? " sel" : ""));
-            if (it.name) b.setAttribute("data-tip", it.name);
+            var locked = isLocked(it) && it.key !== current;
+            var b = el("button", "opt" + (it.key === current ? " sel" : "") + (locked ? " locked" : ""));
+            if (it.name) b.setAttribute("data-tip", locked ? "🔒 " + (it.lock || "Se desbloquea con /logros") : it.name);
             b.appendChild(build(it));
-            b.addEventListener("click", function () { play("select", 0.3); onPick(it.key); });
+            if (locked) b.appendChild(el("span", "opt-lock", "🔒"));
+            b.addEventListener("click", function () {
+                if (locked) { play("error", 0.3); return; }
+                play("select", 0.3); onPick(it.key);
+            });
             box.appendChild(b);
         });
     }
@@ -424,7 +436,12 @@
             var entry = rows[key];
             if (entry) entry.whoSig = null;      // se rehace en el proximo update
         },
+        setLocked: function (keys) {
+            lockedKeys = Array.isArray(keys) ? keys : [];
+            if (!$("editor").hidden) renderEditor();
+        },
         openEditor: function (myRow) {
+            lockedKeys = null;
             board.hidden = true;
             board.classList.remove("opening", "closing");
             me = myRow;

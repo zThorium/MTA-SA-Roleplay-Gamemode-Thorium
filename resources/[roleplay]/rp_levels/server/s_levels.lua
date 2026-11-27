@@ -59,6 +59,7 @@ function giveXP(player, amount, reason)
     sync(player, amount, after > before)
     if after > before then
         outputServerLog(("[rp_levels] %s subio al nivel %d (%s)"):format(getPlayerName(player), after, tostring(reason or "?")))
+        triggerEvent("rp:achievements:progress", player, "char_level", after)   -- logros (rp_achievements, modo max)
     end
     return true
 end

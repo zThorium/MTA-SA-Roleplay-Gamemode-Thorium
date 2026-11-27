@@ -152,6 +152,8 @@ function finishSession(p, reason, silent)
     end
 
     local characterId = ps.characterId
+    -- Logros (rp_achievements): solo cuenta un entrenamiento de verdad (al menos 20 disparos)
+    if (s.shots or 0) >= 20 then triggerEvent("rp:achievements:progress", p, "shooting_sessions", 1) end
     saveSession(characterId, s, final, reason, function()
         if silent or not isElement(p) then return end
         loadHistory(characterId, s.stat, function(history, totals)

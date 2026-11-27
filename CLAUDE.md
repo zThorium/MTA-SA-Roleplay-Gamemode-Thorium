@@ -53,6 +53,8 @@ de viajes `rp_rides` (Vroom), `rp_interact` (M + clic derecho sobre una persona:
 policiales las pone `rp_police` con `getPlayerActions`/`doPlayerAction`). Mundo: `rp_properties`, `rp_vehicles`, `rp_radio` (radio de vehículos con emisoras de internet), `rp_citizens`
 (peatones, tráfico IA, barcos y aviones con horario compartido en todo San Andreas sobre los nodos de GTA SA, `tools/generar-nodos.ps1`), `rp_bikes` (arriendo de bicicletas, 60 min), `rp_train` (trenes de SA con paradas, bocina y claxon 10 s antes de salir; boleterías con boleto `train_ticket` para viajar como pasajero bajando solo en estaciones; carteles LED con la llegada estimada; pasos a nivel con barreras y campanas que detienen el tráfico IA). Interfaz: `rp_hud`, `rp_scoreboard` (Tab en CEF que se expande/contrae, con nivel y facción; `/perfil` personaliza tu fila: color, letras animadas, icono, bandera y foto), `rp_nametags`, `rp_markers` (marcadores modernos con icono 3D: rediseña solo todos los cilindros; `setMarkerStyle` para icono y texto; **todo marcador fijo se registra con `registerMarker` y pide su posición con `placePoint`** para que los admins lo muevan), `rp_map` (mapa F11 estilo GTA VI: niebla de exploración por personaje, cuadrículas, lugares que se descubren, GPS con rutas reales al hacer clic, 3D con Three.js, iconos que solo crean los admins y `/mapajugador` para ver la vista de jugador; tema de fondo libre de cynicmusic; datos generados con `tools/generar-datos.ps1`, ver `docs/MAPA.md`).
 Trabajos: `rp_jobs` (6 trabajos civiles con minijuegos CEF, niveles y mercados dinámicos; API para la agencia en `docs/TRABAJOS.md`) y `rp_pizzeria` (pizzero en Well Stacked Pizza: comandas, armado, horno, corte y clientes NPC; trabajo externo de `rp_jobs`).
+Actividades: `rp_metaldetector` (detector de metales en las playas: 5 detectores con modelo 3D propio por nivel (`tools/build_detector.py` en Blender) que se desbloquean con el nivel de buscador (`metal_detecting`), tienda CEF, lectura del metal y pitidos, excavar a paladas, revelación con rareza, colección `/detector` y botín que se vende en el mercado `beachfinds` de `rp_jobs`).
+Logros: `rp_achievements` (logros por personaje con bronce/plata/oro/platino, puntos e hitos con recompensa; `/logros` y app del teléfono). **Todo recurso que tenga un hecho lograble avisa con `triggerEvent("rp:achievements:progress", jugador, "stat", n)`** en el servidor tras validarlo (sin `<include>`); estadísticas y catálogo en `rp_achievements/shared/s_achievements.lua`, guía en `docs/LOGROS.md`.
 Licencias: `rp_driving` (autoescuela con medallas y ranking, licencia de conducir como ítem).
 Gimnasio: `rp_gym` (Ganton fijo con interior original; las máquinas las ponen los admins con `/crearmaquina`; entrenadores que enseñan estilos de pelea en el ring sin dar estrellas, aviso al subir una stat y `/stats`).
 Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (campo de tiro: entrena la habilidad nativa de arma con tus balas; progreso en `weapon_skills`).
@@ -165,6 +167,22 @@ mejorar o arreglar un recurso:
 
 Caso de referencia: `rp_pizzeria`. Al entregar, pedir a Fabián la **prueba del jugador nuevo** (alguien que
 no lo conoce lo completa sin ayuda).
+
+## Estándar de logros (obligatorio, con sentido)
+
+Al **crear o mejorar** cualquier recurso, Claude revisa sin que se lo pidan si tiene hechos que
+merecen logro (regla `INT-09`, criterio completo en [`docs/LOGROS.md`](docs/LOGROS.md)):
+
+- **Sí**: esfuerzo repetido (turnos, entregas, incendios), habilidad (ganar, nota perfecta, oro),
+  progreso con techo (nivel, % del mapa, colección) y momentos únicos (primera casa, legendario).
+  Se avisa con `triggerEvent("rp:achievements:progress", jugador, "stat", n)` en el **servidor**,
+  **después** de validar y cobrar (sin `<include>`). La estadística y el logro se añaden en
+  `rp_achievements/shared/s_achievements.lua`: primero se reutiliza una estadística existente, los
+  umbrales siguen el ritmo real del recurso y hay condiciones contra el farmeo.
+- **No**: infraestructura (BD, avisos, HUD, marcadores, efectos), admin, herramientas de desarrollo,
+  y lo pasivo, trivial o que se farmea gratis. No se inventan logros de relleno: la auditoría anota
+  `INT-09: N/A, motivo`.
+- Al entregar, se dice qué logros se añadieron o por qué no hay.
 
 ## Estándar de cinemáticas (obligatorio)
 

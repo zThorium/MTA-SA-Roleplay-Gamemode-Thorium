@@ -17,6 +17,7 @@
 addEvent("rp:onCharacterSpawn", false)
 addEvent("rp:onCharacterLogout", false)
 addEvent("rp:scoreboard:save", true)
+addEvent("rp:scoreboard:unlocks", true)      -- el editor pide qué opciones de logros tiene (responde rp:scoreboard:unlocks)
 addEvent("rp:scoreboard:setAvatar", true)
 addEvent("rp:scoreboard:clearAvatar", true)
 addEvent("rp:scoreboard:getAvatar", true)
@@ -100,11 +101,28 @@ addEventHandler("rp:scoreboard:save", resourceRoot, function(json)
     if not SB.EFFECT_BY_KEY[t.e] then return end
     if t.i ~= "" and not SB.ICON_BY_KEY[t.i] then return end
     if t.f ~= "" and not SB.FLAG_BY_KEY[t.f] then return end
+    -- Opciones de los logros: solo si las tiene desbloqueadas (o ya las llevaba puestas)
+    local fx, ic = SB.EFFECT_BY_KEY[t.e], t.i ~= "" and SB.ICON_BY_KEY[t.i]
+    if (t.e ~= p.e and not SB.isUnlocked(client, fx)) or (ic and t.i ~= p.i and not SB.isUnlocked(client, ic)) then
+        return notify(client, "Esa opción se desbloquea con los logros (/logros).", "error")
+    end
     lastSave[client] = now
     p.c, p.c2, p.e, p.i, p.f = t.c:lower(), t.c2 and t.c2:lower() or false, t.e, t.i, t.f
     saveRow(p)
     publish(client)
     notify(client, "Perfil del Tab guardado.", "success")
+end)
+
+-- Opciones de los logros que este jugador tiene bloqueadas (el editor les pone candado)
+addEventHandler("rp:scoreboard:unlocks", resourceRoot, function()
+    if not profiles[client] then return end
+    local locked = {}
+    for _, list in ipairs({ SB.EFFECTS, SB.ICONS }) do
+        for _, it in ipairs(list) do
+            if it.requires and not SB.isUnlocked(client, it) then locked[#locked + 1] = it.key end
+        end
+    end
+    triggerClientEvent(client, "rp:scoreboard:unlocks", resourceRoot, locked)
 end)
 
 -- Tipo real del archivo por sus primeros bytes (no por la extension de la URL)

@@ -215,6 +215,11 @@ local function completeRide(ride, dropX, dropY)
     charge(passenger, ride.characterId, fare, "Viaje " .. RIDES.APP_NAME, function(paid, via)
         if paid > 0 then
             notify(passenger, ("Viaje terminado: $%d pagados con %s."):format(paid, via), "success")
+            -- Logros (rp_achievements): viaje como pasajero y, si conducía una persona, como chofer
+            if isElement(passenger) then triggerEvent("rp:achievements:progress", passenger, "rides_taken", 1) end
+            if not ai and isElement(driver) and driver ~= passenger then
+                triggerEvent("rp:achievements:progress", driver, "rides_driven", 1)
+            end
         else
             notify(passenger, "No tenias dinero para pagar el viaje.", "error")
         end

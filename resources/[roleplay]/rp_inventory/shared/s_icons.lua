@@ -21,14 +21,26 @@ local WITH_ICON = {
     "weed", "cocaine", "lsd", "meth",
     "ammo_pistol", "ammo_shotgun", "ammo_smg", "ammo_rifle",
     "pol_cuffs", "pol_taser", "pol_baton", "pol_vest", "pol_kit",
+    -- detector de metales (rp_metaldetector)
+    "shovel", "rusty_can", "scrap_metal", "rusty_key", "lost_keys", "old_compass",
+    "gold_earrings", "gold_chain", "doubloon", "jeweled_tiara",
 }
 
 -- Familias (vkey:12, bcard:3): icono por plantilla
 local FAMILY_ICON = { ["^vkey:%d+$"] = "vkey", ["^bcard:%d+$"] = "bcard" }
 
+-- Items con icono .png propio (render del modelo 3D): html/icons/<id>.png
+local WITH_PNG_ICON = {
+    -- detectores de metales (rp_metaldetector/tools/render_icons.py), un color por nivel
+    "metal_detector_1", "metal_detector_2", "metal_detector_3", "metal_detector_4", "metal_detector_5",
+}
+
 function applyItemIcons(items, families)
     for _, id in ipairs(WITH_ICON) do
         if items[id] then items[id].iconImg = ICON_URL:format(id) end
+    end
+    for _, id in ipairs(WITH_PNG_ICON) do
+        if items[id] then items[id].iconImg = ("http://mta/rp_inventory/html/icons/%s.png"):format(id) end
     end
     for _, family in ipairs(families) do
         local file = FAMILY_ICON[family.pattern]

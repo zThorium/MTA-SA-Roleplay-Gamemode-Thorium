@@ -1,5 +1,5 @@
 <meta>
-    <info author="Thorium" name="RP AnimLab" description="Laboratorio de animaciones: prueba el mocap de las cinematicas de GTA SA (cuts.img) sobre peds en MTA" version="0.1.0" type="script" />
+    <info author="Thorium" name="RP AnimLab" description="Laboratorio de animaciones: prueba el mocap de las cinematicas de GTA SA (cuts.img) sobre peds en MTA" version="0.1.0" type="script" devtool="true" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_login" />

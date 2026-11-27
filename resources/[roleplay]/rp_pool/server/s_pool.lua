@@ -245,6 +245,10 @@ local function endMatch(T, winnerIdx, reason)
             playerTable[p] = nil
             triggerClientEvent(p, "rp:pool:matchEnd", resourceRoot, T.id, winnerIdx, m.bet, why)
             if i == winnerIdx then
+                -- Logros (rp_achievements): solo partidas jugadas hasta la 8 contra otro personaje
+                if (reason == "eightball" or reason == "eightfoul") and wc ~= lc then
+                    triggerEvent("rp:achievements:progress", p, "pool_wins", 1)
+                end
                 notify(p, ("Ganaste la partida de pool. %s"):format(m.bet > 0 and ("Cobras " .. money(pot) .. ".") or ""), "success")
             else
                 notify(p, ("Perdiste la partida de pool. %s"):format(m.bet > 0 and ("Pierdes " .. money(m.bet) .. ".") or ""), "error")

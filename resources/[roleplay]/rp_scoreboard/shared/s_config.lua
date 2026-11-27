@@ -17,6 +17,9 @@ SB.EFFECTS = {
     { key = "flicker", name = "Letrero roto" },
     { key = "bounce",  name = "Saltitos" },
     { key = "type",    name = "Máquina de escribir" },
+    -- Se desbloquea con los logros (rp_achievements): requires = "milestone:<n>" (hito reclamado),
+    -- "ach:<clave>[:<medalla>]" o "points:<n>". lock = texto que ve quien aún no lo tiene.
+    { key = "gold",    name = "Oro", requires = "milestone:7", lock = "Hito 7 de /logros (1.800 puntos)" },
 }
 
 -- Iconos animados: emoji + animacion CSS (.ico-<anim>)
@@ -39,7 +42,19 @@ SB.ICONS = {
     { key = "dice",    emoji = "🎲", anim = "roll",   name = "Dados" },
     { key = "ghost",   emoji = "👻", anim = "float",  name = "Fantasma" },
     { key = "sparkle", emoji = "✨", anim = "flash",  name = "Brillo" },
+    -- De los logros (rp_achievements): ver SB.EFFECTS
+    { key = "medal",   emoji = "🏅", anim = "float",  name = "Medalla", requires = "milestone:2", lock = "Hito 2 de /logros (150 puntos)" },
+    { key = "trophy",  emoji = "🏆", anim = "shine",  name = "Trofeo",  requires = "milestone:5", lock = "Hito 5 de /logros (800 puntos)" },
+    { key = "dragon",  emoji = "🐉", anim = "sway",   name = "Dragón",  requires = "milestone:9", lock = "Hito 9 de /logros (3.500 puntos)" },
 }
+
+-- ¿Puede este jugador usar esta opción? (solo servidor: pregunta a rp_achievements)
+function SB.isUnlocked(player, entry)
+    if not entry or not entry.requires then return true end
+    local res = getResourceFromName("rp_achievements")
+    if not res or getResourceState(res) ~= "running" then return false end
+    return exports.rp_achievements:hasAchievement(player, entry.requires) == true
+end
 
 -- Banderas (svg de flag-icons en html/flags/<code>.svg)
 SB.FLAGS = {
