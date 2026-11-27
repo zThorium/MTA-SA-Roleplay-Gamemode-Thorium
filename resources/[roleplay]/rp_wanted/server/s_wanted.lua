@@ -56,9 +56,13 @@ end
 -- en un vehiculo policial. Un policia de civil comete delitos como cualquiera.
 local function isPoliceOnDuty(player)
     if not isWantedPolice(player) then return false end
-    -- Marcado de servicio de rp_police (vestuario)
-    local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
-    if ok and duty then return true end
+    -- Marcado de servicio de rp_police (vestuario). Dependencia opcional: rp_police incluye
+    -- a rp_wanted (arranca despues), asi que aqui no puede ir un <include>
+    local police = getResourceFromName("rp_police")
+    if police and getResourceState(police) == "running" then
+        local ok, duty = pcall(function() return exports.rp_police:isOnDuty(player) end)
+        if ok and duty then return true end
+    end
     if WANTED_POLICE_SKINS[getElementModel(player)] then return true end
     local v = getPedOccupiedVehicle(player)
     return v and WANTED_POLICE_MODELS[getElementModel(v)] or false
@@ -247,6 +251,8 @@ function reportCrime(player, crimeKey, victimKey, dontCare, witnessed)
             chaos = math.max(chaos, s.parole.chaos)
         end
         applyChaos(player, chaos)
+        -- la denuncia le da a la policia tu posicion (client/c_knowledge.lua)
+        if s.level > 0 then triggerClientEvent(player, "rp:wanted:reveal", resourceRoot) end
     end, (witnessed == "police" or policeNear(player, WANTED.WITNESS_RADIUS)) and WANTED.REPORT_DELAY
         or WANTED.CIVIL_REPORT_DELAY, 1)
     return true

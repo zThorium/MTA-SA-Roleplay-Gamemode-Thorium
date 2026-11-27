@@ -19,7 +19,7 @@ local pursuits = {}      -- [player] = { units = {[id] = unit}, next, pending, f
 local unitOwner = {}     -- [elemento de la unidad] = { player, unit }
 local nextId = 0
 
-for _, e in ipairs({ "spawnAt", "dismount", "remount", "unitLost", "busted", "bustedLocal", "ready", "heliDrop" }) do
+for _, e in ipairs({ "spawnAt", "dismount", "remount", "unitLost", "busted", "bustedLocal", "ready", "heliDrop", "heliBurst" }) do
     addEvent("rp:wanted:" .. e, true)
 end
 
@@ -41,6 +41,7 @@ local function sendUnit(player, unit)
     triggerClientEvent(player, "rp:wanted:unit", resourceRoot, {
         id = unit.id, kind = unit.kind, vehicle = unit.vehicle, vehicles = unit.vehicles, peds = unit.peds,
         fleet = unit.fleet, leaving = unit.leaving or false, spike = unit.spike, drop = unit.drop,
+        gunner = unit.gunner,
     })
 end
 
@@ -108,8 +109,44 @@ local function copWeapon(weapon, level, seat)
     return weapon
 end
 
+-- Para rp_test: arma de un policia de una flota a ese nivel y asiento (0 = conductor / a pie)
+function getCopWeapon(fleetName, level, seat)
+    local f = WANTED_FLEET[fleetName]
+    if not f or fleetName == "heli" then return false end
+    return copWeapon(f.weapon, tonumber(level) or 0, tonumber(seat))
+end
+
+-- Para rp_test: incoherencias de la config de la IA (lista vacia = bien)
+function getPoliceAIConfigErrors()
+    local errs = {}
+    local S, C = WANTED_SEARCH, WANTED_COMBAT
+    local function check(ok, msg) if not ok then errs[#errs + 1] = msg end end
+    check(S and C, "falta WANTED_SEARCH o WANTED_COMBAT")
+    if not (S and C) then return errs end
+    check(S.GRACE > 0 and S.PREDICT_MS > 0, "GRACE y PREDICT_MS deben ser > 0")
+    check(S.RADIUS_MIN > 0 and S.RADIUS_MIN < S.RADIUS_MAX, "RADIUS_MIN < RADIUS_MAX")
+    check(S.RADIUS_MAX < WANTED_DISPATCH.LOST_DISTANCE + 80, "RADIUS_MAX debe caber antes de que se retiren las unidades")
+    check(S.SIGHT_TICK >= 100 and S.SIGHT_TICK <= 1000, "SIGHT_TICK entre 100 y 1000 ms")
+    check(S.FOOT_RADIUS > 6, "FOOT_RADIUS > 6")
+    check(C.RING_MIN > 3.5 and C.RING_MIN < C.RING_MAX and C.RING_MAX < C.RANGE, "3.5 < RING_MIN < RING_MAX < RANGE")
+    check(C.BURST_MIN < C.BURST_MAX and C.PAUSE_MIN < C.PAUSE_MAX, "rafagas y pausas: MIN < MAX")
+    check(C.AIM_BASE >= 0 and C.AIM_PER_M >= 0 and C.AIM_PER_KMH >= 0, "errores de punteria >= 0")
+    check(C.COVER_HEALTH > 0 and C.COVER_HEALTH < 100, "COVER_HEALTH entre 0 y 100")
+    check(type(WANTED_COP_SKILL) == "number" and WANTED_COP_SKILL >= 0 and WANTED_COP_SKILL < 999,
+        "WANTED_COP_SKILL entre 0 y 998 (999 = Hitman: doble pistola)")
+    check(type(WANTED_HELI.GUNNER_OFFSET) == "table" and #WANTED_HELI.GUNNER_OFFSET == 3, "GUNNER_OFFSET = { x, y, z }")
+    return errs
+end
+
+-- Habilidad "Gangster" con todas las armas: postura de apuntado correcta (sin ella
+-- disparaban desde la cadera) y pueden moverse apuntando
+local function trainCop(ped)
+    for stat = 69, 79 do setPedStat(ped, stat, WANTED_COP_SKILL) end
+end
+
 local function armCop(ped, weapon, level, seat)
     local w = copWeapon(weapon, level, seat)
+    trainCop(ped)
     giveWeapon(ped, w, w == WANTED_FLEET.police.melee and 1 or 9999, true)
     setElementData(ped, "rp:cop", true)
 end
@@ -160,6 +197,26 @@ local function spawnCar(player, x, y, z, rot)
     return unit
 end
 
+-- Tirador asomado: de pie en el patin, sujeto a la puerta y mirando hacia fuera. Se
+-- crea al salir el helicoptero a 4+ estrellas o al llegar a 4 con el helicoptero ya en el aire.
+function addHeliGunner(player, unit)
+    local heli = unit.vehicle
+    if not isElement(heli) or isVehicleBlown(heli) then return end
+    if isElement(unit.gunner) and not isPedDead(unit.gunner) then return end
+    local x, y, z = getElementPosition(heli)
+    local gunner = createPed(WANTED_HELI.GUNNER_SKIN, x, y, z - 2)
+    if not gunner then return end
+    local o = WANTED_HELI.GUNNER_OFFSET
+    attachElements(gunner, heli, o[1], o[2], o[3], 0, 0, WANTED_HELI.GUNNER_ROT)
+    trainCop(gunner)
+    giveWeapon(gunner, WANTED_HELI.GUNNER_WEAPON, 9999, true)
+    setElementData(gunner, "rp:cop", true)
+    setElementData(gunner, "rp:heliGunner", true)
+    unit.gunner = gunner
+    unit.peds[#unit.peds + 1] = gunner
+    register(player, unit, gunner)
+end
+
 local function spawnHeli(player)
     local px, py, pz = getElementPosition(player)
     local a = math.random() * math.pi * 2
@@ -182,16 +239,7 @@ local function spawnHeli(player)
         register(player, unit, ped)
     end
     -- Desde 4 estrellas va un tirador SWAT con M4 (el disparo lo simula el cliente)
-    if getWantedLevel(player) >= WANTED_HELI.SHOOT_LEVEL then
-        local gunner = createPed(WANTED_HELI.GUNNER_SKIN, x, y, z)
-        if gunner then
-            warpPedIntoVehicle(gunner, heli, 1)
-            giveWeapon(gunner, WANTED_HELI.GUNNER_WEAPON, 9999, true)
-            setElementData(gunner, "rp:cop", true)
-            unit.peds[#unit.peds + 1] = gunner
-            register(player, unit, gunner)
-        end
-    end
+    if getWantedLevel(player) >= WANTED_HELI.SHOOT_LEVEL then addHeliGunner(player, unit) end
     pursuitOf(player).units[unit.id] = unit
     sendUnit(player, unit)
 end
@@ -464,14 +512,24 @@ addEventHandler("rp:onWantedLevelChange", root, function(level, old)
     if level > 0 then
         local p = pursuitOf(player)
         if old == 0 then p.next = nowMs() + WANTED_DISPATCH.FIRST_DELAY end
-        -- Armas de los policias segun el nuevo nivel (a 1 estrella no disparan)
-        for _, unit in pairs(p.units) do
-            if unit.kind ~= "heli" and not unit.leaving then
-                local _, _, _, weapon = resolveFleet(unit.fleet, getElementPosition(player))
-                for _, ped in ipairs(unit.peds) do
-                    if isElement(ped) and not isPedDead(ped) and level > 1 and old <= 1 then
-                        local seat = getPedOccupiedVehicleSeat(ped)
-                        giveWeapon(ped, copWeapon(weapon, level, seat), 9999, true)
+        -- Armas de los policias segun el nuevo nivel (a 1 estrella no disparan). Al subir,
+        -- cada uno recibe el arma que le toca (antes solo al pasar de 1 a 2: de 2 a 4
+        -- estrellas las unidades que ya estaban seguian con pistola)
+        if level > 1 and level > old then
+            for _, unit in pairs(p.units) do
+                -- el helicoptero que ya estaba sube a su tirador al llegar a 4 estrellas
+                if unit.kind == "heli" and not unit.leaving and level >= WANTED_HELI.SHOOT_LEVEL
+                    and not (isElement(unit.gunner) and not isPedDead(unit.gunner)) then
+                    addHeliGunner(player, unit)
+                    sendUnit(player, unit)
+                end
+                if unit.kind ~= "heli" and unit.kind ~= "swat" and not unit.leaving then
+                    local _, _, _, weapon = resolveFleet(unit.fleet, getElementPosition(player))
+                    for _, ped in ipairs(unit.peds) do
+                        if isElement(ped) and not isPedDead(ped) then
+                            local w = copWeapon(weapon, level, getPedOccupiedVehicleSeat(ped))
+                            if getPedWeapon(ped) ~= w then giveWeapon(ped, w, 9999, true) end
+                        end
                     end
                 end
             end
@@ -543,6 +601,7 @@ addEventHandler("rp:wanted:heliDrop", resourceRoot, function(heli)
         local a = i / WANTED_HELI.SWAT_COUNT * math.pi * 2
         local ped = createPed(WANTED_HELI.SWAT_SKIN, hx + math.cos(a) * 1.2, hy + math.sin(a) * 1.2, hz - 2.5)
         if ped then
+            trainCop(ped)
             giveWeapon(ped, WANTED_HELI.SWAT_WEAPON, 9999, true)
             setElementData(ped, "rp:cop", true)
             squad.peds[#squad.peds + 1] = ped
@@ -551,6 +610,23 @@ addEventHandler("rp:wanted:heliDrop", resourceRoot, function(heli)
     end
     p.units[squad.id] = squad
     sendUnit(player, squad)
+end)
+
+-- Rafaga del tirador del helicoptero: el cliente del buscado la simula (y aplica el dano);
+-- aqui se reenvia a los jugadores cercanos para que la vean y la oigan (solo efectos)
+addEventHandler("rp:wanted:heliBurst", resourceRoot, function(heli)
+    local player = client
+    local unit = ownedBy(player, heli)
+    if not unit or unit.kind ~= "heli" or unit.leaving then return end
+    if getWantedLevel(player) < WANTED_HELI.SHOOT_LEVEL or isVehicleBlown(heli) then return end
+    if not (isElement(unit.gunner) and not isPedDead(unit.gunner)) then return end
+    local now = nowMs()
+    if now - (unit.burstAt or 0) < WANTED_HELI.CYCLE * 0.75 then return end
+    unit.burstAt = now
+    local x, y, z = getElementPosition(heli)
+    for _, pl in ipairs(getElementsWithinRange(x, y, z, WANTED_HELI.SHARE_RADIUS, "player")) do
+        if pl ~= player then triggerClientEvent(pl, "rp:wanted:heliBurst", resourceRoot, heli, unit.gunner, player) end
+    end
 end)
 
 -- Los policias se bajan del auto junto a su puerta

@@ -31,6 +31,7 @@
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
     <script src="server/s_tests_robbery.lua" type="server" />
+    <script src="server/s_tests_wanted.lua" type="server" />
     <script src="server/s_tests_social.lua" type="server" />
     <script src="server/s_tests_vending.lua" type="server" />
     <script src="server/s_tests_shootingrange.lua" type="server" />

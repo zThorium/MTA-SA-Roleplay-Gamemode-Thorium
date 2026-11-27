@@ -22,9 +22,14 @@
     <script src="server/s_units.lua" type="server" />
     <script src="server/s_jail.lua" type="server" />
     <script src="client/c_roads.lua" type="client" cache="false" />
+    <script src="client/c_knowledge.lua" type="client" cache="false" />
+    <script src="client/c_combat.lua" type="client" cache="false" />
     <script src="client/c_crimes.lua" type="client" cache="false" />
     <script src="client/c_police.lua" type="client" cache="false" />
     <script src="client/c_jail.lua" type="client" cache="false" />
+
+    <!-- Rafagas del tirador del helicoptero (sintetizado: tools/gen_sounds.ps1) -->
+    <file src="sounds/disparo_rifle.wav" />
 
     <export function="getWantedLevel" type="server" />
     <export function="getWantedChaos" type="server" />
@@ -41,6 +46,9 @@
     <export function="isPursuitHeld" type="server" />
     <export function="setPursuitTerms" type="server" />
     <export function="getPursuitTerms" type="server" />
+    <!-- rp_test: arma por nivel y coherencia de la config de la IA policial -->
+    <export function="getCopWeapon" type="server" />
+    <export function="getPoliceAIConfigErrors" type="server" />
     <!-- rp_citizens entrega sus patrullas cuando el jugador esta buscado -->
     <export function="adoptLocalCop" type="client" />
 </meta>

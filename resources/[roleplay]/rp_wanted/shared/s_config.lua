@@ -33,9 +33,9 @@ WANTED = {
     DECAY_RADIUS = 18,          -- m: policia a esta distancia impide que baje el caos
     DECAY_CITY = 1,             -- puntos por segundo en la ciudad
     DECAY_ELUSIVE = 2,          -- fuera de la ciudad o en un interior
-    DECAY_GRACE = 30000,
+    DECAY_GRACE = 30000,        -- ms sin decaimiento despues de un delito o de subir de nivel
     EVADE_TIME = 10000,         -- ms sin que ningun policia te vea antes de que empiece a bajar
-    CITY_EXIT_COOLDOWN = 60000, -- salir de la ciudad con 2+ estrellas quita una (como mucho 1 vez por minuto)        -- ms sin decaimiento despues de un delito o de subir de nivel
+    CITY_EXIT_COOLDOWN = 60000, -- salir de la ciudad con 2+ estrellas quita una (como mucho 1 vez por minuto)
 
     -- Mas facil que GTA (pedido del servidor): todos los puntos se multiplican
     CRIME_SCALE = 2,
@@ -180,7 +180,19 @@ WANTED_HELI = {
     SWAT_MAX_SPEED = 30,      -- km/h: solo baja si vas a pie o despacio
     HOVER_HEIGHT = 14,        -- m sobre el suelo mientras bajan
     RAPPEL_SPEED = 6,         -- m/s
+    -- Tirador asomado: de pie en el patin derecho, sujeto a la puerta (offset respecto al
+    -- helicoptero: derecha, adelante, arriba; giro -90 = mira hacia fuera). Ajustar en juego.
+    GUNNER_OFFSET = { 1.25, 0.5, -0.45 },
+    GUNNER_ROT = -90,
+    SHARE_RADIUS = 250,       -- m: los demas jugadores a esta distancia ven y oyen las rafagas
+    SOUND = "sounds/disparo_rifle.wav",
+    SOUND_DISTANCE = 220,     -- m hasta donde se oye un disparo
 }
+
+-- Habilidad con armas de los policias IA (stats 69-79 de GTA SA). 998 = "Gangster" en todas:
+-- apuntan con la postura correcta y pueden moverse apuntando, sin llegar a "Hitman"
+-- (999+: doble pistola). Sin esto salian con la minima y disparaban desde la cadera.
+WANTED_COP_SKILL = 998
 
 -- Probabilidad de reventarte un neumatico: por bala de policia que pega en tu
 -- vehiculo, y cada 1.5 s mientras te disparan desde una patrulla a menos de 30 m
@@ -250,6 +262,54 @@ WANTED_DISPATCH = {
     ROADBLOCK_AHEAD_MAX = 190,
     ROADBLOCK_LIFE = 90000,
     BODY_TIME = 30000,         -- ms hasta que desaparece un policia muerto
+}
+
+--[[
+    Conocimiento policial (como GTA V): la policia no sabe donde estas, sabe
+    donde te vio por ultima vez (client/c_knowledge.lua).
+      - Con un policia que te ve (linea de vision) persiguen tu posicion real.
+      - Si te pierden de vista: GRACE ms siguen tu posicion real (doblaste una
+        esquina), luego van a la ultima posicion proyectada con tu velocidad
+        (hasta PREDICT_MS) y despues buscan por calles cada vez mas lejos
+        (RADIUS_MIN -> RADIUS_MAX en GROW_MS). Las estrellas parpadean.
+      - Un delito denunciado o disparar con policias cerca les dice donde estas.
+]]
+WANTED_SEARCH = {
+    SIGHT_TICK = 250,          -- ms entre comprobaciones de vision
+    GRACE = 2000,              -- ms que siguen tu posicion real tras perderte de vista
+    PREDICT_MS = 4000,         -- ms de proyeccion de tu ultima velocidad
+    RADIUS_MIN = 60,           -- m: radio de busqueda al empezar
+    RADIUS_MAX = 260,          -- m: radio de busqueda maximo
+    GROW_MS = 45000,           -- ms en llegar al radio maximo
+    POINT_REACHED = 14,        -- m: punto de busqueda alcanzado, se pide otro
+    POINT_TIMEOUT = 20000,     -- ms maximos yendo a un punto de busqueda
+    SPEED = 65,                -- km/h de las patrullas buscando
+    FOOT_RADIUS = 30,          -- m alrededor de la ultima posicion que barren los policias a pie
+    SHOT_REVEAL_RADIUS = 80,   -- m: disparar con un policia a esta distancia revela tu posicion
+}
+
+--[[
+    Combate de los policias a pie y de los tiradores de las patrullas
+    (client/c_combat.lua). Mas listos, no mas letales: rodean al jugador,
+    se desplazan mientras disparan, se cubren y fallan mas de lejos o si corres.
+]]
+WANTED_COMBAT = {
+    RANGE = 32,                 -- m: distancia maxima de disparo a pie
+    -- Error de punteria (m de desvio del punto al que apuntan):
+    -- base + por metro de distancia + por km/h del jugador; mas si les acaban de pegar
+    AIM_BASE = 0.25, AIM_PER_M = 0.035, AIM_PER_KMH = 0.02, AIM_HURT = 0.8,
+    AIM_LEVEL = 0.05,           -- menos error por cada estrella sobre 2 (minimo la mitad)
+    AIM_REFRESH = 300,          -- ms entre cambios del punto de mira
+    -- Ritmo propio de cada policia: rafagas, pausas y recarga
+    BURST_MIN = 250, BURST_MAX = 650, PAUSE_MIN = 450, PAUSE_MAX = 1100,
+    BURSTS_PER_RELOAD = 4, RELOAD = 1600,
+    -- Anillo: a esta distancia se reparten alrededor del jugador para rodearlo
+    RING_MIN = 9, RING_MAX = 17,
+    -- Cobertura: al apuntarles, al recibir dano o con poca vida
+    COVER_HEALTH = 50, COVER_HIDE = 2500, COVER_COOLDOWN = 5000, COVER_COOLDOWN_HURT = 2500,
+    COVER_GO_MAX = 3500,        -- ms maximos corriendo a la cobertura
+    SURRENDER_MS = 1500,        -- ms quieto y sin apuntar: uno se acerca a arrestarte, los demas te cubren
+    STUCK_MS = 1500,            -- ms sin avanzar: salta y se aparta para rodear el obstaculo
 }
 
 -- Nivel de estrellas para un total de caos

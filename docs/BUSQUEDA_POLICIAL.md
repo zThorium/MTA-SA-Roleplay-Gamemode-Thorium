@@ -120,6 +120,52 @@ Decisiones:
 - Pay 'n' Spray solo repara (no repinta) para no desincronizar el color de los vehículos con dueño guardados en la base de datos.
 - Configuración en `rp_wanted/shared/s_config.lua`: puntos, umbrales, unidades por nivel, multa, ubicación de liberación y de los Pay 'n' Spray.
 
+## 2b. IA policial: búsqueda, combate y persecución
+
+Aquí nos apartamos de GTA SA a propósito: en SA la policía siempre sabe dónde estás. En Thorium funciona como en GTA V. Esconderse sirve y la policía actúa con táctica, pero no es más letal. Todo corre en el cliente del buscado, que es el *syncer* de las unidades.
+
+### Lo que sabe la policía (`client/c_knowledge.lua`, `WANTED_SEARCH`)
+| Modo | Cuándo | Qué hacen |
+|---|---|---|
+| `live` | Algún policía te ve (línea de visión: unidades, patrullas y lanchas del tráfico, helicóptero hasta 140 m, policías jugadores de uniforme) o te vio hace menos de `GRACE` (2 s) | Persiguen tu posición real. Pueden cortarte el paso, poner controles y pinchos en tu ruta y adelantarse por la ruta si van lejos y fuera de la vista. |
+| `predict` | Te perdieron hace menos de `GRACE + PREDICT_MS` (6 s) | Van a tu última posición proyectada con tu velocidad. |
+| `search` | Después | Las patrullas barren nodos de calle al azar alrededor de la última posición, en un radio que crece de 60 a 260 m en 45 s. Si te vieron a pie, se bajan al llegar y buscan a pie. El helicóptero orbita la zona y barre con el foco. |
+
+- Un **delito denunciado** hace que el servidor mande `rp:wanted:reveal`. **Disparar** con un policía a menos de 80 m también te delata.
+- Mientras no te ven, los refuerzos aparecen cerca de tu última posición, nunca junto a ti. No hay controles de carretera ni pinchos, porque no saben por dónde vas.
+- Las estrellas parpadean (`rp:wantedLost`) y el caos baja como antes: tras `EVADE_TIME` sin avistamientos y sin policía a menos de 18 m.
+
+### Combate (`client/c_combat.lua`, `WANTED_COMBAT`)
+- **Puntería con error**: desvío = `AIM_BASE` + `AIM_PER_M` × distancia + `AIM_PER_KMH` × tu velocidad. Hay más error si al policía le acaban de pegar y un poco menos con más estrellas. De cerca aciertan como antes; de lejos o corriendo fallan más.
+- **Ritmo propio**: ráfagas, pausas y recarga por policía. Ya no disparan todos a la vez.
+- **Sin fuego amigo**: si un compañero o una patrulla tapa el tiro, no disparan y se apartan de lado.
+- **Anillo**: desde 2★, los policías a pie se reparten alrededor del jugador a 9-17 m y se mueven hacia su puesto mientras disparan. Sin línea de visión, van a su puesto para flanquear.
+- **Cobertura**: si les apuntas, les pegas o tienen poca vida, corren a un punto cercano donde no los ves (pared o auto), esperan 2,5 s y vuelven. Los controles de carretera se cubren tras sus patrullas.
+- **Rendición**: si te quedas quieto a pie sin apuntar durante 1,5 s, el policía más cercano se acerca a arrestarte y el resto te apunta sin disparar.
+- **Atascos a pie**: si en 1,5 s no avanzan, saltan y se apartan para rodear el obstáculo.
+- **Habilidad con armas**: todos los policías IA (patrullas, controles, lanchas, SWAT y tirador del heli) salen con las stats 69-79 a `WANTED_COP_SKILL` = 998, el nivel «Gangster».
+  - Así apuntan con la postura correcta y pueden moverse apuntando.
+  - Antes salían con la habilidad mínima y disparaban desde la cadera.
+  - No llegan a «Hitman» (999), que da doble pistola.
+  - Excepción: las patrullas del tráfico que se suman (`adoptLocalCop`) son peds del cliente y MTA no deja cambiarles las stats.
+
+### Helicóptero (`WANTED_HELI`)
+- **Foco**: te sigue de noche (20:00 a 06:00). Si te pierde, barre la zona en espiral.
+- **Tirador asomado** desde 4★: de pie en el patín derecho, sujeto a la puerta (`GUNNER_OFFSET` y `GUNNER_ROT`, ajustables en juego).
+  - El helicóptero se pone de costado para que su puerta te mire.
+  - Si el heli salió a 3★, el tirador se sube al llegar a 4★.
+  - Sin tirador vivo no hay disparos: si lo abates, deja de disparar.
+- **Ráfagas**: el cliente del buscado las simula (fogonazo, trazadora, impacto y daño) y las sonoriza con `sounds/disparo_rifle.wav`, que es sintetizado.
+  - Al empezar cada ráfaga avisa al servidor (`rp:wanted:heliBurst`, validado y limitado a una por ciclo).
+  - El servidor la reenvía a los jugadores a menos de `SHARE_RADIUS` (250 m), que la ven y la oyen sin daño.
+
+### Persecución en vehículo (`client/c_police.lua`)
+- **Volante amortiguado**, con menos ganancia a alta velocidad. Ya no zigzaguean.
+- **Huecos**: las patrullas detrás de la primera van a su izquierda o a su derecha, sin chocarse entre ellas.
+- **Encajonar**: si vas a menos de 45 km/h, te ven y hay 2 o más patrullas a menos de 40 m, se reparten detrás, delante y al costado, frenan contigo y te arrestan.
+- **PIT** solo con buen ángulo (mismo sentido, menos de 45°) y velocidad parecida, con 4 s entre intentos.
+- **Muros**: en la persecución directa, si hay una pared delante vuelven 2,5 s a la ruta por calles.
+
 ## 3. Comandos
 - `/delitosdebug`: muestra en el chat cada delito que detecta tu cliente (para probar).
 - `/fianza`: paga la fianza y sales de la cárcel.
@@ -129,5 +175,6 @@ Decisiones:
 
 ## 4. Pendiente / ideas
 - Saltarse un semáforo en rojo (10 puntos en GTA) y prender fuego (20/80) aún no se detectan.
-- Sobornos de policía (estrella que resta un nivel) y que los policías disparen desde la patrulla.
+- Sobornos de policía (estrella que resta un nivel).
+- Cono de visión (que los policías solo vean hacia donde miran, como GTA V) y búsqueda dentro de interiores.
 - La facción policial podría tener un `/arrestar` propio que use `bustPlayer`.
