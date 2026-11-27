@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Detector de metales</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window" id="window">
+        <header>
+            <div class="brand">
+                <div class="brand-ico"></div>
+                <div>
+                    <h1>Detector de metales</h1>
+                    <div class="hint" id="subtitle">Equipo de playa</div>
+                </div>
+            </div>
+            <div class="level-pill" id="level-pill">Nivel 1</div>
+            <div class="money"><span class="label">Efectivo</span><strong id="money">$0</strong></div>
+            <button class="close" id="btn-close" title="Cerrar (Esc)">×</button>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab" data-tab="shop" id="tab-shop">Tienda</button>
+            <button class="tab" data-tab="progress" id="tab-progress">Progreso</button>
+            <button class="tab" data-tab="collection" id="tab-collection">Colección</button>
+            <span class="tabs-hint"><kbd>Esc</kbd> cerrar</span>
+        </nav>
+
+        <!-- Tienda -->
+        <section class="view" id="view-shop">
+            <div class="shop">
+                <div class="tier-list" id="tier-list"></div>
+                <aside class="preview" id="preview">
+                    <div class="preview-img"><div class="glow" id="pv-glow"></div><img id="pv-img" alt=""></div>
+                    <div class="pv-name" id="pv-name"></div>
+                    <div class="pv-desc" id="pv-desc"></div>
+                    <div class="stats" id="pv-stats"></div>
+                    <div class="reach" id="pv-reach"></div>
+                    <button class="buy" id="pv-buy">Comprar</button>
+                </aside>
+            </div>
+            <div class="shop-closed" id="shop-closed">
+                La tienda está en el puesto <b>Equipo de playa</b>, junto al muelle de Santa Maria.
+                Habla con el vendedor (<kbd>E</kbd>) para comprar detectores y la pala.
+            </div>
+        </section>
+
+        <!-- Progreso -->
+        <section class="view" id="view-progress">
+            <div class="level-card">
+                <div class="ring" id="ring"><span id="ring-level">1</span><small>de 5</small></div>
+                <div class="level-info">
+                    <div class="level-title" id="level-title">Buscador novato</div>
+                    <div class="bar"><div class="bar-fill" id="xp-fill"></div></div>
+                    <div class="level-sub" id="xp-text">0 / 120 XP</div>
+                    <div class="level-next" id="level-next"></div>
+                </div>
+            </div>
+            <div class="tiles">
+                <div class="tile"><span class="tile-label">Objetos encontrados</span><strong id="t-items">0</strong></div>
+                <div class="tile"><span class="tile-label">Dinero ganado vendiendo</span><strong id="t-money">$0</strong></div>
+                <div class="tile"><span class="tile-label">Colección</span><strong id="t-col">0 / 12</strong></div>
+                <div class="tile"><span class="tile-label">Detector en la mano</span><strong id="t-eq">Ninguno</strong></div>
+            </div>
+            <div class="ladder" id="ladder"></div>
+            <p class="tip">Ganas XP de buscador con cada hallazgo: más cuanto más raro. Cada nivel desbloquea un detector mejor, que llega más hondo, donde están las cosas más valiosas.</p>
+        </section>
+
+        <!-- Colección -->
+        <section class="view" id="view-collection">
+            <div class="col-head" id="col-head"></div>
+            <div class="grid" id="grid"></div>
+        </section>
+
+        <!-- Confirmación de compra -->
+        <div class="modal" id="modal">
+            <div class="modal-box">
+                <h2 id="m-title"></h2>
+                <p id="m-text"></p>
+                <div class="modal-actions">
+                    <button class="btn ghost" id="m-cancel">Cancelar</button>
+                    <button class="btn primary" id="m-ok">Comprar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Entrenador (primera compra) -->
+        <div class="coach-bubble" id="coach"></div>
+        <div class="toast" id="toast"></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

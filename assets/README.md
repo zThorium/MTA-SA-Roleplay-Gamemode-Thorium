@@ -42,6 +42,12 @@ assets/
     sonidos/freir.wav             aceite friendo (sintetizado, rp_pizzeria/tools/gen_assets.ps1)
     sonidos/heartbeat.wav         latido "lub-dub" (vida baja; sintetizado, rp_hud/tools/gen_sounds.ps1)
     sonidos/coins.wav             monedas al cobrar (sintetizado, rp_hud/tools/gen_sounds.ps1)
+    sonidos/detector/             pitidos agudo/grave, tono y zumbido en bucle, encendido, campanas de hallazgo por rareza,
+                                  destellos y «nuevo en la colección» (sintetizados, rp_metaldetector/tools/gen_assets.ps1)
+    texturas/detector/            brillo radial, aro, destello de 4 puntas, hoyo en la arena y viñeta (mismo script)
+  swisser-iconos/                 iconos fotorrealistas de items (SwisserDev/fivem-icons-photoreal, CC0 1.0, LICENSE.txt):
+                                  png-256/ para dx (dxCreateTexture no lee webp) y webp-100/ para paneles CEF.
+                                  Paquete completo (1235 iconos): github.com/SwisserDev/fivem-icons-photoreal (índice items.json)
   fuentes/
     rubik/                        Rubik Regular, Medium y SemiBold (.ttf, subconjunto latino con tildes, ñ, ¿ ¡) · SIL OFL 1.1 (OFL.txt)
   banderas/                       29 banderas 4:3 en SVG (<iso>.svg: Hispanoamérica, España, EE. UU., Brasil, Europa) · flag-icons de lipis, MIT (LICENSE.txt)

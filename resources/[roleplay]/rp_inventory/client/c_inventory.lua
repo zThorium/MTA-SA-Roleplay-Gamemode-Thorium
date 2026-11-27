@@ -188,7 +188,9 @@ addEventHandler("rp:inv:ui:pickup", root, function(ref)
     if isElement(obj) then triggerServerEvent("rp:inv:pickup", resourceRoot, obj) end
 end)
 
--- Columna "Personaje": vida, blindaje y el arma del inventario que lleva equipada
+-- Columna "Personaje": vida, blindaje, el arma del inventario que lleva equipada y el objeto que
+-- lleva en la mano (elementData rp:heldItem = id del item; lo pone el recurso que lo maneja, p. ej.
+-- rp_metaldetector): ese item sale marcado y su acción es «Guardar».
 local function pushCharacter()
     local weaponItem
     for _, it in ipairs(lastData and lastData.items or {}) do
@@ -204,6 +206,7 @@ local function pushCharacter()
         health = math.floor(getElementHealth(localPlayer)),
         armor = math.floor(getPedArmor(localPlayer)),
         weaponItem = weaponItem,
+        heldItem = getElementData(localPlayer, "rp:heldItem") or false,
     }
     executeBrowserJavascript(browser, ("RP.character(%s[0])"):format(toJSON(info, true)))
 end

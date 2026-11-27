@@ -228,6 +228,73 @@ ITEMS = {
         name = "Telefono roto", icon = "📵", weight = 0.2, stack = 5,
         description = "No enciende, pero tiene piezas. Se vende en la compraventa.",
     },
+    -- Detector de metales (rp_metaldetector): herramientas y botin
+    -- Cinco niveles de detector (estadisticas y precio en rp_metaldetector/shared/s_config.lua)
+    metal_detector_1 = {
+        name = "Detector Pionero", icon = "📡", weight = 2.0, stack = 1,
+        description = "Nivel 1. Usalo para encenderlo o guardarlo. Funciona caminando por la arena: pita mas rapido cuanto mas cerca.",
+        use = { event = "metaldetector" },
+    },
+    metal_detector_2 = {
+        name = "Detector Rastreador", icon = "📡", weight = 2.0, stack = 1,
+        description = "Nivel 2. Mas alcance y mejor lectura del metal; llega a monedas y relojes enterrados.",
+        use = { event = "metaldetector" },
+    },
+    metal_detector_3 = {
+        name = "Detector Cazatesoros", icon = "📡", weight = 2.0, stack = 1,
+        description = "Nivel 3. Sensible y preciso: alcanza anillos y cadenas de oro.",
+        use = { event = "metaldetector" },
+    },
+    metal_detector_4 = {
+        name = "Detector Buscador de Oro", icon = "📡", weight = 2.0, stack = 1,
+        description = "Nivel 4. Para profesionales: llega a los doblones piratas.",
+        use = { event = "metaldetector" },
+    },
+    metal_detector_5 = {
+        name = "Detector Abisal Pro", icon = "📡", weight = 2.0, stack = 1,
+        description = "Nivel 5. Alcance, profundidad y precision maximos. Nada se le escapa.",
+        use = { event = "metaldetector" },
+    },
+    shovel = {
+        name = "Pala", icon = "⛏️", weight = 1.5, stack = 1,
+        description = "Para desenterrar lo que encuentra el detector de metales (E junto a la senal).",
+    },
+    rusty_can = {
+        name = "Lata oxidada", icon = "🥫", weight = 0.2, stack = 15,
+        description = "Basura de la playa. El puesto del buscador da unas monedas por ella.",
+    },
+    scrap_metal = {
+        name = "Chatarra", icon = "🔩", weight = 0.4, stack = 15,
+        description = "Restos de metal de la playa. Se vende en el puesto del buscador o en la compraventa.",
+    },
+    rusty_key = {
+        name = "Llave oxidada", icon = "🗝️", weight = 0.05, stack = 10,
+        description = "Una llave antigua comida por la sal. ¿De que puerta sera?",
+    },
+    lost_keys = {
+        name = "Llavero perdido", icon = "🔑", weight = 0.1, stack = 5,
+        description = "Alguien se volvio a casa sin sus llaves. Se vende en el puesto del buscador.",
+    },
+    old_compass = {
+        name = "Brujula antigua", icon = "🧭", weight = 0.2, stack = 5,
+        description = "Brujula de laton de un barco viejo. Los coleccionistas la buscan.",
+    },
+    gold_earrings = {
+        name = "Pendientes de oro", icon = "✨", weight = 0.02, stack = 5,
+        description = "Un par de pendientes de oro perdidos en la arena.",
+    },
+    gold_chain = {
+        name = "Cadena de oro", icon = "📿", weight = 0.05, stack = 5,
+        description = "Cadena de oro macizo. Vale mucho en el puesto del buscador.",
+    },
+    doubloon = {
+        name = "Doblon pirata", icon = "🪙", weight = 0.03, stack = 5,
+        description = "Moneda de oro de un galeon hundido. Una pieza legendaria.",
+    },
+    jeweled_tiara = {
+        name = "Tiara enjoyada", icon = "👑", weight = 0.3, stack = 2,
+        description = "Una tiara cubierta de joyas. Nadie sabe como llego a la playa.",
+    },
     -- Documento (rp_driving): los datos viven en driving_licenses; el item es solo el papel
     driver_license = {
         name = "Licencia de conducir", icon = "🪪", weight = 0.02, stack = 1, document = true,
@@ -373,6 +440,10 @@ local ITEM_MODELS = {
     vest = { 1242, 0.8 },
     cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
     phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
+    metal_detector_1 = { 333, 1.0 }, metal_detector_2 = { 333, 1.0 }, metal_detector_3 = { 333, 1.0 },
+    metal_detector_4 = { 333, 1.0 }, metal_detector_5 = { 333, 1.0 }, shovel = { 337, 1.0 }, scrap_metal = SACK, rusty_can = CUP,
+    rusty_key = CARD, lost_keys = CARD, old_compass = { 2710, 1.0 }, gold_earrings = { 2710, 0.8 },
+    gold_chain = { 2710, 0.8 }, doubloon = { 2710, 0.8 }, jeweled_tiara = { 2710, 1.0 },
     id_card = CARD, driver_license = CARD, train_ticket = CARD,
     bp_small = { 3026, 0.75 }, bp_school = { 3026, 0.9 }, bp_hiking = { 3026, 1.15 },
     bp_tactical = { 3026, 1.3 }, bp_expedition = { 3026, 1.5 },

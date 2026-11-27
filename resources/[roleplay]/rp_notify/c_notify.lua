@@ -37,7 +37,7 @@ local F_LABEL = font("kenney_future.ttf", math.floor(8 * S + 0.5), "default-bold
 local F_BODY = font("rubik_medium.ttf", math.floor(10 * S + 0.5), "default")
 local F_TITLE = font("kenney_future.ttf", math.floor(24 * S + 0.5), "default-bold")
 local F_SUB = font("rubik_regular.ttf", math.floor(12 * S + 0.5), "default")
-local F_BUBBLE = font("rubik_medium.ttf", math.floor(10.5 * S + 0.5), "default")
+local F_BUBBLE = font("rubik_medium.ttf", math.floor(13 * S + 0.5), "default")
 
 local TYPES = {
     info    = { color = { 86, 168, 255 },  label = "INFO",     glyph = "info",  sound = "glass_001.ogg",        popSound = "bong_001.ogg" },
@@ -209,16 +209,18 @@ end
 
 function bubble(element, text, duration)
     if not isElement(element) or type(text) ~= "string" then return false end
-    local lines = wrap(text, px(230), F_BUBBLE, 6)
+    local lines = wrap(text, px(300), F_BUBBLE, 7)
     local widths, w = {}, 0
     for n, l in ipairs(lines) do
         widths[n] = dxGetTextWidth(l, 1, F_BUBBLE)
         w = math.max(w, widths[n])
     end
+    -- Tiempo mínimo para que termine de escribirse (60 letras/s) y dé tiempo a leerlo
+    local readMs = 1500 + (utf8.len(text) or #text) * 70
     bubbles[element] = {
         lines = lines, widths = widths,
-        w = w + px(26), h = #lines * dxGetFontHeight(1, F_BUBBLE) + px(18),
-        start = getTickCount(), duration = tonumber(duration) or 5000,
+        w = w + px(30), h = #lines * dxGetFontHeight(1, F_BUBBLE) + px(22),
+        start = getTickCount(), duration = math.max(tonumber(duration) or 5000, readMs),
     }
     playNotifySound("pluck_002.ogg", 0.35)
     return true
@@ -486,7 +488,8 @@ local function drawBubbles(now)
             local sx, sy = getScreenFromWorldPosition(x, y, z)
             if sx and dist < 30 then
                 local outK = easeIn((age - (b.duration - 300)) / 300)
-                local sc = clamp(1.2 - dist / 30, 0.6, 1) * (0.55 + 0.45 * easeOutBack(age / 320)) * (1 - 0.25 * outK)
+                -- Casi sin encoger con la distancia: el texto escalado hacia abajo se vuelve ilegible
+                local sc = clamp(1.15 - dist / 40, 0.85, 1) * (0.55 + 0.45 * easeOutBack(age / 320)) * (1 - 0.25 * outK)
                 local a = clamp(age / 140, 0, 1) * (1 - outK)
                 local w, h = b.w * sc, b.h * sc
                 local bx, by = sx - w / 2, sy - h - px(14) * sc
@@ -497,15 +500,15 @@ local function drawBubbles(now)
                 roundRect(bx, by, w, h, r, white, false)
                 DX.poly({ { sx - px(9) * sc, by + h, white }, { sx + px(4) * sc, by + h, white }, { sx - px(4) * sc, by + h + px(11) * sc, white } }, false)
 
-                -- Texto letra a letra (45 por segundo)
-                local left = math.floor((age - 120) * 0.045)
+                -- Texto letra a letra (60 por segundo)
+                local left = math.floor((age - 120) * 0.06)
                 for n, line in ipairs(b.lines) do
                     if left <= 0 then break end
                     local len = utf8.len(line) or #line
                     local shown = left >= len and line or utf8.sub(line, 1, left)
                     left = left - len - 1
                     local lx = sx - b.widths[n] * sc / 2
-                    dxDrawText(shown, lx, by + px(9) * sc + (n - 1) * BUBBLE_LH * sc, 0, 0, tocolor(22, 24, 32, 255 * a), sc, F_BUBBLE, "left", "top")
+                    dxDrawText(shown, math.floor(lx + 0.5), math.floor(by + px(11) * sc + (n - 1) * BUBBLE_LH * sc + 0.5), 0, 0, tocolor(12, 14, 20, 255 * a), sc, F_BUBBLE, "left", "top")
                 end
             end
         end

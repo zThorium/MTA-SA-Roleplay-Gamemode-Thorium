@@ -16,6 +16,9 @@ local cooldown = {}
 
 addEvent("rp:jobs:openMarket", true)
 addEvent("rp:jobs:sell", true)
+-- Aviso para otros recursos tras una venta (source = jugador): (marketId, itemId, cantidad, total cobrado).
+-- Lo usa rp_metaldetector para el dinero ganado del buscador.
+addEvent("rp:jobs:onMarketSale", false)
 
 local function notify(p, t, k, d) exports.rp_notify:notify(p, t, k, d) end
 
@@ -111,6 +114,7 @@ addEventHandler("rp:jobs:sell", resourceRoot, function(marketId, itemId, amount)
     if not ok then return notify(player, "No se pudo completar la venta.", "error") end
     givePlayerMoney(player, total)
     exports.rp_characters:saveCharacter(player)
+    triggerEvent("rp:jobs:onMarketSale", player, m.id, itemId, amount, total)
     exports.rp_notify:notify(player, ("Vendiste %dx %s por $%d."):format(amount, Jobs.itemName(itemId), total), "success")
     triggerClientEvent(player, "rp:jobs:market", resourceRoot, marketData(player, m))
 end)
