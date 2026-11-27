@@ -24,6 +24,18 @@
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/confirmation_003.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/minimize_003.ogg" />
+    <file src="html/sounds/back_002.ogg" />
+    <file src="html/sounds/toggle_002.ogg" />
+    <file src="html/sounds/drop_002.ogg" />
+    <file src="html/sounds/rollover2.ogg" />
 
     <!-- Altura y tono de piel (mta-helper.fx: ejemplo oficial de shaders de MTA) -->
     <file src="fx/body.fx" />

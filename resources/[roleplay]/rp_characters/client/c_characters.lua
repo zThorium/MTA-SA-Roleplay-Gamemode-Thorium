@@ -25,6 +25,7 @@ addEvent("rp:chars:ui:rotate", false)
 addEvent("rp:chars:ui:create", false)
 addEvent("rp:chars:ui:play", false)
 addEvent("rp:chars:ui:delete", false)
+addEvent("rp:chars:ui:music", false)
 
 local function jsString(s)
     s = tostring(s or "")
@@ -50,12 +51,42 @@ end
 ----------------------------------------------------------------
 -- "body": cuerpo entero | "face": primer plano de la cabeza
 local cameraMode = "body"
-local function setPreviewCamera()
+local CAM_MS = 750
+local cam = { cur = nil, from = nil, to = nil, start = 0, ms = CAM_MS, moving = false }
+
+local function cameraTarget()
     local s = SCENE
     if cameraMode == "face" then
-        setCameraMatrix(s.x, s.y + 1.25, s.z + 0.72, s.x + 0.32, s.y, s.z + 0.62, 0, 45)
-    else
-        setCameraMatrix(s.x, s.y + 3.4, s.z + 0.45, s.x + 1.0, s.y, s.z + 0.15, 0, 60)
+        return { s.x, s.y + 1.25, s.z + 0.72, s.x + 0.32, s.y, s.z + 0.62, 0, 45 }
+    end
+    return { s.x, s.y + 3.4, s.z + 0.45, s.x + 1.0, s.y, s.z + 0.15, 0, 60 }
+end
+
+-- Movimiento suave de camara entre planos (cuerpo, rostro, entrada)
+local function cameraRender()
+    local t = math.min(1, (getTickCount() - cam.start) / cam.ms)
+    local e = 1 - (1 - t) ^ 3   -- sale rapido y frena suave
+    for i = 1, 8 do cam.cur[i] = cam.from[i] + (cam.to[i] - cam.from[i]) * e end
+    setCameraMatrix(unpack(cam.cur))
+    if t >= 1 then
+        cam.moving = false
+        removeEventHandler("onClientPreRender", root, cameraRender)
+    end
+end
+
+local function stopCameraMove()
+    if cam.moving then removeEventHandler("onClientPreRender", root, cameraRender) end
+    cam.moving, cam.cur = false, nil
+end
+
+-- from (opcional): plano de partida, para la entrada en grua
+local function setPreviewCamera(from, ms)
+    local target = cameraTarget()
+    cam.cur = cam.cur or from or target
+    cam.from, cam.to, cam.start, cam.ms = { unpack(cam.cur) }, target, getTickCount(), ms or CAM_MS
+    if not cam.moving then
+        cam.moving = true
+        addEventHandler("onClientPreRender", root, cameraRender)
     end
 end
 
@@ -99,10 +130,14 @@ local function createScene()
         setElementFrozen(previewPed, true)
         previewRot = 0
     end
-    setPreviewCamera()
+    -- entrada: la camara baja en grua desde lo alto de la estacion hasta el personaje
+    local p = SCENE
+    cameraMode = "body"
+    setPreviewCamera({ p.x - 14, p.y + 22, p.z + 16, p.x, p.y, p.z + 0.5, 0, 70 }, 2200)
 end
 
 local function destroyScene()
+    stopCameraMove()
     if isElement(previewPed) then
         exports.rp_heads:removeHead(previewPed)
         removePedBody(previewPed)
@@ -132,6 +167,8 @@ local function openUI()
     addEventHandler("onClientBrowserDocumentReady", browser, function()
         documentReady = true
         executeBrowserJavascript(source, ("RP.setAppearance(%s)"):format(json(appearanceData())))
+        -- la musica es la del login (rp_login): mismo boton, misma preferencia
+        executeBrowserJavascript(source, ("RP.setMusic(%s)"):format(exports.rp_login:isLoginMusicOn() and "true" or "false"))
         for _, code in ipairs(jsQueue) do executeBrowserJavascript(source, code) end
         jsQueue = {}
     end)
@@ -207,6 +244,10 @@ addEventHandler("rp:chars:ui:create", root, function(payload)
         race = tonumber(data.race), head = tonumber(data.head),
         torso = tonumber(data.torso), legs = tonumber(data.legs), shoes = tonumber(data.shoes),
     })
+end)
+
+addEventHandler("rp:chars:ui:music", root, function()
+    callJS(("RP.setMusic(%s)"):format(exports.rp_login:toggleLoginMusic() and "true" or "false"))
 end)
 
 addEventHandler("rp:chars:ui:play", root, function(id)

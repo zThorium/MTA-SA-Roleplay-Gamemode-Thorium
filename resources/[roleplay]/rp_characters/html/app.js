@@ -49,6 +49,26 @@
         }
     }
 
+    // ---------------------------------------------------------- Sonidos
+    var SOUNDS = {};
+    ["click_002", "select_002", "error_004", "confirmation_003", "maximize_003", "minimize_003",
+     "back_002", "toggle_002", "drop_002", "rollover2"].forEach(function (n) {
+        SOUNDS[n] = new Audio("sounds/" + n + ".ogg");
+    });
+    function sfx(name, volume) {
+        var a = SOUNDS[name];
+        if (!a) return;
+        a = a.cloneNode();
+        a.volume = volume === undefined ? 0.6 : volume;
+        a.play().catch(function () {});
+    }
+
+    // Sonido suave al pasar por botones y tarjetas (una vez por entrada)
+    document.addEventListener("mouseover", function (e) {
+        var target = e.target.closest && e.target.closest("button, .slot");
+        if (target && !target.contains(e.relatedTarget)) sfx("rollover2", 0.2);
+    });
+
     function el(tag, className, text) {
         var node = document.createElement(tag);
         if (className) node.className = className;
@@ -154,13 +174,15 @@
             play.addEventListener("click", function (e) {
                 e.stopPropagation();
                 if (state.busy) return;
+                sfx("confirmation_003", 0.7);
                 setBusy(true);
                 setMessage("select-message", "Entrando...", "success");
+                document.body.classList.add("leaving");
                 send("rp:chars:ui:play", c.id);
             });
             var del = el("button", "danger ghost", "Eliminar");
             del.type = "button";
-            del.addEventListener("click", function (e) { e.stopPropagation(); openDelete(c); });
+            del.addEventListener("click", function (e) { e.stopPropagation(); sfx("minimize_003", 0.5); openDelete(c); });
             actions.appendChild(play);
             actions.appendChild(del);
             card.appendChild(actions);
@@ -173,7 +195,7 @@
             var empty = el("div", "slot empty");
             empty.appendChild(el("span", "plus", "+"));
             empty.appendChild(el("span", null, "Crear personaje"));
-            empty.addEventListener("click", openCreate);
+            empty.addEventListener("click", function () { sfx("maximize_003"); openCreate(); });
             container.appendChild(empty);
         }
 
@@ -184,6 +206,7 @@
     }
 
     function selectCharacter(c) {
+        if (state.selectedId !== c.id) sfx("select_002");
         state.selectedId = c.id;
         previewCharacter(c);
         renderSlots();
@@ -209,9 +232,10 @@
     $("delete-input").addEventListener("input", function () {
         $("delete-confirm").disabled = !deleting || this.value.trim() !== displayName(deleting.name);
     });
-    $("delete-cancel").addEventListener("click", closeDelete);
+    $("delete-cancel").addEventListener("click", function () { sfx("back_002", 0.5); closeDelete(); });
     $("delete-confirm").addEventListener("click", function () {
         if (!deleting) return;
+        sfx("drop_002");
         setBusy(true);
         send("rp:chars:ui:delete", deleting.id);
         closeDelete();
@@ -241,6 +265,7 @@
             var b = el("button", race === state.race ? "active" : "", name);
             b.type = "button";
             b.addEventListener("click", function () {
+                sfx("select_002", 0.5);
                 state.race = race;
                 state.index.head = 0;
                 var tone = state.data.toneByRace[String(race)];
@@ -266,6 +291,10 @@
             function step(delta) {
                 state.index[row.key] = wrap(state.index[row.key] + delta, row.total);
                 value.textContent = (state.index[row.key] + 1) + " / " + row.total;
+                sfx("click_002", 0.45);
+                value.classList.remove("bump");
+                void value.offsetWidth;   // reinicia la animacion
+                value.classList.add("bump");
                 if (row.camera) setCamera(row.camera);
                 sendLook();
             }
@@ -341,6 +370,7 @@
             b2.title = tone.name;
             b2.style.background = tone.hex;
             b2.addEventListener("click", function () {
+                sfx("toggle_002", 0.5);
                 state.body.tone = index;
                 setCamera("body");
                 renderBody();
@@ -399,6 +429,7 @@
         input.classList.add("invalid");
         input.focus();
         setMessage("create-message", message, "error");
+        sfx("error_004");
         send("rp:chars:ui:notify", message, "error");
         return null;
     }
@@ -441,16 +472,24 @@
         if (state.busy) return;
         var data = collect();
         if (!data) return;
+        sfx("click_002");
         setMessage("create-message", "");
         setBusy(true);
         send("rp:chars:ui:create", JSON.stringify(data));
     });
 
     form.story.addEventListener("input", updateStoryCount);
-    $("btn-back").addEventListener("click", function () { RP.showSelect(state.characters, state.maxSlots); });
-    $("btn-zoom").addEventListener("click", function () { setCamera(state.camera === "face" ? "body" : "face"); });
+    $("btn-back").addEventListener("click", function () { sfx("back_002"); RP.showSelect(state.characters, state.maxSlots); });
+    $("btn-zoom").addEventListener("click", function () { sfx("click_002", 0.5); setCamera(state.camera === "face" ? "body" : "face"); });
     document.querySelectorAll("#gender button").forEach(function (b) {
-        b.addEventListener("click", function () { setGender(Number(b.dataset.gender)); });
+        b.addEventListener("click", function () { sfx("select_002", 0.5); setGender(Number(b.dataset.gender)); });
+    });
+
+    // ---------------------------------------------------------- Musica (la del login)
+    var musicBtn = $("music");
+    musicBtn.addEventListener("click", function () {
+        sfx("toggle_002", 0.5);
+        send("rp:chars:ui:music");
     });
 
     // ---------------------------------------------------------- Girar al personaje
@@ -494,8 +533,14 @@
             if (selected) previewCharacter(selected);
             renderSlots();
         },
+        setMusic: function (on) {
+            musicBtn.classList.toggle("off", !on);
+            musicBtn.querySelector("small").textContent = "XNOVA · clic para " + (on ? "silenciar" : "activar");
+        },
         onResult: function (ok, message) {
             setBusy(false);
+            sfx(ok ? "confirmation_003" : "error_004");
+            if (!ok) document.body.classList.remove("leaving");
             var creating = document.body.classList.contains("creating");
             setMessage(creating && !ok ? "create-message" : "select-message", message, ok ? "success" : "error");
         }

@@ -14,6 +14,23 @@
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />
+    <file src="html/fonts/rubik_medium.ttf" />
+    <file src="html/fonts/rubik_semibold.ttf" />
+    <file src="html/fonts/kenney_future.ttf" />
+    <file src="html/sounds/click_002.ogg" />
+    <file src="html/sounds/select_002.ogg" />
+    <file src="html/sounds/error_004.ogg" />
+    <file src="html/sounds/confirmation_003.ogg" />
+    <file src="html/sounds/maximize_003.ogg" />
+    <file src="html/sounds/toggle_002.ogg" />
+    <file src="html/sounds/rollover2.ogg" />
+
+    <!-- Musica del login (ver CREDITOS.md) -->
+    <file src="music/login.mp3" />
+
+    <!-- Cliente: rp_characters comparte el boton de musica -->
+    <export function="isLoginMusicOn" type="client" />
+    <export function="toggleLoginMusic" type="client" />
 
     <export function="isPlayerLoggedIn" type="server" />
     <export function="getPlayerAccountId" type="server" />

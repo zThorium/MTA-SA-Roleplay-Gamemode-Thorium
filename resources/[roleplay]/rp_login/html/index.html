@@ -2,55 +2,87 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Roleplay - Acceso</title>
+    <title>Thorium Roleplay - Acceso</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Cine: franjas, viñeta y grano sobre el recorrido de cámara -->
+    <div class="bars top"></div>
+    <div class="bars bottom"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+    <div class="flash" id="flash"></div>
+
     <main class="panel" id="panel">
         <header class="brand">
-            <span class="brand-mark">RP</span>
+            <div class="brand-mark"><span>T</span></div>
             <div>
-                <h1>San Andreas Roleplay</h1>
-                <p>Inicia sesion o crea tu cuenta para empezar</p>
+                <h1>THORIUM</h1>
+                <p>Roleplay · Los Santos</p>
             </div>
         </header>
 
         <nav class="tabs" role="tablist">
-            <button type="button" class="tab active" data-tab="login" role="tab">Iniciar sesion</button>
+            <button type="button" class="tab active" data-tab="login" role="tab">Iniciar sesión</button>
             <button type="button" class="tab" data-tab="register" role="tab">Registrarse</button>
+            <span class="tab-indicator"></span>
         </nav>
 
-        <form id="form-login" class="form active" autocomplete="off" novalidate>
-            <label>Usuario
-                <input name="username" type="text" maxlength="24" spellcheck="false" autofocus>
-            </label>
-            <label>Contrasena
-                <input name="password" type="password" maxlength="64">
-            </label>
-            <label class="remember">
-                <input name="remember" type="checkbox">
-                <span>Recordar usuario y contrasena en este equipo</span>
-            </label>
-            <p class="message" aria-live="polite"></p>
-            <button type="submit" class="primary">Entrar</button>
-        </form>
+        <div class="forms">
+            <form id="form-login" class="form active" autocomplete="off" novalidate>
+                <div class="field">
+                    <input name="username" type="text" maxlength="24" spellcheck="false" placeholder=" " autofocus>
+                    <label>Usuario</label>
+                    <svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>
+                </div>
+                <div class="field">
+                    <input name="password" type="password" maxlength="64" placeholder=" ">
+                    <label>Contraseña</label>
+                    <svg viewBox="0 0 24 24"><path d="M17 9V7A5 5 0 0 0 7 7v2H5v12h14V9h-2zM9 7a3 3 0 0 1 6 0v2H9V7zm3 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+                    <button type="button" class="reveal" tabindex="-1" title="Mostrar contraseña">👁</button>
+                </div>
+                <label class="remember">
+                    <input name="remember" type="checkbox">
+                    <span class="check"></span>
+                    <span>Recordar usuario y contraseña en este equipo</span>
+                </label>
+                <p class="message" aria-live="polite"></p>
+                <button type="submit" class="primary"><span class="label">Entrar</span><span class="spinner"></span></button>
+            </form>
 
-        <form id="form-register" class="form" autocomplete="off" novalidate>
-            <label>Usuario
-                <input name="username" type="text" maxlength="24" spellcheck="false">
-                <small>3-24 caracteres. Letras, numeros y _ (empieza por letra).</small>
-            </label>
-            <label>Contrasena
-                <input name="password" type="password" maxlength="64">
-                <small>Minimo 6 caracteres.</small>
-            </label>
-            <label>Repite la contrasena
-                <input name="confirm" type="password" maxlength="64">
-            </label>
-            <p class="message" aria-live="polite"></p>
-            <button type="submit" class="primary">Crear cuenta</button>
-        </form>
+            <form id="form-register" class="form" autocomplete="off" novalidate>
+                <div class="field">
+                    <input name="username" type="text" maxlength="24" spellcheck="false" placeholder=" ">
+                    <label>Usuario</label>
+                    <svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>
+                    <small>3-24 caracteres: letras, números y _ (empieza por letra)</small>
+                </div>
+                <div class="field">
+                    <input name="password" type="password" maxlength="64" placeholder=" ">
+                    <label>Contraseña</label>
+                    <svg viewBox="0 0 24 24"><path d="M17 9V7A5 5 0 0 0 7 7v2H5v12h14V9h-2zM9 7a3 3 0 0 1 6 0v2H9V7zm3 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+                    <button type="button" class="reveal" tabindex="-1" title="Mostrar contraseña">👁</button>
+                    <div class="strength"><i></i></div>
+                </div>
+                <div class="field">
+                    <input name="confirm" type="password" maxlength="64" placeholder=" ">
+                    <label>Repite la contraseña</label>
+                    <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+                </div>
+                <p class="message" aria-live="polite"></p>
+                <button type="submit" class="primary"><span class="label">Crear cuenta</span><span class="spinner"></span></button>
+            </form>
+        </div>
     </main>
+
+    <!-- Lugar del plano actual -->
+    <div class="location" id="location"><span class="loc-name"></span><span class="loc-sub">San Andreas</span></div>
+
+    <!-- Música: un clic la apaga o la enciende (se recuerda en este equipo) -->
+    <button type="button" class="music" id="music" title="Activar o silenciar la música">
+        <span class="eq"><i></i><i></i><i></i><i></i></span>
+        <span class="music-text"><b>GTA Type Beat</b><small>XNOVA · clic para silenciar</small></span>
+    </button>
 
     <script src="app.js"></script>
 </body>
