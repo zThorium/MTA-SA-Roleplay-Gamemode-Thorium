@@ -67,6 +67,7 @@ local function spawnShop(row, items)
     local col = createColSphere(row.x, row.y, row.z, INTERACT_RADIUS)
     setElementInterior(col, row.interior)
     setElementDimension(col, row.dimension)
+    attachElements(col, ped)   -- la esfera sigue al NPC si otro recurso lo mueve
 
     local blip = createBlipAttachedTo(ped, 52, 2, 255, 255, 255, 255, 0, 250)
 
@@ -148,13 +149,25 @@ end)
 ----------------------------------------------------------------
 -- Compra
 ----------------------------------------------------------------
+-- Cerca del vendedor: dentro de la esfera de la tienda (la misma que enciende el "Pulsa E" en el
+-- cliente) o a menos de INTERACT_RADIUS + 1.5 m del NPC en planta. La altura se tolera aparte:
+-- NPC creados un poco por encima del suelo (eventos, puntos de admin) no deben rechazar la compra.
 local function isNear(player, shopId)
     local shop = shops[shopId]
     if not shop or not isElement(shop.ped) then return false end
-    if getElementDimension(player) ~= getElementDimension(shop.ped) or getElementInterior(player) ~= getElementInterior(shop.ped) then return false end
+    if getElementDimension(player) ~= getElementDimension(shop.ped) or getElementInterior(player) ~= getElementInterior(shop.ped) then
+        outputDebugString(("[rp_shops] %s lejos de la tienda #%s: dim/int %d/%d vs NPC %d/%d"):format(getPlayerName(player), tostring(shopId),
+            getElementDimension(player), getElementInterior(player), getElementDimension(shop.ped), getElementInterior(shop.ped)), 3)
+        return false
+    end
+    if isElement(shop.col) and isElementWithinColShape(player, shop.col) then return true end
     local px, py, pz = getElementPosition(player)
     local sx, sy, sz = getElementPosition(shop.ped)
-    return getDistanceBetweenPoints3D(px, py, pz, sx, sy, sz) <= INTERACT_RADIUS + 1.5
+    local flat = getDistanceBetweenPoints2D(px, py, sx, sy)
+    if flat <= INTERACT_RADIUS + 1.5 and math.abs(pz - sz) <= 3 then return true end
+    outputDebugString(("[rp_shops] %s lejos de la tienda #%s: %.1f m en planta, %.1f m de altura"):format(
+        getPlayerName(player), tostring(shopId), flat, pz - sz), 3)
+    return false
 end
 
 local function catalogFor(shopId)
@@ -309,6 +322,7 @@ function addTempShop(ped, name, catalog, greeting)
     local col = createColSphere(x, y, z, INTERACT_RADIUS)
     setElementInterior(col, getElementInterior(ped))
     setElementDimension(col, getElementDimension(ped))
+    attachElements(col, ped)   -- la esfera sigue al NPC si otro recurso lo mueve
     setElementData(ped, "rp:shopId", id)      -- invulnerable en el cliente (c_shops.lua)
     setElementData(ped, "rp:shopName", name)
     shops[id] = { row = { id = id, name = name }, items = items, ped = ped, col = col, temp = true }
