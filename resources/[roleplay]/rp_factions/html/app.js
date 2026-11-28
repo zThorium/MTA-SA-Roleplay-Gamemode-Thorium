@@ -41,6 +41,7 @@
         { id: "members", label: "Miembros", visible: function () { return data.members !== false || has("invite"); } },
         { id: "ranks", label: "Roles y permisos", visible: function () { return has("manage_ranks"); } },
         { id: "bank", label: "Fondos", visible: function () { return data.faction.bank !== false || has("bank_deposit"); } },
+        { id: "duty", label: "Uniformes y equipo", visible: function () { return data.faction.genericDuty && has("manage_ranks"); } },
         { id: "log", label: "Registro", visible: function () { return data.log !== false; } }
     ];
 
@@ -286,6 +287,19 @@
         if (!f.stateFunded) panel.appendChild(el("p", "muted", "Si los fondos no alcanzan para el sueldo de un miembro, ese payday lo cubre el sueldo base del Estado."));
     }
 
+    // ---------------------------------------------------------- Uniformes y equipo (rp_factionduty)
+    function renderDuty(panel) {
+        var box = el("div", "box");
+        box.appendChild(el("h3", null, "Servicio en el vestuario"));
+        box.appendChild(el("p", "muted", "Define los equipos de servicio: nombre, rol minimo, uniforme y los objetos que se entregan. " +
+            "Los miembros los eligen en el vestuario de la faccion y los devuelven al salir de servicio. " +
+            "Si la faccion tiene vestuario, el sueldo solo se cobra estando de servicio."));
+        var row = el("div", "row");
+        row.appendChild(button("Abrir editor de equipos", "primary", function () { send("rp:fac:ui:dutyEditor"); }));
+        box.appendChild(row);
+        panel.appendChild(box);
+    }
+
     // ---------------------------------------------------------- Registro
     function renderLog(panel) {
         var box = el("div", "box");
@@ -314,7 +328,7 @@
 
         var panel = $("panel");
         panel.innerHTML = "";
-        ({ summary: renderSummary, members: renderMembers, ranks: renderRanks, bank: renderBank, log: renderLog })[tab](panel);
+        ({ summary: renderSummary, members: renderMembers, ranks: renderRanks, bank: renderBank, duty: renderDuty, log: renderLog })[tab](panel);
     }
 
     $("btn-close").addEventListener("click", function () { send("rp:fac:ui:close"); });

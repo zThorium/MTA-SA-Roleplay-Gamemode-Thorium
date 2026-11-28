@@ -41,24 +41,32 @@ end
 -- dutyData = element data (true/false) que ese recurso pone en el jugador al entrar o salir de servicio;
 --   con ella el cliente sabe quién está de servicio (nametags) sin preguntar al servidor.
 --   Un sistema nuevo de facción (médicos, taxis...) se registra aquí, no con llamadas a mano.
+-- dutyOptional = el servicio solo cuenta si ese recurso dice que la facción lo tiene (export hasDuty(factionId)):
+--   lo usa el servicio genérico rp_factionduty, que solo existe en las facciones con vestuario.
 -- Pertenencia: los recursos preguntan por el TIPO (isPlayerInFaction(p, "policia")), nunca por un id fijo.
+local GENERIC = { duty = "rp_factionduty", dutyData = "rp:factionDuty", dutyOptional = true }
+local function generic(t)
+    for k, v in pairs(GENERIC) do t[k] = v end
+    return t
+end
+
 FACTION_TYPES = {
-    gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff" },
+    gobierno = generic({ name = "Gobierno",          state = true,  color = "#4c9aff" }),
     policia  = { name = "Policia",           state = true,  color = "#3b6fe0", duty = "rp_police", dutyData = "rp:policeDuty" },
     medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d" },
     bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b", duty = "rp_firefighters", dutyData = "rp:fireDuty" },
-    empresa  = { name = "Empresa",           state = false, color = "#4cd38a" },
+    empresa  = generic({ name = "Empresa",           state = false, color = "#4cd38a" }),
     banda    = { name = "Banda",             state = false, color = "#a35bff" },
-    otra     = { name = "Otra",              state = false, color = "#f5a524" },
-    -- Tipos de los sistemas de las fases F2-F6 (#102). Sin duty hasta que su recurso lleve el servicio;
-    -- al hacerlo se añade aquí duty/dutyData. La clave cabe en factions.type (VARCHAR(16)).
-    mecanicos     = { name = "Mecanicos",          state = false, color = "#c9a227" },
-    noticias      = { name = "Noticias",           state = false, color = "#2ec4d6" },
-    transporte    = { name = "Taxis y buses",      state = false, color = "#ffd23f" },
-    logistica     = { name = "Distribuidora",      state = false, color = "#8d6e4f" },
-    seguros       = { name = "Aseguradora",        state = false, color = "#5c7cfa" },
-    seguridad     = { name = "Seguridad privada",  state = false, color = "#6b7a8f" },
-    concesionaria = { name = "Concesionaria",      state = false, color = "#e0679a" },
+    otra     = generic({ name = "Otra",              state = false, color = "#f5a524" }),
+    -- Tipos de los sistemas de las fases F2-F6 (#102). Usan el servicio genérico (rp_factionduty, #104) hasta que
+    -- su recurso lleve uno propio; entonces se cambia aquí duty/dutyData. La clave cabe en factions.type (VARCHAR(16)).
+    mecanicos     = generic({ name = "Mecanicos",          state = false, color = "#c9a227" }),
+    noticias      = generic({ name = "Noticias",           state = false, color = "#2ec4d6" }),
+    transporte    = generic({ name = "Taxis y buses",      state = false, color = "#ffd23f" }),
+    logistica     = generic({ name = "Distribuidora",      state = false, color = "#8d6e4f" }),
+    seguros       = generic({ name = "Aseguradora",        state = false, color = "#5c7cfa" }),
+    seguridad     = generic({ name = "Seguridad privada",  state = false, color = "#6b7a8f" }),
+    concesionaria = generic({ name = "Concesionaria",      state = false, color = "#e0679a" }),
     mafia         = { name = "Mafia",              state = false, color = "#8b1e2d" },
 }
 

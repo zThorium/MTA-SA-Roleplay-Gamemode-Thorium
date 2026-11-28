@@ -62,6 +62,13 @@ end)
 addEventHandler("rp:fac:closeUI", resourceRoot, function() close(false) end)
 addEventHandler("rp:fac:ui:close", root, function() close() end)
 
+-- Pestaña "Uniformes y equipo": cierra F3 y abre el editor de rp_factionduty (su servidor valida el permiso)
+addEvent("rp:fac:ui:dutyEditor", false)
+addEventHandler("rp:fac:ui:dutyEditor", root, function()
+    close()
+    triggerEvent("rp:factionduty:openEditor", localPlayer)
+end)
+
 -- El HTML manda un JSON con los datos de la accion; se reenvia tal cual y el servidor valida
 addEventHandler("rp:fac:ui:action", root, function(action, json)
     if type(action) ~= "string" or type(json) ~= "string" or #json > 4000 then return end

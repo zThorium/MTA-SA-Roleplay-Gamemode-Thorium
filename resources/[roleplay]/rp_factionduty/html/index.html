@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vestuario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="window" id="window">
+        <header>
+            <span class="tag" id="tag">--</span>
+            <div class="head-text">
+                <h1 id="title">Vestuario</h1>
+                <p class="sub" id="subtitle"></p>
+            </div>
+            <span class="pill" id="status"></span>
+            <button type="button" class="close" id="btn-close" aria-label="Cerrar">&times;</button>
+        </header>
+
+        <!-- Entrenador: un paso a la vez (UX-04) -->
+        <ol class="steps" id="steps"></ol>
+
+        <section class="body" id="body"></section>
+
+        <footer>
+            <span class="hint"><kbd>Esc</kbd> para cerrar</span>
+            <div id="footer-actions"></div>
+        </footer>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

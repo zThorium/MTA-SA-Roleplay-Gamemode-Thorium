@@ -138,7 +138,7 @@ HELP.COMMANDS = {
 -- Guia para jugadores nuevos: pasos en orden
 HELP.GUIDE = {
     { title = "1. Lee las reglas y los conceptos", text = "Son cortos y te ahorran sanciones. Si no entiendes una sigla, la tienes en la pestana Conceptos de rol." },
-    { title = "2. Consigue dinero",                text = "Cada 60 minutos de juego cobras un sueldo en el banco (/payday). Si entras a una faccion, cobras el sueldo de tu rol." },
+    { title = "2. Consigue dinero",                text = "Cada 60 minutos de juego cobras un sueldo en el banco (/payday). Si entras a una faccion, cobras el sueldo de tu rol (si tu faccion tiene vestuario, solo estando de servicio: E en el vestuario)." },
     { title = "3. Usa el banco y los cajeros",     text = "Puedes depositar y transferir desde el telefono (P). Para retirar efectivo ve a un cajero y pulsa E." },
     { title = "4. Compra lo basico",               text = "En las tiendas (E junto al dependiente) hay comida y bebida. Vigila el hambre, la sed y la energia en el HUD." },
     { title = "5. Muevete por la ciudad",          text = "Pide un viaje con Vroom desde el telefono o compra tu propio auto en el concesionario Coutt and Schutz." },
