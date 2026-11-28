@@ -1,0 +1,10 @@
+<meta>
+    <info author="Thorium" name="RP Ballistics" description="Daño por calibre a los NPC: tiro en la cabeza mata al instante y cada arma mata en 1-5 balas segun su calibre" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0" />
+
+    <script src="shared/s_config.lua" type="shared" />
+    <script src="server/s_ballistics.lua" type="server" />
+    <script src="client/c_ballistics.lua" type="client" cache="false" />
+
+    <export function="computeHit" type="server" />
+</meta>
