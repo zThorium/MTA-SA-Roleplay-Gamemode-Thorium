@@ -1,5 +1,16 @@
 # Auditoría de rp_train
 
+## 2026-11-28 · mejorar (barreras largas en el cruce de Idlewood)
+- **Foco**: barreras que abarcan todo el cruce de Idlewood (2200, -1732) y poder ajustar el largo del brazo.
+- **Nota**: 100/100 → 100/100 (OK 32, FALLA B 0, FALLA I 0, AVISO 0)
+- **Cambios**:
+  - P5 Columna `rail_crossings.length` (BD-01, `ADD COLUMN IF NOT EXISTS`, NULL = brazo de serie): el brazo 968 se escala a lo largo (`setObjectScale(arm, 1, 1, length / BARRIER_ARM_LENGTH)`) y pierde la colisión, como el de los torniquetes.
+  - P5 `/puntabarrera [id]` (DOC-03, catálogo de `rp_adminpanel`): de pie donde debe acabar la punta del brazo bajado; gira (`rot` = rumbo base→punta, `side` = 1) y alarga esa barrera o la más cercana a 25 m (`BARRIER_TIP_MAX`).
+  - Dos barreras sembradas en el esquema (idempotente, `NOT EXISTS` a 3 m): base (2194.93, -1725.55) con brazo de 12,49 m hacia el sur y base (2206.68, -1739.14) con brazo de 13,02 m hacia el norte.
+- **Reglas manuales**: SEG-02 (solo admin, sin eventos remotos), BD-06 (consultas parametrizadas), INT-09 N/A (herramienta de admin).
+- **Pendiente**: el sentido de bajada supone que la rotación Y +90 lleva el brazo al eje X local (lo mismo que asumen los torniquetes); si en juego baja al revés, cambiar el signo en `/puntabarrera` o usar `side = -1`. Si se borra una de las dos barreras sembradas, el esquema la vuelve a crear al reiniciar `rp_database`: para quitarla del todo, borrar también su `INSERT` en `schema.lua`.
+- **Probar en juego**: `restart rp_database` y `restart rp_train`; en el cruce ver que los dos brazos suben en vertical (~12-13 m) y al pasar el tren bajan cubriendo cada uno su mitad hasta la punta indicada; `/puntabarrera` junto a una barrera para reajustar; `/debugscript 3` limpio.
+
 ## 2026-11-27 · mejorar (boletería destacada, torniquetes y rejas)
 - **Foco**: que se vea quién vende los boletos y torniquetes en las estaciones donde se valida (corta) el boleto con una UI.
 - **Nota**: 98/100 → 100/100 (OK 31 → 32, FALLA B 0, FALLA I 0, AVISO 1 → 0)

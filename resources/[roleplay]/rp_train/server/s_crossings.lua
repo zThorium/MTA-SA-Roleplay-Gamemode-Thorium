@@ -22,6 +22,11 @@ local function spawnCrossing(row)
     c.d = TrainTrack.project(row.x, row.y)
     c.base = createObject(TRAIN.BARRIER_BASE_MODEL, row.x, row.y, row.z - 1, 0, 0, row.rot)
     c.arm = createObject(TRAIN.BARRIER_MODEL, row.x, row.y, row.z - 0.3, 0, armRotY(c, false), row.rot)
+    local len = tonumber(row.length)
+    if c.arm and len then
+        setObjectScale(c.arm, 1, 1, len / TRAIN.BARRIER_ARM_LENGTH)
+        setElementCollisionsEnabled(c.arm, false) -- la colisión escalada no es fiable; el tráfico IA para por "closed"
+    end
     c.el = createElement("rp_railcrossing", "rp_railcrossing_" .. row.id)
     setElementPosition(c.el, row.x, row.y, row.z)
     setElementData(c.el, "closed", false)
@@ -64,7 +69,7 @@ local function load()
         for id in pairs(crossings) do destroyCrossing(id) end
         for _, row in ipairs(rows) do spawnCrossing(row) end
         outputDebugString(("[rp_train] %d barreras de cruce cargadas"):format(#rows), 3)
-    end, db(), "SELECT id, x, y, z, rot, side, interior, dimension FROM rail_crossings")
+    end, db(), "SELECT id, x, y, z, rot, side, length, interior, dimension FROM rail_crossings")
 end
 
 addEventHandler("onResourceStart", resourceRoot, function()
@@ -130,6 +135,33 @@ function adminMove(id, kind, x, y, z, rot)
     spawnCrossing(row)
     return true
 end
+
+-- /puntabarrera [id]: ponte donde debe acabar la punta del brazo bajado. Ajusta el giro y el largo
+-- de la barrera indicada (sin id, la más cercana a BARRIER_TIP_MAX m) para que llegue hasta ti.
+addCommandHandler("puntabarrera", function(player, _, id)
+    if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
+    local px, py = getElementPosition(player)
+    local c = tonumber(id) and crossings[tonumber(id)]
+    if not c then
+        local best = TRAIN.BARRIER_TIP_MAX
+        for _, e in pairs(crossings) do
+            local d = getDistanceBetweenPoints2D(px, py, e.row.x, e.row.y)
+            if d <= best then c, best = e, d end
+        end
+    end
+    if not c then return notify(player, ("Uso: /puntabarrera [id], a menos de %d m de la barrera."):format(TRAIN.BARRIER_TIP_MAX), "warning") end
+    local row = c.row
+    local len = getDistanceBetweenPoints2D(px, py, row.x, row.y)
+    if len < 1 or len > TRAIN.BARRIER_TIP_MAX then
+        return notify(player, ("La punta debe quedar entre 1 y %d m de la barrera."):format(TRAIN.BARRIER_TIP_MAX), "warning")
+    end
+    -- Con side = 1 el brazo baja hacia el eje X local del objeto, que apunta al rumbo rot
+    row.rot, row.side, row.length = math.deg(math.atan2(py - row.y, px - row.x)) % 360, 1, len
+    dbExec(db(), "UPDATE rail_crossings SET rot = ?, side = 1, length = ? WHERE id = ?", row.rot, len, row.id)
+    destroyCrossing(row.id)
+    spawnCrossing(row)
+    notify(player, ("Barrera #%d: brazo de %.1f m hacia aquí."):format(row.id, len), "success")
+end)
 
 addCommandHandler("borrarbarrera", function(player, _, id)
     if not isAdmin(player) then return notify(player, "No tienes permiso para usar este comando.", "error") end
