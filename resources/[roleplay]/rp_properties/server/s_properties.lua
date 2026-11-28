@@ -415,6 +415,7 @@ addEventHandler("rp:prop:buy", resourceRoot, function()
                     return notify(player, "Alguien compro esta propiedad antes que tu.", "error")
                 end
                 dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'purchase', ?, ?)", characterId, price, row.name)
+                exports.rp_logs:log("prop_buy", isElement(player) and player or characterId, "Inmobiliaria", price, ("#%d %s"):format(id, row.name))
                 if isElement(player) then triggerEvent("rp:achievements:progress", player, "property_bought", 1) end   -- logros
                 exports.rp_notify:popup(player, "Propiedad comprada", row.name .. " ya es tuya. Usa /cerrarcasa para abrir o cerrar.", "success")
                 refresh(id)
@@ -458,6 +459,7 @@ addCommandHandler("vendercasa", function(player)
     dbExec(db(), "UPDATE properties SET owner_id = NULL, locked = 1 WHERE id = ?", id)
     dbExec(db(), "UPDATE characters SET bank_money = bank_money + ? WHERE id = ?", refund, characterId)
     dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'sale', ?, ?)", characterId, refund, p.row.name)
+    exports.rp_logs:log("prop_sell", player, "Inmobiliaria", refund, ("#%d %s"):format(id, p.row.name))
     notify(player, ("Vendiste %s. Recibiste $%d en tu cuenta."):format(p.row.name, refund), "success")
     -- Saca a quien este dentro
     for _, pl in ipairs(getElementsByType("player")) do

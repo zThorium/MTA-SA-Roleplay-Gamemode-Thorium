@@ -157,6 +157,7 @@ function deposit(player, amount, view)
     takePlayerMoney(player, amount)
     dbExec(db(), "UPDATE characters SET bank_money = bank_money + ? WHERE id = ?", amount, characterId)
     logTx(characterId, "deposit", amount)
+    exports.rp_logs:log("bank_deposit", player, "Banco", amount, view)
     finish(player, view, true, ("Depositaste $%d en tu cuenta."):format(amount))
 end
 
@@ -174,6 +175,7 @@ local function withdraw(player, amount)
         if affected and affected > 0 then
             givePlayerMoney(player, amount)
             logTx(characterId, "withdraw", amount)
+            exports.rp_logs:log("bank_withdraw", player, "Banco", amount, "cajero")
             finish(player, "atm", true, ("Retiraste $%d."):format(amount))
         else
             finish(player, "atm", false, "Saldo insuficiente.")
@@ -207,6 +209,7 @@ function transfer(player, targetName, amount, view)
             local myName = getPlayerName(player)
             logTx(characterId, "transfer_out", amount, target.name)
             logTx(target.id, "transfer_in", amount, myName)
+            exports.rp_logs:log("bank_transfer", player, { id = target.id, name = target.name }, amount, view)
             finish(player, view, true, ("Transferiste $%d a %s."):format(amount, (target.name:gsub("_", " "))))
 
             -- Aviso al destinatario si esta conectado
@@ -337,6 +340,7 @@ addCommandHandler("dardinero", function(player, _, query, amount)
     end
     dbExec(db(), "UPDATE characters SET bank_money = GREATEST(0, bank_money + ?) WHERE id = ?", amount, characterId)
     logTx(characterId, amount > 0 and "deposit" or "withdraw", math.abs(amount), "Administracion")
+    exports.rp_logs:log("admin_bank", player, target, amount, "/dardinero")
     notify(player, ("Ingresaste $%d en la cuenta de %s."):format(amount, (getPlayerName(target):gsub("_", " "))), "success")
     notify(target, ("Un administrador ingreso $%d en tu cuenta bancaria."):format(amount), "info")
 end)

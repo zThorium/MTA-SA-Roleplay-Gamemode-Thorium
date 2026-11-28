@@ -145,6 +145,34 @@ local function sendLogs(admin)
     end, db(), "SELECT created_at, admin_name, command, target_name, details FROM admin_log ORDER BY id DESC LIMIT 80")
 end
 
+-- Registro de economía (rp_logs): por personaje (id exacto o parte del nombre) y tipo; vacío = lo último
+local function sendEconomy(admin, query, kind)
+    query = tostring(query or ""):sub(1, 32):gsub("_", " "):gsub("[%%\\]", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local types = {}
+    local logsRes = getResourceFromName("rp_logs")
+    if logsRes and getResourceState(logsRes) == "running" then
+        types = exports.rp_logs:getTypes() or {}
+        exports.rp_logs:flush()
+    end
+    kind = tostring(kind or "")
+    if not types[kind] then kind = "" end
+    local id = tonumber(query)
+    local like = query == "" and "" or ("%" .. query .. "%")
+    dbQuery(function(qh)
+        local out = {}
+        for _, r in ipairs(dbPoll(qh, 0) or {}) do
+            out[#out + 1] = { time = tostring(r.created_at), type = r.type, actor = r.actor_name or "sistema",
+                actorId = r.actor_char_id or "", target = r.target_name or "", targetId = r.target_char_id or "",
+                amount = tonumber(r.amount) or 0, details = r.details or "", res = r.resource or "" }
+        end
+        if isElement(admin) then send(admin, "economy", { rows = out, types = types, query = query, kind = kind }) end
+    end, db(), [[SELECT created_at, type, actor_char_id, actor_name, target_char_id, target_name, amount, details, resource
+        FROM economy_log
+        WHERE (? = '' OR actor_char_id = ? OR target_char_id = ? OR actor_name LIKE ? OR target_name LIKE ?)
+          AND (? = '' OR type = ?)
+        ORDER BY id DESC LIMIT 100]], query, id or 0, id or 0, like, like, kind, kind)
+end
+
 ----------------------------------------------------------------
 -- Dashboard (metricas). Todo agregado; no expone datos privados.
 ----------------------------------------------------------------
@@ -309,6 +337,8 @@ addEventHandler("rp:adminpanel:req", resourceRoot, function(kind, a, b, c)
         if need(admin, "accounts.view") then sendAccounts(admin, a) end
     elseif kind == "logs" then
         if need(admin, "logs.view") then sendLogs(admin) end
+    elseif kind == "economy" then
+        if need(admin, "logs.economy") then sendEconomy(admin, a, b) end
     elseif kind == "iam" then
         if need(admin, "iam.manage") then sendIam(admin) end
     elseif kind == "setlevel" then

@@ -74,6 +74,7 @@ end)
 | `rp_bank:getPlayerCards(p)` | tarjetas `bcard:<id>` que lleva |
 | `rp_bank:isNearATM(p)` | |
 | Ingreso al banco | `UPDATE characters SET bank_money = bank_money + ? WHERE id = ?` + `INSERT INTO bank_transactions (character_id, type, amount, other_name)` (ver `rp_payday`) |
+| `rp_logs:log(tipo, actor, objetivo, n, detalle)` | **Obligatorio** tras mover dinero, ítems, casas o vehículos entre jugadores o desde admin (después de validar y cobrar). `actor`/`objetivo`: jugador, id de personaje, `{ id, name }` o texto; `tipo` de `LOGS.TYPES` en `rp_logs/server/s_config.lua` (añade el tuyo). `true` o `false, motivo` |
 
 ## Inventario
 

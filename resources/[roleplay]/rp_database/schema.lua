@@ -1955,4 +1955,29 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_logs: registro de economía y objetos (dinero, banco, ítems, casas, vehículos) para investigar abusos.
+    -- Sin FK a characters a propósito: el registro debe sobrevivir al borrado o CK del personaje.
+    [[
+    CREATE TABLE IF NOT EXISTS economy_log (
+        id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        type           VARCHAR(24)     NOT NULL,
+        actor_char_id  INT UNSIGNED    NULL,
+        actor_name     VARCHAR(32)     NULL,
+        target_char_id INT UNSIGNED    NULL,
+        target_name    VARCHAR(32)     NULL,
+        amount         BIGINT          NOT NULL DEFAULT 0,
+        details        VARCHAR(255)    NULL,
+        resource       VARCHAR(32)     NULL,
+        x              FLOAT           NULL,
+        y              FLOAT           NULL,
+        z              FLOAT           NULL,
+        serial         VARCHAR(32)     NULL,
+        created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_economy_actor (actor_char_id, created_at),
+        KEY idx_economy_target (target_char_id, created_at),
+        KEY idx_economy_type (type, created_at),
+        KEY idx_economy_time (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

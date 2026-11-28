@@ -467,6 +467,7 @@ local function dropAt(player, itemId, amount, x, y, z)
     if not ok then return notify(player, reason, "error") end
 
     spawnGroundItem(itemId, amount, x, y, z, getElementDimension(player), getElementInterior(player))
+    exports.rp_logs:log("item_drop", player, nil, amount, itemId)
 
     setPedAnimation(player, "BOMBER", "BOM_Plant", 1200, false, false, false, false, 250)
     setAme(player, ("deja %s en el suelo"):format(def.name:lower()))
@@ -509,6 +510,7 @@ addEventHandler("rp:inv:pickup", resourceRoot, function(object)
         if not equipped then return notify(player, why or "No puedes recoger esa mochila ahora.", "warning") end
         ground[object] = nil
         destroyElement(object)
+        exports.rp_logs:log("item_pickup", player, nil, 1, entry.itemId .. " (con contenido)")
         setPedAnimation(player, "CARRY", "liftup", 800, false, false, false, false, 250)
         setAme(player, ("recoge %s del suelo"):format(def.name:lower()))
         notify(player, "Recoges la mochila y te la pones con todo lo que llevaba dentro.", "success")
@@ -521,6 +523,7 @@ addEventHandler("rp:inv:pickup", resourceRoot, function(object)
     ground[object] = nil
     destroyElement(object)
     giveItem(player, entry.itemId, entry.amount)
+    exports.rp_logs:log("item_pickup", player, nil, entry.amount, entry.itemId)
     setPedAnimation(player, "CARRY", "liftup", 800, false, false, false, false, 250)
     setAme(player, ("recoge %s del suelo"):format(def.name:lower()))
     notify(player, ("Recogiste %d x %s."):format(entry.amount, def.name), "success")
@@ -548,6 +551,7 @@ addEventHandler("rp:inv:give", resourceRoot, function(itemId, amount, targetId)
 
     takeItem(player, itemId, amount)
     if not giveItem(target, itemId, amount) then giveItem(player, itemId, amount) return end   -- reembolso
+    exports.rp_logs:log("item_give", player, target, amount, itemId)
     local giver, receiver = getPlayerName(player):gsub("_", " "), getPlayerName(target):gsub("_", " ")
     setPedAnimation(player, "DEALER", "DEALER_DEAL", 1500, false, false, false, false, 250)
     setAme(player, ("entrega %s a %s"):format(def.name:lower(), receiver))
@@ -578,5 +582,7 @@ addEvent("rp:inv:dropBackpack", true)
 addEventHandler("rp:inv:dropBackpack", resourceRoot, function()
     local player = client
     if throttled(player) or not canAct(player) or not bpRunning() then return end
-    exports.rp_backpacks:dropBackpack(player)
+    if exports.rp_backpacks:dropBackpack(player) then
+        exports.rp_logs:log("backpack_drop", player, nil, 1, "mochila con su contenido")
+    end
 end)

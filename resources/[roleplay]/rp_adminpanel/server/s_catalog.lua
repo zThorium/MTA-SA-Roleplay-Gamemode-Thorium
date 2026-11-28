@@ -39,6 +39,7 @@ ADMIN_CATALOG = {
     {
         id = "economia", name = "Economia",
         items = {
+            { cmd = "/logs", args = "<nombre o id de personaje> [tipo]", desc = "Ultimos movimientos de dinero, banco, objetos, casas y vehiculos del personaje (permiso logs.economy). Busqueda completa en la pestana Economia del panel.", res = "rp_logs" },
             { cmd = "/dardinero", args = "<id o nombre> <cantidad>", desc = "Ingresa dinero en la cuenta bancaria del personaje (cantidad negativa para restar).", res = "rp_bank" },
             { cmd = "/darfondos", args = "<idFaccion> <cantidad>", desc = "Suma o resta fondos de la caja de una faccion (negativa para quitar).", res = "rp_factions" },
             { cmd = "/setjob", args = "<id o nombre> <trabajo|ninguno>", desc = "Asigna un trabajo civil (garbage, farmer, lumber, hunter, fisher, miner) o lo quita, sin espera entre cambios.", res = "rp_jobs" },

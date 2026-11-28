@@ -258,6 +258,7 @@ ACT.give_money = function(p, t, d)
     givePlayerMoney(t, amount)
     exports.rp_characters:saveCharacter(p)
     exports.rp_characters:saveCharacter(t)
+    exports.rp_logs:log("cash_give", p, t, amount, "en mano (M)")
     if not isPedInVehicle(p) then
         local x, y = getElementPosition(t)
         face(p, x, y)
@@ -302,6 +303,7 @@ ACCEPT.item = function(p, t, d)
         exports.rp_inventory:giveItem(p, d.item, d.amount)   -- reembolso
         return notify(p, "No se pudo entregar.", "error")
     end
+    exports.rp_logs:log("item_give", p, t, d.amount, d.item .. " (M)")
     if not isPedInVehicle(p) then setPedAnimation(p, "DEALER", "DEALER_DEAL", 1500, false, false, false, false) end
     ame(p, ("le entrega %s a %s"):format(def.name:lower(), dname(t)))
     notify(p, ("Entregaste %d × %s a %s."):format(d.amount, def.name, dname(t)), "success")
@@ -445,6 +447,7 @@ addEventHandler("rp:interact:take", resourceRoot, function(what)
         givePlayerMoney(p, amount)
         exports.rp_characters:saveCharacter(p)
         exports.rp_characters:saveCharacter(t)
+        exports.rp_logs:log("cash_rob", p, t, amount, "cacheo (M)")
         ame(p, ("le quita dinero a %s"):format(dname(t)))
         notify(p, ("Le quitaste $%d a %s."):format(amount, dname(t)), "success")
         notify(t, ("%s te quitó $%d."):format(dname(p), amount), "error")
@@ -463,6 +466,7 @@ addEventHandler("rp:interact:take", resourceRoot, function(what)
             exports.rp_inventory:giveItem(t, what, amount)   -- reembolso
             return notify(p, "No se pudo quitar.", "error")
         end
+        exports.rp_logs:log("item_rob", p, t, amount, what .. " (cacheo M)")
         ame(p, ("le quita %s a %s"):format(def.name:lower(), dname(t)))
         notify(p, ("Le quitaste %d × %s a %s."):format(amount, def.name, dname(t)), "success")
         notify(t, ("%s te quitó %d × %s."):format(dname(p), amount, def.name), "error")

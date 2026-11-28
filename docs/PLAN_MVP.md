@@ -59,7 +59,7 @@ mindmap
       rp_admin freecam ✅
       Panel admin ⬜
       Reportes ⬜
-      Logs ⬜
+      Logs ✅
 ```
 
 ## Lo que ya está
@@ -96,7 +96,7 @@ Ordenado por prioridad. La **fase 1** es lo mínimo para abrir el servidor a jug
 | 5 | `rp_jobs` | ✅ Seis trabajos civiles con minijuegos (basurero, granjero, leñador, cazador, pescador, minero), niveles y mercados dinámicos. Ver `docs/TRABAJOS.md`. Quedan como ideas: camionero, taxista, mecánico. | `rp_vehicles`, `rp_bank` |
 | 6 | `rp_fuel` | Combustible por vehículo, gasolineras con pago. Sin gasolina el motor se apaga. | `rp_vehicles` |
 | 7 | `rp_reports` + panel admin | `/reporte` de jugadores, cola para admins, `/ir`, `/traer`, `/spec`, `/kick`, `/ban` (temporal y permanente en SQL), `/jail` OOC. Niveles de admin según `accounts.admin_level`. | `rp_login`, `rp_ids` |
-| 8 | `rp_logs` | Registro en SQL de dinero, compras, transferencias, acciones de admin y facciones, para investigar abusos. | `rp_database` |
+| 8 | `rp_logs` | ✅ Registro en SQL de dinero, compras, transferencias, ítems y acciones de admin (`economy_log`, `/logs`, pestaña Economía de `/adminpanel`). Faltan por enganchar los pagos de trabajos, tiendas y misiones. | `rp_database` |
 
 ### Fase 2: profundidad
 

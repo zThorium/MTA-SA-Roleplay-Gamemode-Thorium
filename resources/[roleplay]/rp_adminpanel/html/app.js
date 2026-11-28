@@ -6,7 +6,7 @@
 (function () {
     "use strict";
     var $ = function (id) { return document.getElementById(id); };
-    var state = { me: null, catalog: [], dash: null, players: [], accounts: [], iam: null, logs: [], tab: "dash", sel: null };
+    var state = { me: null, catalog: [], dash: null, players: [], accounts: [], iam: null, logs: [], economy: { rows: [], types: {}, query: "", kind: "" }, tab: "dash", sel: null };
     var pollTimer = null, renderedSel = null;
 
     var ICON = {
@@ -34,6 +34,7 @@
         { id: "accounts", name: "Cuentas", sub: "Busqueda de cuentas y asignacion de rangos", icon: "accounts", perm: "accounts.view" },
         { id: "iam", name: "Permisos (IAM)", sub: "Control de acceso por rango y por cuenta", icon: "iam", perm: "iam.manage" },
         { id: "logs", name: "Auditoria", sub: "Registro de acciones administrativas", icon: "logs", perm: "logs.view" },
+        { id: "economy", name: "Economia", sub: "Dinero, banco, objetos, casas y vehiculos (rp_logs)", icon: "logs", perm: "logs.economy" },
         { id: "commands", name: "Comandos", sub: "Catalogo de comandos de administracion", icon: "commands", perm: "commands.view" }
     ];
 
@@ -71,7 +72,8 @@
         renderedSel = null;
         $("search").value = "";
         $("search").style.visibility = (id === "dash" || id === "iam") ? "hidden" : "visible";
-        $("search").placeholder = id === "accounts" ? "Buscar cuenta y pulsar Enter..." : "Filtrar...";
+        $("search").placeholder = id === "accounts" ? "Buscar cuenta y pulsar Enter..."
+            : id === "economy" ? "Personaje (nombre o id) y Enter..." : "Filtrar...";
         var t = TABS.filter(function (x) { return x.id === id; })[0];
         $("page-title").textContent = t.name;
         $("page-sub").textContent = t.sub;
@@ -80,6 +82,7 @@
         if (id === "accounts") req("accounts", "");
         if (id === "iam") req("iam");
         if (id === "logs") req("logs");
+        if (id === "economy") { $("search").value = state.economy.query || ""; req("economy", state.economy.query, state.economy.kind); }
         renderTabs();
         render();
     }
@@ -103,7 +106,7 @@
         v.style.overflowY = state.tab === "players" ? "hidden" : "auto";
         document.documentElement.classList.remove("scene");
         $("count").textContent = "";
-        ({ dash: renderDash, players: renderPlayers, accounts: renderAccounts, iam: renderIam, logs: renderLogs, commands: renderCommands }[state.tab])(v);
+        ({ dash: renderDash, players: renderPlayers, accounts: renderAccounts, iam: renderIam, logs: renderLogs, economy: renderEconomy, commands: renderCommands }[state.tab])(v);
         v.scrollTop = keep;
         var l2 = v.querySelector(".list"); if (l2) l2.scrollTop = keepList;
     }
@@ -432,6 +435,48 @@
         v.appendChild(bar);
     }
 
+    /* ---------------- Economia (rp_logs) ---------------- */
+    function searchEconomy() { req("economy", $("search").value.trim(), state.economy.kind); }
+
+    function renderEconomy(v) {
+        var e = state.economy, types = e.types || {};
+        var bar = el("div", "btns"); bar.style.marginBottom = "14px";
+        var sel = el("select");
+        var all = el("option", "", "Todos los tipos"); all.value = ""; sel.appendChild(all);
+        Object.keys(types).sort().forEach(function (k) {
+            var o = el("option", "", k + " - " + types[k]); o.value = k;
+            if (k === e.kind) o.selected = true;
+            sel.appendChild(o);
+        });
+        sel.addEventListener("change", function () { state.economy.kind = sel.value; searchEconomy(); });
+        bar.appendChild(sel);
+        bar.appendChild(btn("Buscar", "primary", searchEconomy));
+        v.appendChild(bar);
+
+        var rows = e.rows || [];
+        $("count").textContent = rows.length + " movimientos" + (e.query ? " de \"" + e.query + "\"" : " recientes") + (rows.length >= 100 ? " (maximo 100)" : "");
+        if (!rows.length) { v.appendChild(el("div", "empty", "Sin movimientos para esa busqueda.")); return; }
+        var c = el("div", "card tbl-card"), t = el("table"), thead = el("thead"), h = el("tr");
+        ["Fecha", "Tipo", "Quien", "A quien", "Cantidad", "Detalle", "Recurso"].forEach(function (x) { h.appendChild(el("th", "", x)); });
+        thead.appendChild(h); t.appendChild(thead);
+        var tb = el("tbody");
+        rows.forEach(function (l) {
+            var r = el("tr");
+            var who = l.actor + (l.actorId !== "" ? " #" + l.actorId : "");
+            var to = l.target + (l.targetId !== "" ? " #" + l.targetId : "");
+            var isMoney = !/^(item_|backpack_|vehicle_key)/.test(l.type);
+            [l.time, l.type, who, to, isMoney ? money(l.amount) : "x" + num(l.amount), l.details, l.res].forEach(function (x, i) {
+                var td = el("td", i === 1 || i === 6 ? "mono" : "", x);
+                if (i === 2 && l.actorId !== "") td.addEventListener("click", function () { $("search").value = String(l.actorId); searchEconomy(); });
+                if (i === 3 && l.targetId !== "") td.addEventListener("click", function () { $("search").value = String(l.targetId); searchEconomy(); });
+                if ((i === 2 && l.actorId !== "") || (i === 3 && l.targetId !== "")) { td.style.cursor = "pointer"; td.title = "Ver los movimientos de este personaje"; }
+                r.appendChild(td);
+            });
+            tb.appendChild(r);
+        });
+        t.appendChild(tb); c.appendChild(t); v.appendChild(c);
+    }
+
     /* ---------------- Comandos ---------------- */
     function renderCommands(v) {
         var q = $("search").value.trim().toLowerCase(), total = 0;
@@ -458,8 +503,12 @@
 
     /* ---------------- Entrada ---------------- */
     $("btn-close").addEventListener("click", function () { send("rp:adminpanel:ui:close"); });
-    $("search").addEventListener("input", function () { if (state.tab !== "accounts") render(); });
-    $("search").addEventListener("keydown", function (e) { if (e.key === "Enter" && state.tab === "accounts") req("accounts", $("search").value.trim()); });
+    $("search").addEventListener("input", function () { if (state.tab !== "accounts" && state.tab !== "economy") render(); });
+    $("search").addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        if (state.tab === "accounts") req("accounts", $("search").value.trim());
+        if (state.tab === "economy") searchEconomy();
+    });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") send("rp:adminpanel:ui:close"); });
 
     window.RP = {
@@ -478,6 +527,9 @@
             else if (kind === "accounts") state.accounts = data;
             else if (kind === "iam") state.iam = data;
             else if (kind === "logs") state.logs = data;
+            else if (kind === "economy") {
+                state.economy = { rows: Array.isArray(data.rows) ? data.rows : [], types: data.types || {}, query: data.query || "", kind: data.kind || "" };
+            }
             if (kind === state.tab || (kind === "logs" && state.tab === "dash")) {
                 // no reconstruir la vista mientras se escribe un motivo o se elige un select
                 var a = document.activeElement;
