@@ -58,6 +58,7 @@ ADMIN_CATALOG = {
             { cmd = "/borrarfaccion", args = "<id>", desc = "Disuelve una faccion; sus miembros en linea son avisados.", res = "rp_factions" },
             { cmd = "/setlider", args = "<id o nombre> <idFaccion>", desc = "Asigna a un jugador como lider (rol mas alto) de una faccion.", res = "rp_factions" },
             { cmd = "/facciones", args = "", desc = "Lista en el chat todas las facciones con id, tipo, fondos y miembros en linea.", res = "rp_factions" },
+            { cmd = "/makelocker", args = "<idFaccion>", desc = "Crea en tu posicion el vestuario de una faccion con servicio generico (medicos, gobierno, mecanicos, noticias, taxis...). Alias /crearvestuario. Se mueve con ALT; /nearbylockers, /dellocker <id>.", res = "rp_duty" },
         },
     },
     {

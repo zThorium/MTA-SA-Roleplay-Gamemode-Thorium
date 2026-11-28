@@ -73,6 +73,7 @@ HELP.KEYS = {
         { key = "F11", text = "Mapa: lugares que descubres, clic en un punto para poner ruta GPS y vista 3D (Esc cierra)" },
         { key = "E",   text = "Interactuar: tiendas, restaurantes, cajeros, casas, probadores y concesionario. Junto a una banca, silla o sofa del mapa: sentarse (E otra vez para levantarse)" },
         { key = "F3",  text = "Panel de tu faccion" },
+        { key = "E",   text = "En el vestuario de tu faccion (medicos, gobierno, mecanicos, noticias, taxis...): entrar o salir de servicio con uniforme y equipo. El lider crea los uniformes en la pestana Uniformes" },
     } },
     { group = "Vehiculos", items = {
         { key = "L",   text = "Abrir o cerrar tu vehiculo" },

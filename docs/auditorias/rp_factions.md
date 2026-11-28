@@ -56,3 +56,10 @@
 | N/A | B | INT-05 | Dimensiones propias sin choques |  |
 
 </details>
+
+## 2026-11-28 · mejorar (#102, tipos de facción nuevos)
+- **Qué**: `FACTION_TYPES` registra `mecanicos`, `noticias`, `transporte`, `logistica`, `seguros`, `seguridad`, `concesionaria` y `mafia` (nombre, color y `state = false`; sin `duty` hasta que su recurso lleve el servicio). Export nuevo `getFactionTypes()`.
+- **Sin cambios necesarios**: `/crearfaccion`, el panel F3, `rp_scoreboard` y `rp_nametags` ya leen el tipo y el color desde `FACTION_TYPES` / la facción.
+- **Prueba**: `rp_test` › `fac_tipos_registrados` (todos los tipos, color `#rrggbb`, clave ≤ 16 caracteres, `duty` con `dutyData`).
+- **Probar en juego**: `/crearfaccion` sin argumentos lista los 15 tipos; `/crearfaccion mecanicos MEC Taller Prueba` crea la facción con el color del tipo y F3 muestra «Mecanicos».
+- **INT-09**: N/A, catálogo de configuración sin hecho lograble.

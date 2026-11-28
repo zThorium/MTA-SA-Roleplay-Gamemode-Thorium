@@ -1955,4 +1955,47 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_duty (#104): vestuarios de facción que colocan los admins (/makelocker)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_lockers (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED NOT NULL,
+        x           FLOAT        NOT NULL,
+        y           FLOAT        NOT NULL,
+        z           FLOAT        NOT NULL,
+        interior    INT UNSIGNED NOT NULL DEFAULT 0,
+        dimension   INT UNSIGNED NOT NULL DEFAULT 0,
+        created_by  VARCHAR(32)  NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_lockers_faction (faction_id),
+        CONSTRAINT fk_faction_lockers_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty: uniformes de cada facción (rol mínimo -> skin y equipo "item:cantidad,item:cantidad")
+    [[
+    CREATE TABLE IF NOT EXISTS faction_loadouts (
+        id          INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED      NOT NULL,
+        name        VARCHAR(32)       NOT NULL,
+        min_level   TINYINT UNSIGNED  NOT NULL DEFAULT 1,
+        skin        SMALLINT UNSIGNED NULL,
+        items       VARCHAR(255)      NOT NULL DEFAULT '',
+        PRIMARY KEY (id),
+        KEY idx_faction_loadouts_faction (faction_id),
+        CONSTRAINT fk_faction_loadouts_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty: equipo entregado al entrar de servicio. Se devuelve al salir; si el servidor se cae,
+    -- se recoge al volver a entrar con ese personaje (así no se duplican ítems)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_duty_items (
+        character_id INT UNSIGNED NOT NULL,
+        faction_id   INT UNSIGNED NULL,
+        items        VARCHAR(255) NOT NULL DEFAULT '',
+        started_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_faction_duty_items_char FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
