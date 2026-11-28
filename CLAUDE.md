@@ -3,6 +3,29 @@
 Contexto para Claude (y para cualquier persona) que trabaje en este repositorio.
 Léelo completo antes de tocar código. Responde y documenta **en español**.
 
+## Al empezar cada sesión: leer el kanban (obligatorio)
+
+Lo que hay que hacer vive en el kanban del proyecto: <https://github.com/users/zThorium/projects/4/views/1>
+(columnas Backlog → Ready → In progress → In review → Done; campos **Priority** P0-P2 y **Size** XS-XL).
+
+El kanban se trabaja **en local** con `scripts/kanban.sh` para no agotar la cuota de GraphQL de GitHub
+(5.000 puntos por hora compartidos por todo lo que usa la cuenta; `gh project item-list` gasta mucho).
+
+1. Al iniciar la sesión, antes de proponer o empezar trabajo: `scripts/kanban.sh pull` (1-2 puntos) y
+   `scripts/kanban.sh status`. Durante la sesión se lee la copia (`status`, `ver <texto>`), nunca GitHub.
+   Si falla por permisos: `gh auth refresh --hostname github.com -s project,read:project`.
+2. Resume al usuario lo que está **In progress**, **In review** y **Ready**, y los **P0** del Backlog, y sugiere en qué seguir.
+   Si el usuario ya pidió algo concreto, comprueba si tiene issue y úsalo como contexto.
+3. Al trabajar en un issue: `scripts/kanban.sh mover <N> "In progress"`; al abrir el PR (con `Closes #N`),
+   `scripts/kanban.sh mover <N> "In review"`. Los cambios quedan en la cola y se envían juntos con
+   `scripts/kanban.sh push` al terminar la tarea (si alguien cambió esa tarjeta en la web, no se pisa y avisa).
+4. Trabajo nuevo que surja = issue nuevo en **Backlog** con Priority y Size: el issue se crea por **REST**
+   (`gh api repos/zThorium/MTA-SA-Roleplay-Gamemode-Thorium/issues -f title=... -f body=...`, otra cuota) y se
+   añade al proyecto con `scripts/kanban.sh nuevo <N> <P0-P2> <XS-XL>` + `push`. Los PR también por REST
+   (`gh api .../pulls`), no con `gh pr create` (usa GraphQL).
+5. Los issues de las auditorías llevan código en el título (`[F0.2]`, `[O3.1]`...) y se detallan en
+   `docs/AUDITORIA_COLORADO.md` y `docs/AUDITORIA_OWLGAMING.md`.
+
 ## Qué es
 
 **Thorium**: gamemode de roleplay en español para **MTA:SA 1.6**, hecho desde cero.
