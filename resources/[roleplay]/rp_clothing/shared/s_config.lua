@@ -102,7 +102,9 @@ TOYS = {
     cane        = { name = "Baston",                    icon = "🦯", model = 326,  price = 90,  bone = 12, x = 0,     y = 0,     z = 0,    rx = 0,  ry = 0,  rz = 0 },
     flowers     = { name = "Ramo de flores",            icon = "💐", model = 325,  price = 60,  bone = 12, x = 0,     y = 0,     z = 0,    rx = 0,  ry = 0,  rz = 0 },
     camera      = { name = "Camara de fotos",           icon = "📷", model = 367,  price = 250, bone = 3,  x = 0.1,   y = 0.15,  z = 0,    rx = 0,  ry = 0,  rz = 0 },
-    cigar       = { name = "Puro",                      icon = "🚬", model = 1485, price = 40,  bone = 1,  x = 0.03,  y = 0.11,  z = -0.05, rx = 0, ry = 0,  rz = 90 },
+    -- 3027 «ciggy»: el 1485 (CJ_CIGGY) y el 3044 (CIGAR) traen incrustado el efecto 2DFX cigarette_smoke,
+    -- que ilumina lo que está cerca y hacía subir y bajar el brillo de los modelos al moverse (visto en rp_turbus)
+    cigar       = { name = "Puro",                      icon = "🚬", model = 3027, price = 40, bone = 1,  x = 0.03,  y = 0.11,  z = -0.05, rx = 0, ry = 0,  rz = 90 },
     cup         = { name = "Vaso de bebida",            icon = "🥤", model = 2647, price = 25,  bone = 12, x = 0,     y = 0,     z = 0,    rx = 0,  ry = 0,  rz = 0 },
 }
 
