@@ -18,7 +18,18 @@
 FurnEditor = { active = false }
 
 local screenW, screenH = guiGetScreenSize()
-local L_W, R_W, T_W, T_H = 360, 310, 720, 58
+-- Interfaz adaptable: los paneles se disenaron a 1000 px de alto (360 + 310 de ancho y barra de
+-- 720 x 58). Se escalan con la altura de la pantalla, los laterales nunca ocupan mas del 52 % del
+-- ancho y la barra de arriba se encoge si no cabe entre ellos. El HTML aplica la misma escala con
+-- zoom (FURN.zoom), asi el contenido se ve igual en cualquier resolucion.
+local BASE_L, BASE_R, BASE_TW, BASE_TH = 360, 310, 720, 58
+local UI_K = math.max(0.8, math.min(1.8, screenH / 1000))
+if (BASE_L + BASE_R) * UI_K > screenW * 0.52 then UI_K = screenW * 0.52 / (BASE_L + BASE_R) end
+local L_W, R_W = math.floor(BASE_L * UI_K), math.floor(BASE_R * UI_K)
+local TOP_K = math.min(UI_K, (screenW - L_W - R_W - 16) / BASE_TW)
+local T_W, T_H = math.floor(BASE_TW * TOP_K), math.floor(BASE_TH * TOP_K)
+local PANEL_ZOOM = { left = UI_K, right = UI_K, top = TOP_K }
+FurnEditor.uiScale = UI_K
 
 local E = nil                 -- estado de la sesion (nil si no esta activo)
 local panels = {}             -- { left, right, top } = { gui, browser, ready, pending }
@@ -72,13 +83,38 @@ local function pushAll(code)
     for name in pairs(panels) do panelJS(name, code) end
 end
 
+-- Otro recurso puede dejar un navegador transparente a pantalla completa visible encima de los
+-- paneles: MTA pasa al mundo los clics sobre sus pixeles transparentes y los paneles nunca los
+-- reciben (el clic cae en el HUD o en los muebles de detras). Los paneles se suben al frente y se
+-- anota en el debug quien los tapaba.
+local reportedCovers = {}
+local function bringPanelsFront()
+    local ours = {}
+    for _, p in pairs(panels) do
+        if isElement(p.gui) then ours[p.gui] = true; guiBringToFront(p.gui) end
+    end
+    for _, t in ipairs({ "gui-browser", "gui-window", "gui-staticimage" }) do
+        for _, g in ipairs(getElementsByType(t)) do
+            if not ours[g] and not reportedCovers[g] and guiGetVisible(g) then
+                local w, h = guiGetSize(g, false)
+                if w >= screenW * 0.5 and h >= screenH * 0.5 then
+                    reportedCovers[g] = true
+                    local res = getElementParent(getElementParent(g) or g)
+                    dbg(("GUI visible que tapa los paneles: %s %dx%d (padre: %s)"):format(t, w, h,
+                        tostring(res and getElementID(res) or "?")))
+                end
+            end
+        end
+    end
+end
+
 local function createPanels()
     for name, rectFn in pairs(PANEL_RECT) do
         local x, y, w, h = rectFn()
         -- opaco (no transparente): MTA solo acepta clics sobre pixeles opacos del ultimo cuadro dibujado
         local gui = guiCreateBrowser(x, y, w, h, true, false, false)
         local browser = guiGetBrowser(gui)
-        panels[name] = { gui = gui, browser = browser, ready = false, pending = {} }
+        panels[name] = { gui = gui, browser = browser, ready = false, pending = { ("FURN.zoom(%.4f)"):format(PANEL_ZOOM[name] or 1) } }
         addEventHandler("onClientBrowserCreated", browser, function() loadBrowserURL(source, "http://mta/local/html/index.html#" .. name) end)
         addEventHandler("onClientBrowserDocumentReady", browser, function()
             local p = panels[name]
@@ -86,8 +122,10 @@ local function createPanels()
             p.ready = true
             for _, code in ipairs(p.pending) do executeBrowserJavascript(source, code) end
             p.pending = {}
+            bringPanelsFront()
         end)
     end
+    bringPanelsFront()
 end
 
 local function destroyPanels()
@@ -1151,29 +1189,34 @@ addEventHandler("onClientRender", root, function()
         end
     end
 
-    -- lectura numerica mientras se arrastra
-    local info = (E.gdrag and E.gdrag.info) or nil
-    if info then
-        dxDrawText(info, (L_W + screenW - R_W) / 2 - 200 + 1, 81, (L_W + screenW - R_W) / 2 + 200 + 1, 101, tocolor(0, 0, 0, 230), 1.3, "default-bold", "center", "top")
-        dxDrawText(info, (L_W + screenW - R_W) / 2 - 200, 80, (L_W + screenW - R_W) / 2 + 200, 100, tocolor(255, 224, 80), 1.3, "default-bold", "center", "top")
+    -- Textos centrados en el hueco entre los paneles: escala de la interfaz y, si no caben, se encogen
+    local left, right = L_W + 10, screenW - R_W - 10
+    local cx, room = (left + right) / 2, right - left
+    local function centered(text, y, scale, col, wrap)
+        scale = scale * UI_K
+        local w = dxGetTextWidth(text, scale, "default-bold")
+        if not wrap and w > room then scale = scale * room / w end
+        local h = dxGetFontHeight(scale, "default-bold") * (wrap and 3 or 1)
+        dxDrawText(text, left + 1, y + 1, right + 1, y + h + 1, tocolor(0, 0, 0, 230), scale, "default-bold", "center", "top", true, wrap)
+        dxDrawText(text, left, y, right, y + h, col, scale, "default-bold", "center", "top", true, wrap)
+        return y + h
     end
 
-    -- estado y avisos grandes, centrados entre los paneles
-    local cx = (L_W + screenW - R_W) / 2
+    -- estado, lectura numerica mientras se arrastra y avisos grandes, bajo la barra de arriba
+    local y = T_H + 12 * UI_K
     local status = ("Cuenta: $%d  ·  Capacidad %d/%d  ·  %s"):format(E.money or 0, E.weight or 0, E.limit or 0,
         E.ghost and ("Colocando: " .. E.ghost.def.name) or (E.tool == "hide" and "Ocultar objeto original" or "Elige un mueble del catálogo"))
-    dxDrawText(status, cx - 300 + 1, 71, cx + 300 + 1, 91, tocolor(0, 0, 0, 230), 1, "default-bold", "center", "top")
-    dxDrawText(status, cx - 300, 70, cx + 300, 90, tocolor(255, 255, 255, 235), 1, "default-bold", "center", "top")
+    y = centered(status, y, 1, tocolor(255, 255, 255, 235)) + 4 * UI_K
+    local info = (E.gdrag and E.gdrag.info) or nil
+    if info then y = centered(info, y, 1.3, tocolor(255, 224, 80)) + 4 * UI_K end
     if E.flash and getTickCount() - E.flash.tick < 4500 then
         local col = E.flash.kind == "error" and tocolor(255, 120, 120) or (E.flash.kind == "warning" and tocolor(255, 210, 110) or tocolor(255, 255, 255))
-        dxDrawText(E.flash.text, cx - 400 + 2, 111, cx + 400 + 2, 151, tocolor(0, 0, 0, 240), 1.25, "default-bold", "center", "top", true, true)
-        dxDrawText(E.flash.text, cx - 400, 110, cx + 400, 150, col, 1.25, "default-bold", "center", "top", true, true)
+        centered(E.flash.text, y + 6 * UI_K, 1.25, col, true)
     end
 
     -- ayuda en pantalla
     local help = "RMB orbitar · WASD mover · Mayús: sin rejilla · X/Y/Z: bloquear eje · 4/5/6 mover/girar/escalar · Q/E girar · Ctrl+Z/Y · F4 terminar"
-    dxDrawText(help, L_W + 11, screenH - 29, screenW - R_W + 1, screenH - 9, tocolor(0, 0, 0, 220), 1, "default-bold", "center", "center")
-    dxDrawText(help, L_W + 10, screenH - 30, screenW - R_W, screenH - 10, tocolor(255, 255, 255, 235), 1, "default-bold", "center", "center")
+    centered(help, screenH - 30 * UI_K, 1, tocolor(255, 255, 255, 235))
 end)
 
 ----------------------------------------------------------------
@@ -1255,7 +1298,8 @@ addEventHandler("onClientClick", root, function(button, state, ax, ay)
     end
 
     -- state == "down"
-    if overUI() then return end
+    -- un clic sobre un panel que llega aqui es que algo lo tapa: se vuelve a poner delante
+    if overUI() then bringPanelsFront() return end
     local shift = getKeyState("lshift") or getKeyState("rshift")
 
     -- un clic en el mundo siempre devuelve el foco al juego (si no, el modo de texto bloquea atajos)
@@ -1536,6 +1580,8 @@ function FurnEditor.start(data)
     E.count = n
     toggleAllControls(false, true, false)
     showCursor(true)
+    -- las fichas clicables del HUD quedan detras de los paneles: que no se lleven los clics
+    pcall(function() exports.rp_hud:setHudClicksDisabled("rp_furniture", true) end)
     createPanels()
     setView(2)
     markDirty()
@@ -1553,6 +1599,7 @@ function FurnEditor.stop(silent)
     toggleAllControls(true, true, true)
     showCursor(false)
     guiSetInputEnabled(false)
+    pcall(function() exports.rp_hud:setHudClicksDisabled("rp_furniture", false) end)
 end
 
 function FurnEditor.requestStop(commit)

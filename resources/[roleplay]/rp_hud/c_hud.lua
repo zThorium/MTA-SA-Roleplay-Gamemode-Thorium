@@ -1039,6 +1039,17 @@ function setHudHidden(reason, on)
     return true
 end
 
+-- Desactivar los clics del HUD (fichas de la barra de iconos) sin ocultarlo, para recursos con
+-- cursor propio a pantalla completa (p. ej. el modo decorar de rp_furniture), así sus botones
+-- no compiten con los del HUD que quedan detrás.
+--   exports.rp_hud:setHudClicksDisabled("mi_recurso", true / false)
+local clicksBlockedBy = {}
+function setHudClicksDisabled(reason, on)
+    clicksBlockedBy[tostring(reason or "?")] = on and true or nil
+    return true
+end
+function Hud.clicksDisabled() return next(clicksBlockedBy) ~= nil end
+
 -- Y (px) donde termina el bloque de arriba a la derecha (hora, dinero, banco, arma, estrellas, nivel).
 -- Para que otros recursos pongan sus paneles debajo sin solaparse (p. ej. el miedo del cajero en rp_robbery).
 function getTopRightBottom()

@@ -107,7 +107,9 @@ button:disabled { opacity: 0.35; cursor: default; }
 
 /* Ventana modal */
 html.modal, body.modal { background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; }
-.win { width: 640px; max-width: 94vw; max-height: 88vh; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+/* con zoom, vw/vh no siguen la escala: la ventana se limita con % de #app (que ya va escalado) */
+body.modal #app { display: flex; align-items: center; justify-content: center; }
+.win { width: 640px; max-width: 94%; max-height: 88%; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
 .win h1 { font-size: 17px; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
 .cols .list { max-height: 360px; overflow-y: auto; }

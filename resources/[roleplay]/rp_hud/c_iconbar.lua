@@ -425,7 +425,7 @@ end
 -- Las fichas van a la izquierda del dinero: arriba los accesos rapidos y, en un vehiculo,
 -- debajo sus controles.
 function Hud.drawIconBars(now)
-    local cursor = isCursorShowing() and not isMainMenuActive()
+    local cursor = isCursorShowing() and not isMainMenuActive() and not Hud.clicksDisabled()
     local mx, my = 0, 0
     if cursor then
         local cx, cy = getCursorPosition()
@@ -463,7 +463,7 @@ end
 -- Clic
 ----------------------------------------------------------------
 addEventHandler("onClientClick", root, function(button, state)
-    if button ~= "left" or state ~= "down" or not hovered then return end
+    if button ~= "left" or state ~= "down" or not hovered or Hud.clicksDisabled() then return end
     local now = getTickCount()
     if now - hoveredAt > 200 then return end           -- el HUD dejo de dibujarse
     if isChatBoxInputActive() or isConsoleActive() then return end

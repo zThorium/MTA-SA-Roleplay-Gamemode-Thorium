@@ -427,6 +427,14 @@
     });
 
     /* ---------------- Ciclo ---------------- */
+    var zoomK = 1;
+    function applyZoom() {
+        app.style.zoom = zoomK;
+        app.style.width = (window.innerWidth / zoomK) + "px";
+        app.style.height = (window.innerHeight / zoomK) + "px";
+    }
+    window.addEventListener("resize", applyZoom);
+
     function render() {
         if (PANEL === "left") renderLeft();
         else if (PANEL === "right") renderRight();
@@ -451,6 +459,12 @@
             if (PANEL === "left") renderGrid(); else render();
         },
         modal: modal,
+        // Escala de la interfaz segun la resolucion (la calcula Lua). #app se dibuja a tamano de
+        // diseno y el zoom lo lleva al tamano real del panel, sin recortes ni barras de desplazamiento.
+        zoom: function (k) {
+            zoomK = (k > 0.3 && k < 4) ? k : 1;
+            applyZoom();
+        },
         thumb: function (key, data) {
             thumbs[key] = data;
             var pic = document.querySelector(".pic[data-key=\"" + key + "\"]");

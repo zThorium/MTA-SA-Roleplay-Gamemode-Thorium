@@ -22,6 +22,7 @@
     <export function="setHudSuppressed" type="client" />
     <export function="isHudSuppressed" type="client" />
     <export function="setHudHidden" type="client" />
+    <export function="setHudClicksDisabled" type="client" />
     <export function="getTopRightBottom" type="client" />
     <export function="setNavRoute" type="client" />
     <file src="images/map.png" />

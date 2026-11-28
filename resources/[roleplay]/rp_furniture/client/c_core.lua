@@ -235,6 +235,8 @@ function FurnCore.openModal(kind, payload)
             modal.pending = {}
         end)
         showCursor(true)
+        -- misma escala que los paneles del editor (diseno a 1000 px de alto)
+        modalJS(("FURN.zoom(%.4f)"):format(math.max(0.8, math.min(1.8, screenH / 1000))))
     end
     FurnCore.modalKind = kind
     modalJS(("FURN.modal(%s, %s[0])"):format(jsString(kind), toJSON(payload or {}, true)))
