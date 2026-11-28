@@ -55,3 +55,27 @@ function getAnimByName(name)
         end
     end
 end
+
+-- Estilos de caminar (/caminar <clave>). Ids de setPedWalkingStyle; 0 = el de serie de la skin.
+WALK_STYLES = {
+    { "normal", 0 },      { "hombre", 118 },    { "arrastrado", 119 }, { "anciano", 120 },
+    { "pandillero", 121 }, { "pandillero2", 122 }, { "ancianogordo", 123 }, { "gordo", 124 },
+    { "trote", 125 },     { "borracho", 126 },  { "ciego", 127 },      { "swat", 128 },
+    { "mujer", 129 },     { "compras", 130 },   { "apurada", 131 },    { "sexy", 132 },
+    { "elegante", 133 },  { "anciana", 134 },   { "gorda", 135 },      { "trotadora", 136 },
+    { "skate", 138 },
+}
+
+function getWalkStyle(key)
+    key = tostring(key or ""):lower()
+    for _, w in ipairs(WALK_STYLES) do
+        if w[1] == key then return w[2] end
+    end
+end
+
+function isWalkStyle(id)
+    for _, w in ipairs(WALK_STYLES) do
+        if w[2] == id then return true end
+    end
+    return false
+end

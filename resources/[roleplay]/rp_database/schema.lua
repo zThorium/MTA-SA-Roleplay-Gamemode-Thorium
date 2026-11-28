@@ -1955,4 +1955,9 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_anims: estilo de caminar del personaje (/caminar); 0 = el de serie de su skin
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS walk_style SMALLINT UNSIGNED NOT NULL DEFAULT 0
+    ]],
 }
