@@ -60,6 +60,7 @@ Gimnasio: `rp_gym` (Ganton fijo con interior original; las máquinas las ponen l
 Armería: `rp_ammunation` (tienda y armas del inventario) y `rp_shootingrange` (campo de tiro: entrena la habilidad nativa de arma con tus balas; progreso en `weapon_skills`) y `rp_ballistics` (daño por calibre a los NPC: tiro en la cabeza mata al instante; al cuerpo de 1 bala con calibres altos a 5 con 9 mm).
 Emergencias: `rp_emergency` (`/911`, ambulancia IA con paramédicos) y `rp_firefighters` (facción de bomberos: servicio en el vestuario, autobombas e incendios dinámicos con focos y civiles atrapados en sitios que colocan los admins con `/fdsitio`).
 Robo de vehículos: `rp_cartheft` (ganzúa de las tiendas, minijuegos CEF de cerradura y puente, alarma con sirena y luces que se apaga con dos bocinazos; estrella si te sorprende un policía).
+Lavado: `rp_carwash` (suciedad por terreno, barro/tierra/arena/pasto, pintada con shader y guardada en `vehicles.dirt`; lavado de pago con E en el túnel de `rp_pronto`).
 Policía: `rp_wanted` (estrellas de GTA SA y policía IA que busca tu **última posición conocida**, como GTA V, y combate con táctica: anillo, cobertura, encajonar; config `WANTED_SEARCH`/`WANTED_COMBAT`, ver `docs/BUSQUEDA_POLICIAL.md`) y `rp_police` (facción policial jugadora).
 Drogas: `rp_dealers` (traficantes skin 28/29/30; comprar con un policia mirando da estrella).
 Trámites: `rp_agency` (agencia de empleo: turnos, DNI `id_card` y alta en trabajos).

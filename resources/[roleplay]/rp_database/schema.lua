@@ -1955,4 +1955,9 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_carwash: suciedad del vehiculo (0 = limpio, 1 = cubierto de barro)
+    [[
+    ALTER TABLE vehicles
+        ADD COLUMN IF NOT EXISTS dirt FLOAT NOT NULL DEFAULT 0
+    ]],
 }
