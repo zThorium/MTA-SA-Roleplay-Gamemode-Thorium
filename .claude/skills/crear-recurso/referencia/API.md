@@ -124,7 +124,7 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | Export | |
 |---|---|
 | `rp_factions:isPlayerInFaction(p [, which])` | ¿pertenece? — **la consulta normal** (también en cliente) |
-| `rp_factions:isPlayerOnDuty(p [, which])` | ¿pertenece y está de servicio? Lo responde el recurso de `FACTION_TYPES[tipo].duty` (`rp_police`, `rp_firefighters`); tipos sin servicio: `false` |
+| `rp_factions:isPlayerOnDuty(p [, which])` | ¿pertenece y está de servicio? Lo responde el recurso de `FACTION_TYPES[tipo].duty` (`rp_police`, `rp_firefighters`, `rp_duty` para médicos, gobierno, mecánicos, noticias, taxis...); tipos sin servicio: `false` |
 | `rp_factions:getPlayerFactionId(p)`, `getPlayerFactionType(p)`, `isPlayerFactionLeader(p)` | id / tipo o `false` (los dos primeros también en cliente) |
 | `rp_factions:getPlayerFactionInfo(p)` | `{ id, name, tag, type, color, stateFunded, rank, rankLevel, leader }` o `false` (en cliente, sin `stateFunded`/`rankLevel`) |
 | `rp_factions:getFactionInfo(id)`, `getFactions([tipo])` | `{ id, name, tag, type, color, stateFunded, leaderId, online }` / lista |
@@ -141,6 +141,9 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_wanted:jailPlayer(p, segundos, fianza, caos)`, `isPlayerJailed(p)`, `holdPursuit`, `setPursuitTerms` | ver `docs/BUSQUEDA_POLICIAL.md` |
 | `rp_emergency:callService(p, "ambulance"|"police"|"fire")` | |
 | `rp_firefighters:isOnDuty(p)`, `isFirefighter(p)`, `getFirefightersOnDuty()` | bomberos (facciones de tipo `bomberos`) y quién está de servicio |
+| `rp_duty:isOnDuty(p)`, `getDutyLoadout(p)` | vestuario genérico de facción: ¿de servicio? y uniforme puesto (`{ id, name, factionId }` o `false`) |
+| `rp_duty:getFactionVehicleInfo(v)` | vehículo de facción del garaje: `{ id, factionId, minLevel }` o `false` (también element data `rp:factionVehicle`) |
+| `rp_factions:getFactionFunds(id)`, `takeFactionFunds(id, n [, registro])`, `addFactionFunds(id, n [, registro])` | fondos de una facción; `takeFactionFunds` es atómico y devuelve `false` si no alcanza |
 
 ## Mundo, vehículos y propiedades
 
