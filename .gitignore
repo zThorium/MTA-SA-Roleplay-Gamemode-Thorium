@@ -53,3 +53,7 @@ resources/\[roleplay\]/rp_missions/audio/*.wav
 
 # Worktrees locales de Claude Code
 .claude/worktrees/
+
+# Copia local del kanban (scripts/kanban.sh)
+.claude/kanban*.tsv
+.claude/kanban*.tmp
