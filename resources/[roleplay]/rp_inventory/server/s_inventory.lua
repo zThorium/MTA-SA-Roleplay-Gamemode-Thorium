@@ -163,6 +163,12 @@ local function validAmount(amount)
 end
 
 -- Incluye lo que hay dentro de la mochila equipada (rp_backpacks)
+-- Export: true cuando el inventario del personaje ya se cargó de la BD (antes, takeItem/giveItem fallan)
+function isInventoryReady(player)
+    local inv = inventories[player]
+    return inv ~= nil and not inv.loading
+end
+
 function getInventory(player)
     local inv = inventories[player]
     if not inv then return false end
@@ -434,6 +440,18 @@ local function canAct(player)
     return not getElementData(player, "rp:downed") and not isPedDead(player) and not isPedInVehicle(player)
 end
 
+-- Equipo de servicio (rp_factionduty, elementData de servidor "rp:dutyItems"): no se tira ni se da,
+-- se devuelve en el vestuario. Solo bloquea lo que excede de lo propio.
+local function dutyLocked(player, itemId, amount)
+    local locked = getElementData(player, "rp:dutyItems")
+    local n = type(locked) == "table" and tonumber(locked[itemId]) or 0
+    if n > 0 and getItemAmount(player, itemId) - amount < n then
+        notify(player, "Es equipo de servicio: lo devuelves en el vestuario al salir de servicio.", "warning")
+        return true
+    end
+    return false
+end
+
 -- Export: crea el objeto recogible en el suelo SIN tocar ningun inventario (quien llama ya quito el item).
 -- contents (opcional, solo mochilas): { [itemId] = amount } que lleva dentro; no se ve en el suelo, solo la mochila.
 function spawnGroundItem(itemId, amount, x, y, z, dimension, interior, contents)
@@ -460,6 +478,7 @@ local function dropAt(player, itemId, amount, x, y, z)
     if not def then return end
     if def.document then return notify(player, "No puedes tirar documentos.", "warning") end
     if not validAmount(amount) then return end
+    if dutyLocked(player, itemId, amount) then return end
     if distanceTo(player, x, y, z) > DROP_RANGE or math.abs(z - select(3, getElementPosition(player))) > 3 then
         return notify(player, "Ese lugar queda demasiado lejos.", "warning")
     end
@@ -543,6 +562,7 @@ addEventHandler("rp:inv:give", resourceRoot, function(itemId, amount, targetId)
         return notify(player, "Esa persona no esta cerca de ti.", "warning")
     end
     if not hasItem(player, itemId, amount) then return notify(player, "No tienes suficientes.", "error") end
+    if dutyLocked(player, itemId, amount) then return end
     local ok, reason = canCarry(target, itemId, amount)
     if not ok then return notify(player, "No puede cargar eso: " .. reason, "error") end
 

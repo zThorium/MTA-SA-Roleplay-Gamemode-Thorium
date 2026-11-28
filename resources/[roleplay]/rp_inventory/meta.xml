@@ -109,6 +109,7 @@
     <export function="hasItem" type="server" />
     <export function="getItemAmount" type="server" />
     <export function="getInventory" type="server" />
+    <export function="isInventoryReady" type="server" />
     <export function="getInventoryWeight" type="server" />
     <export function="canCarry" type="server" />
     <export function="getItemDefinition" type="server" />

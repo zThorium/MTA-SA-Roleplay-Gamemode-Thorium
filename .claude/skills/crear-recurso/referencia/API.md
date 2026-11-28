@@ -85,6 +85,8 @@ end)
 | `rp_inventory:hasItem(p, itemId, n)`, `getItemAmount(p, itemId)` | incluye la mochila |
 | `rp_inventory:getItemDefinition(itemId)` | tabla del catálogo (servidor y cliente) |
 | `rp_inventory:getInventory(p)`, `getInventoryWeight(p)`, `getItemList()` | |
+| `rp_inventory:isInventoryReady(p)` | `true` cuando el inventario del personaje ya se cargó de la BD (antes `giveItem`/`takeItem` fallan) |
+| `rp_factionduty:isOnDuty(p)`, `hasDuty(factionId)`, `getDutyLoadout(p)` | Servicio genérico de facción; normalmente se pregunta con `rp_factions:isPlayerOnDuty` |
 | `rp_inventory:setItemLabel(...)`, `refreshInventory(p)` | |
 | `rp_inventory:spawnGroundItem(itemId, n, x, y, z, dim, int, contents)` | objeto en el suelo |
 | Cliente: `isInventoryOpen()`, `closeInventory()` | |

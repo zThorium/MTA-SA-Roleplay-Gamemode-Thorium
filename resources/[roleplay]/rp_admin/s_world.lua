@@ -43,6 +43,7 @@ WORLD_TYPES = {
     { key = "stationfence",  many = "stationfences",  res = "rp_train",      name = "Reja de estacion", kind = "fence", create = "crearreja" },
     { key = "metropole",     many = "metropoles",     res = "rp_train",      name = "Poste de metro", kind = "pole", create = "crearpostemetro" },
     { key = "flowerclock",   many = "flowerclocks",   res = "rp_relojflores", name = "Reloj de flores", create = "crearrelojflores" },
+    { key = "locker",        many = "lockers",        res = "rp_factionduty", name = "Vestuario de faccion", create = "makelocker" },
     { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D", create = "create3dtext" },
     { key = "marker",        many = "markers",        res = "rp_markers",    name = "Marcador" },
 }

@@ -281,6 +281,8 @@ local function sendDashboard(player)
             typeName = (FACTION_TYPES[f.type] or FACTION_TYPES.otra).name,
             stateFunded = f.state_funded, motd = f.motd,
             online = #onlineMembers(f.id),
+            -- Uniformes y equipo del servicio genérico (rp_factionduty): pestaña con botón al editor
+            genericDuty = (FACTION_TYPES[f.type] or {}).duty == "rp_factionduty",
             bank = can(player, "bank_view") and f.bank or false,
         },
         me = {
@@ -814,8 +816,15 @@ local function dutyResource(f)
     local t = FACTION_TYPES[f.type]
     local name = t and t.duty
     local res = name and getResourceFromName(name)
-    if res and getResourceState(res) == "running" then return res end
-    return nil, name ~= nil
+    if res and getResourceState(res) == "running" then
+        -- Servicio opcional (rp_factionduty): solo si esa facción lo tiene (tiene vestuario)
+        if t.dutyOptional then
+            local ok, has = pcall(call, res, "hasDuty", f.id)
+            if not (ok and has) then return nil, false end
+        end
+        return res
+    end
+    return nil, name ~= nil and not t.dutyOptional
 end
 
 -- Servicio según el recurso de ese tipo; nil si el tipo no tiene servicio

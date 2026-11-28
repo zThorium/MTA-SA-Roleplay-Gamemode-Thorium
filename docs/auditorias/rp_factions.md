@@ -63,3 +63,7 @@
 - **Prueba**: `rp_test` › `fac_tipos_registrados` (todos los tipos, color `#rrggbb`, clave ≤ 16 caracteres, `duty` con `dutyData`).
 - **Probar en juego**: `/crearfaccion` sin argumentos lista los 15 tipos; `/crearfaccion mecanicos MEC Taller Prueba` crea la facción con el color del tipo y F3 muestra «Mecanicos».
 - **INT-09**: N/A, catálogo de configuración sin hecho lograble.
+
+## 2026-11-28 · mejorar (#104, servicio genérico)
+- **Cambio**: los tipos sin servicio propio (gobierno, empresa, otra, mecanicos, noticias, transporte, logistica, seguros, seguridad, concesionaria) usan `rp_factionduty` con `dutyOptional`: `dutyResource` solo cuenta el servicio si `rp_factionduty:hasDuty(factionId)` (la facción tiene vestuario); sin él, el sueldo se cobra como antes. F3 tiene la pestaña «Uniformes y equipo» (con `manage_ranks`) que abre el editor de `rp_factionduty`.
+- **Probar en juego**: F3 de una facción de seguridad con el líder (se ve la pestaña) y con un miembro sin permisos (no se ve); `/forzarpayday` con y sin vestuario.
