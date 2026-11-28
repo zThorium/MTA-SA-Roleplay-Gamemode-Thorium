@@ -862,9 +862,11 @@ function getPlayerFactionInfo(player)
     local f, m = getFaction(player)
     if not f then return false end
     local rank = f.ranks[m.rankId]
+    local duty = onDuty(player, f)   -- nil = su tipo no tiene servicio
     return {
         id = f.id, name = f.name, tag = f.tag, type = f.type, color = f.color, stateFunded = f.state_funded,
         rank = rank and rank.name or "", rankLevel = getPlayerRankLevel(player), leader = isLeader(player),
+        hasDuty = duty ~= nil, onDuty = duty == true,
     }
 end
 

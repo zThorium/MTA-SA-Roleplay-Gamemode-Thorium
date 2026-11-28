@@ -73,3 +73,12 @@
 | N/A | B | INT-05 | Dimensiones propias sin choques |  |
 
 </details>
+
+## 2026-11-28 · mejorar (#107, radio de facción, departamentos y megáfono)
+- **Qué**: `/r` radio IC de la facción (oyen los miembros conectados, de servicio si su tipo lo tiene; quien está a 6 m oye tu parte con globo «RADIO»), `/d` canal común de los tipos `policia`, `medicos`, `bomberos` y `gobierno`, y `/meg` (alias `/megafono`) desde un vehículo de emergencia, 60 m, con globo «MEGAFONO» que tiembla como el grito. Clic de radio (Kenney CC0) al recibir.
+- **Integración**: solo con la API de `rp_factions` por tipo (`getPlayerFactionInfo`, `getFactionPlayers`, `getFactions`), con `pcall` (dependencia opcional). `getPlayerFactionInfo` añade `hasDuty` y `onDuty`.
+- **UX**: uso y errores con `rp_notify` («Debes estar de servicio...», «Necesitas ir en un vehículo de emergencia...»); comandos en el panel F1.
+- **Prueba**: `rp_test` › `fac_radio_comandos`.
+- **Probar en juego**: policía de servicio `/r prueba` (lo ven los policías de servicio, con clic; quien está al lado ve «dice por radio»); fuera de servicio, aviso; `/d` desde bomberos lo recibe la policía; `/meg alto` en una patrulla.
+- **INT-09**: N/A, comunicación sin hecho lograble.
+- **Pendiente (futuro)**: radio como ítem con frecuencias libres; megáfono en vehículos de facción cuando exista #105.
