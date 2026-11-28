@@ -1955,4 +1955,15 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_chat: descripciones de rol (/yo, /descveh, /desccasa) que se leen con /examinar o el menú M.
+    -- ref_id = characters.id, vehicles.id o properties.id según kind
+    [[
+    CREATE TABLE IF NOT EXISTS descriptions (
+        kind       ENUM('character','vehicle','property') NOT NULL,
+        ref_id     INT UNSIGNED NOT NULL,
+        text       VARCHAR(200) NOT NULL,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (kind, ref_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

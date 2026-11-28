@@ -14,6 +14,7 @@
     <script src="client/c_properties.lua" type="client" cache="false" />
 
     <export function="getPropertyInfo" type="server" />
+    <export function="getPlayerProperty" type="server" />
 
     <file src="html/index.html" />
     <export function="adminElements" type="server" />

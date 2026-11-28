@@ -480,6 +480,11 @@ ACT.frisk = function(p, t)
 end
 ACCEPT.frisk = function(p, t) showFrisk(p, t) end
 
+-- Examinar: su descripción de rol (/yo, en rp_chat)
+ACT.examine = function(p, t)
+    if try("rp_chat", "examinePlayer", p, t) ~= true then notify(p, "No disponible ahora.", "warning") end
+end
+
 -- Facción
 ACT.fac_invite = function(p, t)
     if try("rp_factions", "hasFactionPermission", p, "invite") ~= true then return notify(p, "Tu rol no puede invitar.", "error") end
@@ -585,6 +590,7 @@ local function buildMenu(p, t)
 
     -- Otros
     local g = group("Otros", "muted")
+    if near then add(g, "examine", "Examinar", "🔍", "Su aspecto: tatuajes, heridas, olor… (/yo)") end
     add(g, "report", "Reportar", "🚩", "Abre el reporte F1 con esta persona", { client = true })
 
     if admin then

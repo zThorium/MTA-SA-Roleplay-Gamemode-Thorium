@@ -7,8 +7,11 @@
     <include resource="rp_ids" />
     <include resource="rp_characters" />
     <include resource="rp_notify" />
+    <include resource="rp_vehicles" />
+    <include resource="rp_properties" />
 
     <script src="server/s_chat.lua" type="server" />
+    <script src="server/s_descriptions.lua" type="server" />
     <script src="client/c_dx.lua" type="client" cache="false" />
     <script src="client/c_chat.lua" type="client" cache="false" />
 
@@ -17,4 +20,7 @@
     <file src="fonts/rubik_regular.ttf" />
     <file src="fonts/rubik_medium.ttf" />
     <file src="fonts/rubik_semibold.ttf" />
+
+    <!-- rp_interact: opción «Examinar» del menú M -->
+    <export function="examinePlayer" type="server" />
 </meta>
