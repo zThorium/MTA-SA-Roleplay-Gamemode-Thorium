@@ -41,6 +41,7 @@
         { id: "members", label: "Miembros", visible: function () { return data.members !== false || has("invite"); } },
         { id: "ranks", label: "Roles y permisos", visible: function () { return has("manage_ranks"); } },
         { id: "bank", label: "Fondos", visible: function () { return data.faction.bank !== false || has("bank_deposit"); } },
+        { id: "invoices", label: "Facturas", visible: function () { return has("bill") || has("log_view"); } },
         { id: "log", label: "Registro", visible: function () { return data.log !== false; } }
     ];
 
@@ -52,7 +53,8 @@
         TABS.forEach(function (t) {
             if (!t.visible()) return;
             var b = button(t.label, t.id === tab ? "active" : "", function () {
-                tab = t.id; editing = null; confirmKick = null; render();
+                tab = t.id; editing = null; confirmKick = null; if (tab === "invoices") { invoices = null; action("invoices"); }
+                render();
             });
             nav.appendChild(b);
             if (t.id === tab) $("title").textContent = t.label;
@@ -194,6 +196,8 @@
         level.type = "number"; level.min = 1; level.max = maxLevel(); level.value = r.level || 1;
         var salary = field("Sueldo por payday", el("input"));
         salary.type = "number"; salary.min = 0; salary.max = 5000; salary.value = r.salary || 0;
+        var commission = field("Comision al facturar (%)", el("input"));
+        commission.type = "number"; commission.min = 0; commission.max = 50; commission.value = r.commission || 0;
         box.appendChild(grid);
         box.appendChild(el("p", "muted", "El nivel define la jerarquia: un rol solo gestiona a los de nivel inferior. Solo puedes conceder permisos que tienes."));
 
@@ -214,6 +218,7 @@
         row.appendChild(button("Guardar rol", "primary", function () {
             action("rankSave", {
                 id: r.id || null, name: name.value.trim(), level: Number(level.value), salary: Number(salary.value),
+                commission: Number(commission.value) || 0,
                 perms: checks.filter(function (c) { return c.checked; }).map(function (c) { return c.value; })
             });
             editing = null;
@@ -286,6 +291,50 @@
         if (!f.stateFunded) panel.appendChild(el("p", "muted", "Si los fondos no alcanzan para el sueldo de un miembro, ese payday lo cubre el sueldo base del Estado."));
     }
 
+    // ---------------------------------------------------------- Facturas
+    var invoices = null;   // datos de rp:fac:invoices (se piden al abrir la pestaña)
+    var STATUS = { pending: "Pendiente", paid: "Pagada", rejected: "Rechazada", expired: "Caducada" };
+    function renderInvoices(panel) {
+        var help = el("div", "box");
+        help.appendChild(el("h3", null, "Cobrar a un cliente"));
+        help.appendChild(el("p", "muted", has("bill")
+            ? "Junto al cliente escribe /facturar <id> <monto> <concepto>. El cliente paga en efectivo o con el banco; el dinero va a los fondos y tu rol se lleva su comision."
+            : "Tu rol no puede facturar; el lider lo activa con el permiso Facturar."));
+        panel.appendChild(help);
+        if (!invoices) { panel.appendChild(el("p", "muted", "Cargando...")); return; }
+
+        var box = el("div", "box");
+        box.appendChild(el("h3", null, (invoices.full ? "Aporte por miembro" : "Tu aporte") + " (ultimos " + invoices.days + " dias)"));
+        var table = el("table", "table");
+        var head = el("tr");
+        ["Miembro", "Facturado", "Facturas", "Comision", "Ultima"].forEach(function (h) { head.appendChild(el("th", null, h)); });
+        table.appendChild(head);
+        if (!invoices.members.length) {
+            var tr0 = el("tr"); var td0 = el("td", "muted", "Aun no hay facturas pagadas."); td0.colSpan = 5; tr0.appendChild(td0); table.appendChild(tr0);
+        }
+        invoices.members.forEach(function (m) {
+            var tr = el("tr");
+            [m.name, money(m.total), String(m.count), money(m.commission), m.last || "-"].forEach(function (v) { tr.appendChild(el("td", null, v)); });
+            table.appendChild(tr);
+        });
+        box.appendChild(table);
+        panel.appendChild(box);
+
+        var box2 = el("div", "box");
+        box2.appendChild(el("h3", null, "Ultimas facturas"));
+        var list = el("ul", "log");
+        if (!invoices.recent.length) list.appendChild(el("li", "muted", "Sin facturas."));
+        invoices.recent.forEach(function (i) {
+            var li = el("li");
+            li.appendChild(el("span", "date", i.date));
+            li.appendChild(el("span", null, "#" + i.id + " · " + i.employee + " → " + i.client + " · " + money(i.amount) + " · " + i.concept
+                + " · " + (STATUS[i.status] || i.status) + (i.method ? " (" + (i.method === "cash" ? "efectivo" : "banco") + ")" : "")));
+            list.appendChild(li);
+        });
+        box2.appendChild(list);
+        panel.appendChild(box2);
+    }
+
     // ---------------------------------------------------------- Registro
     function renderLog(panel) {
         var box = el("div", "box");
@@ -314,7 +363,7 @@
 
         var panel = $("panel");
         panel.innerHTML = "";
-        ({ summary: renderSummary, members: renderMembers, ranks: renderRanks, bank: renderBank, log: renderLog })[tab](panel);
+        ({ summary: renderSummary, members: renderMembers, ranks: renderRanks, bank: renderBank, invoices: renderInvoices, log: renderLog })[tab](panel);
     }
 
     $("btn-close").addEventListener("click", function () { send("rp:fac:ui:close"); });
@@ -323,6 +372,7 @@
     });
 
     window.RP = {
+        invoices: function (d) { invoices = d; if (tab === "invoices" && !editing) render(); },
         render: function (d) {
             // Mientras se edita un rol no se redibuja (no se pierde lo escrito); se vera al guardar o cancelar
             data = d;

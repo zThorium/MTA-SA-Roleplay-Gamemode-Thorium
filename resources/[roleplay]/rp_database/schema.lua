@@ -1955,4 +1955,112 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_duty (#104): vestuarios de facción que colocan los admins (/makelocker)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_lockers (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED NOT NULL,
+        x           FLOAT        NOT NULL,
+        y           FLOAT        NOT NULL,
+        z           FLOAT        NOT NULL,
+        interior    INT UNSIGNED NOT NULL DEFAULT 0,
+        dimension   INT UNSIGNED NOT NULL DEFAULT 0,
+        created_by  VARCHAR(32)  NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_lockers_faction (faction_id),
+        CONSTRAINT fk_faction_lockers_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty: uniformes de cada facción (rol mínimo -> skin y equipo "item:cantidad,item:cantidad")
+    [[
+    CREATE TABLE IF NOT EXISTS faction_loadouts (
+        id          INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED      NOT NULL,
+        name        VARCHAR(32)       NOT NULL,
+        min_level   TINYINT UNSIGNED  NOT NULL DEFAULT 1,
+        skin        SMALLINT UNSIGNED NULL,
+        items       VARCHAR(255)      NOT NULL DEFAULT '',
+        PRIMARY KEY (id),
+        KEY idx_faction_loadouts_faction (faction_id),
+        CONSTRAINT fk_faction_loadouts_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty: equipo entregado al entrar de servicio. Se devuelve al salir; si el servidor se cae,
+    -- se recoge al volver a entrar con ese personaje (así no se duplican ítems)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_duty_items (
+        character_id INT UNSIGNED NOT NULL,
+        faction_id   INT UNSIGNED NULL,
+        items        VARCHAR(255) NOT NULL DEFAULT '',
+        started_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (character_id),
+        CONSTRAINT fk_faction_duty_items_char FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty (#105): garajes de facción (punto donde salen y se guardan los vehículos; /makefgarage)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_garages (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED NOT NULL,
+        x           FLOAT        NOT NULL,
+        y           FLOAT        NOT NULL,
+        z           FLOAT        NOT NULL,
+        rot         FLOAT        NOT NULL DEFAULT 0,
+        interior    INT UNSIGNED NOT NULL DEFAULT 0,
+        dimension   INT UNSIGNED NOT NULL DEFAULT 0,
+        created_by  VARCHAR(32)  NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_garages_faction (faction_id),
+        CONSTRAINT fk_faction_garages_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty (#105): vehículos propiedad de la facción (comprados con sus fondos)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_vehicles (
+        id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED     NOT NULL,
+        model       SMALLINT UNSIGNED NOT NULL,
+        color       VARCHAR(40)      NOT NULL DEFAULT '',
+        min_level   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+        plate       VARCHAR(8)       NOT NULL,
+        fuel        FLOAT            NULL,
+        health      FLOAT            NOT NULL DEFAULT 1000,
+        price       INT UNSIGNED     NOT NULL DEFAULT 0,
+        created_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_vehicles_faction (faction_id),
+        CONSTRAINT fk_faction_vehicles_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_factions (#106): % de comisión de cada rol sobre lo que factura
+    [[
+    ALTER TABLE faction_ranks
+        ADD COLUMN IF NOT EXISTS commission TINYINT UNSIGNED NOT NULL DEFAULT 0
+    ]],
+    -- rp_factions (#106): facturas a clientes (pending -> paid | rejected | expired)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_invoices (
+        id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id    INT UNSIGNED NOT NULL,
+        employee_id   INT UNSIGNED NULL,
+        employee_name VARCHAR(32)  NOT NULL,
+        client_id     INT UNSIGNED NULL,
+        client_name   VARCHAR(32)  NOT NULL,
+        amount        INT UNSIGNED NOT NULL,
+        concept       VARCHAR(60)  NOT NULL,
+        status        VARCHAR(10)  NOT NULL DEFAULT 'pending',
+        method        VARCHAR(8)   NULL,
+        commission    INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        resolved_at   DATETIME     NULL,
+        PRIMARY KEY (id),
+        KEY idx_faction_invoices_faction (faction_id, created_at),
+        KEY idx_faction_invoices_employee (employee_id),
+        CONSTRAINT fk_faction_invoices_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE,
+        CONSTRAINT fk_faction_invoices_employee FOREIGN KEY (employee_id) REFERENCES characters (id) ON DELETE SET NULL,
+        CONSTRAINT fk_faction_invoices_client FOREIGN KEY (client_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

@@ -10,12 +10,22 @@
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_factions.lua" type="server" />
+    <script src="server/s_invoices.lua" type="server" />
     <script src="client/c_factions.lua" type="client" cache="false" />
     <script src="client/c_api.lua" type="client" cache="false" />
+    <script src="client/c_invoice.lua" type="client" cache="false" />
 
     <file src="html/index.html" />
     <file src="html/style.css" />
     <file src="html/app.js" />
+    <file src="images/keyboard_1.png" />
+    <file src="images/keyboard_2.png" />
+    <file src="images/keyboard_backspace.png" />
+    <file src="sounds/glass_001.ogg" />
+    <file src="sounds/confirmation_003.ogg" />
+    <file src="sounds/error_004.ogg" />
+    <file src="fonts/rubik_medium.ttf" />
+    <file src="fonts/rubik_semibold.ttf" />
 
     <export function="getPlayerFaction" type="server" />
     <export function="hasFactionPermission" type="server" />
@@ -33,6 +43,11 @@
     <export function="getPlayerFactionInfo" type="server" />
     <export function="getFactionInfo" type="server" />
     <export function="getFactions" type="server" />
+    <export function="getFactionTypes" type="server" />
+    <export function="getFactionFunds" type="server" />
+    <export function="takeFactionFunds" type="server" />
+    <export function="addFactionFunds" type="server" />
+    <export function="bill" type="server" />
     <export function="getFactionPlayers" type="server" />
     <export function="getCharacterFaction" type="server" />
     <export function="isPlayerInFaction" type="client" />

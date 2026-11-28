@@ -165,6 +165,7 @@ local function rankFromRow(r)
     return {
         id = tonumber(r.id), factionId = tonumber(r.faction_id), name = r.name,
         level = tonumber(r.level) or 1, salary = tonumber(r.salary) or 0, permissions = tonumber(r.permissions) or 0,
+        commission = tonumber(r.commission) or 0,
     }
 end
 
@@ -309,6 +310,7 @@ local function sendDashboard(player)
             data.ranks[#data.ranks + 1] = {
                 id = r.id, name = r.name, level = r.level,
                 salary = full and r.salary or nil,
+                commission = full and r.commission or nil,
                 perms = full and permissionKeys(r.permissions) or nil,
                 editable = r.level < myLevel,
             }
@@ -491,6 +493,10 @@ actions.rankSave = function(player, d)
     local myLevel, myMask = levelOf(player), maskOf(player)
     local name = type(d.name) == "string" and d.name:gsub("^%s+", ""):gsub("%s+$", "") or nil
     local level, salary = tonumber(d.level), tonumber(d.salary)
+    local commission = tonumber(d.commission) or 0
+    if not isInt(commission, 0, INVOICES.MAX_COMMISSION) then
+        return notify(player, ("La comision va de 0 a %d %%."):format(INVOICES.MAX_COMMISSION), "error")
+    end
 
     if not validText(name, FACTIONS.NAME_MIN, FACTIONS.NAME_MAX) then
         return notify(player, ("El nombre del rol debe tener entre %d y %d caracteres."):format(FACTIONS.NAME_MIN, FACTIONS.NAME_MAX), "error")
@@ -523,8 +529,8 @@ actions.rankSave = function(player, d)
 
     local who = displayName(getPlayerName(player))
     if existing then
-        dbExec(db(), "UPDATE faction_ranks SET name = ?, level = ?, salary = ?, permissions = ? WHERE id = ?", name, level, salary, mask, id)
-        existing.name, existing.level, existing.salary, existing.permissions = name, level, salary, mask
+        dbExec(db(), "UPDATE faction_ranks SET name = ?, level = ?, salary = ?, permissions = ?, commission = ? WHERE id = ?", name, level, salary, mask, commission, id)
+        existing.name, existing.level, existing.salary, existing.permissions, existing.commission = name, level, salary, mask, commission
         addLog(f.id, ("%s edito el rol %s (nivel %d, sueldo $%d)."):format(who, name, level, salary))
         notify(player, ("Rol %s guardado."):format(name), "success")
         for _, p in ipairs(onlineMembers(f.id)) do publishMembership(p) end
@@ -538,11 +544,11 @@ actions.rankSave = function(player, d)
     dbQuery(function(qh)
         local ok, _, newId = dbPoll(qh, 0)
         if not ok then return isElement(player) and notify(player, "No se pudo crear el rol.", "error") end
-        f.ranks[newId] = { id = newId, factionId = f.id, name = name, level = level, salary = salary, permissions = mask }
+        f.ranks[newId] = { id = newId, factionId = f.id, name = name, level = level, salary = salary, permissions = mask, commission = commission }
         addLog(f.id, ("%s creo el rol %s (nivel %d, sueldo $%d)."):format(who, name, level, salary))
         if isElement(player) then notify(player, ("Rol %s creado."):format(name), "success") end
         refreshFaction(f.id)
-    end, db(), "INSERT INTO faction_ranks (faction_id, name, level, salary, permissions) VALUES (?, ?, ?, ?, ?)", f.id, name, level, salary, mask)
+    end, db(), "INSERT INTO faction_ranks (faction_id, name, level, salary, permissions, commission) VALUES (?, ?, ?, ?, ?, ?)", f.id, name, level, salary, mask, commission)
 end
 
 actions.rankDelete = function(player, d)
@@ -614,6 +620,11 @@ local function leave(player)
 end
 
 actions.leave = function(player) leave(player) end
+
+-- Pestaña Facturas de F3 (s_invoices.lua): aporte por miembro y últimas facturas
+actions.invoices = function(player)
+    if sendInvoiceStats then sendInvoiceStats(player, getFaction(player), isLeader(player) or can(player, "log_view")) end
+end
 
 addEventHandler("rp:fac:action", resourceRoot, function(action, d)
     if client and getElementData(client, "rp:downed") then return end   -- abatido (rp_injury)
@@ -865,6 +876,7 @@ function getPlayerFactionInfo(player)
     return {
         id = f.id, name = f.name, tag = f.tag, type = f.type, color = f.color, stateFunded = f.state_funded,
         rank = rank and rank.name or "", rankLevel = getPlayerRankLevel(player), leader = isLeader(player),
+        commission = rank and rank.commission or 0,
     }
 end
 
@@ -880,6 +892,40 @@ function getFactions(kind)
     end
     table.sort(list, function(a, b) return a.id < b.id end)
     return list
+end
+
+-- Catálogo de tipos (FACTION_TYPES): nombre, color, state, duty y dutyData de cada uno
+function getFactionTypes()
+    return FACTION_TYPES
+end
+
+-- Fondos de la facción para otros recursos (garaje, facturas...). La memoria de este recurso
+-- es la fuente: se comprueba y descuenta aquí (sin carreras) y la BD lleva la misma guarda.
+function getFactionFunds(factionId)
+    local f = factions[tonumber(factionId)]
+    return f and f.bank or false
+end
+
+function takeFactionFunds(factionId, amount, logText)
+    local f = factions[tonumber(factionId)]
+    amount = tonumber(amount)
+    if not f or not amount or amount <= 0 or amount ~= math.floor(amount) or f.bank < amount then return false end
+    f.bank = f.bank - amount
+    dbExec(db(), "UPDATE factions SET bank = bank - ? WHERE id = ? AND bank >= ?", amount, f.id, amount)
+    if logText then addLog(f.id, tostring(logText)) end
+    refreshFaction(f.id)
+    return true
+end
+
+function addFactionFunds(factionId, amount, logText)
+    local f = factions[tonumber(factionId)]
+    amount = tonumber(amount)
+    if not f or not amount or amount <= 0 or amount ~= math.floor(amount) then return false end
+    f.bank = f.bank + amount
+    dbExec(db(), "UPDATE factions SET bank = bank + ? WHERE id = ?", amount, f.id)
+    if logText then addLog(f.id, tostring(logText)) end
+    refreshFaction(f.id)
+    return true
 end
 
 function getFactionPlayers(which, dutyOnly)

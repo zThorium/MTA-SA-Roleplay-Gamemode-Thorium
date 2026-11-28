@@ -56,3 +56,22 @@
 | N/A | B | INT-05 | Dimensiones propias sin choques |  |
 
 </details>
+
+## 2026-11-28 · mejorar (#102, tipos de facción nuevos)
+- **Qué**: `FACTION_TYPES` registra `mecanicos`, `noticias`, `transporte`, `logistica`, `seguros`, `seguridad`, `concesionaria` y `mafia` (nombre, color y `state = false`; sin `duty` hasta que su recurso lleve el servicio). Export nuevo `getFactionTypes()`.
+- **Sin cambios necesarios**: `/crearfaccion`, el panel F3, `rp_scoreboard` y `rp_nametags` ya leen el tipo y el color desde `FACTION_TYPES` / la facción.
+- **Prueba**: `rp_test` › `fac_tipos_registrados` (todos los tipos, color `#rrggbb`, clave ≤ 16 caracteres, `duty` con `dutyData`).
+- **Probar en juego**: `/crearfaccion` sin argumentos lista los 15 tipos; `/crearfaccion mecanicos MEC Taller Prueba` crea la facción con el color del tipo y F3 muestra «Mecanicos».
+- **INT-09**: N/A, catálogo de configuración sin hecho lograble.
+
+## 2026-11-28 · mejorar (#106, facturas a clientes y comisiones)
+- **Qué**: permiso nuevo `bill` (bit 131072), `INVOICES` en la config, `server/s_invoices.lua` (`/facturar`, export `bill`, pago, caducidad y datos de la pestaña), `client/c_invoice.lua` (ventana dx del cliente con teclas 1/2/Retroceso dibujadas, sonidos Kenney), comisión por rol (`faction_ranks.commission`, editable en Roles), tabla `faction_invoices` y pestaña **Facturas** en F3. El pago usa `addFactionFunds` (#105).
+- **Reglas manuales revisadas**:
+  - SEG-02 ✔: el cliente solo responde «cash», «bank» o rechaza; el servidor exige factura pendiente suya y sin caducar, el empleado a 5 m y el saldo. Monto entero 1-100.000, concepto limpio 3-60, una pendiente por cliente.
+  - SEG-04 ✔: 3 s entre facturas del mismo empleado; la acción de F3 lleva el cooldown general.
+  - BD-06 ✔: banco con `UPDATE ... AND bank_money >= ?` y entrega solo con fila afectada; efectivo con `getPlayerMoney` + `takePlayerMoney` + `saveCharacter`; la factura se cierra con `WHERE status = 'pending'` (no se cobra dos veces).
+  - PRU-02 ✔: `fac_facturas_export_y_permiso` y `fac_facturas_cobro_atomico` (cobra el monto exacto; sin saldo no mueve nada).
+  - CIC-03 ✔: al salir el cliente o parar el recurso, las pendientes pasan a `expired`.
+  - INT-09: N/A por ahora: facturar entre amigos se farmea gratis; los logros irán en cada trabajo (reparaciones, atenciones...).
+  - UX-01/06 ✔: teclas dibujadas en la ventana, barra de tiempo que se pone roja al final, sonido al llegar, pagar y rechazar.
+- **Pendiente** [A]: registrar los pagos en `rp_logs` cuando se fusione #109.

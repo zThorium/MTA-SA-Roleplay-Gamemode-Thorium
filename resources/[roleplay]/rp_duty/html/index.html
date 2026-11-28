@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vestuario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="panel" class="panel hidden">
+        <header>
+            <div class="tag" id="tag">FAC</div>
+            <div class="titles">
+                <div class="kicker">VESTUARIO</div>
+                <div class="title" id="faction">Facción</div>
+                <div class="sub" id="rank"></div>
+            </div>
+            <div class="state" id="state">Fuera de servicio</div>
+            <button class="close" id="close" title="Cerrar (Esc)">✕</button>
+        </header>
+
+        <nav class="tabs" id="tabs">
+            <button data-tab="duty" class="on">Servicio</button>
+            <button data-tab="edit" id="tab-edit">Uniformes</button>
+        </nav>
+
+        <!-- Servicio -->
+        <section id="sec-duty">
+            <div class="guide" id="guide">
+                <span class="step"><b>1</b> Elige un uniforme</span>
+                <span class="arrow">→</span>
+                <span class="step"><b>2</b> Pulsa <i>Entrar de servicio</i></span>
+                <span class="hint">El equipo va a tu inventario (I) y se devuelve al salir.</span>
+            </div>
+            <div class="cards" id="cards"></div>
+            <div class="empty hidden" id="empty">
+                Tu facción todavía no tiene uniformes.<br>
+                <span id="empty-hint">Pídele al líder que los cree en la pestaña <b>Uniformes</b>.</span>
+            </div>
+            <footer>
+                <button class="btn ghost hidden" id="off">Salir de servicio</button>
+                <button class="btn primary" id="on" disabled>Entrar de servicio</button>
+            </footer>
+        </section>
+
+        <!-- Editor de uniformes (líder) -->
+        <section id="sec-edit" class="hidden">
+            <div class="edit-grid">
+                <div class="list" id="list"></div>
+                <form class="form" id="form" autocomplete="off">
+                    <div class="form-title" id="form-title">Nuevo uniforme</div>
+                    <label>Nombre<input id="f-name" maxlength="32" placeholder="Ej.: Paramédico"></label>
+                    <div class="row2">
+                        <label>Nivel de rol mínimo<input id="f-level" type="number" min="1" max="99" value="1"></label>
+                        <label>Skin (vacío = su ropa)<input id="f-skin" type="number" min="1" max="312" placeholder="Ej.: 274"></label>
+                    </div>
+                    <div class="items-head">Equipo <span id="items-count"></span></div>
+                    <div id="f-items"></div>
+                    <button type="button" class="btn small ghost" id="add-item">+ Añadir objeto</button>
+                    <div class="form-actions">
+                        <button type="button" class="btn ghost" id="new">Nuevo</button>
+                        <button type="button" class="btn danger hidden" id="del">Borrar</button>
+                        <button type="submit" class="btn primary" id="save">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        <!-- Garaje de la facción -->
+        <section id="sec-garage" class="hidden">
+            <div class="guide" id="g-guide">
+                <span class="step"><b>1</b> Entra de servicio en el vestuario</span>
+                <span class="arrow">→</span>
+                <span class="step"><b>2</b> Pulsa <i>Sacar</i></span>
+                <span class="arrow">→</span>
+                <span class="step"><b>3</b> Vuelve y pulsa <kbd class="key">E</kbd> al volante para guardarlo</span>
+            </div>
+            <div class="cards" id="g-cards"></div>
+            <div class="empty hidden" id="g-empty">
+                La facción todavía no tiene vehículos.<br>
+                <span id="g-empty-hint">Pídele al líder que compre uno.</span>
+            </div>
+            <div id="g-shop" class="hidden">
+                <div class="shop-head">
+                    <span>Comprar con los fondos de la facción</span>
+                    <span class="funds" id="g-funds">$0</span>
+                </div>
+                <div class="cards" id="g-catalog"></div>
+            </div>
+        </section>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

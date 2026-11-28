@@ -26,6 +26,19 @@ FACTION_PERMISSIONS = {
     { key = "pol_armory",    bit = 16384, label = "Policia: armeria",           description = "Usar la armeria (cada articulo pide un nivel de rol minimo)." },
     { key = "pol_garage",    bit = 32768, label = "Policia: garaje",            description = "Sacar vehiculos policiales (cada modelo pide un nivel de rol minimo)." },
     { key = "pol_evidence",  bit = 65536, label = "Policia: evidencia",         description = "Recolectar evidencia y usar el laboratorio." },
+    -- Facturas (#106): cualquier facción
+    { key = "bill",          bit = 131072, label = "Facturar",                  description = "Cobrar a clientes con /facturar; se lleva la comision de su rol." },
+}
+
+-- Facturas a clientes (/facturar, export bill). El cobro va a los fondos y la comisión del rol al empleado.
+INVOICES = {
+    MIN = 1, MAX = 100000,      -- monto por factura
+    CONCEPT_MIN = 3, CONCEPT_MAX = 60,
+    DISTANCE = 5,               -- metros entre empleado y cliente
+    EXPIRE_S = 60,              -- segundos para aceptar
+    COOLDOWN_MS = 3000,         -- entre facturas del mismo empleado
+    MAX_COMMISSION = 50,        -- % máximo de comisión que un rol puede llevarse
+    STATS_DAYS = 30,            -- días que mira el «aporte por miembro» de F3
 }
 
 FACTION_PERMISSION_BIT = {}
@@ -42,14 +55,28 @@ end
 --   con ella el cliente sabe quién está de servicio (nametags) sin preguntar al servidor.
 --   Un sistema nuevo de facción (médicos, taxis...) se registra aquí, no con llamadas a mano.
 -- Pertenencia: los recursos preguntan por el TIPO (isPlayerInFaction(p, "policia")), nunca por un id fijo.
+-- Tipos sin recurso propio de servicio usan el vestuario genérico rp_duty (#104): uniforme y equipo
+-- por rol y sueldo de rol solo de servicio. Una facción de estos tipos necesita un vestuario
+-- (/makelocker) para que sus miembros entren de servicio y cobren.
+local GENERIC_DUTY = { duty = "rp_duty", dutyData = "rp:factionDuty" }
 FACTION_TYPES = {
-    gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff" },
+    gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
     policia  = { name = "Policia",           state = true,  color = "#3b6fe0", duty = "rp_police", dutyData = "rp:policeDuty" },
-    medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d" },
+    medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
     bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b", duty = "rp_firefighters", dutyData = "rp:fireDuty" },
     empresa  = { name = "Empresa",           state = false, color = "#4cd38a" },
     banda    = { name = "Banda",             state = false, color = "#a35bff" },
     otra     = { name = "Otra",              state = false, color = "#f5a524" },
+    -- Tipos de los sistemas de las fases F2-F6 (#102). Si un tipo pasa a tener su propio recurso de
+    -- servicio, se cambia aquí su duty/dutyData. La clave cabe en factions.type (VARCHAR(16)).
+    mecanicos     = { name = "Mecanicos",          state = false, color = "#c9a227", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    noticias      = { name = "Noticias",           state = false, color = "#2ec4d6", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    transporte    = { name = "Taxis y buses",      state = false, color = "#ffd23f", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    logistica     = { name = "Distribuidora",      state = false, color = "#8d6e4f", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    seguros       = { name = "Aseguradora",        state = false, color = "#5c7cfa", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    seguridad     = { name = "Seguridad privada",  state = false, color = "#6b7a8f", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    concesionaria = { name = "Concesionaria",      state = false, color = "#e0679a", duty = GENERIC_DUTY.duty, dutyData = GENERIC_DUTY.dutyData },
+    mafia         = { name = "Mafia",              state = false, color = "#8b1e2d" },
 }
 
 FACTIONS = {
