@@ -1938,4 +1938,21 @@ SCHEMA = {
         PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_train: largo del brazo de cada barrera en metros (NULL = largo de serie del 968); /puntabarrera
+    [[
+    ALTER TABLE rail_crossings
+        ADD COLUMN IF NOT EXISTS length FLOAT NULL
+    ]],
+    -- rp_train: cruce de Idlewood (2200, -1732): una barrera a cada lado, brazos de ~12,5 y ~13 m.
+    -- rot = rumbo de la base a la punta del brazo bajado (s_crossings.lua); no se duplica si ya hay una ahí
+    [[
+    INSERT INTO rail_crossings (x, y, z, rot, side, length)
+    SELECT 2194.933, -1725.551, 13.585, 269.86, 1, 12.49 FROM DUAL
+    WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2194.933) < 3 AND ABS(y + 1725.551) < 3)
+    ]],
+    [[
+    INSERT INTO rail_crossings (x, y, z, rot, side, length)
+    SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
+    WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
+    ]],
 }

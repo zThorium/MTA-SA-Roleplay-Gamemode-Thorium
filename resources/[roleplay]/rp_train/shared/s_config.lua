@@ -55,6 +55,8 @@ TRAIN = {
     BARRIER_MODEL = 968,      -- brazo de barrera
     BARRIER_BASE_MODEL = 966, -- poste
     BARRIER_MOVE_MS = 3500,
+    BARRIER_ARM_LENGTH = 6,   -- largo de serie del brazo 968 (m); rail_crossings.length lo escala
+    BARRIER_TIP_MAX = 25,     -- /puntabarrera: largo máximo del brazo y radio para elegir la barrera
     BELL_DISTANCE = 120,      -- se oyen las campanas hasta aquí
     BELL_VOLUME = 0.9,
 

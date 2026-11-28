@@ -118,6 +118,7 @@ ADMIN_CATALOG = {
             { cmd = "/hora", args = "<0-23> [minutos]", desc = "Cambia la hora de juego (el reloj sigue avanzando desde ahi).", res = "rp_events" },
             { cmd = "/mercadoajuste", args = "<dz> <rotacion>", desc = "Calibra los puestos del mercadillo: metros que se suben (por si quedan enterrados) y rotacion extra 0/90/180/270 para que miren a la calle. Luego crea otro con /evento market.", res = "rp_events" },
             { cmd = "/crearbarrera", args = "[inv]", desc = "Crea una barrera de paso a nivel en tu posicion junto a la via (el brazo apunta hacia donde miras; inv lo baja al otro lado). Baja sola cuando pasa el tren.", res = "rp_train" },
+            { cmd = "/puntabarrera", args = "[id]", desc = "De pie donde debe acabar la punta del brazo bajado: gira y alarga el brazo de esa barrera (sin id, la mas cercana a 25 m) para cubrir todo el cruce.", res = "rp_train" },
             { cmd = "/borrarbarrera", args = "<id>", desc = "Elimina una barrera de paso a nivel.", res = "rp_train" },
             { cmd = "/barreras", args = "", desc = "Lista las barreras de paso a nivel con id, estado y distancia.", res = "rp_train" },
             { cmd = "/crearboleteria", args = "", desc = "Pone una empleada de boleteria delante de ti en la estacion mas cercana: vende boletos de tren (con el boleto se sube al tren de pasajeros). Borrar con /delticketbooth <id>.", res = "rp_train" },
