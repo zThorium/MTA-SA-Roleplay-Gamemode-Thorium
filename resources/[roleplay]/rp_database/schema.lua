@@ -2034,4 +2034,33 @@ SCHEMA = {
         CONSTRAINT fk_faction_vehicles_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_factions (#106): % de comisión de cada rol sobre lo que factura
+    [[
+    ALTER TABLE faction_ranks
+        ADD COLUMN IF NOT EXISTS commission TINYINT UNSIGNED NOT NULL DEFAULT 0
+    ]],
+    -- rp_factions (#106): facturas a clientes (pending -> paid | rejected | expired)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_invoices (
+        id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id    INT UNSIGNED NOT NULL,
+        employee_id   INT UNSIGNED NULL,
+        employee_name VARCHAR(32)  NOT NULL,
+        client_id     INT UNSIGNED NULL,
+        client_name   VARCHAR(32)  NOT NULL,
+        amount        INT UNSIGNED NOT NULL,
+        concept       VARCHAR(60)  NOT NULL,
+        status        VARCHAR(10)  NOT NULL DEFAULT 'pending',
+        method        VARCHAR(8)   NULL,
+        commission    INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        resolved_at   DATETIME     NULL,
+        PRIMARY KEY (id),
+        KEY idx_faction_invoices_faction (faction_id, created_at),
+        KEY idx_faction_invoices_employee (employee_id),
+        CONSTRAINT fk_faction_invoices_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE,
+        CONSTRAINT fk_faction_invoices_employee FOREIGN KEY (employee_id) REFERENCES characters (id) ON DELETE SET NULL,
+        CONSTRAINT fk_faction_invoices_client FOREIGN KEY (client_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

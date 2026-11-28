@@ -26,6 +26,19 @@ FACTION_PERMISSIONS = {
     { key = "pol_armory",    bit = 16384, label = "Policia: armeria",           description = "Usar la armeria (cada articulo pide un nivel de rol minimo)." },
     { key = "pol_garage",    bit = 32768, label = "Policia: garaje",            description = "Sacar vehiculos policiales (cada modelo pide un nivel de rol minimo)." },
     { key = "pol_evidence",  bit = 65536, label = "Policia: evidencia",         description = "Recolectar evidencia y usar el laboratorio." },
+    -- Facturas (#106): cualquier facción
+    { key = "bill",          bit = 131072, label = "Facturar",                  description = "Cobrar a clientes con /facturar; se lleva la comision de su rol." },
+}
+
+-- Facturas a clientes (/facturar, export bill). El cobro va a los fondos y la comisión del rol al empleado.
+INVOICES = {
+    MIN = 1, MAX = 100000,      -- monto por factura
+    CONCEPT_MIN = 3, CONCEPT_MAX = 60,
+    DISTANCE = 5,               -- metros entre empleado y cliente
+    EXPIRE_S = 60,              -- segundos para aceptar
+    COOLDOWN_MS = 3000,         -- entre facturas del mismo empleado
+    MAX_COMMISSION = 50,        -- % máximo de comisión que un rol puede llevarse
+    STATS_DAYS = 30,            -- días que mira el «aporte por miembro» de F3
 }
 
 FACTION_PERMISSION_BIT = {}

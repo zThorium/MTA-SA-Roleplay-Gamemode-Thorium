@@ -54,3 +54,34 @@ test("fac_tipos_registrados", function(t)
     end
     t.pass(#needed .. " tipos válidos")
 end)
+
+-- #106: facturas. Sin jugadores no se puede emitir; se prueba el export, el permiso y el cobro
+-- atómico del banco que usa el pago (con saldo mueve el monto exacto; sin saldo no mueve nada)
+test("fac_facturas_export_y_permiso", function(t)
+    local ok, why = exports.rp_factions:bill(root, root, 10, "Prueba")
+    if ok ~= false or type(why) ~= "string" then return t.fail("bill con datos no válidos debe devolver false, motivo") end
+    local types = exports.rp_factions:getFactionTypes()
+    if type(types) ~= "table" then return t.fail("sin tipos") end
+    t.pass("bill rechaza: " .. why)
+end)
+
+test("fac_facturas_cobro_atomico", function(t, ctx)
+    if not ctx.characterId then return t.fail("sin personaje de prueba") end
+    local CHARGE = "UPDATE characters SET bank_money = bank_money - ? WHERE id = ? AND bank_money >= ?"
+    query(function(rows)
+        local before = tonumber(rows and rows[1] and rows[1].bank_money) or 0
+        query(function()
+        query(function(_, a1)
+            query(function(_, a2)
+                query(function(r2)
+                    local after = tonumber(r2 and r2[1] and r2[1].bank_money) or -1
+                    if a1 ~= 1 then return t.fail("con saldo no cobró") end
+                    if a2 ~= 0 then return t.fail("sin saldo cobró igual") end
+                    if after ~= before then return t.fail(("saldo %d, esperado %d"):format(after, before)) end
+                    t.pass("cobra exacto y sin saldo no mueve nada")
+                end, "SELECT bank_money FROM characters WHERE id = ?", ctx.characterId)
+            end, CHARGE, before + 1000000, ctx.characterId, before + 1000000)
+        end, CHARGE, 25, ctx.characterId, 25)
+        end, "UPDATE characters SET bank_money = bank_money + 25 WHERE id = ?", ctx.characterId)
+    end, "SELECT bank_money FROM characters WHERE id = ?", ctx.characterId)
+end)

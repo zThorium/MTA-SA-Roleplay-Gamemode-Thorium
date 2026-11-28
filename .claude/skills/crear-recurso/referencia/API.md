@@ -144,6 +144,7 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_duty:isOnDuty(p)`, `getDutyLoadout(p)` | vestuario genérico de facción: ¿de servicio? y uniforme puesto (`{ id, name, factionId }` o `false`) |
 | `rp_duty:getFactionVehicleInfo(v)` | vehículo de facción del garaje: `{ id, factionId, minLevel }` o `false` (también element data `rp:factionVehicle`) |
 | `rp_factions:getFactionFunds(id)`, `takeFactionFunds(id, n [, registro])`, `addFactionFunds(id, n [, registro])` | fondos de una facción; `takeFactionFunds` es atómico y devuelve `false` si no alcanza |
+| `rp_factions:bill(empleado, cliente, monto, concepto)` | factura a un cliente cercano (permiso `bill`): `true` o `false, motivo`; el pago llega después (evento `rp:faction:onInvoicePaid`, source = empleado) |
 
 ## Mundo, vehículos y propiedades
 

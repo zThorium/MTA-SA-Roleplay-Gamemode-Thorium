@@ -122,6 +122,7 @@ HELP.COMMANDS = {
     { cmd = "/cerrarcasa",     text = "Cerrar o abrir tu casa" },
     { cmd = "/vendercasa",     text = "Vender tu casa" },
     { cmd = "/f <texto>",      text = "Chat de tu faccion" },
+    { cmd = "/facturar <id> <monto> <concepto>", text = "Cobrar a un cliente a tu lado (si tu rol puede facturar). El cliente paga con 1 (efectivo) o 2 (banco) y tu rol se lleva su comision" },
     { cmd = "/aceptarfaccion", text = "Aceptar una invitacion a una faccion" },
     { cmd = "/salirfaccion",   text = "Salir de tu faccion" },
     { cmd = "/payday",         text = "Ver cuanto falta para tu sueldo" },

@@ -59,6 +59,14 @@ addEventHandler("rp:fac:data", resourceRoot, function(data)
     render()
 end)
 
+-- Pestaña Facturas: el servidor manda el aporte por miembro y las últimas facturas
+addEvent("rp:fac:invoices", true)
+addEventHandler("rp:fac:invoices", resourceRoot, function(d)
+    if isElement(browser) and ready then
+        executeBrowserJavascript(browser, ("RP.invoices(%s[0])"):format(toJSON(d, true)))
+    end
+end)
+
 addEventHandler("rp:fac:closeUI", resourceRoot, function() close(false) end)
 addEventHandler("rp:fac:ui:close", root, function() close() end)
 
