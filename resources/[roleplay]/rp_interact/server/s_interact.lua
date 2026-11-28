@@ -110,7 +110,7 @@ local function face(ped, x, y)
 end
 
 local function isMedic(p)
-    return try("rp_factions", "isPlayerInFaction", p, "medicos") == true
+    return try("rp_factions", "isPlayerOnDuty", p, "medicos") == true
         or try("rp_factions", "isPlayerOnDuty", p, "bomberos") == true
 end
 

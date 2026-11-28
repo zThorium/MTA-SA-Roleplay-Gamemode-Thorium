@@ -135,6 +135,11 @@ ITEMS = {
         name = "Mochila de expedicion", icon = "🎒", weight = 2.5, stack = 1,
         description = "La mochila mas grande. Capacidad 45 kg, pero te frena y te cansa mas.", use = { event = "backpack" },
     },
+    -- rp_medics: mochila de servicio (la da el vestuario del hospital; no se tira ni sale del servicio)
+    bp_medic = {
+        name = "Mochila medica", icon = "🎒", weight = 0.8, stack = 1,
+        description = "Mochila de servicio de los medicos con el material de atencion. Se devuelve en el vestuario.", use = { event = "backpack" },
+    },
 
     -- rp_jobs: productos y hallazgos de los trabajos (se venden en los puntos de venta de rp_jobs)
     fish_sardine = {

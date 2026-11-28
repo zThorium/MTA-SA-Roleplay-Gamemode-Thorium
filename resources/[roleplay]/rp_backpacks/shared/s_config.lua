@@ -3,6 +3,7 @@
     Cada mochila es un item de rp_inventory (mismo id). Al usarla se equipa en la espalda.
       capacity  kg que caben dentro
       weight    kg que pesa la mochila vacia (se suma a la carga del personaje)
+      duty      true = mochila de servicio de una facción (rp_medics): no se tira ni se conserva al reconectar
       model     modelo GTA SA (el unico de vanilla es 3026 = para_pack)
       look.size { alto, fondo, ancho }: escala en los ejes del modelo (X = alto, Y = fondo, Z = ancho)
       look.shader receta de fx/backpack.fx (ver la cabecera del .fx):
@@ -52,6 +53,15 @@ BACKPACKS = {
             size = { 1.15, 1.30, 1.30 },
             shader = { body = { 0.19, 0.21, 0.26 }, accent = { 0.96, 0.72, 0.10 }, dark = { 0.06, 0.07, 0.09 },
                        pattern = { 0.0, 0.2, 0.0, 1.0 }, tile = 30, bandV = 0.50, bandW = 0.05, sheen = 0.2, reflect = 1.0, seed = 0 },
+        },
+    },
+    -- Mochila de servicio de los médicos (rp_medics): la da el vestuario y se devuelve al salir de servicio
+    bp_medic = {
+        capacity = 12, weight = 0.8, model = 3026, slots = 12, duty = true,
+        look = {
+            size = { 0.90, 1.05, 1.00 },
+            shader = { body = { 0.78, 0.10, 0.12 }, accent = { 0.96, 0.96, 0.96 }, dark = { 0.30, 0.04, 0.05 },
+                       pattern = { 1.0, 0.3, 0.0, 0.0 }, tile = 44, bandV = 0.50, bandW = 0.16, sheen = 0.5, reflect = 0.3, seed = 0 },
         },
     },
 }

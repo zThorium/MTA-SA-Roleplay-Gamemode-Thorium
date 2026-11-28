@@ -32,6 +32,8 @@
     <include resource="rp_pronto" />
     <include resource="rp_ballistics" />
     <include resource="rp_cartheft" />
+    <include resource="rp_medics" />
+    <include resource="rp_backpacks" />
 
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
@@ -48,6 +50,7 @@
     <script src="server/s_tests_ballistics.lua" type="server" />
     <script src="server/s_tests_cartheft.lua" type="server" />
     <script src="server/s_tests_firefighters.lua" type="server" />
+    <script src="server/s_tests_medics.lua" type="server" />
     <script src="server/s_tests_factions.lua" type="server" />
     <script src="server/s_tests_map.lua" type="server" />
     <script src="server/s_tests_admin.lua" type="server" />

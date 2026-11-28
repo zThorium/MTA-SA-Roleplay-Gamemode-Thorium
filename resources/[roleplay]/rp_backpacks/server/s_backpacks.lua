@@ -15,6 +15,8 @@
     Exports (servidor), usados por rp_inventory:
         getBackpack, getPackWeight, getBackpackInfo, getStoredAmount, getBackpackFree,
         storeInBackpack, takeFromBackpack, equipFromGround, dropBackpack
+    Export para vestuarios de facción (rp_medics): stowBackpack (quita la mochila sin tirarla y devuelve id y contenido).
+    Mochilas de servicio (duty = true en BACKPACKS): no se tiran y no se recuperan al reconectar (se borran).
 ]]
 
 local state = {}      -- [player] = { cid, id, items = { [itemId] = amount }, loading }
@@ -184,6 +186,13 @@ local function load(player, cid)
         if not isElement(player) or state[player] ~= s then return end
         local row = rows[1]
         if not (row and BACKPACKS[row.backpack_id]) then state[player] = nil return end
+        if BACKPACKS[row.backpack_id].duty then
+            -- Mochila de servicio que quedó puesta al desconectar: no se lleva fuera del servicio
+            dbExec(db(), "DELETE FROM backpack_items WHERE character_id = ?", cid)
+            dbExec(db(), "DELETE FROM character_backpack WHERE character_id = ?", cid)
+            state[player] = nil
+            return
+        end
         s.id = row.backpack_id
         dbQuery(function(qh2)
             local items = dbPoll(qh2, 0) or {}
@@ -260,6 +269,10 @@ end
 function dropBackpack(player)
     local s = active(player)
     if not s or not canAct(player) then return false end
+    if BACKPACKS[s.id].duty then
+        notify(player, "La mochila de servicio no se tira: se devuelve en el vestuario al salir de servicio.", "warning")
+        return false
+    end
     local x, y, z = getElementPosition(player)
     local _, _, rot = getElementRotation(player)
     local rad = math.rad(rot)
@@ -279,6 +292,23 @@ function dropBackpack(player)
     setPedAnimation(player, "BOMBER", "BOM_Plant", 1200, false, false, false, false, 250)
     notify(player, "Tiras la mochila al suelo con todo lo que llevaba dentro.", "info")
     return true
+end
+
+-- Export (vestuarios de facción): quita la mochila puesta SIN dejarla en el suelo y devuelve su id y contenido
+-- para guardarla en otro sitio; se devuelve con equipFromGround(player, id, contenido). -> id, contenido | false
+function stowBackpack(player)
+    local s = active(player)
+    if not s then return false end
+    local contents = {}
+    for itemId, amount in pairs(s.items) do contents[itemId] = amount end
+    dbExec(db(), "DELETE FROM character_backpack WHERE character_id = ?", s.cid)
+    dbExec(db(), "DELETE FROM backpack_items WHERE character_id = ?", s.cid)
+    local id = s.id
+    state[player] = nil
+    setVisual(player, nil)
+    setElementData(player, "rp:packWeight", nil)
+    refreshInventory(player)
+    return id, contents
 end
 
 addCommandHandler("tirarmochila", function(player)

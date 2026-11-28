@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vestuario médico</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute">
+        <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
+        <symbol id="i-pack" viewBox="0 0 24 24"><path d="M9 2h6v2h1a4 4 0 0 1 4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a4 4 0 0 1 4-4h1zm2 2h2V3.5h-2zM8 12v5h8v-5z"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zm2 0h6V7a3 3 0 0 0-6 0z"/></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6z"/></symbol>
+    </svg>
+
+    <div class="wrap">
+        <div class="window">
+            <div class="head">
+                <div class="logo"><svg><use href="#i-cross"/></svg></div>
+                <div>
+                    <div class="kicker">HOSPITAL ALL SAINTS</div>
+                    <div class="title">Vestuario médico</div>
+                </div>
+                <div class="state" id="state"></div>
+                <div class="keys"><kbd>Esc</kbd> cerrar</div>
+                <button class="close" id="btn-close">×</button>
+            </div>
+
+            <div class="coach" id="coach"></div>
+
+            <div class="body">
+                <div class="col-duty">
+                    <div class="step"><span class="n">1</span> Uniforme</div>
+                    <div class="skins" id="skins"></div>
+                    <div class="step"><span class="n">2</span> Servicio</div>
+                    <button class="btn primary" id="btn-main"><img src="../images/keys/mouse_left.png"><span id="main-label"></span></button>
+                    <button class="btn ghost" id="btn-alt"></button>
+                    <div class="note" id="note"></div>
+                </div>
+
+                <div class="col-list">
+                    <div class="list-head">Llevas encima <span id="carried-n"></span></div>
+                    <div class="pack-slot" id="worn-pack"></div>
+                    <div class="list" id="carried"></div>
+                </div>
+
+                <div class="col-arrow"><svg><use href="#i-arrow"/></svg></div>
+
+                <div class="col-list">
+                    <div class="list-head">Tu casillero <span id="stored-n"></span></div>
+                    <div class="pack-slot" id="locker-pack"></div>
+                    <div class="list" id="stored"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
