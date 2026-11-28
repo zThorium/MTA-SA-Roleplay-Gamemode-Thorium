@@ -35,3 +35,22 @@ test("fac_api_sin_faccion", function(t)
     if type(f:getFactionPlayers("policia")) ~= "table" then return t.fail("getFactionPlayers no devuelve lista") end
     t.pass()
 end)
+
+-- #102: los tipos que usan los sistemas nuevos existen y son válidos (nombre, color #rrggbb,
+-- clave que cabe en factions.type VARCHAR(16) y, si hay servicio, duty + dutyData)
+test("fac_tipos_registrados", function(t)
+    local types = exports.rp_factions:getFactionTypes()
+    if type(types) ~= "table" then return t.fail("getFactionTypes no devuelve una tabla") end
+    local needed = { "gobierno", "policia", "medicos", "bomberos", "empresa", "banda", "otra",
+        "mecanicos", "noticias", "transporte", "logistica", "seguros", "seguridad", "concesionaria", "mafia" }
+    for _, k in ipairs(needed) do
+        if not types[k] then return t.fail("falta el tipo " .. k) end
+    end
+    for k, ty in pairs(types) do
+        if #k > 16 then return t.fail(k .. ": clave de más de 16 caracteres") end
+        if type(ty.name) ~= "string" or ty.name == "" then return t.fail(k .. ": sin nombre") end
+        if type(ty.color) ~= "string" or not ty.color:match("^#%x%x%x%x%x%x$") then return t.fail(k .. ": color no es #rrggbb") end
+        if (ty.duty ~= nil) ~= (ty.dutyData ~= nil) then return t.fail(k .. ": duty y dutyData van juntos") end
+    end
+    t.pass(#needed .. " tipos válidos")
+end)

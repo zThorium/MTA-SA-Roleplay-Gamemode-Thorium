@@ -882,6 +882,11 @@ function getFactions(kind)
     return list
 end
 
+-- Catálogo de tipos (FACTION_TYPES): nombre, color, state, duty y dutyData de cada uno
+function getFactionTypes()
+    return FACTION_TYPES
+end
+
 function getFactionPlayers(which, dutyOnly)
     local list = {}
     for player, m in pairs(members) do
