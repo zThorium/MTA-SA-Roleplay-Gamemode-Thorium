@@ -59,5 +59,6 @@
     <script src="server/s_tests_metaldetector.lua" type="server" />
     <script src="server/s_tests_achievements.lua" type="server" />
     <script src="server/s_tests_mapeditor.lua" type="server" />
+    <script src="server/s_tests_carwash.lua" type="server" />
     <script src="server/s_tests_zz_cleanup.lua" type="server" />
 </meta>

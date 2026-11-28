@@ -129,6 +129,7 @@ local function spawnRow(row)
     setElementData(v, "rp:vehicleOwner", tonumber(row.owner_id))
     setElementData(v, "rp:vehicleId", id)
     setElementData(v, "rp:indicator", false)
+    setElementData(v, "rp:dirt", tonumber(row.dirt) or 0)   -- rp_carwash la pinta y la guarda
     if applyTuning then applyTuning(v, row.tuning) end
     if initPerf then initPerf(v, row.perf, row.odometer) end
     if initFuel then initFuel(v, tonumber(row.fuel)) end
