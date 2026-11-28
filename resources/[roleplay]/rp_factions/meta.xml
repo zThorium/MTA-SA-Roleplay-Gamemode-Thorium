@@ -34,6 +34,9 @@
     <export function="getFactionInfo" type="server" />
     <export function="getFactions" type="server" />
     <export function="getFactionTypes" type="server" />
+    <export function="getFactionFunds" type="server" />
+    <export function="takeFactionFunds" type="server" />
+    <export function="addFactionFunds" type="server" />
     <export function="getFactionPlayers" type="server" />
     <export function="getCharacterFaction" type="server" />
     <export function="isPlayerInFaction" type="client" />

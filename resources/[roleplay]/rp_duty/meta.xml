@@ -10,9 +10,11 @@
     <include resource="rp_factions" />
     <include resource="rp_markers" />
     <include resource="rp_hud" />
+    <include resource="rp_vehicles" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_duty.lua" type="server" />
+    <script src="server/s_garage.lua" type="server" />
     <script src="client/c_duty.lua" type="client" cache="false" />
 
     <!-- CEF y assets (de assets/, ver CREDITOS.md) -->
@@ -34,4 +36,5 @@
     <export function="getDutyLoadout" type="server" />
     <export function="adminElements" type="server" />
     <export function="adminDelete" type="server" />
+    <export function="getFactionVehicleInfo" type="server" />
 </meta>

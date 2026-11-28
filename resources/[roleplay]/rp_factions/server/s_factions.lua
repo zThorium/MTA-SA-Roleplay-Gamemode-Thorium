@@ -887,6 +887,35 @@ function getFactionTypes()
     return FACTION_TYPES
 end
 
+-- Fondos de la facción para otros recursos (garaje, facturas...). La memoria de este recurso
+-- es la fuente: se comprueba y descuenta aquí (sin carreras) y la BD lleva la misma guarda.
+function getFactionFunds(factionId)
+    local f = factions[tonumber(factionId)]
+    return f and f.bank or false
+end
+
+function takeFactionFunds(factionId, amount, logText)
+    local f = factions[tonumber(factionId)]
+    amount = tonumber(amount)
+    if not f or not amount or amount <= 0 or amount ~= math.floor(amount) or f.bank < amount then return false end
+    f.bank = f.bank - amount
+    dbExec(db(), "UPDATE factions SET bank = bank - ? WHERE id = ? AND bank >= ?", amount, f.id, amount)
+    if logText then addLog(f.id, tostring(logText)) end
+    refreshFaction(f.id)
+    return true
+end
+
+function addFactionFunds(factionId, amount, logText)
+    local f = factions[tonumber(factionId)]
+    amount = tonumber(amount)
+    if not f or not amount or amount <= 0 or amount ~= math.floor(amount) then return false end
+    f.bank = f.bank + amount
+    dbExec(db(), "UPDATE factions SET bank = bank + ? WHERE id = ?", amount, f.id)
+    if logText then addLog(f.id, tostring(logText)) end
+    refreshFaction(f.id)
+    return true
+end
+
 function getFactionPlayers(which, dutyOnly)
     local list = {}
     for player, m in pairs(members) do

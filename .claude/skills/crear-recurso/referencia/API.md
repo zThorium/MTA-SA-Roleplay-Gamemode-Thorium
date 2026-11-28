@@ -142,6 +142,8 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 | `rp_emergency:callService(p, "ambulance"|"police"|"fire")` | |
 | `rp_firefighters:isOnDuty(p)`, `isFirefighter(p)`, `getFirefightersOnDuty()` | bomberos (facciones de tipo `bomberos`) y quién está de servicio |
 | `rp_duty:isOnDuty(p)`, `getDutyLoadout(p)` | vestuario genérico de facción: ¿de servicio? y uniforme puesto (`{ id, name, factionId }` o `false`) |
+| `rp_duty:getFactionVehicleInfo(v)` | vehículo de facción del garaje: `{ id, factionId, minLevel }` o `false` (también element data `rp:factionVehicle`) |
+| `rp_factions:getFactionFunds(id)`, `takeFactionFunds(id, n [, registro])`, `addFactionFunds(id, n [, registro])` | fondos de una facción; `takeFactionFunds` es atómico y devuelve `false` si no alcanza |
 
 ## Mundo, vehículos y propiedades
 

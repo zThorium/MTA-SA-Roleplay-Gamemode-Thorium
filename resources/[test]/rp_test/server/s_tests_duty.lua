@@ -56,3 +56,21 @@ test("duty_registro_de_equipo", function(t, ctx)
         end, SQL, ctx.characterId, "medkit:3")
     end, SQL, ctx.characterId, "medkit:2,water:1")
 end)
+
+-- #105: fondos de facción atómicos (los usa el garaje) y catálogo del garaje
+test("duty_fondos_de_faccion", function(t)
+    local f = exports.rp_factions
+    local before = f:getFactionFunds(1)
+    if type(before) ~= "number" then return t.fail("getFactionFunds(1) no devuelve número") end
+    if f:takeFactionFunds(1, before + 1) ~= false then return t.fail("cobró más de lo que hay en los fondos") end
+    if f:takeFactionFunds(1, -5) ~= false or f:addFactionFunds(1, 0) ~= false then return t.fail("aceptó una cantidad no válida") end
+    if not f:addFactionFunds(1, 7) or f:getFactionFunds(1) ~= before + 7 then return t.fail("addFactionFunds no sumó") end
+    if not f:takeFactionFunds(1, 7) or f:getFactionFunds(1) ~= before then return t.fail("takeFactionFunds no restó") end
+    t.pass("cobro e ingreso exactos; sin saldo no cobra")
+end)
+
+test("duty_garaje_exports", function(t)
+    if exports.rp_duty:getFactionVehicleInfo(root) ~= false then return t.fail("getFactionVehicleInfo sin vehículo debe ser false") end
+    if type(exports.rp_duty:adminElements("garage")) ~= "table" then return t.fail("adminElements('garage') no devuelve tabla") end
+    t.pass()
+end)

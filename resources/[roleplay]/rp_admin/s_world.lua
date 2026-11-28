@@ -44,7 +44,8 @@ WORLD_TYPES = {
     { key = "metropole",     many = "metropoles",     res = "rp_train",      name = "Poste de metro", kind = "pole", create = "crearpostemetro" },
     { key = "flowerclock",   many = "flowerclocks",   res = "rp_relojflores", name = "Reloj de flores", create = "crearrelojflores" },
     { key = "3dtext",        many = "3dtexts",        res = "rp_3dtext",     name = "Texto 3D", create = "create3dtext" },
-    { key = "locker",        many = "lockers",        res = "rp_duty",       name = "Vestuario de faccion", create = "makelocker" },
+    { key = "locker",        many = "lockers",        res = "rp_duty",       name = "Vestuario de faccion", kind = "locker", create = "makelocker" },
+    { key = "fgarage",       many = "fgarages",       res = "rp_duty",       name = "Garaje de faccion", kind = "garage", create = "makefgarage" },
     { key = "marker",        many = "markers",        res = "rp_markers",    name = "Marcador" },
 }
 

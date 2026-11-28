@@ -67,3 +67,19 @@
 | OK | I | PRU-01 | Pruebas en rp_test |  |
 | N/A | B | INT-05 | Dimensiones propias sin choques |  |
 </details>
+
+## 2026-11-28 · mejorar (#105, vehículos de facción y garaje)
+- **Motivo**: issue #105 [F0.3]: ambulancias, grúas, taxis, camiones y furgones de noticias propiedad de la facción.
+- **Cambios**:
+  - `server/s_garage.lua`: garajes por facción (`/makefgarage`, tabla `faction_garages`, `rp_markers` movible con ALT, tipo `fgarage` en `WORLD_TYPES`) y vehículos de facción (`faction_vehicles`: modelo, color, nivel mínimo, matrícula, combustible, daño, precio).
+  - Sacar (de servicio y con nivel), guardar al volante con E, bloqueo de conductor en `onVehicleStartEnter`, vuelta sola al garaje tras 15 min abandonado o al explotar, combustible (`rp_vehicles:get/setVehicleFuel`) y daño guardados.
+  - Compra con los fondos de la facción: exports nuevos de `rp_factions` `getFactionFunds`, `takeFactionFunds` (comprueba y descuenta en memoria y la BD lleva `AND bank >= ?`) y `addFactionFunds`; si el `INSERT` falla se devuelve el dinero. Venta con `DELETE ... AND faction_id = ?` y reembolso solo si borró una fila (no se paga dos veces).
+  - Vista de garaje en el mismo panel CEF; ayuda F1, catálogo de admin, `RECURSOS.md`, `API.md`, `REGISTROS.md`.
+- **Reglas manuales revisadas**:
+  - SEG-02 ✔: el cliente manda ids; el servidor comprueba garaje de su facción a menos de 6 m, servicio, nivel, permiso de gestión, catálogo del tipo y fondos.
+  - BD-06 ✔: cobro atómico y venta idempotente (arriba).
+  - PRU-02 ✔: `duty_fondos_de_faccion` (cobro e ingreso exactos; sin saldo no cobra) y `duty_garaje_exports`.
+  - CIC-03 ✔: al parar el recurso se guardan y quitan los vehículos fuera; timer de abandonados cancelado.
+  - INT-09: N/A (sacar un vehículo no es lograble; los logros irán en el trabajo de cada facción).
+  - UX-01/04 ✔: E dibujada a pie y al volante («Guardar el vehículo en el garaje»); guía de 3 pasos en el panel; venta con doble clic de confirmación.
+- **Pendiente** [A]: el megáfono de `rp_chat` (#107) podría aceptar también `rp:factionVehicle`; el modelo de cada vehículo comprado no se puede cambiar de color desde el panel.

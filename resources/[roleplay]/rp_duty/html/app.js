@@ -118,8 +118,97 @@
     }
 
     // ---------- Entrada desde Lua ----------
+    var mode = "duty";   // "duty" (vestuario) o "garage"
+    function header(d, kicker) {
+        $("panel").classList.remove("hidden");
+        document.querySelector(".kicker").textContent = kicker;
+        $("tag").textContent = d.tag || "FAC";
+        $("faction").textContent = d.faction || "";
+        $("rank").textContent = d.rank ? "Tu rol: " + d.rank : "";
+        if (/^#[0-9a-f]{6}$/i.test(d.color || "")) document.documentElement.style.setProperty("--fac", d.color);
+        $("state").textContent = d.onDuty ? "De servicio" : "Fuera de servicio";
+        $("state").classList.toggle("on", !!d.onDuty);
+    }
+
+    // ---------- Garaje ----------
+    var gdata = null;
+    function money(n) { return "$" + String(Math.floor(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    function gaction(name, d) { sound("click_002"); send("rp:duty:ui:garage", name, JSON.stringify(d || {})); }
+    function renderGarage() {
+        var d = gdata, box = $("g-cards");
+        box.innerHTML = "";
+        $("g-empty").classList.toggle("hidden", d.vehicles.length > 0);
+        $("g-empty-hint").textContent = d.manage ? "Cómprale uno abajo con los fondos de la facción." : "Pídele al líder que compre uno.";
+        $("g-guide").classList.toggle("hidden", d.vehicles.length === 0);
+        d.vehicles.forEach(function (v) {
+            var c = el("div", "card" + (v.allowed ? "" : " locked"));
+            c.appendChild(el("div", "name", v.name));
+            c.appendChild(el("div", "meta", v.plate + " · Rol " + v.minLevel + "+ · Estado " + v.health + "%"));
+            c.appendChild(el("span", "badge" + (v.out ? " out" : ""), v.out ? "Fuera" : "En el garaje"));
+            var row = el("div", "row");
+            if (!v.out && v.allowed) {
+                var take = el("button", "btn primary", "Sacar");
+                take.disabled = !d.onDuty;
+                take.title = d.onDuty ? "" : "Entra de servicio en el vestuario primero";
+                take.onclick = function () { gaction("take", { id: v.id }); };
+                row.appendChild(take);
+            }
+            if (d.manage) {
+                var lvl = el("input"); lvl.type = "number"; lvl.min = 1; lvl.max = 99; lvl.value = v.minLevel; lvl.title = "Rol mínimo";
+                var setL = el("button", "btn ghost", "Rol");
+                setL.onclick = function () { gaction("level", { id: v.id, level: parseInt(lvl.value, 10) || 1 }); };
+                row.appendChild(lvl); row.appendChild(setL);
+                if (!v.out) {
+                    var sell = el("button", "btn danger", "Vender " + money(v.price * d.limits.refund));
+                    var armed = false;
+                    sell.onclick = function () {
+                        if (!armed) { armed = true; sell.textContent = "¿Seguro? Pulsa otra vez"; sound("error_004"); return; }
+                        gaction("sell", { id: v.id });
+                    };
+                    row.appendChild(sell);
+                }
+            }
+            c.appendChild(row);
+            box.appendChild(c);
+        });
+        $("g-shop").classList.toggle("hidden", !d.manage);
+        if (d.manage) {
+            $("g-funds").textContent = money(d.funds);
+            var cat = $("g-catalog");
+            cat.innerHTML = "";
+            d.catalog.forEach(function (m) {
+                var c = el("div", "card" + (d.funds < m.price ? " locked" : ""));
+                c.appendChild(el("div", "name", m.name));
+                var meta = el("div", "meta"); meta.appendChild(el("span", "price", money(m.price)));
+                c.appendChild(meta);
+                var buy = el("button", "btn primary", "Comprar");
+                buy.disabled = d.funds < m.price || d.vehicles.length >= d.limits.maxVehicles;
+                buy.onclick = function () { gaction("buy", { model: m.model }); };
+                var row = el("div", "row"); row.appendChild(buy);
+                c.appendChild(row);
+                cat.appendChild(c);
+            });
+        }
+    }
+    window.garageOpen = function (d) {
+        var first = mode !== "garage" || $("panel").classList.contains("hidden");
+        mode = "garage";
+        gdata = d;
+        sound(first ? "maximize_003" : "confirmation_001");
+        header(d, "GARAJE");
+        $("tabs").classList.add("hidden");
+        $("sec-duty").classList.add("hidden");
+        $("sec-edit").classList.add("hidden");
+        $("sec-garage").classList.remove("hidden");
+        renderGarage();
+    };
+
     window.dutyOpen = function (d) {
-        var first = !data || $("panel").classList.contains("hidden");
+        var first = !data || mode !== "duty" || $("panel").classList.contains("hidden");
+        mode = "duty";
+        $("sec-garage").classList.add("hidden");
+        $("tabs").classList.remove("hidden");
+        header(d, "VESTUARIO");
         var wasOn = data && data.onDuty;
         data = d;
         if (first) { selected = null; editing = null; sound("maximize_003"); }
@@ -176,5 +265,16 @@
             limits: { maxItems: 6, maxAmount: 20, maxLoadouts: 10 },
         });
         if (location.hash === "#demo-edit") { setTab("edit"); fillForm(data.all[1]); }
+        if (location.hash === "#demo-garage") {
+            window.garageOpen({
+                faction: "Servicios Médicos de LS", tag: "LSMD", color: "#e5484d", rank: "Jefe", onDuty: true, manage: true, funds: 85000,
+                vehicles: [
+                    { id: 1, name: "Ambulancia", plate: "F2-1", minLevel: 1, out: false, health: 100, price: 60000, allowed: true },
+                    { id: 2, name: "Furgoneta Burrito", plate: "F2-2", minLevel: 3, out: true, health: 74, price: 25000, allowed: true },
+                ],
+                catalog: [{ model: 482, name: "Furgoneta Burrito", price: 25000 }, { model: 416, name: "Ambulancia", price: 60000 }, { model: 413, name: "Furgoneta Pony", price: 22000 }],
+                limits: { maxVehicles: 15, refund: 0.5 },
+            });
+        }
     }
 })();

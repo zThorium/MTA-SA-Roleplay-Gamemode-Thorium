@@ -22,6 +22,47 @@ DUTY = {
     MARKER_COLOR = { 90, 170, 255 },
 }
 
+-- Garaje de facción (#105): vehículos comprados con los fondos de la facción
+GARAGE = {
+    INTERACT_RADIUS = 4.0,       -- metros del punto del garaje (a pie abre el panel, al volante guarda)
+    SPAWN_CLEAR = 4.0,           -- la salida debe estar libre en este radio
+    MAX_VEHICLES = 15,           -- por facción
+    SELL_REFUND = 0.5,           -- al vender vuelve a los fondos este % del precio
+    ABANDON_MIN = 15,            -- minutos sin nadie dentro: vuelve solo al garaje
+    PLATE_PREFIX = "F",          -- matrícula F<id facción>-<id vehículo>
+    MARKER_COLOR = { 90, 170, 255 },
+    -- Catálogo: types = tipos de facción que lo pueden comprar ("*" = todos los que usan rp_duty)
+    CATALOG = {
+        { model = 482, name = "Furgoneta Burrito", price = 25000, types = { "*" } },
+        { model = 413, name = "Furgoneta Pony",    price = 22000, types = { "*" } },
+        { model = 416, name = "Ambulancia",        price = 60000, types = { "medicos" } },
+        { model = 525, name = "Grua",              price = 45000, types = { "mecanicos" } },
+        { model = 552, name = "Furgon de servicio", price = 30000, types = { "mecanicos", "gobierno" } },
+        { model = 582, name = "Furgon de noticias", price = 40000, types = { "noticias" } },
+        { model = 488, name = "Helicoptero de noticias", price = 250000, types = { "noticias" } },
+        { model = 420, name = "Taxi",              price = 25000, types = { "transporte" } },
+        { model = 438, name = "Taxi Cabbie",       price = 25000, types = { "transporte" } },
+        { model = 431, name = "Autobus",           price = 80000, types = { "transporte" } },
+        { model = 437, name = "Autobus de linea",  price = 90000, types = { "transporte" } },
+        { model = 499, name = "Camion Benson",     price = 40000, types = { "logistica" } },
+        { model = 414, name = "Camion Mule",       price = 35000, types = { "logistica" } },
+        { model = 456, name = "Camion Yankee",     price = 50000, types = { "logistica" } },
+        { model = 428, name = "Blindado",          price = 70000, types = { "seguridad" } },
+        { model = 426, name = "Sedan Premier",     price = 30000, types = { "gobierno", "seguros", "concesionaria" } },
+        { model = 409, name = "Limusina",          price = 80000, types = { "gobierno" } },
+    },
+}
+
+function garageCatalogFor(kind)
+    local out = {}
+    for _, c in ipairs(GARAGE.CATALOG) do
+        for _, t in ipairs(c.types) do
+            if t == "*" or t == kind then out[#out + 1] = c break end
+        end
+    end
+    return out
+end
+
 -- "id:n,id:n" <-> { { id = "id", amount = n }, ... }
 function dutyParseItems(text)
     local list = {}

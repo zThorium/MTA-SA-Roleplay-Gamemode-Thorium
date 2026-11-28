@@ -1998,4 +1998,40 @@ SCHEMA = {
         CONSTRAINT fk_faction_duty_items_char FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_duty (#105): garajes de facción (punto donde salen y se guardan los vehículos; /makefgarage)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_garages (
+        id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED NOT NULL,
+        x           FLOAT        NOT NULL,
+        y           FLOAT        NOT NULL,
+        z           FLOAT        NOT NULL,
+        rot         FLOAT        NOT NULL DEFAULT 0,
+        interior    INT UNSIGNED NOT NULL DEFAULT 0,
+        dimension   INT UNSIGNED NOT NULL DEFAULT 0,
+        created_by  VARCHAR(32)  NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_garages_faction (faction_id),
+        CONSTRAINT fk_faction_garages_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- rp_duty (#105): vehículos propiedad de la facción (comprados con sus fondos)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_vehicles (
+        id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+        faction_id  INT UNSIGNED     NOT NULL,
+        model       SMALLINT UNSIGNED NOT NULL,
+        color       VARCHAR(40)      NOT NULL DEFAULT '',
+        min_level   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+        plate       VARCHAR(8)       NOT NULL,
+        fuel        FLOAT            NULL,
+        health      FLOAT            NOT NULL DEFAULT 1000,
+        price       INT UNSIGNED     NOT NULL DEFAULT 0,
+        created_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_faction_vehicles_faction (faction_id),
+        CONSTRAINT fk_faction_vehicles_faction FOREIGN KEY (faction_id) REFERENCES factions (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

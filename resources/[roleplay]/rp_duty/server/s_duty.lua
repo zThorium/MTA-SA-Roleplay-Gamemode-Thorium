@@ -462,8 +462,10 @@ function getDutyLoadout(p)
     return l and { id = l.id, name = l.name, factionId = d.factionId } or false
 end
 
--- rp_admin (s_world.lua): /nearbylockers, /gotolocker, /dellocker...
-function adminElements()
+-- rp_admin (s_world.lua): /nearbylockers, /dellocker... (kind "locker") y /nearbyfgarages,
+-- /delfgarage... (kind "garage", en s_garage.lua)
+function adminElements(kind)
+    if kind == "garage" then return adminGarageElements() end
     local list = {}
     for id, l in pairs(lockers) do
         local r = l.row
@@ -475,7 +477,8 @@ function adminElements()
     return list
 end
 
-function adminDelete(id)
+function adminDelete(id, kind)
+    if kind == "garage" then return adminGarageDelete(id) end
     id = tonumber(id)
     if not id or not lockers[id] then return false, "no existe" end
     destroyLocker(id)

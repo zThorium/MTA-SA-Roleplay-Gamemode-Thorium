@@ -64,6 +64,28 @@
                 </form>
             </div>
         </section>
+        <!-- Garaje de la facción -->
+        <section id="sec-garage" class="hidden">
+            <div class="guide" id="g-guide">
+                <span class="step"><b>1</b> Entra de servicio en el vestuario</span>
+                <span class="arrow">→</span>
+                <span class="step"><b>2</b> Pulsa <i>Sacar</i></span>
+                <span class="arrow">→</span>
+                <span class="step"><b>3</b> Vuelve y pulsa <kbd class="key">E</kbd> al volante para guardarlo</span>
+            </div>
+            <div class="cards" id="g-cards"></div>
+            <div class="empty hidden" id="g-empty">
+                La facción todavía no tiene vehículos.<br>
+                <span id="g-empty-hint">Pídele al líder que compre uno.</span>
+            </div>
+            <div id="g-shop" class="hidden">
+                <div class="shop-head">
+                    <span>Comprar con los fondos de la facción</span>
+                    <span class="funds" id="g-funds">$0</span>
+                </div>
+                <div class="cards" id="g-catalog"></div>
+            </div>
+        </section>
     </div>
     <script src="app.js"></script>
 </body>
