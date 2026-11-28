@@ -296,15 +296,30 @@ setTimer(function()
     end
 end, 500, 0)
 
+-- Cuando la camara choca con una pared o un poste y queda pegada al personaje, GTA deja de dibujar
+-- el cuerpo del jugador local, pero la cabeza custom es un objeto aparte y seguia visible: se veia la
+-- propia cabeza ocupando media pantalla por un instante. Se oculta con la camara a menos de esta distancia.
+local CAMERA_NEAR_HEAD = 0.6
+
+local function isCameraInsideHead()
+    local cx, cy, cz = getCameraMatrix()
+    local hx, hy, hz = getPedBonePosition(localPlayer, 8)
+    if not (cx and hx) then return false end
+    local dx, dy, dz = cx - hx, cy - hy, cz - hz
+    return dx * dx + dy * dy + dz * dz < CAMERA_NEAR_HEAD * CAMERA_NEAR_HEAD
+end
+
 -- Tambien se oculta la cabeza de cualquier ped invisible (alfa 0: editor de mapas, admin oculto)
--- o con "rp:hideBody" (rp_pool), para que no flote sola
-addEventHandler("onClientRender", root, function()
+-- o con "rp:hideBody" (rp_pool), para que no flote sola.
+-- onClientPedsProcessed (despues de la camara y antes de dibujar): asi se oculta en el mismo fotograma.
+addEventHandler("onClientPedsProcessed", root, function()
     for ped, obj in pairs(attached) do
         if isElement(ped) and isElement(obj) then
             local hide = getElementAlpha(ped) == 0 or getElementData(ped, "rp:hideBody") == true
             if ped == localPlayer and not hide then
                 local weapon = getPedWeapon(localPlayer)
-                hide = (weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN"
+                hide = ((weapon == 34 or weapon == 43) and getPedTask(localPlayer, "secondary", 0) == "TASK_SIMPLE_USE_GUN")
+                    or isCameraInsideHead()
             end
             local a = hide and 0 or 255
             if getElementAlpha(obj) ~= a then setElementAlpha(obj, a) end

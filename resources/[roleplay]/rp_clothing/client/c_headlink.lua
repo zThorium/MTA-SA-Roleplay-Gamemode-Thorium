@@ -166,6 +166,46 @@ addEventHandler("onClientElementStreamIn", root, function()
     if getElementType(source) == "object" and getElementData(source, "rp:toy") then HeadLink.relink(source) end
 end)
 
+----------------------------------------------------------------
+-- Camara pegada al personaje: cuando choca con una pared o un poste, GTA deja de dibujar el cuerpo
+-- del jugador local, pero los accesorios son objetos aparte y se veian enormes delante de la camara
+-- por un instante. Se ocultan los propios mientras la camara esta a menos de CAMERA_NEAR de la cabeza
+-- (lo mismo hace rp_heads con la cabeza custom). Solo se toca el alfa al cambiar de estado.
+----------------------------------------------------------------
+local CAMERA_NEAR = 0.6
+local hiddenByCamera = {}   -- [objeto] = true (ocultos por la camara)
+local cameraNear = false
+
+local function cameraNearHead()
+    local cx, cy, cz = getCameraMatrix()
+    local hx, hy, hz = getPedBonePosition(localPlayer, 8)
+    if not (cx and hx) then return false end
+    local dx, dy, dz = cx - hx, cy - hy, cz - hz
+    return dx * dx + dy * dy + dz * dz < CAMERA_NEAR * CAMERA_NEAR
+end
+
+local function showHiddenToys()
+    for obj in pairs(hiddenByCamera) do
+        if isElement(obj) then setElementAlpha(obj, 255) end
+    end
+    hiddenByCamera = {}
+end
+
+addEventHandler("onClientPedsProcessed", root, function()
+    local near = not isStudioOpen() and cameraNearHead()
+    if near == cameraNear then return end
+    cameraNear = near
+    if not near then return showHiddenToys() end
+    for _, obj in ipairs(getElementsByType("object", root, true)) do
+        if getElementData(obj, "rp:toy") and getElementAlpha(obj) > 0
+            and exports.bone_attach:getElementBoneAttachmentDetails(obj) == localPlayer then
+            setElementAlpha(obj, 0)
+            hiddenByCamera[obj] = true
+        end
+    end
+end)
+addEventHandler("onClientResourceStop", resourceRoot, showHiddenToys)
+
 -- El servidor vuelve a pegar el accesorio al hueso 1 al guardarlo: convertirlo enseguida
 -- (prioridad baja: despues del handler de bone_attach que guarda los datos nuevos)
 addEvent("boneAttach_attach", true)   -- ya lo crea bone_attach; por si arranca despues
