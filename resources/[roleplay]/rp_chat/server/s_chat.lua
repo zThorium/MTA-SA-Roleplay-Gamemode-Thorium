@@ -9,6 +9,10 @@
         /me accion  /do descripcion   rol de accion y entorno (15 m)
         /ame accion               etiqueta sobre la cabeza (vive en rp_nametags)
         /pm <id> texto            mensaje privado OOC (queda en chat_pm_log)
+    Facciones (rp_factions; de servicio si su tipo lo tiene):
+        /r texto                  radio de tu facción (quien está a 6 m oye tu parte)
+        /d texto                  canal común de policía, médicos, bomberos y gobierno
+        /meg texto                megáfono desde un vehículo de emergencia, 60 m (alias /megafono)
     Admin (nivel 1+):
         /pmlog <id o nombre> [cantidad]   historial de PMs de un jugador
 
@@ -30,6 +34,8 @@ local C = {
     ooc     = { 111, 168, 255 }, oocText = { 186, 204, 228 },
     me      = { 255, 150, 190 }, act = { 128, 222, 168 }, actAuthor = { 98, 160, 128 },
     pm      = { 255, 211, 90 },  pmText = { 255, 241, 194 },
+    radio   = { 120, 220, 140 }, radioText = { 225, 245, 230 }, dept = { 255, 140, 60 },
+    megaphone = { 255, 196, 64 }, megaphoneText = { 255, 244, 214 },
 }
 
 addEvent("rp:chat:bubble", true)
@@ -197,6 +203,132 @@ local function emote(player, text, isDo)
         end
     end
 end
+----------------------------------------------------------------
+-- Radio de facción (/r), canal de departamentos (/d) y megáfono (/meg)
+-- La pertenencia y el servicio los decide rp_factions (por TIPO, nunca por id).
+----------------------------------------------------------------
+-- Tipos que comparten el canal /d (servicios del Estado)
+local DEPT_TYPES = { "policia", "medicos", "bomberos", "gobierno" }
+local IS_DEPT = {}
+for _, t in ipairs(DEPT_TYPES) do IS_DEPT[t] = true end
+-- Vehículos de emergencia con megáfono (patrullas, ambulancia, bomberos, FBI/SWAT, helicóptero y lancha policial)
+local MEGAPHONE_MODELS = {
+    [596] = true, [597] = true, [598] = true, [599] = true, [523] = true, [427] = true, [490] = true,
+    [528] = true, [601] = true, [416] = true, [407] = true, [544] = true, [497] = true, [430] = true,
+}
+RANGE.radioNear, RANGE.megaphone = 6, 60
+
+-- Facción del jugador con su servicio; avisa y devuelve nil si no puede usar la radio
+local function radioFaction(player)
+    local ok, f = pcall(function() return exports.rp_factions:getPlayerFactionInfo(player) end)
+    if not ok or type(f) ~= "table" then
+        notify(player, "No perteneces a ninguna facción.", "warning")
+        return nil
+    end
+    if f.hasDuty and not f.onDuty then
+        notify(player, "Debes estar de servicio para usar la radio (ve al vestuario de tu facción).", "warning")
+        return nil
+    end
+    return f
+end
+
+-- Miembros conectados que oyen la radio de una facción: de servicio si su tipo lo tiene
+local function radioMembers(factionId)
+    local ok, list = pcall(function() return exports.rp_factions:getFactionPlayers(factionId) end)
+    local out = {}
+    for _, p in ipairs(ok and type(list) == "table" and list or {}) do
+        local ok2, f = pcall(function() return exports.rp_factions:getPlayerFactionInfo(p) end)
+        if ok2 and type(f) == "table" and (not f.hasDuty or f.onDuty) and charId(p) then out[#out + 1] = p end
+    end
+    return out
+end
+
+-- Quien está al lado oye tu parte (sin los que ya la reciben por radio)
+local function radioNearby(player, text, heard)
+    local list = {}
+    for _, l in ipairs(listeners(player, RANGE.radioNear)) do
+        if not heard[l.p] then
+            list[#list + 1] = l
+            local d, r = l.d, RANGE.radioNear
+            line(l.p, ("%s%s %sdice por radio: %s%s"):format(hex(C.name, d, r), nameOf(player), hex(C.verb, d, r), hex(C.say, d, r), text))
+        end
+    end
+    list[#list + 1] = { p = player }
+    bubble(list, player, text, "radio")
+end
+
+local function sendRadio(player, recipients, tag, color, text)
+    local heard = {}
+    local rank = ""
+    local ok, f = pcall(function() return exports.rp_factions:getPlayerFactionInfo(player) end)
+    if ok and type(f) == "table" and f.rank ~= "" then rank = f.rank .. " " end
+    local msg = ("%s** [%s] %s%s%s: %s%s %s**"):format(color, tag, hex(C.name), rank, nameOf(player), hex(C.radioText), text, color)
+    for _, p in ipairs(recipients) do
+        heard[p] = true
+        line(p, msg)
+    end
+    triggerClientEvent(recipients, "rp:chat:radioSound", resourceRoot)
+    radioNearby(player, text, heard)
+end
+
+local function factionHex(f)
+    local c = type(f.color) == "string" and f.color:match("^#(%x%x%x%x%x%x)$")
+    return c and ("#" .. c:upper()) or hex(C.radio)
+end
+
+local function radio(player, text)
+    text = clean(text)
+    if text == "" then return notify(player, "Uso: /r <texto>  (radio de tu facción; quien está a tu lado oye tu parte)", "info") end
+    local f = radioFaction(player)
+    if not f or not canSpeak(player) then return end
+    sendRadio(player, radioMembers(f.id), "RADIO " .. tostring(f.tag), factionHex(f), text)
+end
+
+local function department(player, text)
+    text = clean(text)
+    if text == "" then return notify(player, "Uso: /d <texto>  (canal común de policía, médicos, bomberos y gobierno)", "info") end
+    local f = radioFaction(player)
+    if not f then return end
+    if not IS_DEPT[f.type] then
+        return notify(player, "El canal de departamentos es solo para policía, médicos, bomberos y gobierno.", "warning")
+    end
+    if not canSpeak(player) then return end
+    local recipients, seen = {}, {}
+    for _, kind in ipairs(DEPT_TYPES) do
+        local ok, list = pcall(function() return exports.rp_factions:getFactions(kind) end)
+        for _, fac in ipairs(ok and type(list) == "table" and list or {}) do
+            for _, p in ipairs(radioMembers(fac.id)) do
+                if not seen[p] then seen[p] = true; recipients[#recipients + 1] = p end
+            end
+        end
+    end
+    sendRadio(player, recipients, "DEP " .. tostring(f.tag), hex(C.dept), text)
+end
+
+local function megaphone(player, text)
+    text = clean(text)
+    if text == "" then return notify(player, "Uso: /meg <texto>  (megáfono desde un vehículo de emergencia, se oye a 60 m)", "info") end
+    local f = radioFaction(player)
+    if not f then return end
+    local veh = getPedOccupiedVehicle(player)
+    if not veh or not (MEGAPHONE_MODELS[getElementModel(veh)] or getElementData(veh, "rp:fireTruck")) then
+        return notify(player, "Necesitas ir en un vehículo de emergencia (patrulla, ambulancia, autobomba...).", "warning")
+    end
+    if not canSpeak(player) then return end
+    local list = listeners(player, RANGE.megaphone)
+    local body = text:gsub("[!%.]+$", "")
+    for _, l in ipairs(list) do
+        local d, r = l.d, RANGE.megaphone
+        line(l.p, ("%s[MEGÁFONO] %s%s%s: %s%s!"):format(hex(C.megaphone, d, r), hex(C.name, d, r), nameOf(player), hex(C.verb, d, r), hex(C.megaphoneText, d, r), body))
+    end
+    bubble(list, player, text:upper(), "megaphone")
+end
+
+addCommandHandler("r", function(p, _, ...) radio(p, table.concat({ ... }, " ")) end)
+addCommandHandler("d", function(p, _, ...) department(p, table.concat({ ... }, " ")) end)
+addCommandHandler("meg", function(p, _, ...) megaphone(p, table.concat({ ... }, " ")) end)
+addCommandHandler("megafono", function(p, _, ...) megaphone(p, table.concat({ ... }, " ")) end)
+
 addCommandHandler("me", function(p, _, ...) emote(p, table.concat({ ... }, " "), false) end)
 addCommandHandler("do", function(p, _, ...) emote(p, table.concat({ ... }, " "), true) end)
 

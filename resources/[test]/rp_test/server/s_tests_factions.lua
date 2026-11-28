@@ -35,3 +35,15 @@ test("fac_api_sin_faccion", function(t)
     if type(f:getFactionPlayers("policia")) ~= "table" then return t.fail("getFactionPlayers no devuelve lista") end
     t.pass()
 end)
+
+-- #107: radio de facción, canal de departamentos y megáfono registrados en rp_chat
+test("fac_radio_comandos", function(t)
+    local res = getResourceFromName("rp_chat")
+    if not res or getResourceState(res) ~= "running" then return t.fail("rp_chat no esta running") end
+    local have = {}
+    for _, c in ipairs(getCommandHandlers(res) or {}) do have[type(c) == "table" and c[1] or c] = true end
+    for _, cmd in ipairs({ "r", "d", "meg", "megafono" }) do
+        if not have[cmd] then return t.fail("falta el comando /" .. cmd) end
+    end
+    t.pass("/r, /d, /meg y /megafono")
+end)

@@ -35,7 +35,17 @@ local STYLES = {
     say     = { bg = { 12, 14, 20, 228 }, accent = { 236, 239, 245 }, text = { 245, 247, 250 }, font = F_SAY,     maxW = 230, cps = 70 },
     whisper = { bg = { 34, 26, 58, 218 }, accent = { 178, 152, 255 }, text = { 224, 214, 255 }, font = F_WHISPER, maxW = 200, cps = 55, label = "SUSURRO", tail = "dots" },
     shout   = { bg = { 82, 12, 20, 235 }, accent = { 255, 96, 82 },   text = { 255, 255, 255 }, font = F_SHOUT,   maxW = 260, cps = 90, shake = true, burst = true, tail = "spike" },
+    -- /r y /d: lo que dice por radio (lo ve quien está al lado); /meg: megáfono
+    radio     = { bg = { 14, 40, 26, 228 }, accent = { 120, 220, 140 }, text = { 228, 246, 232 }, font = F_SAY,   maxW = 230, cps = 70, label = "RADIO" },
+    megaphone = { bg = { 70, 46, 6, 235 },  accent = { 255, 196, 64 },  text = { 255, 255, 255 }, font = F_SHOUT, maxW = 260, cps = 90, label = "MEGAFONO", shake = true, burst = true, tail = "spike" },
 }
+
+-- Clic de la radio al recibir /r o /d (Kenney CC0, ver CREDITOS.md)
+addEvent("rp:chat:radioSound", true)
+addEventHandler("rp:chat:radioSound", resourceRoot, function()
+    local s = playSound("sounds/radio_click.ogg")
+    if s then setSoundVolume(s, 0.6) end
+end)
 local LABEL_H = dxGetFontHeight(1, F_LABEL)
 
 local stacks = {}    -- [player] = { entrada más nueva primero }

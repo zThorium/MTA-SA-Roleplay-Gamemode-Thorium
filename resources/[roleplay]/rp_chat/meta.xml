@@ -1,5 +1,5 @@
 <meta>
-    <info author="Thorium" name="RP Chat" description="Chat de rol: decir, susurrar, gritar, OOC (/b) y PM con historial para admins; burbujas animadas e indicador de escribiendo" version="2.0.0" type="script" />
+    <info author="Thorium" name="RP Chat" description="Chat de rol: decir, susurrar, gritar, OOC (/b), radio de facción (/r, /d), megáfono y PM con historial para admins; burbujas animadas e indicador de escribiendo" version="2.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_database" />
@@ -17,4 +17,5 @@
     <file src="fonts/rubik_regular.ttf" />
     <file src="fonts/rubik_medium.ttf" />
     <file src="fonts/rubik_semibold.ttf" />
+    <file src="sounds/radio_click.ogg" />
 </meta>
