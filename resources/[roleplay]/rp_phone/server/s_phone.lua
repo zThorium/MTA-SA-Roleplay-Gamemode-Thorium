@@ -211,10 +211,21 @@ addEventHandler("rp:phone:call", resourceRoot, function(number)
         end
     end
     local entry = BY_NUMBER[number]
-    if not entry then
-        triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
-        return notify(player, "El numero marcado no esta disponible.", "info")
-    end
+    -- Llamadas entre jugadores y emergencias atendidas por jugadores de servicio (s_calls.lua)
+    ensureNumber(characterOf(player), function(mine)
+        if not isElement(player) then return end
+        if entry and handleEmergencyCall(player, entry, mine) then return end
+        if not entry and handlePlayerCall(player, number, mine) then return end
+        if not entry then
+            triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
+            return notify(player, "El numero marcado no esta disponible.", "info")
+        end
+        callEmergencyCentral(player, entry, number)
+    end)
+end)
+
+-- Central IA de emergencias (rp_emergency): cuando no hay jugadores de servicio que contesten
+function callEmergencyCentral(player, entry, number)
     local emergency = getResourceFromName("rp_emergency")
     if not emergency or getResourceState(emergency) ~= "running" then
         triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, false)
@@ -223,6 +234,6 @@ addEventHandler("rp:phone:call", resourceRoot, function(number)
     -- rp_emergency valida todo y avisa al jugador si rechaza la llamada
     local ok = exports.rp_emergency:callService(player, entry.service)
     triggerClientEvent(player, "rp:phone:callResult", resourceRoot, number, ok == true)
-end)
+end
 
 addEventHandler("onPlayerQuit", root, function() lastCall[source] = nil end)

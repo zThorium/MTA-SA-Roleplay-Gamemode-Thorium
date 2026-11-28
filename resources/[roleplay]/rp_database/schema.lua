@@ -1955,4 +1955,22 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_phone (#115): historial de llamadas entre jugadores (y a emergencias atendidas por jugadores)
+    [[
+    CREATE TABLE IF NOT EXISTS phone_calls (
+        id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        caller_id       INT UNSIGNED NULL,
+        callee_id       INT UNSIGNED NULL,
+        caller_number   INT UNSIGNED NULL,
+        callee_number   VARCHAR(12)  NOT NULL,
+        status          VARCHAR(10)  NOT NULL,
+        duration        INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_phone_calls_caller (caller_id, id),
+        KEY idx_phone_calls_callee (callee_id, id),
+        CONSTRAINT fk_phone_calls_caller FOREIGN KEY (caller_id) REFERENCES characters (id) ON DELETE SET NULL,
+        CONSTRAINT fk_phone_calls_callee FOREIGN KEY (callee_id) REFERENCES characters (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
