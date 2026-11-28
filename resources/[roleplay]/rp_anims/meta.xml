@@ -2,10 +2,12 @@
     <info author="Thorium" name="RP Anims" description="Animaciones con menu radial (mantener O, mover el mouse, soltar)" version="1.0.0" type="script" />
     <min_mta_version server="1.6.0" client="1.6.0" />
 
+    <include resource="rp_database" />
     <include resource="rp_notify" />
     <include resource="rp_characters" />
 
     <script src="shared/s_config.lua" type="shared" />
     <script src="server/s_anims.lua" type="server" />
+    <script src="server/s_walk.lua" type="server" />
     <script src="client/c_anims.lua" type="client" cache="false" />
 </meta>
