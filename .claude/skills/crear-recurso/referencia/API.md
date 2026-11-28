@@ -148,6 +148,8 @@ un id fijo. `which` = id de facción (número) o tipo (texto); sin `which`, cual
 |---|---|
 | `rp_vehicles:createOwnedVehicle(p, modelo, color, x, y, z, rz)` | vehículo personal persistente con llave |
 | `rp_vehicles:getVehicleOwner(v)`, `getVehicleDatabaseId(v)`, `saveVehicle(v)`, `countOwnedVehicles(p)` | |
+| `rp_vehicles:setVehicleLockState(v, cerrado)`, `setVehicleHotwired(v, bool)` | abrir sin llave (guardado) y puente; evento cancelable `rp:veh:onEngineNoKey` (source = jugador, vehículo) |
+| `rp_cartheft:isPlayerStealing(p)`, `isVehicleAlarmOn(v)` | robo de vehículo en curso / alarma sonando |
 | `rp_vehicles:getVehicleFuel(v)`, `setVehicleFuel(v, litros)`, `getVehicleOdometer(v)` | |
 | `rp_properties:getPropertyInfo(id)` | |
 | `rp_shops:addTempShop(ped, nombre, {itemId = precio})`, `removeTempShop(id)` | tienda temporal con el menú de `rp_shops` |

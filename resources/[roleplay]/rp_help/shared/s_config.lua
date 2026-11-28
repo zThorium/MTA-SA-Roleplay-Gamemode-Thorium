@@ -84,6 +84,11 @@ HELP.KEYS = {
         { key = "M",   text = "Muestra el cursor: click derecho sobre un vehiculo abre su menu (maletero, matricula, multas) y sobre una persona, el de interaccion (saludar, dar dinero u objetos, documentos, reanimar, cachear). En Vroom alterna app y mapa" },
         { key = "E / Retroceso", text = "Aceptar o rechazar lo que te propone otra persona (darte la mano, un objeto, subir a su coche, cachearte)" },
     } },
+    { group = "Robo de vehiculos", items = {
+        { key = "E",   text = "Junto a la puerta del conductor de un vehiculo cerrado, con una ganzua (tiendas 24/7): forzar la cerradura. Espacio o clic cuando la aguja este en la zona verde; si fallas, la ganzua puede romperse" },
+        { key = "J",   text = "Al volante del vehiculo forzado: hacer el puente (une los cables del mismo color y da la chispa)" },
+        { key = "H",   text = "Con el motor en marcha, toca la bocina dos veces para apagar la alarma. Si un policia te ve durante el robo, ganas una estrella" },
+    } },
     { group = "Detector de metales", items = {
         { key = "E",   text = "Junto al vendedor del puesto 'Equipo de playa' (muelle de Santa Maria): tienda de detectores y pala. Los detectores mejores se desbloquean subiendo de nivel de buscador" },
         { key = "I",   text = "Usa el detector desde el inventario para sacarlo o guardarlo" },

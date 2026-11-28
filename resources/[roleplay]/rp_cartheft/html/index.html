@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Robo de vehiculo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="window" id="win">
+        <header>
+            <div>
+                <div class="eyebrow" id="eyebrow">Paso 1 de 2</div>
+                <h1 id="title">Forzar la cerradura</h1>
+            </div>
+            <button class="close" id="btn-close" title="Salir (Esc)">×</button>
+        </header>
+
+        <!-- Cerradura -->
+        <section id="pick" class="mode hidden">
+            <div class="pins" id="pins"></div>
+            <div class="track" id="pick-track">
+                <div class="zone" id="pick-zone"></div>
+                <div class="needle" id="pick-needle"></div>
+            </div>
+            <div class="status">
+                <span id="pick-count">Pin 1 de 3</span>
+                <span class="lives" id="pick-lives"></span>
+            </div>
+        </section>
+
+        <!-- Puente -->
+        <section id="wire" class="mode hidden">
+            <div class="board" id="board">
+                <svg class="links" id="links"></svg>
+                <div class="col" id="wires-left"></div>
+                <div class="col right" id="wires-right"></div>
+            </div>
+            <div class="spark hidden" id="spark">
+                <div class="track" id="spark-track">
+                    <div class="zone" id="spark-zone"></div>
+                    <div class="needle" id="spark-needle"></div>
+                </div>
+            </div>
+            <div class="status">
+                <span id="wire-count">Cables 0 de 3</span>
+                <span class="lives" id="wire-lives"></span>
+            </div>
+        </section>
+
+        <div class="flash" id="flash"></div>
+
+        <footer class="hints" id="hints"></footer>
+
+        <!-- Entrenador: solo la primera vez -->
+        <div class="coach-dim hidden" id="coach-dim"></div>
+        <div class="coach hidden" id="coach">
+            <div class="coach-step" id="coach-step"></div>
+            <div class="coach-text" id="coach-text"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

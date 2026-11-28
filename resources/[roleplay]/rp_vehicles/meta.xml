@@ -50,6 +50,9 @@
     <export function="getVehicleOwner" type="server" />
     <export function="getVehicleDatabaseId" type="server" />
     <export function="saveVehicle" type="server" />
+    <!-- Robo de vehiculos (rp_cartheft): abrir sin llave y puente -->
+    <export function="setVehicleLockState" type="server" />
+    <export function="setVehicleHotwired" type="server" />
     <export function="getVehicleOdometer" type="server" />
     <export function="getVehicleFuel" type="server" />
     <export function="setVehicleFuel" type="server" />

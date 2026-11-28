@@ -41,6 +41,7 @@ ACH.STATS = {
     -- Ley y calle
     wanted_escapes   = { mode = "add", maxPerCall = 1 },
     robberies        = { mode = "add", maxPerCall = 1 },
+    cars_stolen      = { mode = "add", maxPerCall = 1 },   -- rp_cartheft: robo completo de un auto ajeno (1 vez/hora por auto)
     jailed           = { mode = "add", maxPerCall = 1 },
     police_arrests   = { mode = "add", maxPerCall = 1 },
     police_fines     = { mode = "add", maxPerCall = 1 },
@@ -97,6 +98,7 @@ ACH.CATALOG = {
     -- Ley y calle -----------------------------------------------------------
     { key = "fantasma",      cat = "street", icon = "👻", name = "Fantasma",          stat = "wanted_escapes",  tiers = { 1, 10, 30, 100 },           desc = "Pierde a la policía %s veces" },
     { key = "atracador",     cat = "street", icon = "💰", name = "Atracador",         stat = "robberies",       tiers = { 1, 5, 20, 50 },             desc = "Sal con el botín de %s robos a tiendas" },
+    { key = "ganzua",        cat = "street", icon = "🔓", name = "Manos de seda",     stat = "cars_stolen",     tiers = { 1, 10, 30, 100 },           desc = "Roba %s vehículos forzando la cerradura y haciendo el puente" },
     { key = "rejas",         cat = "street", icon = "⛓️", name = "Entre rejas",       stat = "jailed",          tiers = { 1 }, medals = { 1 }, secret = true, desc = "Acaba en la cárcel" },
     { key = "placa",         cat = "street", icon = "🚔", name = "Placa y deber",     stat = "police_arrests",  tiers = { 5, 25, 100, 300 },          desc = "Arresta a %s personas" },
     { key = "multas",        cat = "street", icon = "🧾", name = "Talonario",         stat = "police_fines",    tiers = { 5, 25, 100, 300 },          desc = "Pon %s multas" },
