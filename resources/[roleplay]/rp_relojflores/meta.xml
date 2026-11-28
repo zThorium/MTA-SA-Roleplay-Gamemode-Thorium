@@ -1,0 +1,29 @@
+<meta>
+    <info author="Thorium" name="RP Reloj de Flores" description="Reloj de Flores de Viña del Mar: monumento con modelo propio cuyas agujas marcan la hora del juego" version="1.0.0" type="script" />
+    <min_mta_version server="1.6.0" client="1.6.0-9.22470" />
+
+    <include resource="rp_database" />
+    <include resource="rp_notify" />
+    <include resource="rp_login" />
+
+    <script src="shared/s_config.lua" type="shared" cache="false" />
+    <script src="server/s_relojflores.lua" type="server" />
+    <script src="client/c_relojflores.lua" type="client" cache="false" />
+
+    <!-- Modelos propios (tools/build_flower_clock.py, Blender + DragonFF); el pasto usa la textura nativa del juego -->
+    <file src="models/reloj_flores.txd" />
+    <file src="models/reloj_flores.dff" />
+    <file src="models/reloj_pasto.dff" />
+    <file src="models/reloj_pasto.col" />
+    <file src="models/reloj_bounds.col" />
+    <file src="models/reloj_flores_lod.dff" />
+    <file src="models/reloj_flores_flora.dff" />
+    <file src="models/reloj_aguja_hora.dff" />
+    <file src="models/reloj_aguja_minuto.dff" />
+    <file src="models/reloj_aguja_segundo.dff" />
+
+    <!-- Gramatica Owl de rp_admin: /nearbyflowerclocks, /gotoflowerclock, /delflowerclock... y editor ALT -->
+    <export function="adminElements" type="server" />
+    <export function="adminDelete" type="server" />
+    <export function="adminMove" type="server" />
+</meta>
