@@ -92,6 +92,11 @@ ITEMS = {
         name = "Encendedor", icon = "🔥", weight = 0.05, stack = 1,
         description = "Un encendedor de bolsillo.",
     },
+    lockpick = {
+        name = "Ganzua", icon = "🔓", weight = 0.05, stack = 5,
+        description = "Juego de ganzuas para forzar la cerradura de un vehiculo cerrado. Puede romperse. Usala junto a la puerta del conductor (o pulsa E).",
+        use = { event = "lockpick" },
+    },
     phone = {
         name = "Telefono movil", icon = "📱", weight = 0.2, stack = 1,
         description = "Telefono movil: notas, agenda, banco y Fotogram. Tambien se abre con la tecla P.",
@@ -438,7 +443,7 @@ local ITEM_MODELS = {
     sandwich = WRAP,
     medkit = { 1240, 0.8 },
     vest = { 1242, 0.8 },
-    cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 },
+    cigarettes = { 1485, 2.5 }, lighter = { 1485, 2.5 }, lockpick = { 1485, 2.5 },
     phone = { 330, 1.5 }, broken_phone = { 330, 1.5 },
     metal_detector_1 = { 333, 1.0 }, metal_detector_2 = { 333, 1.0 }, metal_detector_3 = { 333, 1.0 },
     metal_detector_4 = { 333, 1.0 }, metal_detector_5 = { 333, 1.0 }, shovel = { 337, 1.0 }, scrap_metal = SACK, rusty_can = CUP,

@@ -15,6 +15,11 @@
         getVehicleOwner(vehicle)                              -> characterId | false
         getVehicleDatabaseId(vehicle)                         -> id | false
         saveVehicle(vehicle)
+        setVehicleLockState(vehicle, locked)          abre o cierra y lo guarda (rp_cartheft al forzar la cerradura)
+        setVehicleHotwired(vehicle, on)               puente hecho: el motor arranca sin llave hasta que el dueno lo cierre
+
+    Evento: rp:veh:onEngineNoKey (source = jugador, vehicle) al intentar encender sin llave.
+    Si otro recurso lo cancela (cancelEvent), no se avisa "No tienes la llave" (rp_cartheft abre el puente).
 ]]
 
 local vehicles = {}    -- [vehicle] = { id, ownerId, locked, engine, handbrake, clamped, plate, model }
@@ -27,6 +32,7 @@ addEvent("rp:veh:toggleLock", true)
 addEvent("rp:veh:engine", true)
 addEvent("rp:veh:handbrake", true)
 addEvent("rp:veh:indicator", true)
+addEvent("rp:veh:onEngineNoKey", false)
 
 function db() return exports.rp_database:getConnection() end
 function notify(p, t, k) exports.rp_notify:notify(p, t, k) end
@@ -234,10 +240,25 @@ end
 
 function setVehicleLockState(vehicle, locked)
     local data = vehicles[vehicle]
-    if not data then return end
+    if not data then return false end
+    locked = locked and true or false
     data.locked = locked
+    if locked then data.hotwired = nil end   -- el dueno lo vuelve a cerrar: el puente deja de servir
     setVehicleLocked(vehicle, locked)
     dbExec(db(), "UPDATE vehicles SET locked = ? WHERE id = ?", locked and 1 or 0, data.id)
+    return true
+end
+
+-- Puente (rp_cartheft): enciende el motor y deja arrancarlo sin llave hasta que se cierre con llave
+function setVehicleHotwired(vehicle, on)
+    local data = vehicles[vehicle]
+    if not data then return false end
+    data.hotwired = on and true or nil
+    if on then
+        data.engine = true
+        setVehicleEngineState(vehicle, true)
+    end
+    return true
 end
 
 local function toggleLock(player, vehicle)
@@ -350,7 +371,11 @@ addEventHandler("rp:veh:engine", resourceRoot, function()
         return setVehicleEngineState(v, not getVehicleEngineState(v))
     end
     if not data.engine then
-        if not hasVehicleKey(player, data.id) then return notify(player, "No tienes la llave de este vehiculo.", "error") end
+        if not data.hotwired and not hasVehicleKey(player, data.id) then
+            -- otro recurso (rp_cartheft) puede tomar el intento y abrir el minijuego del puente
+            if not triggerEvent("rp:veh:onEngineNoKey", player, v) then return end
+            return notify(player, "No tienes la llave de este vehiculo.", "error")
+        end
         if data.clamped then return notify(player, "El vehiculo tiene un cepo de la policia.", "error") end
         if getElementHealth(v) <= 300 then return notify(player, "El motor esta demasiado danado.", "error") end
     end

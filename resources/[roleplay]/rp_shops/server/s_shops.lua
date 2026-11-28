@@ -15,7 +15,7 @@ local MAX_QUANTITY = 10
 -- Catalogo con el que se crean las tiendas nuevas (item -> precio)
 local DEFAULT_CATALOG = {
     water = 5, coffee = 8, sandwich = 12, burger = 18, cigarettes = 15,
-    lighter = 5, medkit = 150, phone = 250, vest = 400,
+    lighter = 5, medkit = 150, phone = 250, vest = 400, lockpick = 60,
 }
 
 -- Tienda inicial junto al punto de aparicion (estacion Unity)
@@ -91,6 +91,8 @@ end
 local function loadShops()
     -- Items agregados despues de crear la tienda inicial (idempotente)
     dbExec(db(), "INSERT IGNORE INTO shop_items (shop_id, item_id, price) SELECT id, ?, ? FROM shops WHERE id = 1", "coffee", DEFAULT_CATALOG.coffee)
+    -- Ganzua (rp_cartheft) en todas las tiendas ya creadas
+    dbExec(db(), "INSERT IGNORE INTO shop_items (shop_id, item_id, price) SELECT id, ?, ? FROM shops", "lockpick", DEFAULT_CATALOG.lockpick)
     dbQuery(function(qh)
         local rows = dbPoll(qh, 0) or {}
         if #rows == 0 then

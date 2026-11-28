@@ -37,11 +37,11 @@ Para un recurso nuevo usa un bloque de 1000 libre (por ejemplo `24000 + id`, `27
 |---|---|
 | **E** | interacción universal (15 recursos: tiendas, cajeros, puertas, máquinas, trabajos...). Solo actúa junto a tu punto |
 | G | muebles con función (`rp_furniture`) |
-| H | interactuar con peatones (`rp_npcrel`), amenazar en robos (`rp_robbery`) |
+| H | interactuar con peatones (`rp_npcrel`), amenazar en robos (`rp_robbery`); bocina de GTA al volante (control `horn`: `rp_cartheft` cuenta dos bocinazos para apagar la alarma) |
 | I | inventario |
 | O | menú radial de animaciones (`rp_anims`, mantener), mochila (`rp_backpacks`), sirena (`rp_police`, en patrulla) ⚠️ saturada |
 | C | cinturón de seguridad, solo dentro de un coche (`rp_seatbelt`) |
-| J | motor del vehículo (`rp_vehicles`, rebindeable) |
+| J | motor del vehículo (`rp_vehicles`, rebindeable); sin llave en un auto forzado abre el puente de `rp_cartheft` (evento `rp:veh:onEngineNoKey`) |
 | K | cursor de interacción policial (`rp_police`) |
 | L / X / flechas | cerrar, freno de mano, intermitentes (`rp_vehicles`, rebindeables en Ajustes > Binds) |
 | M | cursor (`rp_vehicles`): clic derecho en un vehículo = menú de vehículo, en una persona = menú de `rp_interact`; mapa/app en Vroom (`rp_rides`) |
@@ -70,7 +70,7 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
   `rp:hudHidden` (no lo toques: usa `setHudSuppressed`), `rp:downed`, `rp:carried`, `rp:cuffed`, `rp:tased`,
   `rp:faction`, `rp:policeDuty`, `rp:job`, `rp:jobShift`, `rp:race`, `rp:drivingTest`, `rp:packWeight`,
   `rp:meth`, `rp:respect`, `rp:fireDuty`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
-- Vehículos: `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
+- Vehículos: `rp:carAlarm` (`rp_cartheft`, alarma sonando), `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
   trenes (`rp_train`): `rp:train`, `rp:train:wagon`, `rp:train:of`, `rp:train:idx`, `rp:train:v`, `rp:train:passenger`, `rp:train:dwell`, `rp:train:horn`.
 - Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
 - Objeto en la mano (no arma): `rp:heldItem` en el jugador = id del item (lo pone el recurso que lo maneja; `rp_inventory` lo marca con ✓ y su botón dice «Guardar»). Hoy: `rp_metaldetector` (`metal_detector_<n>`); al quitarlo, borra solo si el valor es tuyo.
@@ -133,7 +133,7 @@ rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads �
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
-→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map → rp_worldobjects → rp_interact → rp_metaldetector → rp_achievements
+→ rp_missions → rp_vending → rp_restaurants → rp_pizzeria → rp_firefighters → rp_map → rp_worldobjects → rp_interact → rp_metaldetector → rp_cartheft → rp_achievements
 ```
 
 Herramientas de desarrollo que no arrancan con el servidor (p. ej. `rp_animlab`): no van en `mtaserver.conf` y llevan
@@ -145,7 +145,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 ## Prefijos de eventos en uso
 
 `rp:admin:`, `rp:adminpanel:`, `rp:agency:`, `rp:ammu:`, `rp:anims:`, `rp:atm:`, `rp:auth:`, `rp:bank:`,
-`rp:achievements:`, `rp:bikes:`, `rp:bp:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
+`rp:achievements:`, `rp:bikes:`, `rp:bp:`, `rp:cartheft:`, `rp:chars:`, `rp:chat:`, `rp:citizens:`, `rp:cloth:`, `rp:clothing:`, `rp:dealer:`,
 `rp:dealers:`, `rp:driving:`, `rp:firefighters:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
 `rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:interact:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`, `rp:metaldetector:`,
 `rp:map:`, `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,

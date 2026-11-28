@@ -43,6 +43,7 @@ assets/
     sonidos/heartbeat.wav         latido "lub-dub" (vida baja; sintetizado, rp_hud/tools/gen_sounds.ps1)
     sonidos/coins.wav             monedas al cobrar (sintetizado, rp_hud/tools/gen_sounds.ps1)
     sonidos/disparo_rifle.wav     disparo de rifle (tirador del helicoptero; sintetizado, rp_wanted/tools/gen_sounds.ps1)
+    sonidos/alarma_auto.wav       alarma de auto en bucle de 2 s y alarma_chirp.wav (pitido doble al apagarla); sintetizados, rp_cartheft/tools/gen_sounds.ps1
     sonidos/detector/             pitidos agudo/grave, tono y zumbido en bucle, encendido, campanas de hallazgo por rareza,
                                   destellos y «nuevo en la colección» (sintetizados, rp_metaldetector/tools/gen_assets.ps1)
     texturas/detector/            brillo radial, aro, destello de 4 puntas, hoyo en la arena y viñeta (mismo script)
