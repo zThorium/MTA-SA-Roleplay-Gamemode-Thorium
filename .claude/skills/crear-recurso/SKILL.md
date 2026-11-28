@@ -128,8 +128,10 @@ Parte de [`plantillas/s_main.lua`](plantillas/s_main.lua). Lo que **siempre** de
    `rp_inventory/shared/s_items.lua`; con `use = { event = true }` se gestionan en tu recurso con `rp:onItemUse`.
 7. **Avisos**: `exports.rp_notify:notify(p, texto, "success"|"error"|"warning"|"info")`, `popup` para
    avisos importantes, `bubble` para globos sobre un ped. Nada de `outputChatBox` para feedback de acciones.
-8. **Logs**: `outputDebugString("[rp_sistema] ...")` (nivel 1 error, 2 aviso, 3 info). Acciones de
-   admin y movimientos grandes de dinero: también a la BD si hay que auditarlos.
+8. **Logs**: `outputDebugString("[rp_sistema] ...")` (nivel 1 error, 2 aviso, 3 info). Todo lo que
+   mueva dinero, ítems, casas o vehículos entre jugadores o desde admin se registra además con
+   `exports.rp_logs:log(tipo, actor, objetivo, n, detalle)` tras validar y cobrar (`<include resource="rp_logs" />`;
+   tipos en `rp_logs/server/s_config.lua`). Las acciones de admin van también a `admin_log`.
 
 ## Fase 5 · Cliente
 

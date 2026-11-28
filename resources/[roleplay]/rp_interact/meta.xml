@@ -3,6 +3,7 @@
     <min_mta_version server="1.6.0" client="1.6.0" />
 
     <include resource="rp_notify" />
+    <include resource="rp_logs" />
     <include resource="rp_login" />
     <include resource="rp_ids" />
     <include resource="rp_characters" />

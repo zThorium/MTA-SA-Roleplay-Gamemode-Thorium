@@ -323,6 +323,7 @@ local function giveMoney(player, cmd, query, amount)
             or ("Un administrador te quito $%d en efectivo."):format(-amount), "info")
     end
     logAction(player, cmd, t, ("%+d (antes $%d, ahora $%d)"):format(amount, before, after))
+    exports.rp_logs:log("admin_cash", player, t, after - before, ("/%s: $%d -> $%d"):format(cmd, before, after))
 end
 addCommandHandler("givemoney", giveMoney)
 addCommandHandler("apagar", giveMoney)
@@ -342,6 +343,7 @@ addCommandHandler("setmoney", function(player, _, query, amount)
     notify(player, ("Efectivo de %s fijado en $%d."):format(label(t), amount), "success")
     if t ~= player then notify(t, ("Un administrador fijo tu efectivo en $%d."):format(amount), "info") end
     logAction(player, "setmoney", t, ("$%d -> $%d"):format(before, amount))
+    exports.rp_logs:log("admin_setcash", player, t, amount - before, ("/setmoney: $%d -> $%d"):format(before, amount))
 end)
 
 ----------------------------------------------------------------

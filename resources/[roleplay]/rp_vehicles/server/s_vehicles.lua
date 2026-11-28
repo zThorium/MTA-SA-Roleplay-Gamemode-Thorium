@@ -324,6 +324,7 @@ addCommandHandler("darllave", function(player, _, query)
     local ok, reason = exports.rp_inventory:canCarry(target, item, 1)
     if not ok then return notify(player, reason or "No puede llevar la llave.", "error") end
     if exports.rp_inventory:takeItem(player, item, 1) and exports.rp_inventory:giveItem(target, item, 1) then
+        exports.rp_logs:log("vehicle_key", player, target, 1, ("vehículo %d, patente %s"):format(vehicles[vehicle].id, vehicles[vehicle].plate))
         notify(player, ("Le diste la llave de %s a %s."):format(vehicles[vehicle].plate, displayName(target)), "success")
         notify(target, ("%s te dio la llave de %s."):format(displayName(player), vehicles[vehicle].plate), "info")
     end
@@ -340,6 +341,7 @@ addCommandHandler("allave", function(player, _, vehicleId, query)
     if giveKey(target, vehicleId) then
         notify(player, ("Llave del vehiculo %d entregada a %s."):format(vehicleId, displayName(target)), "success")
         notify(target, "Un administrador te dio una llave de vehiculo.", "info")
+        exports.rp_logs:log("vehicle_key", player, target, 1, ("/allave vehículo %d"):format(vehicleId))
     else
         notify(player, "No se pudo dar la llave (inventario lleno o no disponible).", "error")
     end
