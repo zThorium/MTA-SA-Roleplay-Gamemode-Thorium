@@ -568,6 +568,9 @@ end)
 ----------------------------------------------------------------
 -- -> { id, name, type, owner_id, locked, price, interior, x, y, z, rot } | false
 -- (x, y, z = punto de salida dentro del interior)
+-- Propiedad donde está el jugador (dentro o en la puerta), o nil
+function getPlayerProperty(player) return currentProperty(player) end
+
 function getPropertyInfo(id)
     local p = props[tonumber(id)]
     if not p then return false end
