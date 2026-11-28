@@ -9,6 +9,7 @@
         /me accion  /do descripcion   rol de accion y entorno (15 m)
         /ame accion               etiqueta sobre la cabeza (vive en rp_nametags)
         /pm <id> texto            mensaje privado OOC (queda en chat_pm_log)
+        /dado [caras]  /moneda  /intentar <accion>   azar visible a 15 m
     Admin (nivel 1+):
         /pmlog <id o nombre> [cantidad]   historial de PMs de un jugador
 
@@ -199,6 +200,30 @@ local function emote(player, text, isDo)
 end
 addCommandHandler("me", function(p, _, ...) emote(p, table.concat({ ... }, " "), false) end)
 addCommandHandler("do", function(p, _, ...) emote(p, table.concat({ ... }, " "), true) end)
+
+-- Azar visible para los cercanos (15 m): el servidor tira, nadie puede amañar el resultado
+local function chance(player, text)
+    if not canSpeak(player) then return end
+    for _, l in ipairs(listeners(player, RANGE.say)) do
+        local d, r = l.d, RANGE.say
+        line(l.p, ("%s* %s%s %s%s"):format(hex(C.act, d, r), hex(C.name, d, r), nameOf(player), hex(C.act, d, r), text))
+    end
+end
+addCommandHandler("dado", function(p, _, faces)
+    faces = tonumber(faces or 6)
+    if not faces or faces ~= math.floor(faces) or faces < 2 or faces > 100 then
+        return notify(p, "Uso: /dado [caras]  (de 2 a 100; por defecto 6)", "info")
+    end
+    chance(p, ("lanza un dado de %d caras y sale %d."):format(faces, math.random(faces)))
+end)
+addCommandHandler("moneda", function(p)
+    chance(p, ("lanza una moneda al aire y sale %s."):format(math.random(2) == 1 and "cara" or "sello"))
+end)
+addCommandHandler("intentar", function(p, _, ...)
+    local text = clean(table.concat({ ... }, " ")):gsub("^%u", string.lower):gsub("[%.!]+$", "")
+    if text == "" then return notify(p, "Uso: /intentar <acción>  (ej: /intentar abrir la puerta a patadas)", "info") end
+    chance(p, ("intenta %s y %s"):format(text, math.random(2) == 1 and "lo consigue." or "falla."))
+end)
 
 -- El chat por defecto (T) pasa a ser "decir"
 addEventHandler("onPlayerChat", root, function(message, kind)
