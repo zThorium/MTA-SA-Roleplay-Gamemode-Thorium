@@ -24,4 +24,5 @@
     <export function="takeFromBackpack" type="server" />
     <export function="equipFromGround" type="server" />
     <export function="dropBackpack" type="server" />
+    <export function="stowBackpack" type="server" />
 </meta>

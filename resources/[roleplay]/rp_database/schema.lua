@@ -1955,4 +1955,37 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_medics: puntos del hospital movidos por un admin (/medmover o editor ALT)
+    [[
+    CREATE TABLE IF NOT EXISTS medic_points (
+        kind VARCHAR(16) NOT NULL,
+        x    FLOAT       NOT NULL,
+        y    FLOAT       NOT NULL,
+        z    FLOAT       NOT NULL,
+        rot  FLOAT       NOT NULL DEFAULT 0,
+        PRIMARY KEY (kind)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Casillero personal del vestuario de una facción (rp_medics; genérico por tipo de facción para F0.2)
+    [[
+    CREATE TABLE IF NOT EXISTS faction_locker_items (
+        character_id INT UNSIGNED NOT NULL,
+        faction_type VARCHAR(16)  NOT NULL,
+        item_id      VARCHAR(32)  NOT NULL,
+        amount       INT UNSIGNED NOT NULL,
+        PRIMARY KEY (character_id, faction_type, item_id),
+        CONSTRAINT fk_faction_locker_items_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
+    -- Mochila personal guardada en el casillero, con su contenido (JSON { item_id: cantidad })
+    [[
+    CREATE TABLE IF NOT EXISTS faction_locker_backpack (
+        character_id INT UNSIGNED NOT NULL,
+        faction_type VARCHAR(16)  NOT NULL,
+        backpack_id  VARCHAR(32)  NOT NULL,
+        contents     TEXT         NOT NULL,
+        PRIMARY KEY (character_id, faction_type),
+        CONSTRAINT fk_faction_locker_backpack_character FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }

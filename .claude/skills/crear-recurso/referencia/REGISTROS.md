@@ -69,8 +69,8 @@ tabla Lua del servidor. Prefijo `rp:` siempre.
 - Jugador / sesión: `rp:accountId`, `rp:characterId`, `rp:loaded`, `rp:body`, `rp:head`, `rp:needs`,
   `rp:hudHidden` (no lo toques: usa `setHudSuppressed`), `rp:downed`, `rp:carried`, `rp:cuffed`, `rp:tased`,
   `rp:faction`, `rp:policeDuty`, `rp:job`, `rp:jobShift`, `rp:race`, `rp:drivingTest`, `rp:packWeight`,
-  `rp:meth`, `rp:respect`, `rp:fireDuty`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
-- Vehículos: `rp:carAlarm` (`rp_cartheft`, alarma sonando), `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
+  `rp:meth`, `rp:respect`, `rp:fireDuty`, `rp:medDuty`, `rp:wanted`, `rp:wantedHeld`, `rp:wantedLost`, `rp:wantedNoTires`.
+- Vehículos: `rp:carAlarm` (`rp_cartheft`, alarma sonando), `rp:vehicleId`, `rp:vehicleOwner`, `rp:indicator`, `rp:copCar`, `rp:fireTruck`, `rp:ambulance`, `rp:perf`, `rp:radio`, `rp:rides:ai`,
   trenes (`rp_train`): `rp:train`, `rp:train:wagon`, `rp:train:of`, `rp:train:idx`, `rp:train:v`, `rp:train:passenger`, `rp:train:dwell`, `rp:train:horn`.
 - Jugador en el tren: `rp:train:rider` (`rp_train`, viaja como pasajero). Root del recurso: `rp:train:eta` (`rp_train`).
 - Objeto en la mano (no arma): `rp:heldItem` en el jugador = id del item (lo pone el recurso que lo maneja; `rp_inventory` lo marca con ✓ y su botón dice «Guardar»). Hoy: `rp_metaldetector` (`metal_detector_<n>`); al quitarlo, borra solo si el valor es tuyo.

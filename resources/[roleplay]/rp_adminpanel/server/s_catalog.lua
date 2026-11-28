@@ -185,6 +185,12 @@ ADMIN_CATALOG = {
         },
     },
     {
+        id = "medicos", name = "Medicos",
+        items = {
+            { cmd = "/medmover", args = "<vestuario|garaje|ambulancia>", desc = "Mueve un punto del hospital a tu posicion (ambulancia = donde aparece, con tu rumbo). Tambien se mueven con el editor (ALT).", res = "rp_medics" },
+        },
+    },
+    {
         id = "owl_jugadores", name = "Jugadores y sanciones (sintaxis Owl)",
         items = {
             { cmd = "/check", args = "<id o nombre>", desc = "Ficha del jugador: cuenta, nivel admin, ping, vida, efectivo, banco, posicion y numero de sanciones (serial e IP desde nivel 2).", res = "rp_admin" },

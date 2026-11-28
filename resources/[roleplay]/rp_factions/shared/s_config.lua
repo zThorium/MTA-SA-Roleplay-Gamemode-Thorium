@@ -45,7 +45,7 @@ end
 FACTION_TYPES = {
     gobierno = { name = "Gobierno",          state = true,  color = "#4c9aff" },
     policia  = { name = "Policia",           state = true,  color = "#3b6fe0", duty = "rp_police", dutyData = "rp:policeDuty" },
-    medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d" },
+    medicos  = { name = "Servicios medicos", state = true,  color = "#e5484d", duty = "rp_medics", dutyData = "rp:medDuty" },
     bomberos = { name = "Bomberos",          state = true,  color = "#ff6a2b", duty = "rp_firefighters", dutyData = "rp:fireDuty" },
     empresa  = { name = "Empresa",           state = false, color = "#4cd38a" },
     banda    = { name = "Banda",             state = false, color = "#a35bff" },
