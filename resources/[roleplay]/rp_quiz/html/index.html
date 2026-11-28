@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Cuestionario de rol</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="card hidden" id="card">
+        <header>
+            <div class="kicker">ANTES DE EMPEZAR</div>
+            <h1>Cuestionario de rol</h1>
+            <p class="sub" id="intro">Aquí todos rolean. Responde estas preguntas para crear tu personaje: necesitas <b id="pass">7</b> aciertos.</p>
+            <div class="progress"><i id="bar"></i></div>
+        </header>
+
+        <section id="quiz">
+            <div class="count" id="count">Pregunta 1 de 8</div>
+            <h2 id="question"></h2>
+            <div class="options" id="options"></div>
+            <footer>
+                <button class="ghost" id="prev">Anterior</button>
+                <button class="primary" id="next" disabled>Siguiente</button>
+            </footer>
+        </section>
+
+        <section id="result" class="hidden">
+            <div class="badge" id="badge">✓</div>
+            <h2 id="r-title"></h2>
+            <p class="sub" id="r-text"></p>
+            <ul class="wrong" id="wrong"></ul>
+            <footer>
+                <button class="primary" id="r-action">Continuar</button>
+            </footer>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

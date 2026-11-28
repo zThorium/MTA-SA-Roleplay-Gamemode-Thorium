@@ -129,7 +129,7 @@ Comprobación: `(exports.rp_login:getPlayerAdminLevel(p) or 0) >= N`. Para permi
 rp_database → rp_notify → rp_ids → rp_login → bone_attach → rp_heads → rp_characters → rp_needs
 → rp_inventory → rp_shops → rp_clothing → rp_bank → rp_phone → rp_rides → rp_properties
 → object_preview → rp_vehicles → rp_radio → rp_dealership → rp_nametags → rp_chat → rp_scoreboard
-→ rp_hud → rp_citizens → rp_npcrel → rp_admin → rp_resmanager → rp_factions → rp_wanted → rp_pickups
+→ rp_hud → rp_quiz → rp_citizens → rp_npcrel → rp_admin → rp_resmanager → rp_factions → rp_wanted → rp_pickups
 → rp_robbery → rp_dealers → rp_ammunation → rp_backpacks → rp_gym → rp_payday → rp_driving
 → rp_injury → rp_shootingrange → rp_emergency → rp_help → rp_agency → rp_adminpanel → rp_bikes → rp_jobs → rp_events
 → rp_levels → rp_pool → rp_hookers → rp_anims → rp_furniture → rp_races → rp_police → rp_mocap
@@ -149,7 +149,7 @@ dependencias con `<include>`: es lo que garantiza el orden si alguien lo reinici
 `rp:dealers:`, `rp:driving:`, `rp:firefighters:`, `rp:drugs:`, `rp:emergency:`, `rp:events:`, `rp:fac:`, `rp:fuel:`, `rp:furn:`,
 `rp:gallery:`, `rp:gym:`, `rp:help:`, `rp:hooker:`, `rp:injury:`, `rp:interact:`, `rp:inv:`, `rp:jobs:`, `rp:levels:`, `rp:metaldetector:`,
 `rp:map:`, `rp:missions:`, `rp:mocap:`, `rp:music:`, `rp:notify:`, `rp:npcrel:`, `rp:paths:`, `rp:phone:`, `rp:pol:`,
-`rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
+`rp:pizzeria:`, `rp:pool:`, `rp:prop:`, `rp:quiz:`, `rp:races:`, `rp:radio:`, `rp:restaurants:`, `rp:resmgr:`, `rp:rides:`, `rp:robbery:`, `rp:shop:`,
 `rp:social:`, `rp:tinder:`, `rp:toyed:`, `rp:toys:`, `rp:tune:`, `rp:ui:`, `rp:veh:`, `rp:vending:`, `rp:wanted:`.
 
 Usa uno nuevo y único, igual al nombre del recurso sin `rp_`: `rp:<sistema>:<accion>` (y

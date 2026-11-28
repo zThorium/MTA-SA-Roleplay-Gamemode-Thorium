@@ -32,6 +32,7 @@
     <include resource="rp_pronto" />
     <include resource="rp_ballistics" />
     <include resource="rp_cartheft" />
+    <include resource="rp_quiz" />
 
     <script src="server/s_runner.lua" type="server" />
     <script src="server/s_tests.lua" type="server" />
@@ -59,5 +60,6 @@
     <script src="server/s_tests_metaldetector.lua" type="server" />
     <script src="server/s_tests_achievements.lua" type="server" />
     <script src="server/s_tests_mapeditor.lua" type="server" />
+    <script src="server/s_tests_quiz.lua" type="server" />
     <script src="server/s_tests_zz_cleanup.lua" type="server" />
 </meta>

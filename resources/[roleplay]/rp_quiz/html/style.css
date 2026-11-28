@@ -1,0 +1,55 @@
+/* rp_quiz / style.css — misma línea que rp_login: cristal oscuro y ámbar */
+@font-face { font-family: "Rubik"; src: url("fonts/rubik_medium.ttf"); font-weight: 400 500; }
+@font-face { font-family: "Rubik"; src: url("fonts/rubik_semibold.ttf"); font-weight: 600 800; }
+@font-face { font-family: "Future"; src: url("fonts/kenney_future.ttf"); }
+
+:root {
+    --glass: rgba(10, 12, 18, 0.88);
+    --surface: rgba(255, 255, 255, 0.06);
+    --surface-hover: rgba(255, 255, 255, 0.10);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: #f2f4f8;
+    --muted: #9aa3b2;
+    --accent: #f5a524;
+    --accent-2: #ff6a3d;
+    --error: #ff6b6b;
+    --success: #4cd38a;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: rgba(0, 0, 0, .45); font-family: "Rubik", "Segoe UI", Arial, sans-serif; color: var(--text); user-select: none; }
+body { display: flex; align-items: center; justify-content: center; }
+.hidden { display: none !important; }
+button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+
+.card { width: 640px; background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 28px 30px; box-shadow: 0 30px 80px rgba(0,0,0,.6); animation: pop .5s var(--ease) both; }
+@keyframes pop { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+.kicker { font-family: Future; font-size: 11px; letter-spacing: .18em; color: var(--accent); }
+h1 { font-size: 26px; font-weight: 700; margin: 4px 0 6px; }
+h2 { font-size: 19px; font-weight: 600; margin: 8px 0 16px; line-height: 1.35; }
+.sub { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.progress { height: 6px; border-radius: 6px; background: var(--surface); margin: 16px 0 18px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s var(--ease); }
+.count { font-size: 12px; color: var(--muted); }
+
+.options { display: flex; flex-direction: column; gap: 8px; }
+.option { text-align: left; padding: 13px 16px; border-radius: 12px; background: var(--surface); border: 2px solid transparent; font-size: 15px; transition: background .15s, border-color .15s, transform .15s; }
+.option:hover { background: var(--surface-hover); transform: translateX(3px); }
+.option.sel { border-color: var(--accent); background: rgba(245, 165, 36, .10); }
+.option b { display: inline-block; width: 24px; color: var(--accent); }
+
+footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+.primary { padding: 12px 22px; border-radius: 12px; background: var(--accent); color: #17110a; font-weight: 700; }
+.primary:disabled { opacity: .4; cursor: not-allowed; }
+.ghost { padding: 12px 18px; border-radius: 12px; background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.ghost:disabled { visibility: hidden; }
+
+.badge { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 4px auto 6px; background: rgba(76, 211, 138, .15); color: var(--success); }
+.badge.bad { background: rgba(255, 107, 107, .15); color: var(--error); }
+#result { text-align: center; }
+#result footer { justify-content: center; }
+.wrong { list-style: none; text-align: left; margin-top: 14px; max-height: 260px; overflow: auto; }
+.wrong li { background: var(--surface); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; font-size: 13px; line-height: 1.45; }
+.wrong li b { display: block; color: var(--text); }
+.wrong li span { color: var(--success); }
+.wrong li em { color: var(--muted); font-style: normal; }

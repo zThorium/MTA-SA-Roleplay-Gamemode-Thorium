@@ -1955,4 +1955,25 @@ SCHEMA = {
     SELECT 2206.675, -1739.138, 13.370, 90.88, 1, 13.02 FROM DUAL
     WHERE NOT EXISTS (SELECT 1 FROM rail_crossings WHERE ABS(x - 2206.675) < 3 AND ABS(y + 1739.138) < 3)
     ]],
+    -- rp_quiz (#111): cuestionario de rol aprobado por la cuenta (sin él no se crea personaje)
+    [[
+    ALTER TABLE accounts
+        ADD COLUMN IF NOT EXISTS quiz_passed_at DATETIME NULL
+    ]],
+    -- rp_quiz (#111): tutorial jugable terminado (o saltado) por el personaje
+    [[
+    ALTER TABLE characters
+        ADD COLUMN IF NOT EXISTS tutorial_done TINYINT(1) NOT NULL DEFAULT 0
+    ]],
+    -- rp_quiz: lo que ya existía antes del cuestionario queda exento (se aplica en cada arranque:
+    -- la fecha fija hace que solo toque filas antiguas). Personajes viejos sin tutorial; cuentas
+    -- viejas que ya tenían personaje, con el cuestionario aprobado.
+    [[
+    UPDATE characters SET tutorial_done = 1 WHERE tutorial_done = 0 AND created_at < '2026-11-29'
+    ]],
+    [[
+    UPDATE accounts SET quiz_passed_at = created_at
+    WHERE quiz_passed_at IS NULL AND created_at < '2026-11-29'
+      AND EXISTS (SELECT 1 FROM characters c WHERE c.account_id = accounts.id)
+    ]],
 }
