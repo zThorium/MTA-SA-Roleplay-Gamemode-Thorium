@@ -114,6 +114,8 @@ Parte de [`plantillas/s_main.lua`](plantillas/s_main.lua). Lo que **siempre** de
 4. **Eventos remotos**: `addEvent(nombre, true)` solo para lo que el cliente dispara. En el handler
    el jugador es **`client`**, nunca `source`. Revalidar: tipo, rango, cooldown, personaje,
    cercanía (posición + interior + dimensión), item, dinero, permiso, estado (abatido, esposado, en misión).
+   El anti-spam de `rp_admin` corta un evento remoto a más de 20 por segundo y jugador: si el tuyo
+   necesita más (sincronización, arrastre), añádelo a `ANTISPAM.EVENT_LIMITS` en `rp_admin/s_antispam.lua`.
 5. **Dinero** (elige uno, nunca inventes otro):
    - Efectivo: `if getPlayerMoney(p) < n then ... end; takePlayerMoney(p, n); exports.rp_characters:saveCharacter(p)`.
      Pagar: `givePlayerMoney` + `saveCharacter`.
