@@ -14,6 +14,7 @@
     <script src="s_owl.lua" type="server" />
     <script src="s_inspect.lua" type="server" />
     <script src="s_move.lua" type="server" />
+    <script src="s_antispam.lua" type="server" />
     <script src="c_freecam.lua" type="client" />
     <script src="c_debug.lua" type="client" cache="false" />
     <script src="c_inspect.lua" type="client" cache="false" />
@@ -26,4 +27,5 @@
     <file src="images/raton_der.png" />
 
     <export function="isFreecamActive" type="client" />
+    <export function="getSpamStrikes" type="server" />
 </meta>

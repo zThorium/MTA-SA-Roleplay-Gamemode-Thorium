@@ -66,3 +66,8 @@
 | N/A | B | INT-05 | Dimensiones propias sin choques |  |
 
 </details>
+
+## 2026-11-28 · mejorar (#110, anti-spam de comandos y eventos remotos)
+- **Qué**: `s_antispam.lua`: tope de comandos por jugador (`onPlayerCommand`, 8 en 2 s, sin tope para admins), tope por evento remoto y segundo con el debug hook `preEvent` (solo eventos que traen `client`; lista de alta frecuencia por nombre o prefijo en `ANTISPAM.EVENT_LIMITS`) y el límite total de MTA (`onPlayerTriggerEventThreshold`). Faltas en ventana de 60 s: aviso cada 2 y kick a las 6, con registro en `admin_log` y `server.log`.
+- **Reglas manuales**: SEG-04 ✔ (es la regla); PRU-02 ✔ `admin_antispam_activo`; CIC-03 ✔ (se limpia al salir; el hook se quita al parar); INT-09 N/A (infraestructura).
+- **Pendiente** [A]: ajustar `EVENT_LIMITS` si en juego algún sistema legítimo supera 20 eventos/s (se verá en `admin_log` como «antispam» de un admin o jugador normal). Fallas previas que no son de este cambio: BD-04 (`admin_log` se crea en `s_commands.lua`, debería ir a `schema.lua`) y EST-02 (`c_freecam.lua` sin `cache="false"`).

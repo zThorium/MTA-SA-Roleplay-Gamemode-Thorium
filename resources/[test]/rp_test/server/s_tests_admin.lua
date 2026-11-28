@@ -84,3 +84,13 @@ test("relojflores_tabla", function(t)
         t.pass(("flower_clocks accesible (%d relojes)"):format(#rows))
     end, "SELECT id, x, y, z, rot, interior, dimension FROM flower_clocks")
 end)
+
+-- #110: anti-spam de comandos y eventos remotos (rp_admin/s_antispam.lua)
+test("admin_antispam_activo", function(t)
+    local ok, n = pcall(function() return exports.rp_admin:getSpamStrikes(root) end)
+    if not ok or n ~= 0 then return t.fail("getSpamStrikes no responde 0 para un no-jugador") end
+    local interval = tonumber(getServerConfigSetting("player_triggered_event_interval"))
+    local max = tonumber(getServerConfigSetting("max_player_triggered_events_per_interval"))
+    if not interval or not max or max <= 0 then return t.fail("falta el límite de eventos de MTA en mtaserver.conf") end
+    t.pass(("anti-spam en marcha; límite MTA %d eventos / %d ms"):format(max, interval))
+end)
