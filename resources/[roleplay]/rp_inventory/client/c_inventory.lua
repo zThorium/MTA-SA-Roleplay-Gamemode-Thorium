@@ -9,6 +9,7 @@ local screenW, screenH = guiGetScreenSize()
 local browserGui, browser, ready = nil, nil, false
 local visible = false
 local lastData = nil
+local dirty = false     -- hay datos nuevos que aun no se dibujaron en el CEF
 local pushNearby   -- se define abajo (columnas "Cerca de ti" y "Personaje")
 
 addEvent("rp:inv:update", true)
@@ -54,7 +55,8 @@ local function pushLayout()
 end
 
 local function render()
-    if not (isElement(browser) and ready and lastData) then return end
+    if not (isElement(browser) and ready and lastData) then dirty = lastData ~= nil; return end
+    dirty = false
     executeBrowserJavascript(browser, ("RP.render(%s[0], %s, %s, %s[0])"):format(
         toJSON(lastData.items, true), tostring(lastData.weight), tostring(lastData.maxWeight),
         toJSON(lastData.bp or false, true)))   -- toJSON ya envuelve el valor en un array: el "[0]" lo desenvuelve
@@ -66,7 +68,7 @@ end
 
 local function destroyBrowser()
     if isElement(browserGui) then destroyElement(browserGui) end
-    browserGui, browser, ready, visible = nil, nil, false, false
+    browserGui, browser, ready, visible, dirty = nil, nil, false, false, false
 end
 
 local function createBrowser()
@@ -104,10 +106,13 @@ local function open()
     focusBrowser(browser)
     showCursor(true)
     guiSetInputEnabled(true)
-    render()
+    -- Los datos se dibujan en segundo plano al llegar (rp:inv:update): al abrir solo se
+    -- repite el render si quedaron pendientes (el CEF aun no estaba listo).
+    if dirty then render() end
     if ready then
         executeBrowserJavascript(browser, "RP.opened()")
-        pushNearby()
+        -- "Cerca de ti" y "Personaje" recorren elementos del mundo: no bloquean la apertura
+        setTimer(pushNearby, 50, 1)
     end
     -- Solo pedimos datos si aun no llegaron (normalmente ya estan sincronizados)
     if not lastData then triggerServerEvent("rp:inv:request", resourceRoot) end
@@ -269,12 +274,24 @@ local function nearestGround()
     return best
 end
 
+-- Lista cacheada de objetos del suelo en streaming (antes se recorrian todos los
+-- objetos del recurso y se leia su elementData en cada frame)
+local groundObjs = {}
+local function refreshGroundObjs()
+    local list = {}
+    for _, obj in ipairs(getElementsByType("object", resourceRoot, true)) do
+        if getElementData(obj, "rp:ground") then list[#list + 1] = obj end
+    end
+    groundObjs = list
+end
+setTimer(refreshGroundObjs, 250, 0)
+
 addEventHandler("onClientRender", root, function()
-    if getElementData(localPlayer, "rp:hudHidden") then return end
+    if #groundObjs == 0 or getElementData(localPlayer, "rp:hudHidden") then return end
     local cx, cy, cz = getCameraMatrix()
     local target = (not isOpen()) and nearestGround() or nil
-    for _, obj in ipairs(getElementsByType("object", resourceRoot, true)) do
-        local data = getElementData(obj, "rp:ground")
+    for _, obj in ipairs(groundObjs) do
+        local data = isElement(obj) and getElementData(obj, "rp:ground")
         if data then
             local x, y, z = getElementPosition(obj)
             local dist = getDistanceBetweenPoints3D(cx, cy, cz, x, y, z)

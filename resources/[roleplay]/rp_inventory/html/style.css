@@ -44,7 +44,7 @@ html, body {
         radial-gradient(ellipse at 50% 55%, rgba(8, 10, 16, 0.35), rgba(8, 10, 16, 0.82) 75%),
         linear-gradient(90deg, rgba(10, 12, 20, 0.55), rgba(10, 12, 20, 0.15) 50%, rgba(10, 12, 20, 0.55));
     transition: opacity 0.2s;
-    animation: fade 0.18s ease-out;
+    animation: fade 0.1s ease-out;
 }
 body.dragging-out .shade { opacity: 0.25; }
 body.dragging-out .panel { opacity: 0.35; }
@@ -93,7 +93,7 @@ kbd { padding: 0 5px; border: 1px solid var(--line); border-radius: 3px; font-fa
     align-items: flex-start;
     gap: calc(var(--u) * 3.5);
 }
-.panel { display: flex; flex-direction: column; max-height: 100%; animation: enter 0.2s ease-out; transition: opacity 0.15s; }
+.panel { display: flex; flex-direction: column; max-height: 100%; animation: enter 0.12s ease-out; transition: opacity 0.15s; }
 .col-near { width: calc(var(--slot) * 3 + var(--gap) * 2 + var(--u) * 1.2); }
 .col-inv  { width: calc(var(--slot) * 6 + var(--gap) * 5 + var(--u) * 1.2); }
 .col-char { width: calc(var(--slot) * 3 + var(--gap) * 2 + var(--u) * 1.2); }
