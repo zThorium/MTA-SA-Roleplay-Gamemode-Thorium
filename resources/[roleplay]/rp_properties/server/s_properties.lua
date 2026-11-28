@@ -455,16 +455,28 @@ addCommandHandler("vendercasa", function(player)
         return notify(player, "Debes estar en la puerta o dentro de una propiedad tuya.", "warning")
     end
     local refund = math.floor(tonumber(p.row.price) * PROPERTY.SELL_REFUND)
-    dbExec(db(), "UPDATE properties SET owner_id = NULL, locked = 1 WHERE id = ?", id)
-    dbExec(db(), "UPDATE characters SET bank_money = bank_money + ? WHERE id = ?", refund, characterId)
-    dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'sale', ?, ?)", characterId, refund, p.row.name)
-    notify(player, ("Vendiste %s. Recibiste $%d en tu cuenta."):format(p.row.name, refund), "success")
-    -- Saca a quien este dentro
-    for _, pl in ipairs(getElementsByType("player")) do
-        if getElementDimension(pl) == dimensionOf(id) then teleportOutside(pl, id) end
-    end
-    triggerEvent("rp:prop:sold", root, id, characterId)   -- rp_furniture guarda los muebles en la bodega del vendedor
-    refresh(id)
+    local name = p.row.name
+    -- Cierra la carrera en memoria: un segundo /vendercasa antes del refresh ya no la ve como suya
+    p.row.owner_id = nil
+    -- Cambio de dueno atomico: solo se paga si esta llamada fue la que la libero (#150)
+    dbQuery(function(qh)
+        local _, affected = dbPoll(qh, 0)
+        if not affected or affected == 0 then
+            if isElement(player) then notify(player, "Esta propiedad ya no es tuya.", "error") end
+            return refresh(id)
+        end
+        dbExec(db(), "UPDATE characters SET bank_money = bank_money + ? WHERE id = ?", refund, characterId)
+        dbExec(db(), "INSERT INTO bank_transactions (character_id, type, amount, other_name) VALUES (?, 'sale', ?, ?)", characterId, refund, name)
+        if isElement(player) then
+            notify(player, ("Vendiste %s. Recibiste $%d en tu cuenta."):format(name, refund), "success")
+        end
+        -- Saca a quien este dentro
+        for _, pl in ipairs(getElementsByType("player")) do
+            if getElementDimension(pl) == dimensionOf(id) then teleportOutside(pl, id) end
+        end
+        triggerEvent("rp:prop:sold", root, id, characterId)   -- rp_furniture guarda los muebles en la bodega del vendedor
+        refresh(id)
+    end, db(), "UPDATE properties SET owner_id = NULL, locked = 1 WHERE id = ? AND owner_id = ?", id, characterId)
 end)
 
 local function isAdmin(player) return (exports.rp_login:getPlayerAdminLevel(player) or 0) >= 1 end
