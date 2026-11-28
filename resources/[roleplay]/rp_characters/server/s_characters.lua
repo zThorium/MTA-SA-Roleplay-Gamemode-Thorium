@@ -150,6 +150,14 @@ addEventHandler("rp:chars:create", resourceRoot, function(data)
     local accountId = accountOf(player)
     if not accountId or active[player] or pending[player] then return end
 
+    -- Cuestionario de rol (rp_quiz, #111): sin aprobarlo no se crea personaje
+    -- estandar:dep-opcional rp_quiz arranca después; si no está en marcha no se bloquea a nadie
+    local quiz = getResourceFromName("rp_quiz")
+    if quiz and getResourceState(quiz) == "running" and not exports.rp_quiz:hasPassedQuiz(player) then
+        exports.rp_quiz:openQuiz(player)
+        return reply(player, false, "Antes de crear un personaje aprueba el cuestionario de rol.")
+    end
+
     local c, err = validateCharacter(data)
     if not c then return reply(player, false, err) end
 

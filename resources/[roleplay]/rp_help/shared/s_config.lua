@@ -117,6 +117,7 @@ HELP.COMMANDS = {
     { cmd = "/vroom",          text = "Abrir la app de viajes" },
     { cmd = "/tunear",         text = "Abrir el taller dentro de un taller de tuning (circulo naranja)" },
     { cmd = "/darllave <jugador>", text = "Dar una copia de la llave de tu vehiculo" },
+    { cmd = "/saltartutorial", text = "Saltar el tutorial que sale la primera vez que entras con un personaje" },
     { cmd = "/cerrarcasa",     text = "Cerrar o abrir tu casa" },
     { cmd = "/vendercasa",     text = "Vender tu casa" },
     { cmd = "/f <texto>",      text = "Chat de tu faccion" },

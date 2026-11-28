@@ -58,6 +58,7 @@ ACH.STATS = {
     -- Vida
     char_level       = { mode = "max", maxPerCall = 100 },
     bank_balance     = { mode = "max", maxPerCall = 1000000000 },
+    tutorial_done    = { mode = "max", maxPerCall = 1 },
     payday_count     = { mode = "add", maxPerCall = 1 },
     vehicles_bought  = { mode = "add", maxPerCall = 1 },
     property_bought  = { mode = "add", maxPerCall = 1 },
@@ -116,6 +117,7 @@ ACH.CATALOG = {
     { key = "tirador",       cat = "body", icon = "🎯", name = "Tirador",            stat = "shooting_sessions", tiers = { 3, 15, 50, 150 },         desc = "Completa %s entrenamientos en el campo de tiro" },
 
     -- Vida ------------------------------------------------------------------
+    { key = "primer_dia",    cat = "life", icon = "🌅", name = "Primer día",          stat = "tutorial_done",   tiers = { 1 }, medals = { 1 },         desc = "Termina el tutorial al llegar a la ciudad" },
     { key = "veterano",      cat = "life", icon = "⭐", name = "Veterano",            stat = "char_level",      tiers = { 5, 10, 25, 50 },            desc = "Llega al nivel %s" },
     { key = "ahorrador",     cat = "life", icon = "🏦", name = "Ahorrador",           stat = "bank_balance",    tiers = { 10000, 100000, 1000000, 5000000 }, unit = "money", desc = "Ten %s en tu cuenta del banco" },
     { key = "nomina",        cat = "life", icon = "📅", name = "Nómina",              stat = "payday_count",    tiers = { 5, 25, 100, 500 },          desc = "Cobra %s paydays" },
