@@ -29,7 +29,7 @@ MAP_SEED = {
     { "air_lv", "Aeropuerto de Las Venturas", "aeropuerto", 1672.0, 1447.0, 10.8, "Terminal del aeropuerto de Las Venturas." },
     { "air_verdant", "Aeródromo Verdant Meadows", "aeropuerto", 414.0, 2533.0, 16.5, "Aeródromo abandonado del desierto." },
     -- Estaciones de tren
-    { "tr_unity", "Estación Unity", "transporte", 1743.0, -1862.0, 13.6, "Estación de tren de El Corona, Los Santos." },
+    { "tr_unity", "Estación Unity", "transporte", 1743.0, -1862.0, 13.6, "Terminal de buses Turbus y estación de tren de El Corona, Los Santos." },
     { "tr_market", "Estación Market", "transporte", 816.6, -1352.6, 13.5, "Estación de tren de Market, Los Santos." },
     { "tr_cranberry", "Estación Cranberry", "transporte", -1974.0, 138.0, 27.7, "Estación de tren de San Fierro." },
     { "tr_linden", "Estación Linden", "transporte", 2847.0, 1290.0, 11.4, "Estación de tren de Las Venturas." },

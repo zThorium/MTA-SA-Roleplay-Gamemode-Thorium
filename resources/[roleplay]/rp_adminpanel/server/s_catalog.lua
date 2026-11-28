@@ -130,6 +130,7 @@ ADMIN_CATALOG = {
             { cmd = "/editarreja", args = "[id]", desc = "Editor 3D de una reja de estacion (sin id, la mas cercana a 15 m), mismas teclas que el cartel.", res = "rp_train" },
             { cmd = "/crearpostemetro", args = "", desc = "Pone delante de ti el poste de metro (logo y letrero con el nombre) de la estacion mas cercana; se abre el editor 3D. Borrar con /delmetropole <id>.", res = "rp_train" },
             { cmd = "/editarpostemetro", args = "[id]", desc = "Editor 3D de un poste de metro (sin id, el mas cercano a 15 m), mismas teclas que el cartel.", res = "rp_train" },
+            { cmd = "/crearrelojflores", args = "", desc = "Pone el Reloj de Flores de Vina del Mar (monumento de ~15 m con agujas que marcan la hora del juego) 9 m delante de ti, con la esfera mirandote. Ajustalo con ALT + clic derecho (editor). Alias /makeflowerclock. Listar y borrar con /nearbyflowerclocks y /delflowerclock <id>.", res = "rp_relojflores" },
         },
     },
     {

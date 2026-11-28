@@ -8,7 +8,7 @@
 local OWNERS = {
     { "rp_bank" }, { "rp_shops" }, { "rp_properties" }, { "rp_clothing" }, { "rp_vending" },
     { "rp_dealers" }, { "rp_robbery" }, { "rp_gym", "machine" }, { "rp_gym", "trainer" },
-    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" }, { "rp_train", "pole" }, { "rp_markers" },
+    { "rp_driving" }, { "rp_pool" }, { "rp_train" }, { "rp_train", "booth" }, { "rp_train", "sign" }, { "rp_train", "gate" }, { "rp_train", "fence" }, { "rp_train", "pole" }, { "rp_relojflores" }, { "rp_markers" },
 }
 
 test("admin_exports_de_elementos", function(t)
@@ -76,4 +76,11 @@ test("admin_marcadores_movibles", function(t)
         if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
         t.pass("marker_points accesible")
     end, "SELECT id, marker_key, base_x, x FROM marker_points LIMIT 1")
+end)
+
+test("relojflores_tabla", function(t)
+    query(function(rows, _, _, code, msg)
+        if not rows then return t.fail(("[%s] %s"):format(tostring(code), tostring(msg))) end
+        t.pass(("flower_clocks accesible (%d relojes)"):format(#rows))
+    end, "SELECT id, x, y, z, rot, interior, dimension FROM flower_clocks")
 end)

@@ -1924,4 +1924,18 @@ SCHEMA = {
         KEY idx_mapedit_log_project (project_id, id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]],
+    -- rp_relojflores: relojes de flores (monumento) que colocan los admins (/crearrelojflores)
+    [[
+    CREATE TABLE IF NOT EXISTS flower_clocks (
+        id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        x          FLOAT        NOT NULL,
+        y          FLOAT        NOT NULL,
+        z          FLOAT        NOT NULL,
+        rot        FLOAT        NOT NULL DEFAULT 0,
+        interior   INT UNSIGNED NOT NULL DEFAULT 0,
+        dimension  INT UNSIGNED NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]],
 }
